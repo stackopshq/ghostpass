@@ -8,6 +8,7 @@ import type {
   OrgMemberRow,
   OrgRole,
   OrgRow,
+  SendRow,
   SessionRow,
   UserRow,
   VaultItemRow,
@@ -180,6 +181,30 @@ export const vaultItems = {
       .prepare(`DELETE FROM vault_items WHERE id = ? AND user_id = ?`)
       .run(args.id, args.userId);
     return result.changes > 0;
+  },
+};
+
+export const sends = {
+  create(
+    db: DB,
+    s: { id: string; ciphertext: string; iv: string; expiresAt: number; maxViews: number },
+  ): void {
+    db.prepare(
+      `INSERT INTO sends (id, ciphertext, iv, created_at, expires_at, max_views, views)
+       VALUES (?, ?, ?, ?, ?, ?, 0)`,
+    ).run(s.id, s.ciphertext, s.iv, Date.now(), s.expiresAt, s.maxViews);
+  },
+
+  get(db: DB, id: string): SendRow | undefined {
+    return db.prepare(`SELECT * FROM sends WHERE id = ?`).get(id) as SendRow | undefined;
+  },
+
+  incrementViews(db: DB, id: string): void {
+    db.prepare(`UPDATE sends SET views = views + 1 WHERE id = ?`).run(id);
+  },
+
+  remove(db: DB, id: string): void {
+    db.prepare(`DELETE FROM sends WHERE id = ?`).run(id);
   },
 };
 

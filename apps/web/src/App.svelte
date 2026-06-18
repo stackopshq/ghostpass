@@ -21,6 +21,7 @@
   import { DEFAULT_GEN_OPTIONS, generatePassword, type GenOptions } from "./lib/generator.js";
   import { parseCsv } from "./lib/csv.js";
   import { pwnedCount } from "./lib/breach.js";
+  import { sealSend } from "./lib/send.js";
 
   let cryptoReady = $state(false);
   let busy = $state(false);
@@ -386,6 +387,39 @@
     adding = false;
     detailRevealed = false;
     histRevealed = new Set();
+    shareLink = null;
+  }
+
+  // Partage de lien éphémère (Send) : chiffre le secret côté client, la clé reste dans l'URL (#).
+  let shareLink = $state<string | null>(null);
+  let shareBusy = $state(false);
+
+  async function shareEntry() {
+    if (!selected || !token) return;
+    shareBusy = true;
+    shareLink = null;
+    error = null;
+    try {
+      const secret =
+        selected.kind === "note"
+          ? selected.note
+          : selected.kind === "card"
+            ? selected.cardNumber
+            : selected.password;
+      if (!secret) throw new Error("rien à partager");
+      const sealed = await sealSend(secret);
+      const { id } = await api.createSend(token, {
+        ciphertext: sealed.ciphertext,
+        iv: sealed.iv,
+        expiresInHours: 24,
+        maxViews: 1,
+      });
+      shareLink = `${location.origin}/s/${id}#${sealed.keyFragment}`;
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      shareBusy = false;
+    }
   }
 
   function toggleHist(i: number) {
@@ -1130,10 +1164,23 @@
                 <div class="sub">{selected.kind === "note" ? "Note sécurisée" : selected.kind === "card" ? "Carte chiffrée" : "Identifiant chiffré"}</div>
               </div>
               <div class="detail-actions">
+                <button class="ghost sm" onclick={shareEntry} disabled={shareBusy}>{shareBusy ? "…" : "Partager"}</button>
                 <button class="ghost sm" onclick={startEdit}>Modifier</button>
                 <button class="danger" onclick={deleteEntry} disabled={busy}>Supprimer</button>
               </div>
             </div>
+
+            {#if shareLink}
+              <div class="callout info" style="flex-direction:column;align-items:stretch;gap:0.4rem;margin-bottom:1rem">
+                <span>Lien de partage — <strong>1 vue, expire dans 24 h</strong>. La clé est dans l'URL (#), jamais envoyée au serveur.</span>
+                <div class="codeblock-wrap">
+                  <code class="codeblock">{shareLink}</code>
+                  <button class="icon-btn {copiedKey === 'share' ? 'copied' : ''}" title="Copier" aria-label="Copier le lien" onclick={() => copy(shareLink!, "share")}>
+                    {#if copiedKey === "share"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
+                  </button>
+                </div>
+              </div>
+            {/if}
 
             {#if selected.kind === "note"}
               {#if selected.folder}

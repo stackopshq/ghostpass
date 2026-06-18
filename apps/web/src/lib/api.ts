@@ -132,6 +132,15 @@ export const api = {
   purgeItem(token: string, id: string) {
     return http<void>(`/api/vault/trash/${id}`, { method: "DELETE", token });
   },
+  createSend(
+    token: string,
+    body: { ciphertext: string; iv: string; expiresInHours: number; maxViews: number },
+  ) {
+    return http<{ id: string }>("/api/send", { method: "POST", body, token });
+  },
+  getSend(id: string) {
+    return http<{ ciphertext: string; iv: string }>(`/api/send/${id}`);
+  },
 
   // ─── Organisations / partage ───
   createOrg(token: string, body: { name: string; encryptedOrgKey: string }) {

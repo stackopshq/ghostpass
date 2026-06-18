@@ -9,6 +9,7 @@ import { registerMfaRoutes } from "./routes/mfa.js";
 import { registerOrgRoutes } from "./routes/orgs.js";
 import { registerOrgVaultRoutes } from "./routes/orgVault.js";
 import { registerRecoveryRoutes } from "./routes/recovery.js";
+import { registerSendRoutes } from "./routes/send.js";
 import { registerVaultRoutes } from "./routes/vault.js";
 
 /// Construit l'instance Fastify autour d'une base donnée.
@@ -45,6 +46,7 @@ export function buildApp(db: DB): FastifyInstance {
   registerOrgRoutes(app, db);
   registerOrgVaultRoutes(app, db);
   registerIconRoutes(app);
+  registerSendRoutes(app, db);
 
   return app;
 }

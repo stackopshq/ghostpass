@@ -1,0 +1,14 @@
+# Configuration gitleaks (pre-commit).
+# Étend les règles par défaut et ignore les fixtures des fichiers de test : les valeurs
+# `EncString` et hash y sont factices (ex. "2.bm9uY2U.Y2lwaGVy" = base64 de "nonce"/"cipher"),
+# pas des secrets réels. Le code applicatif reste scanné normalement.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fixtures de test (EncStrings/hash factices, non secrets)"
+paths = [
+  '''apps/server/test/.*\.test\.ts$''',
+  '''apps/server/scripts/e2e.*\.ts$''',
+]

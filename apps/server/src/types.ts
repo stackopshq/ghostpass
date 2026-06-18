@@ -19,6 +19,16 @@ export interface UserRow {
   created_at: number;
 }
 
+export interface SendRow {
+  id: string;
+  ciphertext: string;
+  iv: string;
+  created_at: number;
+  expires_at: number;
+  max_views: number;
+  views: number;
+}
+
 export interface VaultItemRow {
   id: string;
   user_id: string;

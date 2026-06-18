@@ -34,6 +34,18 @@ CREATE TABLE IF NOT EXISTS vault_items (
   deleted_at      INTEGER          -- corbeille : NULL = actif, sinon epoch-ms de suppression
 );
 
+-- Partage de lien éphémère (type "Send") : le serveur ne stocke que du chiffré AES-GCM ;
+-- la clé est dans le fragment d'URL côté destinataire, jamais transmise au serveur.
+CREATE TABLE IF NOT EXISTS sends (
+  id          TEXT PRIMARY KEY,
+  ciphertext  TEXT NOT NULL,   -- base64 (AES-256-GCM)
+  iv          TEXT NOT NULL,   -- base64 (nonce GCM)
+  created_at  INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL,
+  max_views   INTEGER NOT NULL,  -- 0 = illimité jusqu'à expiration
+  views       INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
   id          TEXT PRIMARY KEY,
   user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
