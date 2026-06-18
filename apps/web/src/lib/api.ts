@@ -7,6 +7,7 @@ export interface ItemDto {
   encryptedData: string;
   createdAt: number;
   updatedAt: number;
+  deletedAt?: number | null;
 }
 
 async function http<T>(
@@ -121,6 +122,15 @@ export const api = {
   },
   deleteItem(token: string, id: string) {
     return http<void>(`/api/vault/items/${id}`, { method: "DELETE", token });
+  },
+  listTrash(token: string) {
+    return http<{ items: ItemDto[] }>("/api/vault/trash", { token });
+  },
+  restoreItem(token: string, id: string) {
+    return http<{ ok: boolean }>(`/api/vault/trash/${id}/restore`, { method: "POST", token });
+  },
+  purgeItem(token: string, id: string) {
+    return http<void>(`/api/vault/trash/${id}`, { method: "DELETE", token });
   },
 
   // ─── Organisations / partage ───

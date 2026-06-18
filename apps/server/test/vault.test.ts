@@ -105,6 +105,48 @@ test("mise à jour d'un item inexistant → 404", async () => {
   await app.close();
 });
 
+test("corbeille : suppression douce, restauration, purge", async () => {
+  const { app, token } = await appWithUser();
+  const created = (
+    await app.inject({ method: "POST", url: "/api/vault/items", headers: auth(token), payload: ITEM })
+  ).json();
+
+  // Suppression = corbeille : absent de la liste, présent dans la corbeille.
+  let res = await app.inject({
+    method: "DELETE",
+    url: `/api/vault/items/${created.id}`,
+    headers: auth(token),
+  });
+  assert.equal(res.statusCode, 204);
+  res = await app.inject({ method: "GET", url: "/api/vault/items", headers: auth(token) });
+  assert.equal(res.json().items.length, 0);
+  res = await app.inject({ method: "GET", url: "/api/vault/trash", headers: auth(token) });
+  assert.equal(res.json().items.length, 1);
+
+  // Restauration : de retour dans la liste.
+  res = await app.inject({
+    method: "POST",
+    url: `/api/vault/trash/${created.id}/restore`,
+    headers: auth(token),
+  });
+  assert.equal(res.statusCode, 200);
+  res = await app.inject({ method: "GET", url: "/api/vault/items", headers: auth(token) });
+  assert.equal(res.json().items.length, 1);
+
+  // Purge définitive depuis la corbeille.
+  await app.inject({ method: "DELETE", url: `/api/vault/items/${created.id}`, headers: auth(token) });
+  res = await app.inject({
+    method: "DELETE",
+    url: `/api/vault/trash/${created.id}`,
+    headers: auth(token),
+  });
+  assert.equal(res.statusCode, 204);
+  res = await app.inject({ method: "GET", url: "/api/vault/trash", headers: auth(token) });
+  assert.equal(res.json().items.length, 0);
+
+  await app.close();
+});
+
 test("les items d'un utilisateur sont cloisonnés", async () => {
   const { app, token } = await appWithUser();
   // Crée un item pour l'utilisateur A.

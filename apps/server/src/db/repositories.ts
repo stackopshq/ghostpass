@@ -114,7 +114,17 @@ export const sessions = {
 export const vaultItems = {
   listByUser(db: DB, userId: string): VaultItemRow[] {
     return db
-      .prepare(`SELECT * FROM vault_items WHERE user_id = ? ORDER BY updated_at DESC`)
+      .prepare(
+        `SELECT * FROM vault_items WHERE user_id = ? AND deleted_at IS NULL ORDER BY updated_at DESC`,
+      )
+      .all(userId) as VaultItemRow[];
+  },
+
+  listDeleted(db: DB, userId: string): VaultItemRow[] {
+    return db
+      .prepare(
+        `SELECT * FROM vault_items WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
+      )
       .all(userId) as VaultItemRow[];
   },
 
@@ -144,6 +154,27 @@ export const vaultItems = {
     return db.prepare(`SELECT * FROM vault_items WHERE id = ?`).get(args.id) as VaultItemRow;
   },
 
+  /// Soft-delete : déplace vers la corbeille (n'agit que sur un item actif).
+  softDelete(db: DB, args: { id: string; userId: string }): boolean {
+    const result = db
+      .prepare(
+        `UPDATE vault_items SET deleted_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+      )
+      .run(Date.now(), args.id, args.userId);
+    return result.changes > 0;
+  },
+
+  /// Restaure un item de la corbeille.
+  restore(db: DB, args: { id: string; userId: string }): boolean {
+    const result = db
+      .prepare(
+        `UPDATE vault_items SET deleted_at = NULL WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL`,
+      )
+      .run(args.id, args.userId);
+    return result.changes > 0;
+  },
+
+  /// Suppression définitive (purge depuis la corbeille).
   remove(db: DB, args: { id: string; userId: string }): boolean {
     const result = db
       .prepare(`DELETE FROM vault_items WHERE id = ? AND user_id = ?`)

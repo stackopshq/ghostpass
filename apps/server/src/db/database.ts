@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS vault_items (
   encrypted_key   TEXT NOT NULL,   -- EncString (item key enveloppée)
   encrypted_data  TEXT NOT NULL,   -- EncString (contenu de l'item)
   created_at      INTEGER NOT NULL,
-  updated_at      INTEGER NOT NULL
+  updated_at      INTEGER NOT NULL,
+  deleted_at      INTEGER          -- corbeille : NULL = actif, sinon epoch-ms de suppression
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -112,5 +113,18 @@ export function openDatabase(path: string): DB {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA);
+  migrate(db);
   return db;
+}
+
+/// Migrations idempotentes pour les bases créées avant l'ajout d'une colonne.
+function migrate(db: DB): void {
+  ensureColumn(db, "vault_items", "deleted_at", "INTEGER");
+}
+
+function ensureColumn(db: DB, table: string, column: string, type: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
 }

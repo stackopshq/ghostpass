@@ -18,6 +18,7 @@ function toDto(row: VaultItemRow) {
     encryptedData: row.encrypted_data,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    deletedAt: row.deleted_at,
   };
 }
 
@@ -63,8 +64,37 @@ export function registerVaultRoutes(app: FastifyInstance, db: DB): void {
     },
   );
 
+  // Suppression = déplacement vers la corbeille (soft-delete).
   app.delete<{ Params: { id: string } }>(
     "/api/vault/items/:id",
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const ok = vaultItems.softDelete(db, { id: req.params.id, userId: req.currentUser!.id });
+      if (!ok) return reply.code(404).send({ error: "item introuvable" });
+      return reply.code(204).send();
+    },
+  );
+
+  // Corbeille : liste des items supprimés.
+  app.get("/api/vault/trash", { preHandler: authenticate }, async (req) => {
+    const items = vaultItems.listDeleted(db, req.currentUser!.id);
+    return { items: items.map(toDto) };
+  });
+
+  // Restaure un item depuis la corbeille.
+  app.post<{ Params: { id: string } }>(
+    "/api/vault/trash/:id/restore",
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const ok = vaultItems.restore(db, { id: req.params.id, userId: req.currentUser!.id });
+      if (!ok) return reply.code(404).send({ error: "item introuvable" });
+      return { ok: true };
+    },
+  );
+
+  // Suppression définitive (purge).
+  app.delete<{ Params: { id: string } }>(
+    "/api/vault/trash/:id",
     { preHandler: authenticate },
     async (req, reply) => {
       const removed = vaultItems.remove(db, { id: req.params.id, userId: req.currentUser!.id });

@@ -39,7 +39,8 @@
   let token = $state<string | null>(null);
   let account = $state<Account | null>(null);
   let items = $state<VaultEntry[]>([]);
-  let nav = $state<"vault" | "orgs" | "security">("vault");
+  let nav = $state<"vault" | "orgs" | "security" | "trash">("vault");
+  let trashItems = $state<VaultEntry[]>([]);
 
   // Sélection / recherche dans le coffre (UI).
   let search = $state("");
@@ -381,13 +382,58 @@
 
   async function deleteEntry() {
     if (!selected || !token) return;
-    if (!confirm(`Supprimer « ${selected.name} » ? Cette action est définitive.`)) return;
+    if (!confirm(`Déplacer « ${selected.name} » vers la corbeille ?`)) return;
     busy = true;
     error = null;
     try {
       await api.deleteItem(token, selected.id);
       selected = null;
       await loadItems();
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      busy = false;
+    }
+  }
+
+  // ─── Corbeille ───
+  async function openTrash() {
+    nav = "trash";
+    if (!token || !account) return;
+    try {
+      const { items: dtos } = await api.listTrash(token);
+      const entries: VaultEntry[] = [];
+      for (const d of dtos) {
+        const r = decryptVaultItem(account, d.encryptedKey, d.encryptedData);
+        if (r.kind === "login") entries.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
+      }
+      trashItems = entries;
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
+
+  async function restoreEntry(item: VaultEntry) {
+    if (!token) return;
+    busy = true;
+    try {
+      await api.restoreItem(token, item.id);
+      await openTrash();
+      await loadItems();
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function purgeEntry(item: VaultEntry) {
+    if (!token) return;
+    if (!confirm(`Supprimer définitivement « ${item.name} » ? Irréversible.`)) return;
+    busy = true;
+    try {
+      await api.purgeItem(token, item.id);
+      await openTrash();
     } catch (err) {
       error = errMsg(err);
     } finally {
@@ -578,6 +624,7 @@
     search = "";
     selected = null;
     selectedFolder = null;
+    trashItems = [];
     adding = false;
     editingId = null;
     emptyFolders = [];
@@ -668,6 +715,12 @@
   <button class="icon-btn {extra}" onclick={toggleTheme} title={theme === "dark" ? "Passer en clair" : "Passer en sombre"} aria-label="Basculer le thème">
     {#if theme === "dark"}{@render sunIcon()}{:else}{@render moonIcon()}{/if}
   </button>
+{/snippet}
+{#snippet trashIcon()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+    <path d="M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6" /><path d="M10 11v6M14 11v6" />
+  </svg>
 {/snippet}
 {#snippet diceIcon()}
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -875,6 +928,9 @@
         </button>
         <button class="nav-item" class:active={nav === "security"} onclick={() => (nav = "security")}>
           {@render shieldIcon()}<span>Sécurité</span>
+        </button>
+        <button class="nav-item" class:active={nav === "trash"} onclick={openTrash}>
+          {@render trashIcon()}<span>Corbeille</span>
         </button>
 
         {#if nav === "vault"}
@@ -1133,6 +1189,31 @@
               </label>
             </div>
             <p class="muted" style="margin:0.7rem 0 0">Colonnes reconnues : name, username, password, url, folder, totp (compatible exports 1Password / Bitwarden / Proton).</p>
+          </section>
+        </div>
+      {:else if nav === "trash"}
+        <div class="single">
+          <section class="panel">
+            <div class="panel-head"><h2>Corbeille</h2><span class="count">{trashItems.length}</span></div>
+            {#if trashItems.length === 0}
+              <div class="empty">{@render trashIcon()}<p>La corbeille est vide.</p></div>
+            {:else}
+              <ul class="list">
+                {#each trashItems as item (item.id)}
+                  <li>
+                    {@render itemAvatar(item.name, item.url, false)}
+                    <div class="row-main">
+                      <span class="row-title">{item.name}</span>
+                      {#if item.username}<span class="row-sub"><span class="mono">{item.username}</span></span>{/if}
+                    </div>
+                    <div class="row-actions">
+                      <button class="ghost sm" onclick={() => restoreEntry(item)} disabled={busy}>Restaurer</button>
+                      <button class="danger" onclick={() => purgeEntry(item)} disabled={busy}>Supprimer</button>
+                    </div>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
           </section>
         </div>
       {:else}
