@@ -1,0 +1,150 @@
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  color-scheme: light dark;
+  --accent: #4f46e5;
+}
+
+body {
+  margin: 0;
+  background: #f6f7fb;
+  color: #1a1a2e;
+}
+
+main {
+  max-width: 460px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 1.6rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+  margin: 1.6rem 0 0.6rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tabs button {
+  flex: 1;
+  background: #eee;
+  color: #444;
+}
+
+.tabs button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+input {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #d0d0da;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+button {
+  padding: 0.55rem 0.9rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+button.link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 0.4rem 0;
+  font-weight: 500;
+  text-decoration: underline;
+  font-size: 0.85rem;
+}
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.muted {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.error {
+  margin-top: 1rem;
+  color: #b00020;
+  font-size: 0.9rem;
+}
+
+.success {
+  color: #0a7d33;
+  font-size: 0.9rem;
+}
+
+code.block {
+  display: block;
+  padding: 0.5rem;
+  background: #f0f0f5;
+  border-radius: 6px;
+  word-break: break-all;
+  font-size: 0.75rem;
+  margin-bottom: 0.6rem;
+}
