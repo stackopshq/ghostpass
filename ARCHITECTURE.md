@@ -244,9 +244,14 @@ Secrets Manager / Infisical / Doppler.
   + invalidation des sessions. Crypto Rust (`create_recovery`/`recover`, 21 tests), exposé en
   WASM, backend (**22 tests**), UI (génération du kit + écran « mot de passe oublié »).
   **E2E complet validé** (`scripts/e2e-recovery.ts`).
+- ✅ **Durcissement sécurité** (suite à l'audit interne, voir `SECURITY.md`) : anti-downgrade
+  KDF, zeroize étendu, rate-limiting + helmet + CORS + bodyLimit, anti-énumération par timing,
+  logout/révocation de session, anti-rejeu TOTP, re-auth des opérations 2FA, `recovery-blob`
+  uniformisé, normalisation email. **22 tests Rust · 24 tests backend · e2e OK.**
 - ⬜ Reste (coffre) : partage / organisations (UI) — le crypto (`org`, `sharing`) existe, reste
-  à exposer en WASM + endpoints + UI.
-- ⬜ Reste (durcissement) : rate-limiting, bascule PostgreSQL pour la prod.
+  à exposer en WASM + endpoints + UI. ⚠️ Intégrer alors l'authenticité de la distribution
+  d'Org Key + la révocation réelle (points reportés de l'audit, voir `SECURITY.md`).
+- ⬜ Reste (durcissement) : bascule PostgreSQL pour la prod.
 
 ### Phase 2 — Organisations & partage
 - Orgs, collections, clés asymétriques, invitations, rôles, révocation + rotation.
