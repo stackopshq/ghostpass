@@ -30,6 +30,7 @@ export interface LoginInput {
   name: string;
   username: string;
   password: string;
+  url?: string;
   notes?: string;
 }
 
@@ -37,6 +38,7 @@ export interface DecryptedItem {
   name: string;
   username: string;
   password: string;
+  url: string;
 }
 
 /// Crée un compte localement et renvoie les données à transmettre au serveur + l'objet `Account`.
@@ -58,6 +60,19 @@ export function register(email: string, password: string): {
       publicKey: account.public_key,
     },
   };
+}
+
+/// Construit l'URL du proxy de favicons à partir d'une URL/domaine saisi, ou null si invalide.
+/// Le favicon est servi par NOTRE backend (zero-leak) : aucun tiers ne voit le domaine.
+export function faviconUrl(raw: string): string | null {
+  if (!raw) return null;
+  try {
+    const host = new URL(raw.includes("://") ? raw : `https://${raw}`).hostname.replace(/^www\./, "");
+    if (!host.includes(".")) return null;
+    return `/api/icons?domain=${encodeURIComponent(host)}`;
+  } catch {
+    return null;
+  }
 }
 
 /// Calcule le hash d'authentification à envoyer au serveur lors d'une connexion.
@@ -86,7 +101,12 @@ export function encryptLogin(
     notes: login.notes ?? null,
     data: {
       kind: "Login",
-      data: { username: login.username, password: login.password, uris: [], totp: null },
+      data: {
+        username: login.username,
+        password: login.password,
+        uris: login.url ? [login.url] : [],
+        totp: null,
+      },
     },
   };
   const enc = JSON.parse(account.encrypt_item(JSON.stringify(item)));
@@ -154,6 +174,7 @@ export function decryptItem(
     name: item.name,
     username: item.data.data.username,
     password: item.data.data.password,
+    url: item.data.data.uris?.[0] ?? "",
   };
 }
 
@@ -187,7 +208,12 @@ export function encryptOrgLogin(
     notes: login.notes ?? null,
     data: {
       kind: "Login",
-      data: { username: login.username, password: login.password, uris: [], totp: null },
+      data: {
+        username: login.username,
+        password: login.password,
+        uris: login.url ? [login.url] : [],
+        totp: null,
+      },
     },
   };
   const enc = JSON.parse(org.encrypt_item(JSON.stringify(item)));
@@ -221,5 +247,10 @@ export function decryptOrgItem(
     JSON.stringify({ encrypted_key: encryptedKey, encrypted_data: encryptedData }),
   );
   const item = JSON.parse(json);
-  return { name: item.name, username: item.data.data.username, password: item.data.data.password };
+  return {
+    name: item.name,
+    username: item.data.data.username,
+    password: item.data.data.password,
+    url: item.data.data.uris?.[0] ?? "",
+  };
 }
