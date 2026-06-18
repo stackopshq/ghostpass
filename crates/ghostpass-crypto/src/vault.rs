@@ -14,6 +14,7 @@ use crate::rng::random_array;
 use crate::symmetric;
 use crate::util::to_array_32;
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroizing;
 
 /// Contenu typé d'un item de coffre.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -65,10 +66,10 @@ pub struct EncryptedItem {
 
 /// Chiffre un item : génère une item key fraîche, chiffre le contenu, puis enveloppe l'item key.
 pub fn encrypt_item(wrapping_key: &[u8; 32], item: &VaultItem) -> Result<EncryptedItem> {
-    let item_key = random_array::<32>();
-    let payload = serde_json::to_vec(item).map_err(|_| CryptoError::Encryption)?;
+    let item_key = Zeroizing::new(random_array::<32>());
+    let payload = Zeroizing::new(serde_json::to_vec(item).map_err(|_| CryptoError::Encryption)?);
     let encrypted_data = symmetric::encrypt(&item_key, &payload)?;
-    let encrypted_key = symmetric::encrypt(wrapping_key, &item_key)?;
+    let encrypted_key = symmetric::encrypt(wrapping_key, item_key.as_slice())?;
     Ok(EncryptedItem {
         encrypted_key,
         encrypted_data,
@@ -77,8 +78,8 @@ pub fn encrypt_item(wrapping_key: &[u8; 32], item: &VaultItem) -> Result<Encrypt
 
 /// Déchiffre un item : ouvre l'item key avec la clé d'enveloppe, puis le contenu.
 pub fn decrypt_item(wrapping_key: &[u8; 32], enc: &EncryptedItem) -> Result<VaultItem> {
-    let item_key = to_array_32(symmetric::decrypt(wrapping_key, &enc.encrypted_key)?)?;
-    let payload = symmetric::decrypt(&item_key, &enc.encrypted_data)?;
+    let item_key = Zeroizing::new(to_array_32(symmetric::decrypt(wrapping_key, &enc.encrypted_key)?)?);
+    let payload = Zeroizing::new(symmetric::decrypt(&item_key, &enc.encrypted_data)?);
     serde_json::from_slice(&payload).map_err(|_| CryptoError::Decryption)
 }
 
@@ -89,8 +90,9 @@ pub fn rewrap_item_key(
     new_wrapping_key: &[u8; 32],
     enc: &EncryptedItem,
 ) -> Result<EncryptedItem> {
-    let item_key = to_array_32(symmetric::decrypt(old_wrapping_key, &enc.encrypted_key)?)?;
-    let encrypted_key = symmetric::encrypt(new_wrapping_key, &item_key)?;
+    let item_key =
+        Zeroizing::new(to_array_32(symmetric::decrypt(old_wrapping_key, &enc.encrypted_key)?)?);
+    let encrypted_key = symmetric::encrypt(new_wrapping_key, item_key.as_slice())?;
     Ok(EncryptedItem {
         encrypted_key,
         encrypted_data: enc.encrypted_data.clone(),

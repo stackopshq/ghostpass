@@ -94,6 +94,7 @@ impl Account {
         encrypted_private_key: &str,
     ) -> Result<Account, JsError> {
         let params: KdfParams = serde_json::from_str(kdf_params_json).map_err(js_err)?;
+        params.ensure_strong().map_err(js_err)?;
         let euk = encrypted_user_key.parse().map_err(js_err)?;
         let epk = encrypted_private_key.parse().map_err(js_err)?;
         let account_keys =
@@ -110,6 +111,7 @@ impl Account {
         kdf_params_json: &str,
     ) -> Result<String, JsError> {
         let params: KdfParams = serde_json::from_str(kdf_params_json).map_err(js_err)?;
+        params.ensure_strong().map_err(js_err)?;
         keys::master_password_hash(password.as_bytes(), email, params).map_err(js_err)
     }
 
@@ -131,6 +133,7 @@ impl Account {
         encrypted_private_key: &str,
     ) -> Result<RecoveryResult, JsError> {
         let params: KdfParams = serde_json::from_str(kdf_params_json).map_err(js_err)?;
+        params.ensure_strong().map_err(js_err)?;
         let euk_rec: EncString = encrypted_user_key_recovery.parse().map_err(js_err)?;
         let epk: EncString = encrypted_private_key.parse().map_err(js_err)?;
         let (account_keys, reset) =

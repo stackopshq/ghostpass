@@ -46,6 +46,23 @@ impl Default for KdfParams {
     }
 }
 
+/// Planchers de sécurité des paramètres KDF.
+pub const MIN_MEM_COST_KIB: u32 = 64 * 1024;
+pub const MIN_TIME_COST: u32 = 3;
+
+impl KdfParams {
+    /// Rejette des paramètres affaiblis. À appeler côté client sur tout `KdfParams` reçu du
+    /// serveur AVANT dérivation, pour empêcher une attaque de downgrade de KDF : un serveur
+    /// malveillant ne doit pas pouvoir imposer un coût trivial qui rendrait le hash d'auth
+    /// bruteforçable hors-ligne.
+    pub fn ensure_strong(&self) -> Result<()> {
+        if self.mem_cost_kib < MIN_MEM_COST_KIB || self.time_cost < MIN_TIME_COST || self.parallelism < 1 {
+            return Err(CryptoError::WeakKdfParams);
+        }
+        Ok(())
+    }
+}
+
 /// Dérive un salt déterministe de 16 octets à partir de l'email normalisé.
 /// Déterministe ⇒ pas besoin de stocker un salt côté serveur avant la connexion.
 fn email_salt(email: &str) -> [u8; 16] {

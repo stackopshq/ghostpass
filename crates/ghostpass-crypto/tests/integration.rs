@@ -70,6 +70,15 @@ fn master_key_is_deterministic() {
 }
 
 #[test]
+fn kdf_params_rejects_downgrade() {
+    // Les paramètres par défaut sont acceptés ; des paramètres affaiblis (potentiel downgrade
+    // imposé par un serveur malveillant) sont refusés côté client.
+    assert!(KdfParams::default().ensure_strong().is_ok());
+    let weak = KdfParams { mem_cost_kib: 8 * 1024, time_cost: 1, parallelism: 1 };
+    assert!(weak.ensure_strong().is_err());
+}
+
+#[test]
 fn enc_and_auth_keys_differ() {
     let mk = kdf::derive_master_key(b"pw", "a@b.ch", fast_params()).unwrap();
     let enc = kdf::derive_encryption_key(&mk);

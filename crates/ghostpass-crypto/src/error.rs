@@ -15,6 +15,8 @@ pub enum CryptoError {
     InvalidEncString,
     #[error("longueur invalide")]
     InvalidLength,
+    #[error("paramètres KDF trop faibles (downgrade refusé)")]
+    WeakKdfParams,
 }
 
 pub type Result<T> = core::result::Result<T, CryptoError>;
