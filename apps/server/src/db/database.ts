@@ -90,8 +90,20 @@ CREATE INDEX IF NOT EXISTS idx_vault_items_user ON vault_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);
+-- Permissions fines : accès d'un utilisateur à une collection donnée.
+CREATE TABLE IF NOT EXISTS collection_access (
+  id             TEXT PRIMARY KEY,
+  collection_id  TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  permission     TEXT NOT NULL,   -- 'read' | 'write' | 'manage'
+  created_at     INTEGER NOT NULL,
+  UNIQUE (collection_id, user_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_collections_org ON collections(org_id);
 CREATE INDEX IF NOT EXISTS idx_org_items_collection ON org_items(collection_id);
+CREATE INDEX IF NOT EXISTS idx_collection_access_user ON collection_access(user_id);
+CREATE INDEX IF NOT EXISTS idx_collection_access_collection ON collection_access(collection_id);
 `;
 
 /// Ouvre la base et applique le schéma. `path` vaut ":memory:" pour les tests.

@@ -205,4 +205,16 @@ export const api = {
       token,
     });
   },
+  grantCollectionAccess(
+    token: string,
+    orgId: string,
+    collectionId: string,
+    body: { userId: string; permission: string },
+  ) {
+    return http<{ ok: boolean }>(`/api/orgs/${orgId}/collections/${collectionId}/access`, {
+      method: "POST",
+      body,
+      token,
+    });
+  },
 };

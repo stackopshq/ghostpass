@@ -44,6 +44,8 @@
   let itemName = $state("");
   let itemUsername = $state("");
   let itemPassword = $state("");
+  let grantUserId = $state("");
+  let grantPermission = $state("read");
 
   function fail(err: unknown) {
     onError(err instanceof Error ? err.message : String(err));
@@ -189,6 +191,23 @@
     }
   }
 
+  async function grantAccess(e: SubmitEvent) {
+    e.preventDefault();
+    if (!current || !selectedCollection || !grantUserId) return;
+    busy = true;
+    try {
+      await api.grantCollectionAccess(token, current.orgId, selectedCollection.id, {
+        userId: grantUserId,
+        permission: grantPermission,
+      });
+      grantUserId = "";
+    } catch (err) {
+      fail(err);
+    } finally {
+      busy = false;
+    }
+  }
+
   async function addItem(e: SubmitEvent) {
     e.preventDefault();
     if (!current || !currentOrg || !selectedCollection) return;
@@ -303,6 +322,30 @@
         <label>Mot de passe<input bind:value={itemPassword} placeholder="••••••" /></label>
         <button type="submit" disabled={busy}>Partager</button>
       </form>
+
+      {#if current.role === "admin"}
+        <h2>Accès à la collection</h2>
+        <form onsubmit={grantAccess}>
+          <label>
+            Membre
+            <select bind:value={grantUserId}>
+              <option value="" disabled>Choisir un membre…</option>
+              {#each members as m}
+                <option value={m.userId}>{m.email}</option>
+              {/each}
+            </select>
+          </label>
+          <label>
+            Permission
+            <select bind:value={grantPermission}>
+              <option value="read">Lecture</option>
+              <option value="write">Écriture</option>
+              <option value="manage">Gestion</option>
+            </select>
+          </label>
+          <button type="submit" disabled={busy}>Accorder l'accès</button>
+        </form>
+      {/if}
     {/if}
   {/if}
 </section>

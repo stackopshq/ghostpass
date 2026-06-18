@@ -1,5 +1,7 @@
 import type { DB } from "./database.js";
 import type {
+  CollectionAccessRow,
+  CollectionPermission,
   CollectionRow,
   MemberStatus,
   OrgItemRow,
@@ -302,5 +304,36 @@ export const orgItems = {
       .prepare(`DELETE FROM org_items WHERE id = ? AND collection_id = ?`)
       .run(args.id, args.collectionId);
     return result.changes > 0;
+  },
+};
+
+export const collectionAccess = {
+  /// Accorde (ou met à jour) la permission d'un utilisateur sur une collection.
+  grant(
+    db: DB,
+    a: { id: string; collectionId: string; userId: string; permission: CollectionPermission },
+  ): void {
+    db.prepare(
+      `INSERT INTO collection_access (id, collection_id, user_id, permission, created_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (collection_id, user_id) DO UPDATE SET permission = excluded.permission`,
+    ).run(a.id, a.collectionId, a.userId, a.permission, Date.now());
+  },
+
+  findFor(db: DB, collectionId: string, userId: string): CollectionAccessRow | undefined {
+    return db
+      .prepare(`SELECT * FROM collection_access WHERE collection_id = ? AND user_id = ?`)
+      .get(collectionId, userId) as CollectionAccessRow | undefined;
+  },
+
+  /// Collections d'une org auxquelles l'utilisateur a un accès explicite.
+  listCollectionsForUser(db: DB, orgId: string, userId: string): CollectionRow[] {
+    return db
+      .prepare(
+        `SELECT c.* FROM collections c
+         JOIN collection_access a ON a.collection_id = c.id
+         WHERE c.org_id = ? AND a.user_id = ? ORDER BY c.name`,
+      )
+      .all(orgId, userId) as CollectionRow[];
   },
 };

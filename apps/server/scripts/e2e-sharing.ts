@@ -81,15 +81,22 @@ await http(`/api/orgs/${orgId}/collections/${colId}/items`, {
 console.log("✓ secret partagé chiffré et stocké");
 
 // 3. L'admin invite le membre : récupère sa clé publique, scelle l'Org Key pour lui.
-const memberPub = (await http(`/api/users/lookup?email=member@stackops.ch`, { token: adminToken })).json
-  .publicKey as string;
+const lookup = (await http(`/api/users/lookup?email=member@stackops.ch`, { token: adminToken })).json;
+const memberPub = lookup.publicKey as string;
+const memberId = lookup.userId as string;
 const sealedForMember = admin.account.seal_org_key_for_member(org, memberPub);
 await http(`/api/orgs/${orgId}/members`, {
   method: "POST",
   token: adminToken,
   body: { email: "member@stackops.ch", role: "member", encryptedOrgKey: sealedForMember },
 });
-console.log("✓ membre invité avec Org Key scellée (authentifiée)");
+// Permissions fines : l'admin accorde au membre l'accès en lecture à la collection.
+await http(`/api/orgs/${orgId}/collections/${colId}/access`, {
+  method: "POST",
+  token: adminToken,
+  body: { userId: memberId, permission: "read" },
+});
+console.log("✓ membre invité + accès en lecture accordé à la collection");
 
 // 4. Le membre accepte, récupère son adhésion et ouvre l'Org Key (vérifie l'émetteur).
 await http(`/api/orgs/${orgId}/accept`, { method: "POST", token: memberToken });

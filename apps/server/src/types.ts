@@ -71,3 +71,13 @@ export interface OrgItemRow {
   created_at: number;
   updated_at: number;
 }
+
+export type CollectionPermission = "read" | "write" | "manage";
+
+export interface CollectionAccessRow {
+  id: string;
+  collection_id: string;
+  user_id: string;
+  permission: CollectionPermission;
+  created_at: number;
+}

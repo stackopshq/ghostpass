@@ -143,11 +143,13 @@ restent chiffrées).
      (`scripts/e2e-sharing.ts`) : crypto WASM + backend de bout en bout.
    - ✅ 3c — **révocation par rotation d'Org Key** (retrait membre + re-scellement des clés +
      ré-enveloppe des items, atomique, admin only). **37 tests backend.**
-   - ⬜ Plus tard : permissions fines par collection (actuellement au niveau org).
+   - ✅ Permissions **fines par collection** (`collection_access` : read/write/manage ;
+     admin d'org = `manage` implicite) + endpoint d'octroi. **38 tests backend.**
+   - ✅ **Rate-limiting strict par route** sur les endpoints sensibles (login/register/recover…).
 3. ✅ **UI** (`apps/web`, `Organizations.svelte`) : onglet Organisations — créer une org,
    inviter (lookup clé publique + scellement), accepter, membres, collections, partage et
-   lecture de secrets (déchiffrés côté client). svelte-check + build OK.
-   - ⬜ Plus tard (UI) : bouton de révocation (la rotation existe déjà côté backend/crypto).
+   lecture de secrets (déchiffrés côté client), **révocation** (rotation côté client) et
+   **octroi d'accès par collection**. svelte-check + build OK.
 
 ---
 

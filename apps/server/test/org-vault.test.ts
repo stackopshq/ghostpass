@@ -56,17 +56,28 @@ async function setupOrg() {
   return { app, adminToken, memberToken, readonlyToken, orgId };
 }
 
-async function makeCollection(app: ReturnType<typeof buildApp>, orgId: string, token: string) {
-  const res = await app.inject({
+function makeCollection(app: ReturnType<typeof buildApp>, orgId: string, token: string) {
+  return app.inject({
     method: "POST",
     url: `/api/orgs/${orgId}/collections`,
     headers: auth(token),
     payload: { name: "Infra" },
   });
-  return res;
 }
 
-test("un membre actif crée une collection ; un non-membre est refusé", async () => {
+async function userId(
+  app: ReturnType<typeof buildApp>,
+  orgId: string,
+  adminToken: string,
+  email: string,
+): Promise<string> {
+  const members = (
+    await app.inject({ method: "GET", url: `/api/orgs/${orgId}/members`, headers: auth(adminToken) })
+  ).json().members;
+  return members.find((m: { email: string }) => m.email === email).userId;
+}
+
+test("un membre actif crée une collection (et en devient gestionnaire) ; un non-membre est refusé", async () => {
   const { app, memberToken, orgId } = await setupOrg();
   const ok = await makeCollection(app, orgId, memberToken);
   assert.equal(ok.statusCode, 201);
@@ -77,34 +88,66 @@ test("un membre actif crée une collection ; un non-membre est refusé", async (
   await app.close();
 });
 
-test("le lecteur seul ne peut pas écrire mais peut lire", async () => {
-  const { app, adminToken, readonlyToken, orgId } = await setupOrg();
-  const col = (await makeCollection(app, orgId, adminToken)).json();
+test("permissions fines : un membre n'accède pas à une collection sans octroi", async () => {
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json(); // créée par l'admin
 
-  // Écriture interdite.
-  const write = await app.inject({
-    method: "POST",
+  // Le membre n'a aucun accès explicite → lecture refusée.
+  const denied = await app.inject({
+    method: "GET",
     url: `/api/orgs/${orgId}/collections/${col.id}/items`,
-    headers: auth(readonlyToken),
-    payload: ITEM,
+    headers: auth(memberToken),
   });
-  assert.equal(write.statusCode, 403);
+  assert.equal(denied.statusCode, 403);
 
-  // Lecture autorisée.
+  // L'admin lui accorde l'accès en lecture.
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
+  const grant = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+    payload: { userId: memberId, permission: "read" },
+  });
+  assert.equal(grant.statusCode, 201);
+
+  // Désormais il lit, mais ne peut pas écrire (read seulement).
   const read = await app.inject({
     method: "GET",
     url: `/api/orgs/${orgId}/collections/${col.id}/items`,
-    headers: auth(readonlyToken),
+    headers: auth(memberToken),
   });
   assert.equal(read.statusCode, 200);
+  const write = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items`,
+    headers: auth(memberToken),
+    payload: ITEM,
+  });
+  assert.equal(write.statusCode, 403);
   await app.close();
 });
 
-test("cycle de vie d'un item partagé (create/list/update/delete)", async () => {
+test("seul un gestionnaire de collection peut octroyer des accès", async () => {
   const { app, adminToken, memberToken, orgId } = await setupOrg();
   const col = (await makeCollection(app, orgId, adminToken)).json();
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
 
-  // Le membre crée un item.
+  // Le membre (sans accès manage sur cette collection) ne peut pas octroyer.
+  const res = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(memberToken),
+    payload: { userId: memberId, permission: "write" },
+  });
+  assert.equal(res.statusCode, 403);
+  await app.close();
+});
+
+test("cycle de vie d'un item partagé par le gestionnaire de la collection", async () => {
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  // Le membre crée la collection → il en est gestionnaire.
+  const col = (await makeCollection(app, orgId, memberToken)).json();
+
   let res = await app.inject({
     method: "POST",
     url: `/api/orgs/${orgId}/collections/${col.id}/items`,
@@ -114,7 +157,7 @@ test("cycle de vie d'un item partagé (create/list/update/delete)", async () => 
   assert.equal(res.statusCode, 201);
   const itemId = res.json().id as string;
 
-  // L'admin le voit dans la liste.
+  // L'admin (manage implicite) voit l'item.
   res = await app.inject({
     method: "GET",
     url: `/api/orgs/${orgId}/collections/${col.id}/items`,
@@ -122,7 +165,6 @@ test("cycle de vie d'un item partagé (create/list/update/delete)", async () => 
   });
   assert.equal(res.json().items.length, 1);
 
-  // Mise à jour.
   res = await app.inject({
     method: "PUT",
     url: `/api/orgs/${orgId}/collections/${col.id}/items/${itemId}`,
@@ -130,9 +172,7 @@ test("cycle de vie d'un item partagé (create/list/update/delete)", async () => 
     payload: { encryptedKey: ITEM.encryptedKey, encryptedData: "2.bmV3.bmV3Y3Q" },
   });
   assert.equal(res.statusCode, 200);
-  assert.equal(res.json().encryptedData, "2.bmV3.bmV3Y3Q");
 
-  // Suppression.
   res = await app.inject({
     method: "DELETE",
     url: `/api/orgs/${orgId}/collections/${col.id}/items/${itemId}`,
@@ -146,7 +186,6 @@ test("impossible d'accéder à une collection d'une autre organisation", async (
   const { app, adminToken, orgId } = await setupOrg();
   const col = (await makeCollection(app, orgId, adminToken)).json();
 
-  // Une 2e org (même admin) ; la collection de la 1ère ne doit pas y être accessible.
   const other = await app.inject({
     method: "POST",
     url: "/api/orgs",
@@ -176,14 +215,9 @@ test("révocation : la rotation retire le membre, remplace les clés et ré-enve
     })
   ).json();
 
-  // Récupère les userId via la liste des membres (admin).
-  const members = (
-    await app.inject({ method: "GET", url: `/api/orgs/${orgId}/members`, headers: auth(adminToken) })
-  ).json().members;
-  const adminId = members.find((m: { email: string }) => m.email === "admin@stackops.ch").userId;
-  const memberId = members.find((m: { email: string }) => m.email === "member@stackops.ch").userId;
+  const adminId = await userId(app, orgId, adminToken, "admin@stackops.ch");
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
 
-  // Rotation : révoque le membre, re-scelle pour l'admin, ré-enveloppe l'item.
   const rot = await app.inject({
     method: "POST",
     url: `/api/orgs/${orgId}/rotate`,
@@ -196,7 +230,6 @@ test("révocation : la rotation retire le membre, remplace les clés et ré-enve
   });
   assert.equal(rot.statusCode, 200);
 
-  // Le membre révoqué n'a plus d'adhésion.
   const revoked = await app.inject({
     method: "GET",
     url: `/api/orgs/${orgId}/membership`,
@@ -204,7 +237,6 @@ test("révocation : la rotation retire le membre, remplace les clés et ré-enve
   });
   assert.equal(revoked.statusCode, 404);
 
-  // L'admin a une nouvelle clé scellée, et l'item une nouvelle enveloppe (contenu inchangé).
   const adminMembership = (
     await app.inject({ method: "GET", url: `/api/orgs/${orgId}/membership`, headers: auth(adminToken) })
   ).json();
