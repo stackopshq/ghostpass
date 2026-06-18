@@ -69,6 +69,18 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     },
   );
 
+  // Lister TOUS les items partagés de l'org (membre actif) — utile pour la rotation d'Org Key.
+  app.get<{ Params: { id: string } }>(
+    "/api/orgs/:id/items",
+    { preHandler: authenticate },
+    async (req, reply) => {
+      if (!activeMember(db, req.params.id, req.currentUser!.id)) {
+        return reply.code(403).send({ error: "non membre de l'organisation" });
+      }
+      return { items: orgItems.listByOrg(db, req.params.id).map(itemDto) };
+    },
+  );
+
   // Lister les items d'une collection (lecture : tout membre actif).
   app.get<{ Params: { id: string; cid: string } }>(
     "/api/orgs/:id/collections/:cid/items",

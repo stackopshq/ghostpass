@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { DB } from "../db/database.js";
-import { organizations, orgMembers, users } from "../db/repositories.js";
+import { organizations, orgItems, orgMembers, users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { newId, normalizeEmail } from "../services/security.js";
 
@@ -14,6 +14,12 @@ const addMemberSchema = z.object({
   email: z.string().email(),
   role: z.enum(["admin", "member", "readonly"]),
   encryptedOrgKey: z.string().min(1), // Org Key scellée par l'admin pour ce membre
+});
+
+const rotateSchema = z.object({
+  revokeUserId: z.string().optional(),
+  members: z.array(z.object({ userId: z.string(), encryptedOrgKey: z.string().min(1) })),
+  items: z.array(z.object({ id: z.string(), encryptedKey: z.string().min(1) })),
 });
 
 export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
@@ -133,9 +139,56 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
       }
       const members = orgMembers.listByOrg(db, req.params.id).map((m) => {
         const u = users.findById(db, m.user_id);
-        return { userId: m.user_id, email: u?.email ?? null, role: m.role, status: m.status };
+        return {
+          userId: m.user_id,
+          email: u?.email ?? null,
+          publicKey: u?.public_key ?? null,
+          role: m.role,
+          status: m.status,
+        };
       });
       return { members };
+    },
+  );
+
+  // Rotation d'Org Key (révocation effective d'un membre). L'admin a régénéré la clé côté
+  // client, l'a re-scellée pour les membres restants et a ré-enveloppé les items ; le serveur
+  // applique le tout atomiquement.
+  app.post<{ Params: { id: string } }>(
+    "/api/orgs/:id/rotate",
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const parsed = rotateSchema.safeParse(req.body);
+      if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
+      const me = orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
+      if (!me || me.status !== "active" || me.role !== "admin") {
+        return reply.code(403).send({ error: "réservé à l'administrateur de l'organisation" });
+      }
+      const { revokeUserId, members, items } = parsed.data;
+      if (revokeUserId === req.currentUser!.id) {
+        return reply.code(400).send({ error: "impossible de se révoquer soi-même" });
+      }
+      const adminId = req.currentUser!.id;
+      const validItemIds = new Set(orgItems.listByOrg(db, req.params.id).map((i) => i.id));
+
+      db.transaction(() => {
+        if (revokeUserId) orgMembers.remove(db, { orgId: req.params.id, userId: revokeUserId });
+        for (const m of members) {
+          orgMembers.setKey(db, {
+            orgId: req.params.id,
+            userId: m.userId,
+            encryptedOrgKey: m.encryptedOrgKey,
+            sealedByUserId: adminId,
+          });
+        }
+        for (const it of items) {
+          if (validItemIds.has(it.id)) {
+            orgItems.setEncryptedKey(db, { id: it.id, encryptedKey: it.encryptedKey });
+          }
+        }
+      })();
+
+      return { ok: true };
     },
   );
 }

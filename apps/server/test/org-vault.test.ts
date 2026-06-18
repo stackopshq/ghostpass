@@ -163,3 +163,68 @@ test("impossible d'accéder à une collection d'une autre organisation", async (
   assert.equal(res.statusCode, 404);
   await app.close();
 });
+
+test("révocation : la rotation retire le membre, remplace les clés et ré-enveloppe les items", async () => {
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json();
+  const item = (
+    await app.inject({
+      method: "POST",
+      url: `/api/orgs/${orgId}/collections/${col.id}/items`,
+      headers: auth(adminToken),
+      payload: ITEM,
+    })
+  ).json();
+
+  // Récupère les userId via la liste des membres (admin).
+  const members = (
+    await app.inject({ method: "GET", url: `/api/orgs/${orgId}/members`, headers: auth(adminToken) })
+  ).json().members;
+  const adminId = members.find((m: { email: string }) => m.email === "admin@stackops.ch").userId;
+  const memberId = members.find((m: { email: string }) => m.email === "member@stackops.ch").userId;
+
+  // Rotation : révoque le membre, re-scelle pour l'admin, ré-enveloppe l'item.
+  const rot = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/rotate`,
+    headers: auth(adminToken),
+    payload: {
+      revokeUserId: memberId,
+      members: [{ userId: adminId, encryptedOrgKey: "2.bmV3YWRtaW4.eA" }],
+      items: [{ id: item.id, encryptedKey: "2.bmV3aWs.eA" }],
+    },
+  });
+  assert.equal(rot.statusCode, 200);
+
+  // Le membre révoqué n'a plus d'adhésion.
+  const revoked = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/membership`,
+    headers: auth(memberToken),
+  });
+  assert.equal(revoked.statusCode, 404);
+
+  // L'admin a une nouvelle clé scellée, et l'item une nouvelle enveloppe (contenu inchangé).
+  const adminMembership = (
+    await app.inject({ method: "GET", url: `/api/orgs/${orgId}/membership`, headers: auth(adminToken) })
+  ).json();
+  assert.equal(adminMembership.encryptedOrgKey, "2.bmV3YWRtaW4.eA");
+  const itemsAfter = (
+    await app.inject({ method: "GET", url: `/api/orgs/${orgId}/items`, headers: auth(adminToken) })
+  ).json().items;
+  assert.equal(itemsAfter[0].encryptedKey, "2.bmV3aWs.eA");
+  assert.equal(itemsAfter[0].encryptedData, ITEM.encryptedData);
+  await app.close();
+});
+
+test("un non-admin ne peut pas déclencher de rotation", async () => {
+  const { app, memberToken, orgId } = await setupOrg();
+  const res = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/rotate`,
+    headers: auth(memberToken),
+    payload: { members: [], items: [] },
+  });
+  assert.equal(res.statusCode, 403);
+  await app.close();
+});

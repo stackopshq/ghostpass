@@ -208,6 +208,24 @@ export const orgMembers = {
   setActive(db: DB, id: string): void {
     db.prepare(`UPDATE org_members SET status = 'active' WHERE id = ?`).run(id);
   },
+
+  /// Met à jour l'Org Key scellée d'un membre (lors d'une rotation).
+  setKey(
+    db: DB,
+    args: { orgId: string; userId: string; encryptedOrgKey: string; sealedByUserId: string },
+  ): void {
+    db.prepare(
+      `UPDATE org_members SET encrypted_org_key = ?, sealed_by_user_id = ?
+       WHERE org_id = ? AND user_id = ?`,
+    ).run(args.encryptedOrgKey, args.sealedByUserId, args.orgId, args.userId);
+  },
+
+  remove(db: DB, args: { orgId: string; userId: string }): boolean {
+    const result = db
+      .prepare(`DELETE FROM org_members WHERE org_id = ? AND user_id = ?`)
+      .run(args.orgId, args.userId);
+    return result.changes > 0;
+  },
 };
 
 export const collections = {
@@ -245,6 +263,26 @@ export const orgItems = {
     return db
       .prepare(`SELECT * FROM org_items WHERE collection_id = ? ORDER BY updated_at DESC`)
       .all(collectionId) as OrgItemRow[];
+  },
+
+  /// Tous les items partagés d'une org (toutes collections) — utile pour la rotation.
+  listByOrg(db: DB, orgId: string): OrgItemRow[] {
+    return db
+      .prepare(
+        `SELECT i.* FROM org_items i
+         JOIN collections c ON c.id = i.collection_id
+         WHERE c.org_id = ?`,
+      )
+      .all(orgId) as OrgItemRow[];
+  },
+
+  /// Ré-enveloppe l'item key (rotation) ; le contenu chiffré reste inchangé.
+  setEncryptedKey(db: DB, args: { id: string; encryptedKey: string }): void {
+    db.prepare(`UPDATE org_items SET encrypted_key = ?, updated_at = ? WHERE id = ?`).run(
+      args.encryptedKey,
+      Date.now(),
+      args.id,
+    );
   },
   update(
     db: DB,
