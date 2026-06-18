@@ -6,6 +6,7 @@ import type { DB } from "./db/database.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerMfaRoutes } from "./routes/mfa.js";
 import { registerOrgRoutes } from "./routes/orgs.js";
+import { registerOrgVaultRoutes } from "./routes/orgVault.js";
 import { registerRecoveryRoutes } from "./routes/recovery.js";
 import { registerVaultRoutes } from "./routes/vault.js";
 
@@ -41,6 +42,7 @@ export function buildApp(db: DB): FastifyInstance {
   registerRecoveryRoutes(app, db);
   registerVaultRoutes(app, db);
   registerOrgRoutes(app, db);
+  registerOrgVaultRoutes(app, db);
 
   return app;
 }

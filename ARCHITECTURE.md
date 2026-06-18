@@ -137,8 +137,10 @@ restent chiffrées).
 2. 🚧 **Backend** :
    - ✅ 3a — tables `organizations`/`org_members`, création d'org, lookup de clé publique,
      ajout de membre (Org Key scellée), invitation/acceptation, adhésion (clé + émetteur),
-     liste membres, contrôle de rôle admin. **31 tests backend.**
-   - ⬜ 3b — items partagés (CRUD sous org/collection) + collections.
+     liste membres, contrôle de rôle admin.
+   - ✅ 3b — **collections** + **items partagés** (CRUD) avec permissions par rôle
+     (lecture pour tous, écriture admin/member, cloisonnement cross-org). **35 tests backend** +
+     **e2e partage complet** (`scripts/e2e-sharing.ts`) : crypto WASM + backend de bout en bout.
    - ⬜ 3c — rôles fins par collection + révocation (rotation).
 3. ⬜ **UI** : créer une org, inviter/accepter, gérer collections & membres, partager un secret.
 

@@ -69,10 +69,29 @@ CREATE TABLE IF NOT EXISTS org_members (
   UNIQUE (org_id, user_id)
 );
 
+-- Collections (regroupent des secrets partagés au sein d'une org) et items partagés.
+CREATE TABLE IF NOT EXISTS collections (
+  id          TEXT PRIMARY KEY,
+  org_id      TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS org_items (
+  id              TEXT PRIMARY KEY,
+  collection_id   TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  encrypted_key   TEXT NOT NULL,   -- item key enveloppée par l'Org Key
+  encrypted_data  TEXT NOT NULL,   -- contenu chiffré
+  created_at      INTEGER NOT NULL,
+  updated_at      INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_vault_items_user ON vault_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);
+CREATE INDEX IF NOT EXISTS idx_collections_org ON collections(org_id);
+CREATE INDEX IF NOT EXISTS idx_org_items_collection ON org_items(collection_id);
 `;
 
 /// Ouvre la base et applique le schéma. `path` vaut ":memory:" pour les tests.

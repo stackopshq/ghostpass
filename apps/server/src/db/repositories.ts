@@ -1,6 +1,8 @@
 import type { DB } from "./database.js";
 import type {
+  CollectionRow,
   MemberStatus,
+  OrgItemRow,
   OrgMemberRow,
   OrgRole,
   OrgRow,
@@ -205,5 +207,62 @@ export const orgMembers = {
 
   setActive(db: DB, id: string): void {
     db.prepare(`UPDATE org_members SET status = 'active' WHERE id = ?`).run(id);
+  },
+};
+
+export const collections = {
+  create(db: DB, c: { id: string; orgId: string; name: string }): void {
+    db.prepare(`INSERT INTO collections (id, org_id, name, created_at) VALUES (?, ?, ?, ?)`).run(
+      c.id,
+      c.orgId,
+      c.name,
+      Date.now(),
+    );
+  },
+  listByOrg(db: DB, orgId: string): CollectionRow[] {
+    return db
+      .prepare(`SELECT * FROM collections WHERE org_id = ? ORDER BY name`)
+      .all(orgId) as CollectionRow[];
+  },
+  findById(db: DB, id: string): CollectionRow | undefined {
+    return db.prepare(`SELECT * FROM collections WHERE id = ?`).get(id) as CollectionRow | undefined;
+  },
+};
+
+export const orgItems = {
+  create(
+    db: DB,
+    item: { id: string; collectionId: string; encryptedKey: string; encryptedData: string },
+  ): OrgItemRow {
+    const now = Date.now();
+    db.prepare(
+      `INSERT INTO org_items (id, collection_id, encrypted_key, encrypted_data, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(item.id, item.collectionId, item.encryptedKey, item.encryptedData, now, now);
+    return db.prepare(`SELECT * FROM org_items WHERE id = ?`).get(item.id) as OrgItemRow;
+  },
+  listByCollection(db: DB, collectionId: string): OrgItemRow[] {
+    return db
+      .prepare(`SELECT * FROM org_items WHERE collection_id = ? ORDER BY updated_at DESC`)
+      .all(collectionId) as OrgItemRow[];
+  },
+  update(
+    db: DB,
+    args: { id: string; collectionId: string; encryptedKey: string; encryptedData: string },
+  ): OrgItemRow | undefined {
+    const result = db
+      .prepare(
+        `UPDATE org_items SET encrypted_key = ?, encrypted_data = ?, updated_at = ?
+         WHERE id = ? AND collection_id = ?`,
+      )
+      .run(args.encryptedKey, args.encryptedData, Date.now(), args.id, args.collectionId);
+    if (result.changes === 0) return undefined;
+    return db.prepare(`SELECT * FROM org_items WHERE id = ?`).get(args.id) as OrgItemRow;
+  },
+  remove(db: DB, args: { id: string; collectionId: string }): boolean {
+    const result = db
+      .prepare(`DELETE FROM org_items WHERE id = ? AND collection_id = ?`)
+      .run(args.id, args.collectionId);
+    return result.changes > 0;
   },
 };

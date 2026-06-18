@@ -55,3 +55,19 @@ export interface OrgMemberRow {
   sealed_by_user_id: string | null;
   created_at: number;
 }
+
+export interface CollectionRow {
+  id: string;
+  org_id: string;
+  name: string;
+  created_at: number;
+}
+
+export interface OrgItemRow {
+  id: string;
+  collection_id: string;
+  encrypted_key: string;
+  encrypted_data: string;
+  created_at: number;
+  updated_at: number;
+}
