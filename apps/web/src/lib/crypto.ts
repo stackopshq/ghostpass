@@ -31,6 +31,7 @@ export interface LoginInput {
   username: string;
   password: string;
   url?: string;
+  folder?: string;
   notes?: string;
 }
 
@@ -39,6 +40,7 @@ export interface DecryptedItem {
   username: string;
   password: string;
   url: string;
+  folder: string;
 }
 
 /// Crée un compte localement et renvoie les données à transmettre au serveur + l'objet `Account`.
@@ -99,6 +101,7 @@ export function encryptLogin(
   const item = {
     name: login.name,
     notes: login.notes ?? null,
+    folder: login.folder || null,
     data: {
       kind: "Login",
       data: {
@@ -175,6 +178,7 @@ export function decryptItem(
     username: item.data.data.username,
     password: item.data.data.password,
     url: item.data.data.uris?.[0] ?? "",
+    folder: item.folder ?? "",
   };
 }
 
@@ -206,6 +210,7 @@ export function encryptOrgLogin(
   const item = {
     name: login.name,
     notes: login.notes ?? null,
+    folder: login.folder || null,
     data: {
       kind: "Login",
       data: {
@@ -252,5 +257,6 @@ export function decryptOrgItem(
     username: item.data.data.username,
     password: item.data.data.password,
     url: item.data.data.uris?.[0] ?? "",
+    folder: item.folder ?? "",
   };
 }
