@@ -144,7 +144,10 @@ restent chiffrées).
    - ✅ 3c — **révocation par rotation d'Org Key** (retrait membre + re-scellement des clés +
      ré-enveloppe des items, atomique, admin only). **37 tests backend.**
    - ⬜ Plus tard : permissions fines par collection (actuellement au niveau org).
-3. ⬜ **UI** : créer une org, inviter/accepter, gérer collections & membres, partager un secret.
+3. ✅ **UI** (`apps/web`, `Organizations.svelte`) : onglet Organisations — créer une org,
+   inviter (lookup clé publique + scellement), accepter, membres, collections, partage et
+   lecture de secrets (déchiffrés côté client). svelte-check + build OK.
+   - ⬜ Plus tard (UI) : bouton de révocation (la rotation existe déjà côté backend/crypto).
 
 ---
 

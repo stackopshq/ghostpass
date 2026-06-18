@@ -1,6 +1,6 @@
 // Couche crypto côté client : encapsule le module WASM.
 // Les clés en clair restent DANS le WASM ; ce module n'expose que des données chiffrées.
-import init, { Account } from "ghostpass-crypto-wasm";
+import init, { Account, type Org } from "ghostpass-crypto-wasm";
 import wasmUrl from "ghostpass-crypto-wasm/ghostpass_crypto_wasm_bg.wasm?url";
 
 let ready: Promise<unknown> | null = null;
@@ -155,4 +155,54 @@ export function decryptItem(
     username: item.data.data.username,
     password: item.data.data.password,
   };
+}
+
+// ─── Partage / organisations ───
+export type OrgHandle = Org;
+
+/// Crée une organisation : renvoie le contexte `Org` + l'Org Key scellée pour soi (au serveur).
+export function createOrg(account: Account): { org: Org; sealedForSelf: string } {
+  const creation = account.create_org();
+  const sealedForSelf = creation.sealed_for_self;
+  return { org: creation.org(), sealedForSelf };
+}
+
+/// Ouvre l'Org Key reçue (vérifie qu'elle provient bien de l'admin).
+export function openOrg(account: Account, adminPublicKey: string, sealed: string): Org {
+  return account.open_org(adminPublicKey, sealed);
+}
+
+/// Scelle l'Org Key pour un membre (en tant qu'admin).
+export function sealOrgKeyForMember(account: Account, org: Org, memberPublicKey: string): string {
+  return account.seal_org_key_for_member(org, memberPublicKey);
+}
+
+/// Chiffre un login sous l'Org Key (secret partagé).
+export function encryptOrgLogin(
+  org: Org,
+  login: LoginInput,
+): { encryptedKey: string; encryptedData: string } {
+  const item = {
+    name: login.name,
+    notes: login.notes ?? null,
+    data: {
+      kind: "Login",
+      data: { username: login.username, password: login.password, uris: [], totp: null },
+    },
+  };
+  const enc = JSON.parse(org.encrypt_item(JSON.stringify(item)));
+  return { encryptedKey: enc.encrypted_key, encryptedData: enc.encrypted_data };
+}
+
+/// Déchiffre un item partagé sous l'Org Key.
+export function decryptOrgItem(
+  org: Org,
+  encryptedKey: string,
+  encryptedData: string,
+): DecryptedItem {
+  const json = org.decrypt_item(
+    JSON.stringify({ encrypted_key: encryptedKey, encrypted_data: encryptedData }),
+  );
+  const item = JSON.parse(json);
+  return { name: item.name, username: item.data.data.username, password: item.data.data.password };
 }

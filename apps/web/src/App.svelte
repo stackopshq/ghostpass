@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import type { Account } from "ghostpass-crypto-wasm";
   import { api } from "./lib/api.js";
+  import Organizations from "./Organizations.svelte";
   import {
     computeLoginHash,
     createRecovery,
@@ -33,6 +34,7 @@
   let token = $state<string | null>(null);
   let account = $state<Account | null>(null);
   let items = $state<DecryptedItem[]>([]);
+  let tab = $state<"vault" | "orgs">("vault");
 
   // Formulaire d'ajout de secret.
   let itemName = $state("");
@@ -272,6 +274,12 @@
       <button class="ghost" onclick={logout}>Verrouiller</button>
     </div>
 
+    <div class="tabs">
+      <button class:active={tab === "vault"} onclick={() => (tab = "vault")}>Mon coffre</button>
+      <button class:active={tab === "orgs"} onclick={() => (tab = "orgs")}>Organisations</button>
+    </div>
+
+    {#if tab === "vault"}
     <h2>Sécurité</h2>
     {#if mfaMessage}
       <p class="success">{mfaMessage}</p>
@@ -317,6 +325,11 @@
           </li>
         {/each}
       </ul>
+    {/if}
+    {/if}
+
+    {#if tab === "orgs"}
+      <Organizations account={account!} token={token!} onError={(m) => (error = m)} />
     {/if}
   {/if}
 

@@ -116,4 +116,73 @@ export const api = {
   createItem(token: string, body: { encryptedKey: string; encryptedData: string }) {
     return http<ItemDto>("/api/vault/items", { method: "POST", body, token });
   },
+
+  // ─── Organisations / partage ───
+  createOrg(token: string, body: { name: string; encryptedOrgKey: string }) {
+    return http<{ orgId: string }>("/api/orgs", { method: "POST", body, token });
+  },
+  listOrgs(token: string) {
+    return http<{
+      organizations: Array<{ orgId: string; name: string; role: string; status: string }>;
+    }>("/api/orgs", { token });
+  },
+  lookupPublicKey(token: string, email: string) {
+    return http<{ userId: string; publicKey: string }>(
+      `/api/users/lookup?email=${encodeURIComponent(email)}`,
+      { token },
+    );
+  },
+  addMember(
+    token: string,
+    orgId: string,
+    body: { email: string; role: string; encryptedOrgKey: string },
+  ) {
+    return http<{ ok: boolean }>(`/api/orgs/${orgId}/members`, { method: "POST", body, token });
+  },
+  acceptInvite(token: string, orgId: string) {
+    return http<{ status: string }>(`/api/orgs/${orgId}/accept`, { method: "POST", token });
+  },
+  getMembership(token: string, orgId: string) {
+    return http<{
+      role: string;
+      status: string;
+      encryptedOrgKey: string | null;
+      sealedByPublicKey: string | null;
+    }>(`/api/orgs/${orgId}/membership`, { token });
+  },
+  listMembers(token: string, orgId: string) {
+    return http<{
+      members: Array<{ userId: string; email: string | null; role: string; status: string }>;
+    }>(`/api/orgs/${orgId}/members`, { token });
+  },
+  createCollection(token: string, orgId: string, body: { name: string }) {
+    return http<{ id: string; name: string }>(`/api/orgs/${orgId}/collections`, {
+      method: "POST",
+      body,
+      token,
+    });
+  },
+  listCollections(token: string, orgId: string) {
+    return http<{ collections: Array<{ id: string; name: string }> }>(
+      `/api/orgs/${orgId}/collections`,
+      { token },
+    );
+  },
+  listCollectionItems(token: string, orgId: string, collectionId: string) {
+    return http<{ items: ItemDto[] }>(`/api/orgs/${orgId}/collections/${collectionId}/items`, {
+      token,
+    });
+  },
+  createOrgItem(
+    token: string,
+    orgId: string,
+    collectionId: string,
+    body: { encryptedKey: string; encryptedData: string },
+  ) {
+    return http<ItemDto>(`/api/orgs/${orgId}/collections/${collectionId}/items`, {
+      method: "POST",
+      body,
+      token,
+    });
+  },
 };

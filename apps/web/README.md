@@ -10,6 +10,10 @@ SPA pure (pas de SSR) par choix de sécurité : aucun rendu serveur ne touche au
 - Se connecter (`prelogin` → dérivation du hash → `login` → déverrouillage local du coffre).
 - Ajouter un identifiant (chiffré côté client avant envoi).
 - Lister le coffre (déchiffré côté client à l'affichage).
+- MFA TOTP (configuration + code au login) et kit de récupération.
+- **Organisations** (onglet dédié) : créer une org, inviter des membres (distribution
+  authentifiée de l'Org Key), accepter, collections, partager et lire des secrets — l'Org Key
+  ne quitte jamais le module WASM.
 
 ## Lancer en local
 
