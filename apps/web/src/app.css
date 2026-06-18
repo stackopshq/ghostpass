@@ -632,6 +632,120 @@ code,
   color: var(--ink-2);
 }
 
+/* Générateur de mot de passe */
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.input-row input {
+  flex: 1;
+}
+
+.gen-options {
+  margin-top: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.gen-len {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+
+.gen-len input[type="range"] {
+  flex: 1;
+}
+
+.gen-toggles {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+
+.gen-toggles label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+/* Santé des mots de passe */
+.health-row {
+  border-bottom: 1px solid var(--line);
+}
+
+.health-row:last-child {
+  border-bottom: none;
+}
+
+.health-row summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.1rem;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.health-row summary::-webkit-details-marker {
+  display: none;
+}
+
+.health-row[open] summary .chevron {
+  transform: rotate(90deg);
+}
+
+.health-label {
+  flex: 1;
+}
+
+.pill-warn {
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-color: color-mix(in srgb, var(--warn) 26%, transparent);
+}
+
+.pill-ok {
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: color-mix(in srgb, var(--success) 24%, transparent);
+}
+
+.health-list {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0 0 0 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.health-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.health-list .link {
+  margin: 0;
+  align-self: auto;
+}
+
 /* Panneau de détail (droite) & vue pleine largeur */
 .detail,
 .single {

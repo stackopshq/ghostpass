@@ -17,6 +17,8 @@
     type DecryptedItem,
   } from "./lib/crypto.js";
   import { generateOtp, parseOtp } from "./lib/totp.js";
+  import { DEFAULT_GEN_OPTIONS, generatePassword, type GenOptions } from "./lib/generator.js";
+  import { parseCsv } from "./lib/csv.js";
 
   let cryptoReady = $state(false);
   let busy = $state(false);
@@ -65,6 +67,62 @@
   let itemUrl = $state("");
   let itemFolder = $state("");
   let itemTotp = $state("");
+
+  // Générateur de mots de passe.
+  let genOptions = $state<GenOptions>({ ...DEFAULT_GEN_OPTIONS });
+  let genOpen = $state(false);
+  let importMessage = $state<string | null>(null);
+
+  function genPassword() {
+    itemPassword = generatePassword(genOptions);
+  }
+
+  function exportCsv() {
+    const esc = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
+    const header = "name,folder,url,username,password,totp";
+    const rows = items.map((i) =>
+      [i.name, i.folder, i.url, i.username, i.password, i.totp].map(esc).join(","),
+    );
+    const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ghostpass-export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importCsv(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !token || !account) return;
+    busy = true;
+    error = null;
+    importMessage = null;
+    try {
+      const rows = parseCsv(await file.text());
+      let n = 0;
+      for (const r of rows) {
+        const enc = encryptLogin(account, {
+          name: r.name || r.title || "(sans nom)",
+          username: r.username || r.login_username || r.login || "",
+          password: r.password || r.login_password || "",
+          url: r.url || r.login_uri || r.website || r.uri || "",
+          folder: r.folder || r.vault || r.group || "",
+          totp: r.totp || r.login_totp || r.otpauth || "",
+        });
+        await api.createItem(token, enc);
+        n++;
+      }
+      await loadItems();
+      importMessage = `${n} entrée${n > 1 ? "s" : ""} importée${n > 1 ? "s" : ""}.`;
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      busy = false;
+      input.value = "";
+    }
+  }
 
   // Configuration de la 2FA.
   let mfaSetup = $state<{ secret: string; otpauthUri: string } | null>(null);
@@ -130,6 +188,24 @@
 
   function selectFolder(path: string | null) {
     selectedFolder = path;
+  }
+
+  // Santé des mots de passe (calcul 100 % local).
+  const health = $derived.by(() => {
+    const counts = new Map<string, number>();
+    for (const i of items) if (i.password) counts.set(i.password, (counts.get(i.password) ?? 0) + 1);
+    return {
+      weak: items.filter((i) => i.password && passwordStrength(i.password).level <= 1),
+      reused: items.filter((i) => i.password && (counts.get(i.password) ?? 0) > 1),
+      noTotp: items.filter((i) => !i.totp),
+    };
+  });
+
+  function goToItem(item: VaultEntry) {
+    nav = "vault";
+    selectedFolder = null;
+    search = "";
+    selectItem(item);
   }
   // Chemins de dossiers existants (pour l'autocomplétion du formulaire).
   const folderPaths = $derived(
@@ -593,6 +669,20 @@
     {#if theme === "dark"}{@render sunIcon()}{:else}{@render moonIcon()}{/if}
   </button>
 {/snippet}
+{#snippet diceIcon()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="3" />
+    <circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="16" cy="16" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />
+  </svg>
+{/snippet}
+{#snippet slidersIcon()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="4" y1="8" x2="20" y2="8" /><circle cx="9" cy="8" r="2.2" fill="var(--surface)" />
+    <line x1="4" y1="16" x2="20" y2="16" /><circle cx="15" cy="16" r="2.2" fill="var(--surface)" />
+  </svg>
+{/snippet}
 {#snippet itemAvatar(name: string, url: string, large: boolean)}
   <span class="avatar {large ? 'lg' : ''}" style="background:{avatarColor(name)};color:#fff;border-color:transparent">
     {(name || "?").charAt(0).toUpperCase()}
@@ -624,6 +714,25 @@
       {#if item.username}<span class="entry-sub">{item.username}</span>{/if}
     </span>
   </button>
+{/snippet}
+{#snippet healthRow(label: string, list: VaultEntry[])}
+  <details class="health-row">
+    <summary>
+      <span class="chevron">{@render chevronIcon()}</span>
+      <span class="health-label">{label}</span>
+      <span class="pill {list.length ? 'pill-warn' : 'pill-ok'}">{list.length}</span>
+    </summary>
+    {#if list.length}
+      <ul class="health-list">
+        {#each list as it (it.id)}
+          <li>
+            <button class="link" onclick={() => goToItem(it)}>{it.name}</button>
+            {#if it.username}<span class="muted">{it.username}</span>{/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </details>
 {/snippet}
 {#snippet folderNode(node: TreeNode, depth: number)}
   <div class="tree-folder" class:active={selectedFolder === node.path} style="padding-left:{depth * 14 + 8}px">
@@ -840,7 +949,28 @@
               </label>
               <label class="field"><span>Site web</span><input bind:value={itemUrl} placeholder="github.com" inputmode="url" /></label>
               <label class="field"><span>Identifiant</span><input bind:value={itemUsername} placeholder="kevin" /></label>
-              <label class="field"><span>Mot de passe</span><input type="password" bind:value={itemPassword} placeholder="••••••" /></label>
+              <div class="field">
+                <span>Mot de passe</span>
+                <div class="input-row">
+                  <input type="text" bind:value={itemPassword} placeholder="••••••" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                  <button type="button" class="icon-btn" title="Générer un mot de passe" aria-label="Générer" onclick={genPassword}>{@render diceIcon()}</button>
+                  <button type="button" class="icon-btn" class:copied={genOpen} title="Options du générateur" aria-label="Options" onclick={() => (genOpen = !genOpen)}>{@render slidersIcon()}</button>
+                </div>
+                {#if genOpen}
+                  <div class="gen-options">
+                    <label class="gen-len">
+                      Longueur : <strong>{genOptions.length}</strong>
+                      <input type="range" min="8" max="64" bind:value={genOptions.length} oninput={genPassword} />
+                    </label>
+                    <div class="gen-toggles">
+                      <label><input type="checkbox" bind:checked={genOptions.lowercase} onchange={genPassword} /> a-z</label>
+                      <label><input type="checkbox" bind:checked={genOptions.uppercase} onchange={genPassword} /> A-Z</label>
+                      <label><input type="checkbox" bind:checked={genOptions.digits} onchange={genPassword} /> 0-9</label>
+                      <label><input type="checkbox" bind:checked={genOptions.symbols} onchange={genPassword} /> !@#</label>
+                    </div>
+                  </div>
+                {/if}
+              </div>
               <label class="field">
                 <span>Clé TOTP <span class="muted" style="font-weight:400">— secret base32 ou otpauth://</span></span>
                 <input bind:value={itemTotp} placeholder="JBSWY3DPEHPK3PXP" autocomplete="off" />
@@ -936,6 +1066,17 @@
           {#if mfaMessage}
             <div class="callout success" style="margin-bottom:1.1rem">{@render checkIcon()}<span>{mfaMessage}</span></div>
           {/if}
+
+          <section class="panel">
+            <div class="panel-head"><h2>Santé des mots de passe</h2></div>
+            {#if items.length === 0}
+              <p class="muted">Ajoutez des secrets pour voir leur analyse.</p>
+            {:else}
+              {@render healthRow("Mots de passe faibles", health.weak)}
+              {@render healthRow("Mots de passe réutilisés", health.reused)}
+              {@render healthRow("Sans double authentification", health.noTotp)}
+            {/if}
+          </section>
           <section class="panel">
             <div class="panel-head"><h2>Double authentification</h2></div>
             {#if mfaSetup}
@@ -973,6 +1114,25 @@
               <p class="muted" style="margin:0 0 0.8rem">Génère une clé de secours qui permet de réinitialiser le mot de passe maître — sans backdoor côté serveur.</p>
               <button class="ghost" onclick={generateRecoveryKit} disabled={busy}>Générer un kit de récupération</button>
             {/if}
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Données</h2></div>
+            {#if importMessage}
+              <div class="callout success" style="margin-bottom:0.8rem">{@render checkIcon()}<span>{importMessage}</span></div>
+            {/if}
+            <div class="callout warn">
+              {@render alertIcon()}
+              <span>L'export contient vos secrets <strong>en clair</strong> dans un fichier CSV. Conservez-le en lieu sûr et supprimez-le après usage.</span>
+            </div>
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:0.9rem">
+              <button class="ghost" onclick={exportCsv} disabled={items.length === 0}>Exporter (CSV)</button>
+              <label class="ghost" style="cursor:pointer">
+                Importer (CSV)
+                <input type="file" accept=".csv,text/csv" onchange={importCsv} style="display:none" />
+              </label>
+            </div>
+            <p class="muted" style="margin:0.7rem 0 0">Colonnes reconnues : name, username, password, url, folder, totp (compatible exports 1Password / Bitwarden / Proton).</p>
           </section>
         </div>
       {:else}
