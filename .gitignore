@@ -7,3 +7,13 @@
 
 # Node
 node_modules/
+
+# SQLite dev database
+*.db
+*.db-shm
+*.db-wal
+
+# Claude config (not versioned)
+CLAUDE.md
+.claude/
+
