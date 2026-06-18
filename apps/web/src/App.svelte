@@ -6,7 +6,8 @@
   import {
     computeLoginHash,
     createRecovery,
-    decryptItem,
+    decryptVaultItem,
+    encryptFolders,
     encryptLogin,
     ensureCryptoReady,
     faviconUrl,
@@ -15,6 +16,7 @@
     unlock,
     type DecryptedItem,
   } from "./lib/crypto.js";
+  import { generateOtp, parseOtp } from "./lib/totp.js";
 
   let cryptoReady = $state(false);
   let busy = $state(false);
@@ -41,9 +43,20 @@
   let search = $state("");
   let selected = $state<VaultEntry | null>(null);
   let adding = $state(false);
+  let editingId = $state<string | null>(null);
   let detailRevealed = $state(false);
   let copiedKey = $state<string | null>(null);
   let collapsed = $state<Set<string>>(new Set());
+
+  // Dossier sélectionné dans l'arbre de gauche (null = tous les éléments).
+  let selectedFolder = $state<string | null>(null);
+
+  // Dossiers vides persistés (registre chiffré) + code OTP courant de l'entrée affichée.
+  let emptyFolders = $state<string[]>([]);
+  let folderRegistryId = $state<string | null>(null);
+  let otp = $state<{ code: string; remaining: number; period: number } | null>(null);
+  let newFolderOpen = $state(false);
+  let newFolderName = $state("");
 
   // Formulaire d'ajout de secret.
   let itemName = $state("");
@@ -51,18 +64,22 @@
   let itemPassword = $state("");
   let itemUrl = $state("");
   let itemFolder = $state("");
+  let itemTotp = $state("");
 
   // Configuration de la 2FA.
   let mfaSetup = $state<{ secret: string; otpauthUri: string } | null>(null);
   let mfaCode = $state("");
   let mfaMessage = $state<string | null>(null);
 
-  const filtered = $derived(
-    items.filter((it) => {
-      const q = search.trim().toLowerCase();
-      if (!q) return true;
-      return it.name.toLowerCase().includes(q) || it.username.toLowerCase().includes(q);
-    }),
+  // Liste du milieu : secrets du dossier sélectionné (ou résultats de recherche, globaux).
+  const visibleItems = $derived(
+    items
+      .filter((it) => {
+        const q = search.trim().toLowerCase();
+        if (q) return it.name.toLowerCase().includes(q) || it.username.toLowerCase().includes(q);
+        return selectedFolder === null || it.folder === selectedFolder;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name)),
   );
 
   // Entrée de coffre déchiffrée + métadonnées non chiffrées utiles à l'affichage.
@@ -79,23 +96,26 @@
     items: VaultEntry[];
   }
 
-  function buildTree(list: VaultEntry[]): TreeNode {
-    const root: TreeNode = { name: "", path: "", children: [], items: [] };
-    for (const item of list) {
-      const segments = (item.folder || "").split("/").map((s) => s.trim()).filter(Boolean);
-      let node = root;
-      let path = "";
-      for (const seg of segments) {
-        path = path ? `${path}/${seg}` : seg;
-        let child = node.children.find((c) => c.name === seg);
-        if (!child) {
-          child = { name: seg, path, children: [], items: [] };
-          node.children.push(child);
-        }
-        node = child;
+  function ensureFolder(root: TreeNode, path: string): TreeNode {
+    const segments = path.split("/").map((s) => s.trim()).filter(Boolean);
+    let node = root;
+    let acc = "";
+    for (const seg of segments) {
+      acc = acc ? `${acc}/${seg}` : seg;
+      let child = node.children.find((c) => c.name === seg);
+      if (!child) {
+        child = { name: seg, path: acc, children: [], items: [] };
+        node.children.push(child);
       }
-      node.items.push(item);
+      node = child;
     }
+    return node;
+  }
+
+  function buildTree(list: VaultEntry[], extraFolders: string[]): TreeNode {
+    const root: TreeNode = { name: "", path: "", children: [], items: [] };
+    for (const item of list) ensureFolder(root, item.folder || "").items.push(item);
+    for (const f of extraFolders) ensureFolder(root, f);
     const sortNode = (n: TreeNode) => {
       n.children.sort((a, b) => a.name.localeCompare(b.name));
       n.items.sort((a, b) => a.name.localeCompare(b.name));
@@ -105,10 +125,17 @@
     return root;
   }
 
-  const tree = $derived(buildTree(filtered));
+  // L'arbre (colonne de gauche) liste tous les dossiers, vides compris — c'est la navigation.
+  const tree = $derived(buildTree(items, emptyFolders));
+
+  function selectFolder(path: string | null) {
+    selectedFolder = path;
+  }
   // Chemins de dossiers existants (pour l'autocomplétion du formulaire).
   const folderPaths = $derived(
-    [...new Set(items.map((i) => i.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [...new Set([...items.map((i) => i.folder).filter(Boolean), ...emptyFolders])].sort((a, b) =>
+      a.localeCompare(b),
+    ),
   );
 
   function countItems(node: TreeNode): number {
@@ -155,6 +182,65 @@
     }
   }
 
+  // Recalcule le code OTP de l'entrée affichée chaque seconde (et l'efface au changement de sélection).
+  $effect(() => {
+    const cfg = parseOtp(selected?.totp ?? "");
+    if (!cfg) {
+      otp = null;
+      return;
+    }
+    let active = true;
+    const tick = async () => {
+      try {
+        const r = await generateOtp(cfg);
+        if (active) otp = { ...r, period: cfg.period };
+      } catch {
+        if (active) otp = null;
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  });
+
+  // ─── Registre des dossiers vides (persisté chiffré) ───
+  async function saveFolders() {
+    if (!token || !account) return;
+    const enc = encryptFolders(account, emptyFolders);
+    if (folderRegistryId) {
+      await api.updateItem(token, folderRegistryId, enc);
+    } else {
+      const created = await api.createItem(token, enc);
+      folderRegistryId = created.id;
+    }
+  }
+
+  async function createFolder() {
+    const path = newFolderName.trim().replace(/^\/+|\/+$/g, "");
+    newFolderOpen = false;
+    newFolderName = "";
+    if (!path || emptyFolders.includes(path)) return;
+    emptyFolders = [...emptyFolders, path].sort((a, b) => a.localeCompare(b));
+    try {
+      await saveFolders();
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
+
+  async function removeFolder(path: string) {
+    // Retire le dossier (et ses sous-dossiers) du registre ; n'affecte pas les entrées.
+    emptyFolders = emptyFolders.filter((p) => p !== path && !p.startsWith(`${path}/`));
+    try {
+      await saveFolders();
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
+
   // Thème (clair/sombre) — appliqué sur <html data-theme>, persisté en localStorage.
   let theme = $state<"dark" | "light">(
     document.documentElement.dataset.theme === "light" ? "light" : "dark",
@@ -195,12 +281,42 @@
   function startAdd() {
     // Pré-remplit le dossier avec celui de l'entrée affichée (pratique pour enchaîner).
     itemFolder = selected?.folder ?? "";
+    editingId = null;
     adding = true;
     selected = null;
     itemName = "";
     itemUsername = "";
     itemPassword = "";
     itemUrl = "";
+    itemTotp = "";
+  }
+
+  function startEdit() {
+    if (!selected) return;
+    editingId = selected.id;
+    itemName = selected.name;
+    itemUrl = selected.url;
+    itemUsername = selected.username;
+    itemPassword = selected.password;
+    itemFolder = selected.folder;
+    itemTotp = selected.totp;
+    adding = true;
+  }
+
+  async function deleteEntry() {
+    if (!selected || !token) return;
+    if (!confirm(`Supprimer « ${selected.name} » ? Cette action est définitive.`)) return;
+    busy = true;
+    error = null;
+    try {
+      await api.deleteItem(token, selected.id);
+      selected = null;
+      await loadItems();
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      busy = false;
+    }
   }
 
   onMount(async () => {
@@ -211,11 +327,21 @@
   async function loadItems() {
     if (!token || !account) return;
     const { items: dtos } = await api.listItems(token);
-    items = dtos.map((d) => ({
-      ...decryptItem(account!, d.encryptedKey, d.encryptedData),
-      id: d.id,
-      updatedAt: d.updatedAt,
-    }));
+    const entries: VaultEntry[] = [];
+    let registryId: string | null = null;
+    let registryPaths: string[] = [];
+    for (const d of dtos) {
+      const r = decryptVaultItem(account!, d.encryptedKey, d.encryptedData);
+      if (r.kind === "folders") {
+        registryId = d.id;
+        registryPaths = r.paths;
+      } else {
+        entries.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
+      }
+    }
+    items = entries;
+    folderRegistryId = registryId;
+    emptyFolders = registryPaths;
     selected = null;
     detailRevealed = false;
   }
@@ -295,15 +421,21 @@
         password: itemPassword,
         url: itemUrl,
         folder: itemFolder,
+        totp: itemTotp,
       });
-      await api.createItem(token, enc);
+      const savedId = editingId
+        ? (await api.updateItem(token, editingId, enc), editingId)
+        : (await api.createItem(token, enc)).id;
       itemName = "";
       itemUsername = "";
       itemPassword = "";
       itemUrl = "";
       itemFolder = "";
+      itemTotp = "";
       adding = false;
+      editingId = null;
       await loadItems();
+      selected = items.find((i) => i.id === savedId) ?? null;
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
     } finally {
@@ -369,7 +501,14 @@
     nav = "vault";
     search = "";
     selected = null;
+    selectedFolder = null;
     adding = false;
+    editingId = null;
+    emptyFolders = [];
+    folderRegistryId = null;
+    otp = null;
+    newFolderOpen = false;
+    newFolderName = "";
     mfaRequired = false;
     totpCode = "";
     mfaSetup = null;
@@ -472,6 +611,11 @@
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
   </svg>
 {/snippet}
+{#snippet folderPlusIcon()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /><path d="M12 11v4M10 13h4" />
+  </svg>
+{/snippet}
 {#snippet itemEntry(item: VaultEntry, depth: number)}
   <button class="entry" class:active={selected === item} style="padding-left:{depth * 16 + 14}px" onclick={() => selectItem(item)}>
     {@render itemAvatar(item.name, item.url, false)}
@@ -482,18 +626,26 @@
   </button>
 {/snippet}
 {#snippet folderNode(node: TreeNode, depth: number)}
-  <button class="tree-folder" style="padding-left:{depth * 16 + 12}px" onclick={() => toggleFolder(node.path)}>
-    <span class="chevron" class:open={isExpanded(node.path)}>{@render chevronIcon()}</span>
-    {@render folderIcon()}
-    <span class="tree-name">{node.name}</span>
+  <div class="tree-folder" class:active={selectedFolder === node.path} style="padding-left:{depth * 14 + 8}px">
+    {#if node.children.length > 0}
+      <button class="tree-chevron-btn" title="Déplier/replier" aria-label="Déplier/replier" onclick={() => toggleFolder(node.path)}>
+        <span class="chevron" class:open={isExpanded(node.path)}>{@render chevronIcon()}</span>
+      </button>
+    {:else}
+      <span class="tree-chevron-spacer"></span>
+    {/if}
+    <button class="tree-folder-btn" onclick={() => selectFolder(node.path)}>
+      {@render folderIcon()}
+      <span class="tree-name">{node.name}</span>
+    </button>
     <span class="tree-count">{countItems(node)}</span>
-  </button>
+    {#if countItems(node) === 0}
+      <button class="icon-btn tree-remove" title="Supprimer le dossier" aria-label="Supprimer le dossier vide" onclick={() => removeFolder(node.path)}>×</button>
+    {/if}
+  </div>
   {#if isExpanded(node.path)}
     {#each node.children as child (child.path)}
       {@render folderNode(child, depth + 1)}
-    {/each}
-    {#each node.items as item (item)}
-      {@render itemEntry(item, depth + 1)}
     {/each}
   {/if}
 {/snippet}
@@ -615,6 +767,31 @@
         <button class="nav-item" class:active={nav === "security"} onclick={() => (nav = "security")}>
           {@render shieldIcon()}<span>Sécurité</span>
         </button>
+
+        {#if nav === "vault"}
+          <div class="sidebar-tree">
+            <button class="tree-all" class:active={selectedFolder === null} onclick={() => selectFolder(null)}>
+              {@render vaultIcon()}<span class="tree-name">Tous les éléments</span><span class="tree-count">{items.length}</span>
+            </button>
+            <div class="tree-section">
+              <span class="label" style="margin:0">Dossiers</span>
+              <button class="icon-btn" title="Nouveau dossier" aria-label="Nouveau dossier" onclick={() => { newFolderOpen = !newFolderOpen; newFolderName = ""; }}>{@render folderPlusIcon()}</button>
+            </div>
+            {#if newFolderOpen}
+              <form class="new-folder" onsubmit={(e) => { e.preventDefault(); createFolder(); }}>
+                <input bind:value={newFolderName} placeholder="Nom (ou A/B)" list="folder-list" />
+                <button type="submit" class="ghost sm">Créer</button>
+              </form>
+            {/if}
+            <datalist id="folder-list">
+              {#each folderPaths as p}<option value={p}></option>{/each}
+            </datalist>
+            {#each tree.children as folder (folder.path)}
+              {@render folderNode(folder, 0)}
+            {/each}
+          </div>
+        {/if}
+
         <div class="sidebar-foot">
           <span class="pill pill-lock"><span class="dot"></span>Coffre déverrouillé</span>
           <button class="ghost full" onclick={logout}>{@render lockIcon()}<span>Verrouiller</span></button>
@@ -624,29 +801,36 @@
       <div class="content">
         {#if nav === "vault"}
           <div class="master">
-            <div class="master-title"><h2>Mon coffre</h2><span class="count">{filtered.length}</span></div>
+            <div class="master-title">
+              <h2>{search.trim() ? "Résultats" : selectedFolder === null ? "Tous les éléments" : selectedFolder.split("/").pop()}</h2>
+              <span class="count">{visibleItems.length}</span>
+            </div>
             <div class="master-list">
-            {#if filtered.length === 0}
-              <div class="empty">
-                {@render vaultIcon()}
-                <p>{items.length === 0 ? "Coffre vide.\nAjoutez votre premier secret." : "Aucun résultat."}</p>
-              </div>
-            {:else}
-              {#each tree.children as folder (folder.path)}
-                {@render folderNode(folder, 0)}
-              {/each}
-              {#each tree.items as item (item)}
-                {@render itemEntry(item, 0)}
-              {/each}
-            {/if}
+              {#if visibleItems.length === 0}
+                <div class="empty">
+                  {@render vaultIcon()}
+                  <p>
+                    {#if items.length === 0}Coffre vide.<br />Ajoutez votre premier secret.
+                    {:else if search.trim()}Aucun résultat.
+                    {:else}Aucun secret dans ce dossier.{/if}
+                  </p>
+                </div>
+              {:else}
+                {#each visibleItems as item (item.id)}
+                  {@render itemEntry(item, 0)}
+                {/each}
+              {/if}
+            </div>
           </div>
-        </div>
 
         <div class="detail">
           {#if adding}
             <div class="detail-head">
               <span class="avatar lg">{@render plusIcon()}</span>
-              <div><h2>Nouveau secret</h2><div class="sub">Chiffré sur votre appareil avant l'envoi</div></div>
+              <div>
+                <h2>{editingId ? "Modifier le secret" : "Nouveau secret"}</h2>
+                <div class="sub">Chiffré sur votre appareil avant l'envoi</div>
+              </div>
             </div>
             <form onsubmit={addItem} style="max-width:480px">
               <label class="field"><span>Nom</span><input bind:value={itemName} placeholder="GitHub" required /></label>
@@ -654,19 +838,27 @@
                 <span>Dossier <span class="muted" style="font-weight:400">— optionnel, séparez les niveaux par /</span></span>
                 <input bind:value={itemFolder} placeholder="Travail/Serveurs" list="folder-list" />
               </label>
-              <datalist id="folder-list">
-                {#each folderPaths as p}<option value={p}></option>{/each}
-              </datalist>
               <label class="field"><span>Site web</span><input bind:value={itemUrl} placeholder="github.com" inputmode="url" /></label>
               <label class="field"><span>Identifiant</span><input bind:value={itemUsername} placeholder="kevin" /></label>
               <label class="field"><span>Mot de passe</span><input type="password" bind:value={itemPassword} placeholder="••••••" /></label>
-              <button type="submit" disabled={busy}>Chiffrer & enregistrer</button>
+              <label class="field">
+                <span>Clé TOTP <span class="muted" style="font-weight:400">— secret base32 ou otpauth://</span></span>
+                <input bind:value={itemTotp} placeholder="JBSWY3DPEHPK3PXP" autocomplete="off" />
+              </label>
+              <div style="display:flex;gap:0.6rem">
+                <button type="submit" disabled={busy}>{editingId ? "Enregistrer" : "Chiffrer & enregistrer"}</button>
+                <button type="button" class="ghost" onclick={() => { adding = false; editingId = null; }}>Annuler</button>
+              </div>
             </form>
           {:else if selected}
             {@const strength = passwordStrength(selected.password)}
             <div class="detail-head">
               {@render itemAvatar(selected.name, selected.url, true)}
               <div><h2>{selected.name}</h2><div class="sub">Identifiant chiffré</div></div>
+              <div class="detail-actions">
+                <button class="ghost sm" onclick={startEdit}>Modifier</button>
+                <button class="danger" onclick={deleteEntry} disabled={busy}>Supprimer</button>
+              </div>
             </div>
             <div class="kv">
               {#if selected.folder}
@@ -712,6 +904,22 @@
                   </button>
                 </span>
               </div>
+              {#if selected.totp}
+                <div class="kv-row">
+                  <span class="kv-label">Code à usage unique</span>
+                  {#if otp}
+                    <span class="kv-value otp-code">{otp.code.slice(0, Math.ceil(otp.code.length / 2))} {otp.code.slice(Math.ceil(otp.code.length / 2))}</span>
+                    <span class="otp-ring" style="--frac:{otp.remaining / otp.period}"><span>{otp.remaining}</span></span>
+                    <span class="kv-actions">
+                      <button class="icon-btn {copiedKey === 'd-otp' ? 'copied' : ''}" title="Copier" aria-label="Copier le code" onclick={() => copy(otp!.code, "d-otp")}>
+                        {#if copiedKey === "d-otp"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
+                      </button>
+                    </span>
+                  {:else}
+                    <span class="kv-value muted">clé TOTP invalide</span>
+                  {/if}
+                </div>
+              {/if}
             </div>
             <p class="detail-meta">Dernière modification — {formatDate(selected.updatedAt)}</p>
           {:else}

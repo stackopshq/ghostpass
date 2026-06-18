@@ -116,6 +116,12 @@ export const api = {
   createItem(token: string, body: { encryptedKey: string; encryptedData: string }) {
     return http<ItemDto>("/api/vault/items", { method: "POST", body, token });
   },
+  updateItem(token: string, id: string, body: { encryptedKey: string; encryptedData: string }) {
+    return http<ItemDto>(`/api/vault/items/${id}`, { method: "PUT", body, token });
+  },
+  deleteItem(token: string, id: string) {
+    return http<void>(`/api/vault/items/${id}`, { method: "DELETE", token });
+  },
 
   // ─── Organisations / partage ───
   createOrg(token: string, body: { name: string; encryptedOrgKey: string }) {

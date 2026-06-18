@@ -403,29 +403,122 @@ code,
   font-family: var(--font-mono);
 }
 
-/* Nœud de dossier dans l'arbre */
-.tree-folder {
+/* ─── Arbre de dossiers (colonne de gauche) ─── */
+.sidebar-tree {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 0.4rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-all {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.5rem 0.9rem;
-  text-align: left;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
   background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--line);
+  border: 1px solid transparent;
   cursor: pointer;
+  text-align: left;
   color: var(--ink-2);
   font-weight: 600;
   font-size: 0.88rem;
 }
 
-.tree-folder:hover {
-  background: var(--surface-2);
+.tree-all svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--ink-3);
+}
+
+.tree-all:hover {
+  background: rgba(128, 135, 145, 0.12);
   color: var(--ink);
 }
 
-.tree-folder .chevron {
+.tree-all.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.tree-all.active svg {
+  color: var(--accent);
+}
+
+.tree-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.5rem 0.2rem;
+}
+
+/* Nœud de dossier */
+.tree-folder {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding-right: 0.4rem;
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+}
+
+.tree-folder:hover {
+  background: rgba(128, 135, 145, 0.12);
+}
+
+.tree-folder.active {
+  background: var(--accent-soft);
+}
+
+.tree-folder.active .tree-folder-btn,
+.tree-folder.active .tree-folder-btn > svg {
+  color: var(--accent);
+}
+
+.tree-chevron-btn {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3);
+}
+
+.tree-chevron-spacer {
+  width: 18px;
+  flex: none;
+}
+
+.tree-folder-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.tree-folder:hover .tree-folder-btn {
+  color: var(--ink);
+}
+
+.chevron {
   display: grid;
   place-items: center;
   width: 14px;
@@ -435,20 +528,20 @@ code,
   transition: transform 0.15s;
 }
 
-.tree-folder .chevron.open {
+.chevron.open {
   transform: rotate(90deg);
 }
 
-.tree-folder .chevron svg {
+.chevron svg {
   width: 12px;
   height: 12px;
 }
 
-.tree-folder > svg {
+.tree-folder-btn > svg {
   width: 15px;
   height: 15px;
   flex: none;
-  color: var(--accent);
+  color: var(--ink-3);
 }
 
 .tree-name {
@@ -464,6 +557,79 @@ code,
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--ink-3);
+}
+
+.tree-remove {
+  width: 24px;
+  height: 24px;
+  font-size: 1.1rem;
+  line-height: 1;
+  opacity: 0;
+}
+
+.tree-folder:hover .tree-remove {
+  opacity: 1;
+}
+
+/* En-tête de liste & création de dossier */
+.master-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.new-folder {
+  flex-direction: row;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.new-folder input {
+  flex: 1;
+}
+
+/* Actions du détail (Modifier / Supprimer) */
+.detail-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Code OTP + anneau de compte à rebours */
+.otp-code {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
+.otp-ring {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--frac) * 360deg), var(--line-2) 0);
+}
+
+.otp-ring::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.otp-ring span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink-2);
 }
 
 /* Panneau de détail (droite) & vue pleine largeur */
