@@ -118,6 +118,26 @@ Modèle inspiré des organisations/collections :
 Le serveur gère **qui a accès** (autorisation) mais ne peut pas lire le contenu (les clés
 restent chiffrées).
 
+### Décisions arrêtées (incrément partage)
+- **Invitation + acceptation** : l'admin invite par email ; l'Org Key est scellée pour la clé
+  publique de l'invité à l'acceptation (invitation en attente tant qu'il n'a pas de compte).
+- **Collections** : les secrets sont groupés en collections partagées à des membres.
+- **Rôles** : Admin (gère membres + secrets) / Membre (lit/modifie) / Lecture seule.
+- **Authenticité de l'Org Key** (correctif audit #2) : distribution via une box **authentifiée**
+  (`crypto_box` ChaChaBox, expéditeur = admin), pas une sealed box anonyme. Réutilise les paires
+  X25519 existantes ; un serveur actif sans clé privée ne peut pas substituer d'Org Key.
+- **Révocation réelle** (correctif audit #3) : révoquer un membre déclenche la rotation de
+  l'Org Key + des item keys, et signale explicitement que les secrets déjà exposés doivent être
+  changés (rotation des mots de passe côté utilisateur).
+
+### Plan d'implémentation (par lots)
+1. ✅ **Crypto/WASM** : box authentifiée dans `sharing` (corrige audit #2) + exposition au
+   binding WASM — classe `Org` (encrypt/decrypt/rewrap d'items, Org Key jamais exposée au JS)
+   + `Account.create_org` / `open_org` / `seal_org_key_for_member`. Testé en Node.
+2. ⬜ **Backend** : tables `organizations` / `org_members` / `collections` / `collection_access` ;
+   endpoints org, invitation/acceptation, collections, partage d'items, rôles, révocation.
+3. ⬜ **UI** : créer une org, inviter/accepter, gérer collections & membres, partager un secret.
+
 ---
 
 ## 4bis. Volet « Secrets Manager » (type HashiCorp Vault)

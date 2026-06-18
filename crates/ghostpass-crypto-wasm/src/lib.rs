@@ -9,11 +9,22 @@
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use ghostpass_crypto::{keys, vault, EncString, EncryptedItem, KdfParams, VaultItem};
+use crypto_box::PublicKey;
+use ghostpass_crypto::{keys, org, sharing, vault, EncString, EncryptedItem, KdfParams, VaultItem};
 use wasm_bindgen::prelude::*;
+use zeroize::Zeroizing;
 
 fn js_err<E: core::fmt::Display>(e: E) -> JsError {
     JsError::new(&e.to_string())
+}
+
+/// Reconstruit une clé publique de partage X25519 depuis sa représentation base64.
+fn decode_public_key(b64: &str) -> Result<PublicKey, JsError> {
+    let bytes = STANDARD.decode(b64).map_err(js_err)?;
+    let arr: [u8; 32] = bytes
+        .try_into()
+        .map_err(|_| JsError::new("clé publique invalide"))?;
+    Ok(PublicKey::from(arr))
 }
 
 /// Compte déverrouillé : détient les clés en mémoire WASM (jamais exposées en clair au JS).
@@ -164,5 +175,101 @@ impl Account {
         let enc: EncryptedItem = serde_json::from_str(encrypted_item_json).map_err(js_err)?;
         let item = vault::decrypt_item(&self.keys.user_key, &enc).map_err(js_err)?;
         serde_json::to_string(&item).map_err(js_err)
+    }
+}
+
+// ─── Partage / organisations ───────────────────────────────────────────────
+
+/// Contexte d'une organisation : détient l'Org Key en mémoire WASM (jamais exposée au JS).
+#[wasm_bindgen]
+pub struct Org {
+    org_key: Zeroizing<[u8; 32]>,
+}
+
+#[wasm_bindgen]
+impl Org {
+    /// Chiffre un item (JSON `VaultItem`) sous l'Org Key. Renvoie un JSON `EncryptedItem`.
+    pub fn encrypt_item(&self, item_json: &str) -> Result<String, JsError> {
+        let item: VaultItem = serde_json::from_str(item_json).map_err(js_err)?;
+        let enc = vault::encrypt_item(&self.org_key, &item).map_err(js_err)?;
+        serde_json::to_string(&enc).map_err(js_err)
+    }
+
+    /// Déchiffre un JSON `EncryptedItem` sous l'Org Key. Renvoie le JSON `VaultItem`.
+    pub fn decrypt_item(&self, encrypted_item_json: &str) -> Result<String, JsError> {
+        let enc: EncryptedItem = serde_json::from_str(encrypted_item_json).map_err(js_err)?;
+        let item = vault::decrypt_item(&self.org_key, &enc).map_err(js_err)?;
+        serde_json::to_string(&item).map_err(js_err)
+    }
+
+    /// Ré-enveloppe un item d'une ancienne Org Key vers celle-ci (rotation / révocation),
+    /// sans déchiffrer le contenu.
+    pub fn rewrap_item(&self, old_org: &Org, encrypted_item_json: &str) -> Result<String, JsError> {
+        let enc: EncryptedItem = serde_json::from_str(encrypted_item_json).map_err(js_err)?;
+        let rewrapped =
+            vault::rewrap_item_key(&old_org.org_key, &self.org_key, &enc).map_err(js_err)?;
+        serde_json::to_string(&rewrapped).map_err(js_err)
+    }
+}
+
+/// Résultat de la création d'une org : le contexte `Org` + l'Org Key scellée pour le créateur
+/// (à stocker côté serveur comme entrée du membre-admin).
+#[wasm_bindgen]
+pub struct OrgCreation {
+    org: Option<Org>,
+    sealed_for_self: String,
+}
+
+#[wasm_bindgen]
+impl OrgCreation {
+    /// Org Key scellée pour le créateur (base64), à transmettre au serveur.
+    #[wasm_bindgen(getter)]
+    pub fn sealed_for_self(&self) -> String {
+        self.sealed_for_self.clone()
+    }
+
+    /// Récupère le contexte `Org` (les clés). Ne peut être appelé qu'une fois.
+    pub fn org(&mut self) -> Result<Org, JsError> {
+        self.org.take().ok_or_else(|| JsError::new("org déjà consommée"))
+    }
+}
+
+#[wasm_bindgen]
+impl Account {
+    /// Crée une organisation : génère une Org Key et la scelle (authentifiée) pour soi-même.
+    pub fn create_org(&self) -> Result<OrgCreation, JsError> {
+        let org_key = org::generate_org_key();
+        let sealed = sharing::box_seal(&self.keys.secret_key, &self.keys.public_key, &org_key)
+            .map_err(js_err)?;
+        Ok(OrgCreation {
+            org: Some(Org {
+                org_key: Zeroizing::new(org_key),
+            }),
+            sealed_for_self: STANDARD.encode(sealed),
+        })
+    }
+
+    /// Ouvre une Org Key reçue d'un admin, en vérifiant qu'elle provient de sa clé publique.
+    pub fn open_org(&self, admin_public_key: &str, sealed: &str) -> Result<Org, JsError> {
+        let admin_public = decode_public_key(admin_public_key)?;
+        let sealed_bytes = STANDARD.decode(sealed).map_err(js_err)?;
+        let org_key =
+            org::open_org_key(&self.keys.secret_key, &admin_public, &sealed_bytes).map_err(js_err)?;
+        Ok(Org {
+            org_key: Zeroizing::new(org_key),
+        })
+    }
+
+    /// Scelle l'Org Key pour un membre (en tant qu'admin émetteur). Renvoie le blob base64.
+    pub fn seal_org_key_for_member(
+        &self,
+        org: &Org,
+        member_public_key: &str,
+    ) -> Result<String, JsError> {
+        let member_public = decode_public_key(member_public_key)?;
+        let sealed =
+            org::seal_org_key_for_member(&self.keys.secret_key, &member_public, &org.org_key)
+                .map_err(js_err)?;
+        Ok(STANDARD.encode(sealed))
     }
 }

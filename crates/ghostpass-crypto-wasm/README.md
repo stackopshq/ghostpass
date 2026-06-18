@@ -17,6 +17,11 @@ JavaScript. Le JS manipule un objet `Account` opaque et n'échange que des donn�
 | `account.public_key` | clé publique de partage (base64) |
 | `account.encrypt_item(vaultItemJson)` | → JSON `EncryptedItem` |
 | `account.decrypt_item(encryptedItemJson)` | → JSON `VaultItem` |
+| `account.create_recovery()` / `Account.recover(...)` | kit de récupération |
+| `account.create_org()` | → `OrgCreation` : `.sealed_for_self` + `.org()` |
+| `account.open_org(adminPublicKey, sealed)` | ouvre une Org Key reçue (vérifie l'émetteur) |
+| `account.seal_org_key_for_member(org, memberPublicKey)` | distribue l'Org Key (authentifiée) |
+| `org.encrypt_item / decrypt_item / rewrap_item` | items partagés (Org Key jamais exposée au JS) |
 
 ## Build
 

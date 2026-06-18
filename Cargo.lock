@@ -324,10 +324,12 @@ name = "ghostpass-crypto-wasm"
 version = "0.0.0"
 dependencies = [
  "base64",
+ "crypto_box",
  "getrandom",
  "ghostpass-crypto",
  "serde_json",
  "wasm-bindgen",
+ "zeroize",
 ]
 
 [[package]]
