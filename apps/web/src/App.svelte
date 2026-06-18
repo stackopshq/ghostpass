@@ -20,6 +20,7 @@
   import { generateOtp, parseOtp } from "./lib/totp.js";
   import { DEFAULT_GEN_OPTIONS, generatePassword, type GenOptions } from "./lib/generator.js";
   import { parseCsv } from "./lib/csv.js";
+  import { pwnedCount } from "./lib/breach.js";
 
   let cryptoReady = $state(false);
   let busy = $state(false);
@@ -216,6 +217,28 @@
     selectedFolder = null;
     search = "";
     selectItem(item);
+  }
+
+  // Vérification des fuites (HIBP k-anonymity) — déclenchée explicitement.
+  let breachBusy = $state(false);
+  let breachDone = $state(false);
+  let breached = $state<VaultEntry[]>([]);
+
+  async function checkBreaches() {
+    breachBusy = true;
+    breachDone = false;
+    error = null;
+    try {
+      const unique = [...new Set(items.filter((i) => i.password).map((i) => i.password))];
+      const counts = new Map<string, number>();
+      for (const pw of unique) counts.set(pw, await pwnedCount(pw));
+      breached = items.filter((i) => (counts.get(i.password) ?? 0) > 0);
+      breachDone = true;
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      breachBusy = false;
+    }
   }
   // Chemins de dossiers existants (pour l'autocomplétion du formulaire).
   const folderPaths = $derived(
@@ -1255,6 +1278,20 @@
               {@render healthRow("Mots de passe faibles", health.weak)}
               {@render healthRow("Mots de passe réutilisés", health.reused)}
               {@render healthRow("Sans double authentification", health.noTotp)}
+              <hr class="sep" />
+              <p class="label">Fuites connues (dark web)</p>
+              <p class="muted" style="margin:0 0 0.7rem">
+                Vérifie tes mots de passe contre Have I Been Pwned en <strong>k-anonymity</strong> :
+                seul un préfixe de hash (5 caractères) est transmis, jamais le mot de passe.
+              </p>
+              {#if breachDone && breached.length === 0}
+                <div class="callout success">{@render checkIcon()}<span>Aucun mot de passe trouvé dans une fuite connue.</span></div>
+              {:else if breachDone}
+                {@render healthRow("Compromis dans une fuite", breached)}
+              {/if}
+              <button class="ghost" onclick={checkBreaches} disabled={breachBusy} style="margin-top:0.7rem">
+                {breachBusy ? "Vérification…" : "Vérifier les fuites"}
+              </button>
             {/if}
           </section>
           <section class="panel">
