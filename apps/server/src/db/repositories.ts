@@ -1,5 +1,13 @@
 import type { DB } from "./database.js";
-import type { SessionRow, UserRow, VaultItemRow } from "../types.js";
+import type {
+  MemberStatus,
+  OrgMemberRow,
+  OrgRole,
+  OrgRow,
+  SessionRow,
+  UserRow,
+  VaultItemRow,
+} from "../types.js";
 
 export interface NewUser {
   id: string;
@@ -26,6 +34,10 @@ export const users = {
     return db.prepare(`SELECT * FROM users WHERE email = ?`).get(email) as
       | UserRow
       | undefined;
+  },
+
+  findById(db: DB, id: string): UserRow | undefined {
+    return db.prepare(`SELECT * FROM users WHERE id = ?`).get(id) as UserRow | undefined;
   },
 
   setMfaSecret(db: DB, userId: string, secret: string): void {
@@ -133,5 +145,65 @@ export const vaultItems = {
       .prepare(`DELETE FROM vault_items WHERE id = ? AND user_id = ?`)
       .run(args.id, args.userId);
     return result.changes > 0;
+  },
+};
+
+export const organizations = {
+  create(db: DB, o: { id: string; name: string }): void {
+    db.prepare(`INSERT INTO organizations (id, name, created_at) VALUES (?, ?, ?)`).run(
+      o.id,
+      o.name,
+      Date.now(),
+    );
+  },
+  findById(db: DB, id: string): OrgRow | undefined {
+    return db.prepare(`SELECT * FROM organizations WHERE id = ?`).get(id) as OrgRow | undefined;
+  },
+};
+
+export interface NewMember {
+  id: string;
+  orgId: string;
+  userId: string;
+  role: OrgRole;
+  status: MemberStatus;
+  encryptedOrgKey: string | null;
+  sealedByUserId: string | null;
+}
+
+export const orgMembers = {
+  create(db: DB, m: NewMember): void {
+    db.prepare(
+      `INSERT INTO org_members
+        (id, org_id, user_id, role, status, encrypted_org_key, sealed_by_user_id, created_at)
+       VALUES (@id, @orgId, @userId, @role, @status, @encryptedOrgKey, @sealedByUserId, @createdAt)`,
+    ).run({ ...m, createdAt: Date.now() });
+  },
+
+  findByOrgAndUser(db: DB, orgId: string, userId: string): OrgMemberRow | undefined {
+    return db
+      .prepare(`SELECT * FROM org_members WHERE org_id = ? AND user_id = ?`)
+      .get(orgId, userId) as OrgMemberRow | undefined;
+  },
+
+  listByOrg(db: DB, orgId: string): OrgMemberRow[] {
+    return db
+      .prepare(`SELECT * FROM org_members WHERE org_id = ? ORDER BY created_at`)
+      .all(orgId) as OrgMemberRow[];
+  },
+
+  /// Orgs où l'utilisateur est membre (tous statuts), avec le nom de l'organisation.
+  listForUser(db: DB, userId: string): Array<OrgMemberRow & { name: string }> {
+    return db
+      .prepare(
+        `SELECT m.*, o.name AS name FROM org_members m
+         JOIN organizations o ON o.id = m.org_id
+         WHERE m.user_id = ? ORDER BY o.name`,
+      )
+      .all(userId) as Array<OrgMemberRow & { name: string }>;
+  },
+
+  setActive(db: DB, id: string): void {
+    db.prepare(`UPDATE org_members SET status = 'active' WHERE id = ?`).run(id);
   },
 };

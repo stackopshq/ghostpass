@@ -50,8 +50,29 @@ CREATE TABLE IF NOT EXISTS service_accounts (
   created_at       INTEGER NOT NULL
 );
 
+-- Organisations (partage en équipe).
+CREATE TABLE IF NOT EXISTS organizations (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS org_members (
+  id                 TEXT PRIMARY KEY,
+  org_id             TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id            TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role               TEXT NOT NULL,   -- 'admin' | 'member' | 'readonly'
+  status             TEXT NOT NULL,   -- 'invited' | 'active'
+  encrypted_org_key  TEXT,            -- Org Key scellée pour ce membre (base64), authentifiée
+  sealed_by_user_id  TEXT,            -- admin émetteur (sa clé publique sert à vérifier l'origine)
+  created_at         INTEGER NOT NULL,
+  UNIQUE (org_id, user_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_vault_items_user ON vault_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
+CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);
 `;
 
 /// Ouvre la base et applique le schéma. `path` vaut ":memory:" pour les tests.

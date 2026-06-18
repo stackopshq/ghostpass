@@ -35,3 +35,23 @@ export interface SessionRow {
   created_at: number;
   expires_at: number;
 }
+
+export interface OrgRow {
+  id: string;
+  name: string;
+  created_at: number;
+}
+
+export type OrgRole = "admin" | "member" | "readonly";
+export type MemberStatus = "invited" | "active";
+
+export interface OrgMemberRow {
+  id: string;
+  org_id: string;
+  user_id: string;
+  role: OrgRole;
+  status: MemberStatus;
+  encrypted_org_key: string | null;
+  sealed_by_user_id: string | null;
+  created_at: number;
+}

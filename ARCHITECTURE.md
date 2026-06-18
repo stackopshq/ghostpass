@@ -134,8 +134,12 @@ restent chiffrées).
 1. ✅ **Crypto/WASM** : box authentifiée dans `sharing` (corrige audit #2) + exposition au
    binding WASM — classe `Org` (encrypt/decrypt/rewrap d'items, Org Key jamais exposée au JS)
    + `Account.create_org` / `open_org` / `seal_org_key_for_member`. Testé en Node.
-2. ⬜ **Backend** : tables `organizations` / `org_members` / `collections` / `collection_access` ;
-   endpoints org, invitation/acceptation, collections, partage d'items, rôles, révocation.
+2. 🚧 **Backend** :
+   - ✅ 3a — tables `organizations`/`org_members`, création d'org, lookup de clé publique,
+     ajout de membre (Org Key scellée), invitation/acceptation, adhésion (clé + émetteur),
+     liste membres, contrôle de rôle admin. **31 tests backend.**
+   - ⬜ 3b — items partagés (CRUD sous org/collection) + collections.
+   - ⬜ 3c — rôles fins par collection + révocation (rotation).
 3. ⬜ **UI** : créer une org, inviter/accepter, gérer collections & membres, partager un secret.
 
 ---

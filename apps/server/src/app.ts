@@ -5,6 +5,7 @@ import rateLimit from "@fastify/rate-limit";
 import type { DB } from "./db/database.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerMfaRoutes } from "./routes/mfa.js";
+import { registerOrgRoutes } from "./routes/orgs.js";
 import { registerRecoveryRoutes } from "./routes/recovery.js";
 import { registerVaultRoutes } from "./routes/vault.js";
 
@@ -39,6 +40,7 @@ export function buildApp(db: DB): FastifyInstance {
   registerMfaRoutes(app, db);
   registerRecoveryRoutes(app, db);
   registerVaultRoutes(app, db);
+  registerOrgRoutes(app, db);
 
   return app;
 }
