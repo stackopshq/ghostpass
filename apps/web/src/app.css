@@ -1135,7 +1135,8 @@ form {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   padding: 0.6rem 0.7rem;
   font: inherit;
@@ -1147,15 +1148,50 @@ select {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-input::placeholder {
+textarea {
+  resize: vertical;
+  min-height: 6rem;
+  line-height: 1.5;
+}
+
+input::placeholder,
+textarea::placeholder {
   color: var(--ink-3);
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Affichage d'une note */
+.note-block {
+  position: relative;
+  margin-top: 0.2rem;
+}
+
+.note-content {
+  margin: 0;
+  padding: 1rem 2.6rem 1rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.note-block .icon-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
 }
 
 input.search {

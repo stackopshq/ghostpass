@@ -8,13 +8,14 @@
     createRecovery,
     decryptVaultItem,
     encryptFolders,
-    encryptLogin,
+    encryptItem,
     ensureCryptoReady,
     faviconUrl,
     recoverAccount,
     register,
     unlock,
     type DecryptedItem,
+    type ItemKind,
   } from "./lib/crypto.js";
   import { generateOtp, parseOtp } from "./lib/totp.js";
   import { DEFAULT_GEN_OPTIONS, generatePassword, type GenOptions } from "./lib/generator.js";
@@ -63,12 +64,18 @@
   let newFolderName = $state("");
 
   // Formulaire d'ajout de secret.
+  let itemKind = $state<ItemKind>("login");
   let itemName = $state("");
   let itemUsername = $state("");
   let itemPassword = $state("");
   let itemUrl = $state("");
   let itemFolder = $state("");
   let itemTotp = $state("");
+  let itemNote = $state("");
+  let itemCardholder = $state("");
+  let itemCardNumber = $state("");
+  let itemCardExp = $state("");
+  let itemCardCode = $state("");
 
   // Générateur de mots de passe.
   let genOptions = $state<GenOptions>({ ...DEFAULT_GEN_OPTIONS });
@@ -105,7 +112,8 @@
       const rows = parseCsv(await file.text());
       let n = 0;
       for (const r of rows) {
-        const enc = encryptLogin(account, {
+        const enc = encryptItem(account, {
+          kind: "login",
           name: r.name || r.title || "(sans nom)",
           username: r.username || r.login_username || r.login || "",
           password: r.password || r.login_password || "",
@@ -363,28 +371,44 @@
     histRevealed = next;
   }
 
+  function resetItemForm() {
+    itemName = "";
+    itemUsername = "";
+    itemPassword = "";
+    itemUrl = "";
+    itemTotp = "";
+    itemNote = "";
+    itemCardholder = "";
+    itemCardNumber = "";
+    itemCardExp = "";
+    itemCardCode = "";
+  }
+
   function startAdd() {
     // Pré-remplit le dossier avec celui de l'entrée affichée (pratique pour enchaîner).
     itemFolder = selected?.folder ?? "";
     editingId = null;
     adding = true;
     selected = null;
-    itemName = "";
-    itemUsername = "";
-    itemPassword = "";
-    itemUrl = "";
-    itemTotp = "";
+    itemKind = "login";
+    resetItemForm();
   }
 
   function startEdit() {
     if (!selected) return;
     editingId = selected.id;
+    itemKind = selected.kind;
     itemName = selected.name;
-    itemUrl = selected.url;
+    itemFolder = selected.folder;
     itemUsername = selected.username;
     itemPassword = selected.password;
-    itemFolder = selected.folder;
+    itemUrl = selected.url;
     itemTotp = selected.totp;
+    itemNote = selected.note;
+    itemCardholder = selected.cardholder;
+    itemCardNumber = selected.cardNumber;
+    itemCardExp = selected.cardExp;
+    itemCardCode = selected.cardCode;
     adding = true;
   }
 
@@ -413,7 +437,7 @@
       const entries: VaultEntry[] = [];
       for (const d of dtos) {
         const r = decryptVaultItem(account, d.encryptedKey, d.encryptedData);
-        if (r.kind === "login") entries.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
+        if (r.kind === "item") entries.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
       }
       trashItems = entries;
     } catch (err) {
@@ -553,24 +577,26 @@
           passwordHistory = [selected.password, ...passwordHistory].slice(0, 20);
         }
       }
-      const enc = encryptLogin(account, {
+      const enc = encryptItem(account, {
+        kind: itemKind,
         name: itemName,
+        folder: itemFolder,
         username: itemUsername,
         password: itemPassword,
         url: itemUrl,
-        folder: itemFolder,
         totp: itemTotp,
         passwordHistory,
+        note: itemNote,
+        cardholder: itemCardholder,
+        cardNumber: itemCardNumber,
+        cardExp: itemCardExp,
+        cardCode: itemCardCode,
       });
       const savedId = editingId
         ? (await api.updateItem(token, editingId, enc), editingId)
         : (await api.createItem(token, enc)).id;
-      itemName = "";
-      itemUsername = "";
-      itemPassword = "";
-      itemUrl = "";
+      resetItemForm();
       itemFolder = "";
-      itemTotp = "";
       adding = false;
       editingId = null;
       await loadItems();
@@ -781,7 +807,9 @@
     {@render itemAvatar(item.name, item.url, false)}
     <span class="entry-main">
       <span class="entry-title">{item.name}</span>
-      {#if item.username}<span class="entry-sub">{item.username}</span>{/if}
+      {#if item.kind === "login" && item.username}<span class="entry-sub">{item.username}</span>
+      {:else if item.kind === "note"}<span class="entry-sub">Note sécurisée</span>
+      {:else if item.kind === "card" && item.cardNumber}<span class="entry-sub">•••• {item.cardNumber.slice(-4)}</span>{/if}
     </span>
   </button>
 {/snippet}
@@ -1015,39 +1043,56 @@
               </div>
             </div>
             <form onsubmit={addItem} style="max-width:480px">
+              <div class="segmented full" style="margin-bottom:0.3rem">
+                <button type="button" class:active={itemKind === "login"} onclick={() => (itemKind = "login")}>Identifiant</button>
+                <button type="button" class:active={itemKind === "note"} onclick={() => (itemKind = "note")}>Note</button>
+                <button type="button" class:active={itemKind === "card"} onclick={() => (itemKind = "card")}>Carte</button>
+              </div>
               <label class="field"><span>Nom</span><input bind:value={itemName} placeholder="GitHub" required /></label>
               <label class="field">
                 <span>Dossier <span class="muted" style="font-weight:400">— optionnel, séparez les niveaux par /</span></span>
                 <input bind:value={itemFolder} placeholder="Travail/Serveurs" list="folder-list" />
               </label>
-              <label class="field"><span>Site web</span><input bind:value={itemUrl} placeholder="github.com" inputmode="url" /></label>
-              <label class="field"><span>Identifiant</span><input bind:value={itemUsername} placeholder="kevin" /></label>
-              <div class="field">
-                <span>Mot de passe</span>
-                <div class="input-row">
-                  <input type="text" bind:value={itemPassword} placeholder="••••••" autocomplete="off" autocapitalize="off" spellcheck="false" />
-                  <button type="button" class="icon-btn" title="Générer un mot de passe" aria-label="Générer" onclick={genPassword}>{@render diceIcon()}</button>
-                  <button type="button" class="icon-btn" class:copied={genOpen} title="Options du générateur" aria-label="Options" onclick={() => (genOpen = !genOpen)}>{@render slidersIcon()}</button>
-                </div>
-                {#if genOpen}
-                  <div class="gen-options">
-                    <label class="gen-len">
-                      Longueur : <strong>{genOptions.length}</strong>
-                      <input type="range" min="8" max="64" bind:value={genOptions.length} oninput={genPassword} />
-                    </label>
-                    <div class="gen-toggles">
-                      <label><input type="checkbox" bind:checked={genOptions.lowercase} onchange={genPassword} /> a-z</label>
-                      <label><input type="checkbox" bind:checked={genOptions.uppercase} onchange={genPassword} /> A-Z</label>
-                      <label><input type="checkbox" bind:checked={genOptions.digits} onchange={genPassword} /> 0-9</label>
-                      <label><input type="checkbox" bind:checked={genOptions.symbols} onchange={genPassword} /> !@#</label>
-                    </div>
+
+              {#if itemKind === "login"}
+                <label class="field"><span>Site web</span><input bind:value={itemUrl} placeholder="github.com" inputmode="url" /></label>
+                <label class="field"><span>Identifiant</span><input bind:value={itemUsername} placeholder="kevin" /></label>
+                <div class="field">
+                  <span>Mot de passe</span>
+                  <div class="input-row">
+                    <input type="text" bind:value={itemPassword} placeholder="••••••" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                    <button type="button" class="icon-btn" title="Générer un mot de passe" aria-label="Générer" onclick={genPassword}>{@render diceIcon()}</button>
+                    <button type="button" class="icon-btn" class:copied={genOpen} title="Options du générateur" aria-label="Options" onclick={() => (genOpen = !genOpen)}>{@render slidersIcon()}</button>
                   </div>
-                {/if}
-              </div>
-              <label class="field">
-                <span>Clé TOTP <span class="muted" style="font-weight:400">— secret base32 ou otpauth://</span></span>
-                <input bind:value={itemTotp} placeholder="JBSWY3DPEHPK3PXP" autocomplete="off" />
-              </label>
+                  {#if genOpen}
+                    <div class="gen-options">
+                      <label class="gen-len">
+                        Longueur : <strong>{genOptions.length}</strong>
+                        <input type="range" min="8" max="64" bind:value={genOptions.length} oninput={genPassword} />
+                      </label>
+                      <div class="gen-toggles">
+                        <label><input type="checkbox" bind:checked={genOptions.lowercase} onchange={genPassword} /> a-z</label>
+                        <label><input type="checkbox" bind:checked={genOptions.uppercase} onchange={genPassword} /> A-Z</label>
+                        <label><input type="checkbox" bind:checked={genOptions.digits} onchange={genPassword} /> 0-9</label>
+                        <label><input type="checkbox" bind:checked={genOptions.symbols} onchange={genPassword} /> !@#</label>
+                      </div>
+                    </div>
+                  {/if}
+                </div>
+                <label class="field">
+                  <span>Clé TOTP <span class="muted" style="font-weight:400">— secret base32 ou otpauth://</span></span>
+                  <input bind:value={itemTotp} placeholder="JBSWY3DPEHPK3PXP" autocomplete="off" />
+                </label>
+              {:else if itemKind === "note"}
+                <label class="field"><span>Contenu</span><textarea bind:value={itemNote} rows="6" placeholder="Note sécurisée…"></textarea></label>
+              {:else}
+                <label class="field"><span>Titulaire</span><input bind:value={itemCardholder} placeholder="Kevin Allioli" /></label>
+                <label class="field"><span>Numéro</span><input bind:value={itemCardNumber} inputmode="numeric" placeholder="4111 1111 1111 1111" /></label>
+                <div class="grid-2">
+                  <label class="field"><span>Expiration (MM/AA)</span><input bind:value={itemCardExp} placeholder="12/30" /></label>
+                  <label class="field"><span>Cryptogramme</span><input bind:value={itemCardCode} inputmode="numeric" placeholder="123" /></label>
+                </div>
+              {/if}
               <div style="display:flex;gap:0.6rem">
                 <button type="submit" disabled={busy}>{editingId ? "Enregistrer" : "Chiffrer & enregistrer"}</button>
                 <button type="button" class="ghost" onclick={() => { adding = false; editingId = null; }}>Annuler</button>
@@ -1057,12 +1102,50 @@
             {@const strength = passwordStrength(selected.password)}
             <div class="detail-head">
               {@render itemAvatar(selected.name, selected.url, true)}
-              <div><h2>{selected.name}</h2><div class="sub">Identifiant chiffré</div></div>
+              <div>
+                <h2>{selected.name}</h2>
+                <div class="sub">{selected.kind === "note" ? "Note sécurisée" : selected.kind === "card" ? "Carte chiffrée" : "Identifiant chiffré"}</div>
+              </div>
               <div class="detail-actions">
                 <button class="ghost sm" onclick={startEdit}>Modifier</button>
                 <button class="danger" onclick={deleteEntry} disabled={busy}>Supprimer</button>
               </div>
             </div>
+
+            {#if selected.kind === "note"}
+              {#if selected.folder}
+                <div class="kv"><div class="kv-row"><span class="kv-label">Dossier</span><span class="kv-value">{selected.folder}</span></div></div>
+              {/if}
+              <div class="note-block">
+                <button class="icon-btn {copiedKey === 'd-note' ? 'copied' : ''}" title="Copier" aria-label="Copier la note" onclick={() => copy(selected!.note, "d-note")}>
+                  {#if copiedKey === "d-note"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
+                </button>
+                <pre class="note-content">{selected.note}</pre>
+              </div>
+            {:else if selected.kind === "card"}
+              <div class="kv">
+                {#if selected.folder}<div class="kv-row"><span class="kv-label">Dossier</span><span class="kv-value">{selected.folder}</span></div>{/if}
+                <div class="kv-row">
+                  <span class="kv-label">Titulaire</span>
+                  <span class="kv-value">{selected.cardholder || "—"}</span>
+                  {#if selected.cardholder}<span class="kv-actions"><button class="icon-btn {copiedKey === 'd-holder' ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(selected!.cardholder, "d-holder")}>{#if copiedKey === "d-holder"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button></span>{/if}
+                </div>
+                <div class="kv-row">
+                  <span class="kv-label">Numéro</span>
+                  <span class="kv-value" class:dots={!detailRevealed}>{detailRevealed ? selected.cardNumber : "•••• •••• •••• ••••"}</span>
+                  <span class="kv-actions">
+                    <button class="icon-btn" title={detailRevealed ? "Masquer" : "Afficher"} aria-label="Afficher/masquer" onclick={() => (detailRevealed = !detailRevealed)}>{#if detailRevealed}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}</button>
+                    <button class="icon-btn {copiedKey === 'd-num' ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(selected!.cardNumber, "d-num")}>{#if copiedKey === "d-num"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button>
+                  </span>
+                </div>
+                {#if selected.cardExp}<div class="kv-row"><span class="kv-label">Expiration</span><span class="kv-value">{selected.cardExp}</span></div>{/if}
+                <div class="kv-row">
+                  <span class="kv-label">Cryptogramme</span>
+                  <span class="kv-value" class:dots={!detailRevealed}>{detailRevealed ? selected.cardCode : "•••"}</span>
+                  <span class="kv-actions"><button class="icon-btn {copiedKey === 'd-code' ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(selected!.cardCode, "d-code")}>{#if copiedKey === "d-code"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button></span>
+                </div>
+              </div>
+            {:else}
             <div class="kv">
               {#if selected.folder}
                 <div class="kv-row">
@@ -1146,6 +1229,7 @@
                   {/each}
                 </ul>
               </details>
+            {/if}
             {/if}
             <p class="detail-meta">Dernière modification — {formatDate(selected.updatedAt)}</p>
           {:else}
