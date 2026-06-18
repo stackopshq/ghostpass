@@ -1,0 +1,9 @@
+# Rust
+/target
+
+# Artefacts de build WASM (régénérables via wasm-pack)
+**/pkg/
+**/pkg-node/
+
+# Node
+node_modules/
