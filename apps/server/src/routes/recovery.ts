@@ -53,7 +53,10 @@ export function registerRecoveryRoutes(app: FastifyInstance, db: DB): void {
   });
 
   // Renvoie les blobs nécessaires pour tenter une récupération (chiffrés : sans valeur seuls).
-  app.post("/api/auth/recovery-blob", async (req, reply) => {
+  app.post(
+    "/api/auth/recovery-blob",
+    { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (req, reply) => {
     const parsed = blobSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
     const email = normalizeEmail(parsed.data.email);
@@ -74,7 +77,10 @@ export function registerRecoveryRoutes(app: FastifyInstance, db: DB): void {
   });
 
   // Réinitialise le mot de passe maître après preuve de possession de la clé de récupération.
-  app.post("/api/auth/recover", async (req, reply) => {
+  app.post(
+    "/api/auth/recover",
+    { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
     const parsed = recoverSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
     const user = users.findByEmail(db, normalizeEmail(parsed.data.email));

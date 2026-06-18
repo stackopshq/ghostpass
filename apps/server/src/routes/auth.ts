@@ -38,7 +38,10 @@ const loginSchema = z.object({
 
 export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
   // Inscription : stocke les blobs chiffrés et ouvre une session.
-  app.post("/api/auth/register", async (req, reply) => {
+  app.post(
+    "/api/auth/register",
+    { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: "requête invalide" });
@@ -70,7 +73,10 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
 
   // Pré-login : renvoie les paramètres KDF nécessaires au client pour dériver son hash.
   // Pour un email inconnu, on renvoie des paramètres par défaut (anti-énumération).
-  app.post("/api/auth/prelogin", async (req, reply) => {
+  app.post(
+    "/api/auth/prelogin",
+    { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (req, reply) => {
     const parsed = preloginSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: "requête invalide" });
@@ -80,7 +86,10 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
   });
 
   // Connexion : vérifie le hash et renvoie le token + les blobs pour déverrouiller le coffre.
-  app.post("/api/auth/login", async (req, reply) => {
+  app.post(
+    "/api/auth/login",
+    { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: "requête invalide" });
