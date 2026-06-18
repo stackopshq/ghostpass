@@ -250,6 +250,9 @@ Secrets Manager / Infisical / Doppler.
 
 ## 8. Roadmap par phases
 
+> Backlog fonctionnel priorisé + analyse concurrentielle (Proton Pass / 1Password / Bitwarden) :
+> voir [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
 ### Phase 0 — Fondations (cœur crypto isolé) ✅ FAIT
 - Crate Rust `crates/ghostpass-crypto` : Argon2id, HKDF, XChaCha20-Poly1305, X25519
   (sealed box), hiérarchie de clés (`register`/`unlock`), format `EncString`.
