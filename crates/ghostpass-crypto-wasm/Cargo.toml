@@ -1,0 +1,19 @@
+[package]
+name = "ghostpass-crypto-wasm"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Binding WASM (web + extension navigateur) du cœur crypto GhostPass"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ghostpass-crypto = { path = "../ghostpass-crypto" }
+wasm-bindgen = "0.2"
+serde_json = "1"
+base64 = "0.22"
+# Active le backend JS de getrandom pour la cible wasm32-unknown-unknown
+# (source d'entropie = crypto.getRandomValues du navigateur).
+getrandom = { version = "0.2", features = ["js"] }
