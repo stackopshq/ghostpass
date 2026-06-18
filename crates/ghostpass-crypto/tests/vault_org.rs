@@ -9,6 +9,7 @@ fn sample_login() -> VaultItem {
     VaultItem {
         name: "GitHub".into(),
         notes: Some("compte pro".into()),
+        folder: Some("Travail/Serveurs".into()),
         data: ItemData::Login(Login {
             username: "kevin".into(),
             password: "s3cr3t!".into(),
@@ -45,6 +46,7 @@ fn vault_item_round_trip_all_kinds() {
         let item = VaultItem {
             name: "item".into(),
             notes: None,
+            folder: None,
             data,
         };
         let enc = vault::encrypt_item(&key, &item).unwrap();

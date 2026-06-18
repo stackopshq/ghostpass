@@ -52,6 +52,10 @@ pub struct Card {
 pub struct VaultItem {
     pub name: String,
     pub notes: Option<String>,
+    /// Chemin de classement, ex. `"Travail/Serveurs"` (chiffré comme le reste).
+    /// `#[serde(default)]` : les items chiffrés avant l'ajout du champ se déchiffrent à `None`.
+    #[serde(default)]
+    pub folder: Option<String>,
     pub data: ItemData,
 }
 
