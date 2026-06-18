@@ -47,3 +47,17 @@ export function hashSessionToken(token: string): string {
 export function newId(): string {
   return randomUUID();
 }
+
+/// Normalise un email pour le stockage et le lookup (évite les doublons de casse / espaces).
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/// Cible factice précalculée pour le scrypt « à vide ».
+const DUMMY_TARGET = hashServerSecret("ghostpass-dummy-verification-target");
+
+/// Exécute un scrypt à vide pour égaliser le temps de réponse quand le compte n'existe pas
+/// (empêche l'énumération de comptes par timing). Le résultat est volontairement ignoré.
+export function dummyVerify(clientAuthHash: string): void {
+  verifyServerSecret(clientAuthHash, DUMMY_TARGET.hash, DUMMY_TARGET.salt);
+}

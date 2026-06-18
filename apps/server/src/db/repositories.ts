@@ -29,12 +29,18 @@ export const users = {
   },
 
   setMfaSecret(db: DB, userId: string, secret: string): void {
-    // (Re)configure le secret et repasse en non activé tant qu'un code n'a pas été confirmé.
-    db.prepare(`UPDATE users SET mfa_secret = ?, mfa_enabled = 0 WHERE id = ?`).run(secret, userId);
+    // (Re)configure le secret, repasse en non activé et réinitialise l'anti-rejeu.
+    db.prepare(
+      `UPDATE users SET mfa_secret = ?, mfa_enabled = 0, mfa_last_counter = 0 WHERE id = ?`,
+    ).run(secret, userId);
   },
 
   setMfaEnabled(db: DB, userId: string, enabled: boolean): void {
     db.prepare(`UPDATE users SET mfa_enabled = ? WHERE id = ?`).run(enabled ? 1 : 0, userId);
+  },
+
+  setMfaLastCounter(db: DB, userId: string, counter: number): void {
+    db.prepare(`UPDATE users SET mfa_last_counter = ? WHERE id = ?`).run(counter, userId);
   },
 
   setRecovery(

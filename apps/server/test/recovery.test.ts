@@ -31,14 +31,16 @@ async function enroll(app: ReturnType<typeof buildApp>, token: string) {
   });
 }
 
-test("recovery-blob : 404 si aucune récupération configurée", async () => {
+test("recovery-blob répond de façon uniforme même sans récupération (anti-énumération)", async () => {
   const { app } = await registered();
   const res = await app.inject({
     method: "POST",
     url: "/api/auth/recovery-blob",
     payload: { email: REG.email },
   });
-  assert.equal(res.statusCode, 404);
+  // Réponse 200 avec des blobs leurres : indistinguable d'un compte ayant la récupération.
+  assert.equal(res.statusCode, 200);
+  assert.match(res.json().encryptedUserKeyRecovery, /^2\./);
   await app.close();
 });
 

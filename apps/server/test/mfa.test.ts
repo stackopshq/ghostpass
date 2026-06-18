@@ -27,6 +27,7 @@ async function appWithMfa() {
     method: "POST",
     url: "/api/mfa/setup",
     headers: auth(token),
+    payload: { masterPasswordHash: REG.masterPasswordHash },
   });
   const secret = setup.json().secret as string;
 
@@ -47,6 +48,7 @@ test("setup renvoie un secret et une URI otpauth", async () => {
     method: "POST",
     url: "/api/mfa/setup",
     headers: auth(reg.json().token),
+    payload: { masterPasswordHash: REG.masterPasswordHash },
   });
   assert.equal(res.statusCode, 200);
   assert.match(res.json().secret, /^[A-Z2-7]+$/);
@@ -54,10 +56,28 @@ test("setup renvoie un secret et une URI otpauth", async () => {
   await app.close();
 });
 
+test("setup refuse un mauvais mot de passe", async () => {
+  const app = buildApp(openDatabase(":memory:"));
+  const reg = await app.inject({ method: "POST", url: "/api/auth/register", payload: REG });
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/mfa/setup",
+    headers: auth(reg.json().token),
+    payload: { masterPasswordHash: "mauvais" },
+  });
+  assert.equal(res.statusCode, 401);
+  await app.close();
+});
+
 test("activate échoue avec un mauvais code", async () => {
   const app = buildApp(openDatabase(":memory:"));
   const reg = await app.inject({ method: "POST", url: "/api/auth/register", payload: REG });
-  await app.inject({ method: "POST", url: "/api/mfa/setup", headers: auth(reg.json().token) });
+  await app.inject({
+    method: "POST",
+    url: "/api/mfa/setup",
+    headers: auth(reg.json().token),
+    payload: { masterPasswordHash: REG.masterPasswordHash },
+  });
   const res = await app.inject({
     method: "POST",
     url: "/api/mfa/activate",
@@ -96,6 +116,24 @@ test("login réussit avec le bon code TOTP", async () => {
   await app.close();
 });
 
+test("un code TOTP ne peut pas être rejoué (anti-rejeu)", async () => {
+  const { app, secret } = await appWithMfa();
+  const code = generateTOTP(secret);
+  const first = await app.inject({
+    method: "POST",
+    url: "/api/auth/login",
+    payload: { email: REG.email, masterPasswordHash: REG.masterPasswordHash, totpCode: code },
+  });
+  assert.equal(first.statusCode, 200);
+  const replay = await app.inject({
+    method: "POST",
+    url: "/api/auth/login",
+    payload: { email: REG.email, masterPasswordHash: REG.masterPasswordHash, totpCode: code },
+  });
+  assert.equal(replay.statusCode, 401);
+  await app.close();
+});
+
 test("login échoue avec un mauvais code TOTP", async () => {
   const { app } = await appWithMfa();
   const res = await app.inject({
@@ -111,13 +149,13 @@ test("login échoue avec un mauvais code TOTP", async () => {
   await app.close();
 });
 
-test("désactiver la 2FA rétablit le login sans code", async () => {
+test("désactiver la 2FA (mot de passe + code) rétablit le login sans code", async () => {
   const { app, token, secret } = await appWithMfa();
   const disable = await app.inject({
     method: "POST",
     url: "/api/mfa/disable",
     headers: auth(token),
-    payload: { code: generateTOTP(secret) },
+    payload: { masterPasswordHash: REG.masterPasswordHash, code: generateTOTP(secret) },
   });
   assert.equal(disable.statusCode, 200);
 

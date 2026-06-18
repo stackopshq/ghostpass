@@ -4,11 +4,14 @@ import type { DB } from "../db/database.js";
 import { sessions, users } from "../db/repositories.js";
 import {
   createSessionToken,
+  dummyVerify,
   hashServerSecret,
+  hashSessionToken,
   newId,
+  normalizeEmail,
   verifyServerSecret,
 } from "../services/security.js";
-import { verifyTOTP } from "../services/totp.js";
+import { verifyAndConsumeTotp } from "../services/mfa.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
 const DEFAULT_KDF_PARAMS = JSON.stringify({
@@ -38,11 +41,12 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
   app.post("/api/auth/register", async (req, reply) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
-      return reply.code(400).send({ error: "requête invalide", details: parsed.error.issues });
+      return reply.code(400).send({ error: "requête invalide" });
     }
     const body = parsed.data;
+    const email = normalizeEmail(body.email);
 
-    if (users.findByEmail(db, body.email)) {
+    if (users.findByEmail(db, email)) {
       return reply.code(409).send({ error: "email déjà utilisé" });
     }
 
@@ -50,7 +54,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     const userId = newId();
     users.create(db, {
       id: userId,
-      email: body.email,
+      email,
       kdfParams: body.kdfParams,
       serverPasswordHash: hash,
       passwordSalt: salt,
@@ -71,7 +75,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     if (!parsed.success) {
       return reply.code(400).send({ error: "requête invalide" });
     }
-    const user = users.findByEmail(db, parsed.data.email);
+    const user = users.findByEmail(db, normalizeEmail(parsed.data.email));
     return reply.send({ kdfParams: user ? user.kdf_params : DEFAULT_KDF_PARAMS });
   });
 
@@ -81,16 +85,22 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     if (!parsed.success) {
       return reply.code(400).send({ error: "requête invalide" });
     }
-    const { email, masterPasswordHash, totpCode } = parsed.data;
+    const { masterPasswordHash, totpCode } = parsed.data;
+    const email = normalizeEmail(parsed.data.email);
     const user = users.findByEmail(db, email);
-    // Réponse générique en cas d'échec (ne révèle pas si l'email existe).
-    if (!user || !verifyServerSecret(masterPasswordHash, user.server_password_hash, user.password_salt)) {
+    // Réponse générique + scrypt à temps égal même si l'email est inconnu (anti-énumération
+    // par timing : on ne court-circuite pas le coût scrypt).
+    if (!user) {
+      dummyVerify(masterPasswordHash);
+      return reply.code(401).send({ error: "identifiants invalides" });
+    }
+    if (!verifyServerSecret(masterPasswordHash, user.server_password_hash, user.password_salt)) {
       return reply.code(401).send({ error: "identifiants invalides" });
     }
 
     // Second facteur : si la 2FA est activée, un code TOTP valide est exigé.
     if (user.mfa_enabled) {
-      if (!totpCode || !verifyTOTP(user.mfa_secret!, totpCode)) {
+      if (!totpCode || !verifyAndConsumeTotp(db, user, totpCode)) {
         return reply.code(401).send({ error: "code 2FA requis ou invalide", mfaRequired: true });
       }
     }
@@ -103,5 +113,14 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
       encryptedUserKey: user.encrypted_user_key,
       encryptedPrivateKey: user.encrypted_private_key,
     });
+  });
+
+  // Déconnexion : révoque la session courante (le token n'est plus valide ensuite).
+  app.post("/api/auth/logout", async (req, reply) => {
+    const header = req.headers.authorization;
+    if (header?.startsWith("Bearer ")) {
+      sessions.deleteByTokenHash(db, hashSessionToken(header.slice("Bearer ".length).trim()));
+    }
+    return reply.code(204).send();
   });
 }

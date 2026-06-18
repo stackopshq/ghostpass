@@ -73,17 +73,27 @@ export function generateTOTP(secretB32: string, atMs: number = Date.now()): stri
   return hotp(base32Decode(secretB32), counter);
 }
 
-/// Vérifie un code avec une fenêtre de ±1 période (tolérance d'horloge).
-export function verifyTOTP(secretB32: string, code: string, atMs: number = Date.now()): boolean {
-  if (!/^\d{6}$/.test(code)) return false;
+/// Vérifie un code et renvoie le compteur de période qui a matché (pour l'anti-rejeu), ou null.
+/// Fenêtre de ±1 période (tolérance d'horloge).
+export function verifyTOTPCounter(
+  secretB32: string,
+  code: string,
+  atMs: number = Date.now(),
+): number | null {
+  if (!/^\d{6}$/.test(code)) return null;
   const secret = base32Decode(secretB32);
   const counter = Math.floor(atMs / 1000 / PERIOD_SECONDS);
   const candidate = Buffer.from(code);
   for (let w = -1; w <= 1; w++) {
     const expected = Buffer.from(hotp(secret, counter + w));
     if (expected.length === candidate.length && timingSafeEqual(expected, candidate)) {
-      return true;
+      return counter + w;
     }
   }
-  return false;
+  return null;
+}
+
+/// Vérifie un code (sans suivi du compteur). Conserve la signature historique.
+export function verifyTOTP(secretB32: string, code: string, atMs: number = Date.now()): boolean {
+  return verifyTOTPCounter(secretB32, code, atMs) !== null;
 }

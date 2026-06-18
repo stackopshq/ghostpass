@@ -3,42 +3,61 @@ import { z } from "zod";
 import type { DB } from "../db/database.js";
 import { users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
+import { verifyAndConsumeTotp } from "../services/mfa.js";
+import { verifyServerSecret } from "../services/security.js";
 import { generateSecret, otpauthUri, verifyTOTP } from "../services/totp.js";
 
 const codeSchema = z.object({ code: z.string().regex(/^\d{6}$/) });
+const setupSchema = z.object({ masterPasswordHash: z.string().min(1) });
+const disableSchema = z.object({
+  masterPasswordHash: z.string().min(1),
+  code: z.string().regex(/^\d{6}$/),
+});
 
 export function registerMfaRoutes(app: FastifyInstance, db: DB): void {
   const authenticate = makeAuthenticate(db);
 
-  // Démarre la configuration : génère un secret (non activé) + l'URI otpauth à scanner.
-  app.post("/api/mfa/setup", { preHandler: authenticate }, async (req) => {
+  // Démarre la configuration : re-authentification par mot de passe exigée (opération
+  // sensible — elle remet la 2FA à zéro), puis génère un secret + l'URI otpauth.
+  app.post("/api/mfa/setup", { preHandler: authenticate }, async (req, reply) => {
+    const parsed = setupSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
     const user = req.currentUser!;
+    if (!verifyServerSecret(parsed.data.masterPasswordHash, user.server_password_hash, user.password_salt)) {
+      return reply.code(401).send({ error: "mot de passe invalide" });
+    }
     const secret = generateSecret();
     users.setMfaSecret(db, user.id, secret);
     return { secret, otpauthUri: otpauthUri(secret, user.email) };
   });
 
-  // Active la 2FA après vérification d'un premier code.
+  // Active la 2FA après vérification (et consommation) d'un premier code.
   app.post("/api/mfa/activate", { preHandler: authenticate }, async (req, reply) => {
     const parsed = codeSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "code invalide" });
     const user = req.currentUser!;
-    if (!user.mfa_secret) {
+    const secret = user.mfa_secret;
+    if (!secret) {
       return reply.code(400).send({ error: "aucune configuration 2FA en cours" });
     }
-    if (!verifyTOTP(user.mfa_secret, parsed.data.code)) {
+    // À l'activation, on vérifie sans consommer le compteur (session déjà exigée) afin que le
+    // tout premier login juste après reste possible avec un code de la même fenêtre.
+    if (!verifyTOTP(secret, parsed.data.code)) {
       return reply.code(401).send({ error: "code 2FA invalide" });
     }
     users.setMfaEnabled(db, user.id, true);
     return { enabled: true };
   });
 
-  // Désactive la 2FA (exige un code valide).
+  // Désactive la 2FA : exige le mot de passe ET un code TOTP valide (non rejoué).
   app.post("/api/mfa/disable", { preHandler: authenticate }, async (req, reply) => {
-    const parsed = codeSchema.safeParse(req.body);
-    if (!parsed.success) return reply.code(400).send({ error: "code invalide" });
+    const parsed = disableSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
     const user = req.currentUser!;
-    if (!user.mfa_enabled || !user.mfa_secret || !verifyTOTP(user.mfa_secret, parsed.data.code)) {
+    if (!verifyServerSecret(parsed.data.masterPasswordHash, user.server_password_hash, user.password_salt)) {
+      return reply.code(401).send({ error: "mot de passe invalide" });
+    }
+    if (!user.mfa_enabled || !verifyAndConsumeTotp(db, user, parsed.data.code)) {
       return reply.code(401).send({ error: "code 2FA invalide" });
     }
     users.setMfaEnabled(db, user.id, false);

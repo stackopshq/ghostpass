@@ -3,7 +3,24 @@ import { z } from "zod";
 import type { DB } from "../db/database.js";
 import { sessions, users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
-import { hashServerSecret, verifyServerSecret } from "../services/security.js";
+import { createHash } from "node:crypto";
+import {
+  dummyVerify,
+  hashServerSecret,
+  normalizeEmail,
+  verifyServerSecret,
+} from "../services/security.js";
+
+const DEFAULT_KDF_PARAMS = JSON.stringify({ mem_cost_kib: 65536, time_cost: 3, parallelism: 4 });
+
+/// Blob chiffré leurre, déterministe par email : permet à `recovery-blob` de répondre de
+/// façon indistinguable pour un compte sans récupération (anti-énumération).
+function decoyEncString(email: string, tag: string): string {
+  const seed = createHash("sha256").update(`ghostpass-decoy:${tag}:${email}`).digest();
+  const nonce = seed.subarray(0, 24).toString("base64");
+  const ct = createHash("sha256").update(seed).digest().toString("base64");
+  return `2.${nonce}.${ct}`;
+}
 
 const enrollSchema = z.object({
   recoveryAuthHash: z.string().min(1),
@@ -39,14 +56,20 @@ export function registerRecoveryRoutes(app: FastifyInstance, db: DB): void {
   app.post("/api/auth/recovery-blob", async (req, reply) => {
     const parsed = blobSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-    const user = users.findByEmail(db, parsed.data.email);
-    if (!user || !user.encrypted_user_key_recovery) {
-      return reply.code(404).send({ error: "aucune récupération disponible" });
+    const email = normalizeEmail(parsed.data.email);
+    const user = users.findByEmail(db, email);
+    if (user && user.encrypted_user_key_recovery) {
+      return reply.send({
+        kdfParams: user.kdf_params,
+        encryptedUserKeyRecovery: user.encrypted_user_key_recovery,
+        encryptedPrivateKey: user.encrypted_private_key,
+      });
     }
+    // Réponse leurre indistinguable (compte inexistant ou sans kit de récupération).
     return reply.send({
-      kdfParams: user.kdf_params,
-      encryptedUserKeyRecovery: user.encrypted_user_key_recovery,
-      encryptedPrivateKey: user.encrypted_private_key,
+      kdfParams: DEFAULT_KDF_PARAMS,
+      encryptedUserKeyRecovery: decoyEncString(email, "uk"),
+      encryptedPrivateKey: decoyEncString(email, "pk"),
     });
   });
 
@@ -54,13 +77,13 @@ export function registerRecoveryRoutes(app: FastifyInstance, db: DB): void {
   app.post("/api/auth/recover", async (req, reply) => {
     const parsed = recoverSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-    const user = users.findByEmail(db, parsed.data.email);
-    if (
-      !user ||
-      !user.recovery_auth_hash ||
-      !user.recovery_salt ||
-      !verifyServerSecret(parsed.data.recoveryAuthHash, user.recovery_auth_hash, user.recovery_salt)
-    ) {
+    const user = users.findByEmail(db, normalizeEmail(parsed.data.email));
+    // Scrypt à temps égal même sans cible (anti-énumération par timing).
+    if (!user || !user.recovery_auth_hash || !user.recovery_salt) {
+      dummyVerify(parsed.data.recoveryAuthHash);
+      return reply.code(401).send({ error: "clé de récupération invalide" });
+    }
+    if (!verifyServerSecret(parsed.data.recoveryAuthHash, user.recovery_auth_hash, user.recovery_salt)) {
       return reply.code(401).send({ error: "clé de récupération invalide" });
     }
 

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   public_key             TEXT NOT NULL,   -- base64 (clé publique de partage)
   mfa_secret             TEXT,            -- secret TOTP base32 (NULL si pas configuré)
   mfa_enabled            INTEGER NOT NULL DEFAULT 0,
+  mfa_last_counter       INTEGER NOT NULL DEFAULT 0,  -- dernier compteur TOTP consommé (anti-rejeu)
   encrypted_user_key_recovery TEXT,       -- EncString (USK enveloppée par la clé de récupération)
   recovery_auth_hash     TEXT,            -- scrypt(preuve de récupération) en hex
   recovery_salt          TEXT,            -- salt scrypt de la preuve, en hex

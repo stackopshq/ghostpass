@@ -12,6 +12,7 @@ export interface UserRow {
   public_key: string;
   mfa_secret: string | null;
   mfa_enabled: number;
+  mfa_last_counter: number;
   encrypted_user_key_recovery: string | null;
   recovery_auth_hash: string | null;
   recovery_salt: string | null;
