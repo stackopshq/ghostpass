@@ -152,8 +152,28 @@ export const api = {
   },
   listMembers(token: string, orgId: string) {
     return http<{
-      members: Array<{ userId: string; email: string | null; role: string; status: string }>;
+      members: Array<{
+        userId: string;
+        email: string | null;
+        publicKey: string | null;
+        role: string;
+        status: string;
+      }>;
     }>(`/api/orgs/${orgId}/members`, { token });
+  },
+  listOrgItems(token: string, orgId: string) {
+    return http<{ items: ItemDto[] }>(`/api/orgs/${orgId}/items`, { token });
+  },
+  rotateOrg(
+    token: string,
+    orgId: string,
+    body: {
+      revokeUserId?: string;
+      members: Array<{ userId: string; encryptedOrgKey: string }>;
+      items: Array<{ id: string; encryptedKey: string }>;
+    },
+  ) {
+    return http<{ ok: boolean }>(`/api/orgs/${orgId}/rotate`, { method: "POST", body, token });
   },
   createCollection(token: string, orgId: string, body: { name: string }) {
     return http<{ id: string; name: string }>(`/api/orgs/${orgId}/collections`, {

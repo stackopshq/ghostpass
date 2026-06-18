@@ -194,6 +194,23 @@ export function encryptOrgLogin(
   return { encryptedKey: enc.encrypted_key, encryptedData: enc.encrypted_data };
 }
 
+/// Ré-enveloppe l'item key d'une ancienne Org Key vers une nouvelle (rotation/révocation).
+/// Renvoie la nouvelle `encryptedKey` (le contenu chiffré reste inchangé).
+export function rewrapOrgItem(
+  newOrg: Org,
+  oldOrg: Org,
+  encryptedKey: string,
+  encryptedData: string,
+): string {
+  const r = JSON.parse(
+    newOrg.rewrap_item(
+      oldOrg,
+      JSON.stringify({ encrypted_key: encryptedKey, encrypted_data: encryptedData }),
+    ),
+  );
+  return r.encrypted_key;
+}
+
 /// Déchiffre un item partagé sous l'Org Key.
 export function decryptOrgItem(
   org: Org,

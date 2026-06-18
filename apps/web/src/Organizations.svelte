@@ -6,6 +6,7 @@
     decryptOrgItem,
     encryptOrgLogin,
     openOrg,
+    rewrapOrgItem,
     sealOrgKeyForMember,
     type DecryptedItem,
     type OrgHandle,
@@ -15,7 +16,13 @@
     $props();
 
   type OrgSummary = { orgId: string; name: string; role: string; status: string };
-  type Member = { userId: string; email: string | null; role: string; status: string };
+  type Member = {
+    userId: string;
+    email: string | null;
+    publicKey: string | null;
+    role: string;
+    status: string;
+  };
   type Collection = { id: string; name: string };
 
   let orgs = $state<OrgSummary[]>([]);
@@ -123,6 +130,39 @@
     }
   }
 
+  async function revoke(member: Member) {
+    if (!current || !currentOrg) return;
+    if (!confirm(`Révoquer ${member.email} ? La clé d'organisation sera tournée.`)) return;
+    busy = true;
+    try {
+      // Nouvelle Org Key, re-scellée pour tous les membres restants, items ré-enveloppés.
+      const { org: newOrg } = createOrg(account);
+      const newMembers = members
+        .filter((m) => m.userId !== member.userId && m.publicKey)
+        .map((m) => ({
+          userId: m.userId,
+          encryptedOrgKey: sealOrgKeyForMember(account, newOrg, m.publicKey!),
+        }));
+      const allItems = (await api.listOrgItems(token, current.orgId)).items;
+      const newItems = allItems.map((it) => ({
+        id: it.id,
+        encryptedKey: rewrapOrgItem(newOrg, currentOrg!, it.encryptedKey, it.encryptedData),
+      }));
+      await api.rotateOrg(token, current.orgId, {
+        revokeUserId: member.userId,
+        members: newMembers,
+        items: newItems,
+      });
+      currentOrg = newOrg;
+      members = (await api.listMembers(token, current.orgId)).members;
+      if (selectedCollection) await selectCollection(selectedCollection);
+    } catch (err) {
+      fail(err);
+    } finally {
+      busy = false;
+    }
+  }
+
   async function addCollection(e: SubmitEvent) {
     e.preventDefault();
     if (!current) return;
@@ -208,7 +248,11 @@
       <h2>Membres</h2>
       <ul>
         {#each members as m}
-          <li><span>{m.email}</span> <span class="muted">{m.role} · {m.status}</span></li>
+          <li>
+            <span>{m.email}</span>
+            <span class="muted">{m.role} · {m.status}</span>
+            <button class="ghost" onclick={() => revoke(m)} disabled={busy}>Révoquer</button>
+          </li>
         {/each}
       </ul>
       <form onsubmit={invite}>
