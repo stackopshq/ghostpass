@@ -3,7 +3,8 @@
 use ghostpass_crypto::{keys, KdfParams};
 
 fn fast_params() -> KdfParams {
-    KdfParams { mem_cost_kib: 8 * 1024, time_cost: 1, parallelism: 1 }
+    // Planchers ensure_strong : derive_master_key rejette désormais des paramètres plus faibles.
+    KdfParams { mem_cost_kib: 64 * 1024, time_cost: 3, parallelism: 1 }
 }
 
 #[test]

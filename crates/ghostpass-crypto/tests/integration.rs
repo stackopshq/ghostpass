@@ -9,11 +9,12 @@ use ghostpass_crypto::{
     keys, symmetric,
 };
 
-/// Paramètres KDF allégés pour des tests rapides (la prod utilise `KdfParams::default()`).
+/// Paramètres KDF minimaux *valides* (= planchers `ensure_strong`) pour des tests rapides.
+/// `derive_master_key` rejette désormais tout paramètre sous les planchers (anti-downgrade).
 fn fast_params() -> KdfParams {
     KdfParams {
-        mem_cost_kib: 8 * 1024,
-        time_cost: 1,
+        mem_cost_kib: 64 * 1024,
+        time_cost: 3,
         parallelism: 1,
     }
 }

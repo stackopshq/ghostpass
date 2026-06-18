@@ -76,7 +76,12 @@ fn email_salt(email: &str) -> [u8; 16] {
 }
 
 /// Dérive la Master Key (jamais transmise) depuis le mot de passe maître et l'email.
+///
+/// L'anti-downgrade est appliqué ICI (chokepoint unique) : tout chemin — register, unlock,
+/// master_password_hash, recover, et tous les bindings (WASM, futur FFI natif) — refuse des
+/// paramètres KDF affaiblis qu'un serveur malveillant tenterait d'imposer.
 pub fn derive_master_key(password: &[u8], email: &str, params: KdfParams) -> Result<[u8; KEY_LEN]> {
+    params.ensure_strong()?;
     let salt = email_salt(email);
     let argon = argon2::Argon2::new(
         argon2::Algorithm::Argon2id,

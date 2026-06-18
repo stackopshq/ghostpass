@@ -28,7 +28,8 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
   // Clé publique d'un utilisateur, pour qu'un admin lui scelle l'Org Key (partage).
   app.get<{ Querystring: { email?: string } }>(
     "/api/users/lookup",
-    { preHandler: authenticate },
+    // Rate-limit dédié strict : limite l'énumération d'emails / récolte de clés publiques.
+    { preHandler: authenticate, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
     async (req, reply) => {
       const email = req.query.email ? normalizeEmail(req.query.email) : "";
       if (!email) return reply.code(400).send({ error: "email requis" });
@@ -106,6 +107,7 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
       const m = orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
       if (!m) return reply.code(404).send({ error: "aucune invitation" });
+      if (m.status !== "invited") return reply.code(409).send({ error: "déjà membre" });
       orgMembers.setActive(db, m.id);
       return { status: "active" };
     },

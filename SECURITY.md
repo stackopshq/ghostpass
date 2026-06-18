@@ -35,6 +35,39 @@ Ces points concernent le modèle multi-parties et seront traités dans la concep
   pas les secrets déjà exposés à un membre révoqué. ⇒ rotation des secrets eux-mêmes +
   documentation honnête de la garantie.
 
+## Audit interne — 2026-06-19
+Second audit (cœur Rust + WASM + backend + SPA), après l'ajout du proxy de favicons, du registre
+de dossiers chiffré, de la corbeille, du TOTP client, du générateur, de l'import CSV et des
+notes/cartes. **Bilan : invariant zero-knowledge préservé, aucun finding critique.** Primitives
+saines, SQL paramétré, cloisonnement `user_id` systématique (corbeille incluse), pas d'IDOR ni
+d'injection exploitable, pas de XSS (Svelte échappe ; aucun `{@html}`).
+
+### Corrigé
+- **SSRF par DNS-rebinding (TOCTOU) du proxy favicons** : le fetch passe désormais par
+  `node:https` avec un `lookup` **validant** — l'IP utilisée pour la connexion est exactement
+  celle validée (rejet privé/loopback/link-local), revalidée à chaque redirection, IP littérale
+  refusée même après redirect. Fin de la fenêtre validation≠connexion.
+- **Cap mémoire du favicon** : lecture **en streaming** abandonnée dès `MAX_BYTES` (un serveur
+  omettant `Content-Length` ne peut plus gonfler la mémoire).
+- **Anti-downgrade KDF déplacé dans `derive_master_key`** (chokepoint unique) : protège tous les
+  chemins (register/unlock/hash/recover) **et tous les bindings** (WASM + futur FFI natif), plus
+  seulement la couche WASM.
+- **Énumération / récolte de clés** : rate-limit dédié (20/min) sur `/api/users/lookup`.
+- **Machine à états d'adhésion** : `POST /api/orgs/:id/accept` refuse une adhésion non `invited` (409).
+
+### Reporté (durcissement défense-en-profondeur, non bloquant)
+- **Lier `KdfParams` + email en AAD** du chiffrement de l'USK (détecter une altération serveur des
+  paramètres même au-dessus des planchers). Touche au format chiffré → migration à prévoir.
+- **Chiffrer le secret TOTP serveur au repos** (clé serveur dédiée, 12-factor) — hors périmètre ZK
+  utilisateur, mais limite l'impact d'une fuite de base.
+- **Zeroize** des plaintexts déchiffrés et de la clé de récupération (Rust).
+- **Validation `EncString`** à la désérialisation (longueur de nonce / ciphertext) ; **AAD liant
+  `encrypted_key`↔`encrypted_data`** lors de la ré-enveloppe d'Org Key.
+- **Rôles org** : un `member` peut créer des collections / octroyer `manage` ; garde « dernier
+  admin » absente — à arbitrer selon le modèle voulu.
+- **Salt KDF déterministe** (par email) : compromis assumé (pas d'aller-retour serveur) — à figer
+  en ADR. **`cargo audit`/`osv-scanner` + `.strict()` Zod** en défense en profondeur.
+
 ## Avant commercialisation (rappel)
 - Pentest externe + programme de divulgation de vulnérabilités.
 - Conformité nLPD/RGPD ; à terme SOC 2.

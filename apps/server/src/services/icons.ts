@@ -3,11 +3,16 @@
 //
 // ⚠️ Récupérer une URL fournie par l'utilisateur côté serveur est un vecteur SSRF. Défenses :
 //   - on n'accepte qu'un *domaine* (jamais une URL/chemin arbitraire), on construit l'URL nous-mêmes ;
-//   - HTTPS uniquement ; pas d'IP littérale ;
-//   - résolution DNS + rejet de toute adresse privée/loopback/link-local, à CHAQUE saut de redirection ;
-//   - timeout, taille de réponse bornée, content-type image obligatoire ;
+//   - HTTPS uniquement ; pas d'IP littérale (même sur redirection) ;
+//   - DNS résolu via un `lookup` validant passé à la connexion : l'IP utilisée pour se connecter
+//     EST celle validée (rejet privé/loopback/link-local), ce qui ferme la fenêtre TOCTOU /
+//     DNS-rebinding (pas de seconde résolution non contrôlée) ; revalidé à chaque saut ;
+//   - timeout, taille de réponse bornée EN STREAMING, content-type image obligatoire ;
 //   - cache positif et négatif pour limiter les appels sortants.
-import { lookup } from "node:dns/promises";
+import { lookup as dnsLookup, type LookupAddress } from "node:dns";
+import { get as httpsGet } from "node:https";
+import type { IncomingMessage } from "node:http";
+import type { LookupFunction } from "node:net";
 import { isIP } from "node:net";
 
 const MAX_BYTES = 100 * 1024;
@@ -76,56 +81,83 @@ function isBlockedAddress(ip: string): boolean {
   return true; // forme inconnue → bloqué
 }
 
-/// Vérifie que TOUTES les adresses résolues du domaine sont publiquement routables.
-async function assertPublicHost(hostname: string): Promise<void> {
-  if (isIP(hostname)) throw new Error("ip literal");
-  const addrs = await lookup(hostname, { all: true });
-  if (addrs.length === 0) throw new Error("dns empty");
-  for (const a of addrs) {
-    if (isBlockedAddress(a.address)) throw new Error("blocked address");
-  }
+/// `lookup` validant : ne renvoie que des adresses publiquement routables. Comme c'est CE lookup
+/// qui sert à la connexion réelle, l'IP contactée est exactement celle validée → pas de TOCTOU.
+const safeLookup: LookupFunction = (hostname, options, callback) => {
+  dnsLookup(hostname, { all: true }, (err, addresses: LookupAddress[]) => {
+    if (err) return callback(err, "", 0);
+    const ok = addresses.filter((a) => !isBlockedAddress(a.address));
+    if (ok.length === 0) return callback(new Error("blocked address"), "", 0);
+    if (typeof options === "object" && options.all) {
+      return callback(null, ok as unknown as string, 0);
+    }
+    callback(null, ok[0]!.address, ok[0]!.family);
+  });
+};
+
+/// Une requête HTTPS GET, connexion bornée par le `safeLookup`. Renvoie la réponse brute (stream).
+function httpsRequest(url: string): Promise<IncomingMessage> {
+  return new Promise((resolve, reject) => {
+    const req = httpsGet(
+      url,
+      {
+        lookup: safeLookup,
+        headers: { "user-agent": "GhostPass-Icon/1.0", accept: "image/*" },
+        timeout: FETCH_TIMEOUT_MS,
+      },
+      resolve,
+    );
+    req.on("timeout", () => req.destroy(new Error("timeout")));
+    req.on("error", reject);
+  });
 }
 
-async function fetchManual(url: string): Promise<Response> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-  try {
-    return await fetch(url, {
-      redirect: "manual",
-      signal: ctrl.signal,
-      headers: { "user-agent": "GhostPass-Icon/1.0", accept: "image/*" },
+/// Lit le corps en streaming en abandonnant dès que MAX_BYTES est dépassé (anti-DoS mémoire).
+function readStreamCapped(res: IncomingMessage): Promise<Buffer | null> {
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    res.on("data", (chunk: Buffer) => {
+      total += chunk.length;
+      if (total > MAX_BYTES) {
+        res.destroy();
+        resolve(null);
+      } else {
+        chunks.push(chunk);
+      }
     });
-  } finally {
-    clearTimeout(timer);
-  }
+    res.on("end", () => resolve(total > 0 ? Buffer.concat(chunks) : null));
+    res.on("error", () => resolve(null));
+  });
 }
 
-async function readCapped(res: Response): Promise<Buffer | null> {
-  const len = Number(res.headers.get("content-length") ?? "0");
-  if (len > MAX_BYTES) return null;
-  const buf = Buffer.from(await res.arrayBuffer());
-  return buf.length > 0 && buf.length <= MAX_BYTES ? buf : null;
-}
-
-/// Récupère le favicon en suivant manuellement les redirections, en revalidant chaque saut.
+/// Récupère le favicon en suivant manuellement les redirections (chaque saut revalidé via safeLookup).
 async function fetchFavicon(domain: string): Promise<FaviconResult> {
   let url = `https://${domain}/favicon.ico`;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:") return null;
-    await assertPublicHost(parsed.hostname); // garde SSRF à chaque saut
+    if (isIP(parsed.hostname)) return null; // pas d'IP littérale, même après redirection
 
-    const res = await fetchManual(url);
-    if (res.status >= 300 && res.status < 400) {
-      const loc = res.headers.get("location");
+    const res = await httpsRequest(url);
+    const status = res.statusCode ?? 0;
+    if (status >= 300 && status < 400) {
+      const loc = res.headers.location;
+      res.resume(); // draine la réponse de redirection
       if (!loc) return null;
       url = new URL(loc, url).toString();
       continue;
     }
-    if (!res.ok) return null;
-    const contentType = (res.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
-    if (!contentType.startsWith("image/")) return null;
-    const data = await readCapped(res);
+    if (status < 200 || status >= 300) {
+      res.resume();
+      return null;
+    }
+    const contentType = (res.headers["content-type"] ?? "").split(";")[0]!.trim().toLowerCase();
+    if (!contentType.startsWith("image/")) {
+      res.resume();
+      return null;
+    }
+    const data = await readStreamCapped(res);
     return data ? { data, contentType } : null;
   }
   return null;
