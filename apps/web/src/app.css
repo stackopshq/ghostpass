@@ -881,6 +881,49 @@ a.kv-value:hover {
   color: var(--ink-3);
 }
 
+/* Historique des mots de passe */
+.history {
+  margin-top: 1.1rem;
+}
+
+.history summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.history summary::-webkit-details-marker {
+  display: none;
+}
+
+.history[open] summary .chevron {
+  transform: rotate(90deg);
+}
+
+.history-list {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.history-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.history-list .dots {
+  flex: 1;
+}
+
 /* ─── Écran d'authentification (split-screen) ─── */
 .auth {
   min-height: 100vh;

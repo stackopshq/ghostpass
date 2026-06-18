@@ -31,6 +31,9 @@ pub struct Login {
     pub password: String,
     pub uris: Vec<String>,
     pub totp: Option<String>,
+    /// Anciens mots de passe (plus récent en tête). `#[serde(default)]` : rétrocompatible.
+    #[serde(default)]
+    pub password_history: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]

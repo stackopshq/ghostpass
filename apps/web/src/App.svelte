@@ -48,6 +48,7 @@
   let adding = $state(false);
   let editingId = $state<string | null>(null);
   let detailRevealed = $state(false);
+  let histRevealed = $state<Set<number>>(new Set());
   let copiedKey = $state<string | null>(null);
   let collapsed = $state<Set<string>>(new Set());
 
@@ -353,6 +354,13 @@
     selected = item;
     adding = false;
     detailRevealed = false;
+    histRevealed = new Set();
+  }
+
+  function toggleHist(i: number) {
+    const next = new Set(histRevealed);
+    next.has(i) ? next.delete(i) : next.add(i);
+    histRevealed = next;
   }
 
   function startAdd() {
@@ -537,6 +545,14 @@
     error = null;
     busy = true;
     try {
+      // À l'édition, si le mot de passe change, on archive l'ancien (max 20 versions).
+      let passwordHistory: string[] = [];
+      if (editingId && selected) {
+        passwordHistory = selected.passwordHistory ?? [];
+        if (selected.password && itemPassword !== selected.password) {
+          passwordHistory = [selected.password, ...passwordHistory].slice(0, 20);
+        }
+      }
       const enc = encryptLogin(account, {
         name: itemName,
         username: itemUsername,
@@ -544,6 +560,7 @@
         url: itemUrl,
         folder: itemFolder,
         totp: itemTotp,
+        passwordHistory,
       });
       const savedId = editingId
         ? (await api.updateItem(token, editingId, enc), editingId)
@@ -1107,6 +1124,29 @@
                 </div>
               {/if}
             </div>
+            {#if selected.passwordHistory.length}
+              <details class="history">
+                <summary>
+                  <span class="chevron">{@render chevronIcon()}</span>
+                  Historique des mots de passe ({selected.passwordHistory.length})
+                </summary>
+                <ul class="history-list">
+                  {#each selected.passwordHistory as old, i (i)}
+                    <li>
+                      <span class="mono dots">{histRevealed.has(i) ? old : "••••••••••"}</span>
+                      <span class="row-actions">
+                        <button class="icon-btn" title={histRevealed.has(i) ? "Masquer" : "Afficher"} aria-label="Afficher/masquer" onclick={() => toggleHist(i)}>
+                          {#if histRevealed.has(i)}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
+                        </button>
+                        <button class="icon-btn {copiedKey === `hist-${i}` ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(old, `hist-${i}`)}>
+                          {#if copiedKey === `hist-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
+                        </button>
+                      </span>
+                    </li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
             <p class="detail-meta">Dernière modification — {formatDate(selected.updatedAt)}</p>
           {:else}
             <div class="detail-empty">

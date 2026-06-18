@@ -15,6 +15,7 @@ fn sample_login() -> VaultItem {
             password: "s3cr3t!".into(),
             uris: vec!["https://github.com".into()],
             totp: Some("otpauth://...".into()),
+            password_history: vec!["old-pw".into()],
         }),
     }
 }
