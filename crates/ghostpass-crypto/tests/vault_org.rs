@@ -1,7 +1,7 @@
-//! Tests d'intégration : items de coffre (chiffrement par item key) et rotation d'Org Key.
+//! Tests d'intégration : items de coffre (chiffrement par item key) et partage/rotation d'Org Key.
 
 use ghostpass_crypto::{
-    org,
+    org, sharing,
     vault::{self, Card, EncryptedItem, ItemData, Login, SecureNote, VaultItem},
 };
 
@@ -54,8 +54,6 @@ fn vault_item_round_trip_all_kinds() {
 
 #[test]
 fn vault_each_item_uses_a_distinct_item_key() {
-    // Deux chiffrements du même item avec la même clé d'enveloppe doivent produire des
-    // item keys (et donc des ciphertexts) différents.
     let key = [33u8; 32];
     let item = sample_login();
     let a = vault::encrypt_item(&key, &item).unwrap();
@@ -79,57 +77,80 @@ fn rewrap_item_key_changes_envelope_not_content() {
 
     let rewrapped = vault::rewrap_item_key(&old_key, &new_key, &enc).unwrap();
 
-    // Le payload chiffré est inchangé (on n'a pas re-chiffré le contenu)...
     assert_eq!(enc.encrypted_data, rewrapped.encrypted_data);
-    // ...mais l'enveloppe a changé.
     assert_ne!(enc.encrypted_key, rewrapped.encrypted_key);
-    // Déchiffrable avec la nouvelle clé, plus avec l'ancienne.
     assert_eq!(item, vault::decrypt_item(&new_key, &rewrapped).unwrap());
     assert!(vault::decrypt_item(&old_key, &rewrapped).is_err());
 }
 
 #[test]
+fn authenticated_box_round_trip() {
+    // L'admin chiffre vers le membre ; le membre vérifie que ça vient bien de l'admin.
+    let admin = sharing::generate_keypair();
+    let member = sharing::generate_keypair();
+    let sealed = sharing::box_seal(&admin.secret, &member.public, b"org key secrete").unwrap();
+    let opened = sharing::box_open(&member.secret, &admin.public, &sealed).unwrap();
+    assert_eq!(opened, b"org key secrete");
+}
+
+#[test]
+fn authenticated_box_rejects_forged_sender() {
+    // Ouvrir avec une mauvaise clé publique d'expéditeur doit échouer (authenticité).
+    let admin = sharing::generate_keypair();
+    let member = sharing::generate_keypair();
+    let intruder = sharing::generate_keypair();
+    let sealed = sharing::box_seal(&admin.secret, &member.public, b"x").unwrap();
+    assert!(sharing::box_open(&member.secret, &intruder.public, &sealed).is_err());
+}
+
+#[test]
+fn other_member_cannot_open() {
+    let admin = sharing::generate_keypair();
+    let member = sharing::generate_keypair();
+    let intruder = sharing::generate_keypair();
+    let sealed = sharing::box_seal(&admin.secret, &member.public, b"org key secrete").unwrap();
+    assert!(sharing::box_open(&intruder.secret, &admin.public, &sealed).is_err());
+}
+
+#[test]
 fn org_key_seal_open_round_trip() {
-    let member = ghostpass_crypto::sharing::generate_keypair();
+    let admin = sharing::generate_keypair();
+    let member = sharing::generate_keypair();
     let org_key = org::generate_org_key();
-    let sealed = org::seal_org_key_for_member(&member.public, &org_key).unwrap();
-    let opened = org::open_org_key(&member.secret, &sealed).unwrap();
+    let sealed = org::seal_org_key_for_member(&admin.secret, &member.public, &org_key).unwrap();
+    let opened = org::open_org_key(&member.secret, &admin.public, &sealed).unwrap();
     assert_eq!(org_key, opened);
 }
 
 #[test]
 fn rotation_revokes_access_for_removed_member() {
-    use ghostpass_crypto::sharing;
-
-    // Deux membres partagent une organisation et son Org Key.
+    let admin = sharing::generate_keypair();
     let alice = sharing::generate_keypair();
     let bob = sharing::generate_keypair();
     let org_key = org::generate_org_key();
 
-    // Un item partagé est chiffré sous l'Org Key.
     let item = sample_login();
     let shared_item: EncryptedItem = vault::encrypt_item(&org_key, &item).unwrap();
 
-    // On révoque Bob : rotation avec Alice comme seul membre restant.
+    // On révoque Bob : rotation avec Alice comme seul membre restant, distribuée par l'admin.
     let rotation = org::rotate_org_key(
+        &admin.secret,
         &org_key,
         std::slice::from_ref(&alice.public),
         std::slice::from_ref(&shared_item),
     )
     .unwrap();
 
-    // Alice récupère la nouvelle Org Key et peut toujours lire l'item.
-    let alice_new_key = org::open_org_key(&alice.secret, &rotation.sealed_for_members[0]).unwrap();
+    // Alice récupère la nouvelle Org Key (vérifiée comme venant de l'admin) et lit l'item.
+    let alice_new_key =
+        org::open_org_key(&alice.secret, &admin.public, &rotation.sealed_for_members[0]).unwrap();
     let rewrapped = &rotation.rewrapped_items[0];
-    assert_eq!(
-        item,
-        vault::decrypt_item(&alice_new_key, rewrapped).unwrap()
-    );
+    assert_eq!(item, vault::decrypt_item(&alice_new_key, rewrapped).unwrap());
 
-    // L'ancienne Org Key (que Bob pourrait avoir conservée) ne déchiffre plus l'item re-scellé.
+    // L'ancienne Org Key ne déchiffre plus l'item re-enveloppé.
     assert!(vault::decrypt_item(&org_key, rewrapped).is_err());
 
-    // Bob n'a reçu aucune nouvelle clé scellée pour lui.
+    // Bob n'a reçu aucune nouvelle clé.
     assert_eq!(rotation.sealed_for_members.len(), 1);
-    let _ = bob; // Bob est exclu de la rotation
+    let _ = bob;
 }

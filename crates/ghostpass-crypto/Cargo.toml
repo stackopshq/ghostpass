@@ -10,7 +10,7 @@ description = "Cœur cryptographique zero-knowledge de GhostPass"
 argon2 = "0.5.3"
 base64 = "0.22.1"
 chacha20poly1305 = "0.10.1"
-crypto_box = { version = "0.9.1", features = ["seal", "chacha20"] }
+crypto_box = { version = "0.9.1", features = ["chacha20"] }
 hkdf = "0.13.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"

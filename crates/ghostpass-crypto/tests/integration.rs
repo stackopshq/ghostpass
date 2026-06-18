@@ -6,7 +6,7 @@ use std::str::FromStr;
 use ghostpass_crypto::{
     encstring::EncString,
     kdf::{self, KdfParams},
-    keys, sharing, symmetric,
+    keys, symmetric,
 };
 
 /// Paramètres KDF allégés pour des tests rapides (la prod utilise `KdfParams::default()`).
@@ -133,25 +133,4 @@ fn auth_hash_is_stable_and_password_dependent() {
     assert_eq!(h1, h2);
     assert_ne!(h1, h3);
 }
-
-#[test]
-fn sharing_org_key_with_a_member() {
-    // Un membre dispose d'une paire de clés ; un admin lui partage une Org Key.
-    let member = sharing::generate_keypair();
-    let org_key = [42u8; 32];
-
-    // L'admin scelle l'Org Key avec la clé publique du membre.
-    let sealed = sharing::seal(&member.public, &org_key).unwrap();
-    // Seul le membre, avec sa clé privée, peut l'ouvrir.
-    let opened = sharing::unseal(&member.secret, &sealed).unwrap();
-
-    assert_eq!(opened, org_key);
-}
-
-#[test]
-fn sharing_other_member_cannot_open() {
-    let member = sharing::generate_keypair();
-    let intruder = sharing::generate_keypair();
-    let sealed = sharing::seal(&member.public, b"org key secrete").unwrap();
-    assert!(sharing::unseal(&intruder.secret, &sealed).is_err());
-}
+// (Les tests de partage/box authentifiée sont dans tests/vault_org.rs.)
