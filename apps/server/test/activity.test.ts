@@ -47,11 +47,11 @@ test("historique des connexions : enregistrement + drapeau nouvel appareil", asy
   const events = res.json().events as Array<{ userAgent: string; newDevice: boolean }>;
   assert.equal(events.length, 3);
   // Le plus récent en tête : login UA "B" = nouvel appareil.
-  assert.equal(events[0].userAgent, "B");
-  assert.equal(events[0].newDevice, true);
+  assert.equal(events[0]!.userAgent, "B");
+  assert.equal(events[0]!.newDevice, true);
   // Le login UA "A" (déjà vu à l'inscription) n'est PAS un nouvel appareil.
-  assert.equal(events[1].userAgent, "A");
-  assert.equal(events[1].newDevice, false);
+  assert.equal(events[1]!.userAgent, "A");
+  assert.equal(events[1]!.newDevice, false);
 
   await app.close();
 });
