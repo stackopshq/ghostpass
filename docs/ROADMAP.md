@@ -69,9 +69,9 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 ### Phase 3 — Authentification & sécurité du compte (M/L)
 - ✅ **Partage de lien éphémère** (Send : AES-GCM client, clé dans le fragment, expiry + one-time)
 - ✅ **Dark web monitoring** (HIBP k-anonymity, requête côté client)
+- ✅ **MFA FIDO2 / YubiKey** (WebAuthn, 2e facteur au login ; fondation passkeys)
 - 🟡 **Détection d'anomalies** : rate-limit / anti-énumération en place ; Sentinel-like à faire — **M**
-- ⬜ **Passkeys / WebAuthn** : login au coffre **et** stockage/usage de passkeys — **L**
-- ⬜ **MFA FIDO2 / YubiKey** (en plus du TOTP) — **M**
+- ⬜ **Passkeys passwordless** : login sans master password (PRF WebAuthn, tension ZK) — **L**
 - ⬜ **Accès d'urgence** (emergency access) — **M**
 
 ### Phase 4 — Différenciateurs souveraineté CH (L, à arbitrer)
