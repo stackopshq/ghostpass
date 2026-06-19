@@ -12,6 +12,7 @@ import type {
   EmergencyStatus,
   LoginEventRow,
   OrgRow,
+  PasskeyRow,
   SendRow,
   SessionRow,
   UserRow,
@@ -284,6 +285,47 @@ export const loginEvents = {
     return db
       .prepare(`SELECT * FROM login_events WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`)
       .all(userId, limit) as LoginEventRow[];
+  },
+};
+
+export const passkeys = {
+  create(
+    db: DB,
+    c: {
+      id: string;
+      userId: string;
+      publicKey: string;
+      counter: number;
+      transports: string | null;
+      name: string;
+      prfWrappedUserKey: string;
+    },
+  ): void {
+    db.prepare(
+      `INSERT INTO passkeys (id, user_id, public_key, counter, transports, name, prf_wrapped_user_key, created_at)
+       VALUES (@id, @userId, @publicKey, @counter, @transports, @name, @prfWrappedUserKey, @createdAt)`,
+    ).run({ ...c, createdAt: Date.now() });
+  },
+
+  listByUser(db: DB, userId: string): PasskeyRow[] {
+    return db
+      .prepare(`SELECT * FROM passkeys WHERE user_id = ? ORDER BY created_at`)
+      .all(userId) as PasskeyRow[];
+  },
+
+  findById(db: DB, id: string): PasskeyRow | undefined {
+    return db.prepare(`SELECT * FROM passkeys WHERE id = ?`).get(id) as PasskeyRow | undefined;
+  },
+
+  updateCounter(db: DB, id: string, counter: number): void {
+    db.prepare(`UPDATE passkeys SET counter = ? WHERE id = ?`).run(counter, id);
+  },
+
+  remove(db: DB, args: { id: string; userId: string }): boolean {
+    return (
+      db.prepare(`DELETE FROM passkeys WHERE id = ? AND user_id = ?`).run(args.id, args.userId)
+        .changes > 0
+    );
   },
 };
 

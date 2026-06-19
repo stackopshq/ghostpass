@@ -18,6 +18,14 @@ fn js_err<E: core::fmt::Display>(e: E) -> JsError {
     JsError::new(&e.to_string())
 }
 
+/// Décode une clé symétrique de 32 octets depuis sa représentation base64.
+fn decode_key_32(b64: &str) -> Result<[u8; 32], JsError> {
+    let bytes = STANDARD.decode(b64).map_err(js_err)?;
+    bytes
+        .try_into()
+        .map_err(|_| JsError::new("clé de 32 octets invalide"))
+}
+
 /// Reconstruit une clé publique de partage X25519 depuis sa représentation base64.
 fn decode_public_key(b64: &str) -> Result<PublicKey, JsError> {
     let bytes = STANDARD.decode(b64).map_err(js_err)?;
@@ -179,6 +187,29 @@ impl Account {
         let enc: EncryptedItem = serde_json::from_str(encrypted_item_json).map_err(js_err)?;
         let item = vault::decrypt_item(&self.keys.user_key, &enc).map_err(js_err)?;
         serde_json::to_string(&item).map_err(js_err)
+    }
+
+    // ─── Passkey passwordless (extension PRF WebAuthn) ───
+    /// Enveloppe l'USK avec le secret PRF (base64) d'une passkey, pour le déverrouillage sans
+    /// mot de passe. Renvoie l'`EncString` à stocker côté serveur.
+    pub fn wrap_user_key_for_passkey(&self, prf_secret_b64: &str) -> Result<String, JsError> {
+        let prf = decode_key_32(prf_secret_b64)?;
+        let wrapped = keys::wrap_user_key_for_passkey(&self.keys.user_key, &prf).map_err(js_err)?;
+        Ok(wrapped.to_string())
+    }
+
+    /// Déverrouille un compte SANS mot de passe à partir du secret PRF (base64) de la passkey,
+    /// de l'USK enveloppée par PRF et de la clé privée chiffrée.
+    pub fn unlock_with_passkey(
+        prf_secret_b64: &str,
+        prf_wrapped_user_key: &str,
+        encrypted_private_key: &str,
+    ) -> Result<Account, JsError> {
+        let prf = decode_key_32(prf_secret_b64)?;
+        let wrapped: EncString = prf_wrapped_user_key.parse().map_err(js_err)?;
+        let epk: EncString = encrypted_private_key.parse().map_err(js_err)?;
+        let account_keys = keys::unlock_with_passkey(&prf, &wrapped, &epk).map_err(js_err)?;
+        Ok(Account { keys: account_keys })
     }
 }
 

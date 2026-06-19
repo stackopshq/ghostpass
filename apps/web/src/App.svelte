@@ -19,6 +19,8 @@
     register,
     sealUserKeyFor,
     unlock,
+    unlockWithPasskey,
+    wrapUserKeyForPasskey,
     type DecryptedItem,
     type EmergencyItem,
     type ItemKind,
@@ -28,7 +30,7 @@
   import { parseCsv } from "./lib/csv.js";
   import { pwnedCount } from "./lib/breach.js";
   import { sealSend } from "./lib/send.js";
-  import { createCredential, getAssertion } from "./lib/webauthn.js";
+  import { authenticatePasskey, createCredential, getAssertion, registerPasskey } from "./lib/webauthn.js";
 
   let cryptoReady = $state(false);
   let busy = $state(false);
@@ -151,6 +153,74 @@
   // Clés de sécurité WebAuthn.
   let webauthnKeys = $state<Array<{ id: string; name: string; createdAt: number }>>([]);
   let webauthnBusy = $state(false);
+
+  // Passkeys (déverrouillage sans mot de passe).
+  let passkeyKeys = $state<Array<{ id: string; name: string; createdAt: number }>>([]);
+  let passkeyBusy = $state(false);
+
+  async function loadPasskeys() {
+    if (!token) return;
+    try {
+      passkeyKeys = (await api.passkeyCredentials(token)).credentials;
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
+
+  async function addPasskey() {
+    if (!token || !account) return;
+    const name = prompt("Nom de la passkey :", "Passkey");
+    if (name === null) return;
+    passkeyBusy = true;
+    error = null;
+    try {
+      const options = await api.passkeyRegisterOptions(token);
+      const { response, prf } = await registerPasskey(options);
+      const prfWrappedUserKey = wrapUserKeyForPasskey(account, prf);
+      await api.passkeyRegisterVerify(token, {
+        response,
+        name: name.trim() || "Passkey",
+        prfWrappedUserKey,
+      });
+      await loadPasskeys();
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      passkeyBusy = false;
+    }
+  }
+
+  async function removePasskey(id: string) {
+    if (!token || !confirm("Supprimer cette passkey ?")) return;
+    try {
+      await api.passkeyDeleteCredential(token, id);
+      await loadPasskeys();
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
+
+  // Login passwordless via passkey (utilise le champ email de l'écran de connexion).
+  async function loginWithPasskey() {
+    if (!email) {
+      error = "Saisissez d'abord votre email.";
+      return;
+    }
+    busy = true;
+    error = null;
+    try {
+      const options = await api.passkeyLoginOptions(email);
+      const { response, prf } = await authenticatePasskey(options);
+      const res = await api.passkeyLogin(email, response);
+      account = unlockWithPasskey(prf, res.prfWrappedUserKey, res.encryptedPrivateKey);
+      token = res.token;
+      await loadItems();
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      busy = false;
+    }
+  }
 
   // Historique des connexions.
   let activity = $state<Array<{ ip: string; userAgent: string; newDevice: boolean; createdAt: number }>>([]);
@@ -951,6 +1021,7 @@
     mfaCode = "";
     mfaMessage = null;
     webauthnKeys = [];
+    passkeyKeys = [];
     activity = [];
     emgGrantor = [];
     emgGrantee = [];
@@ -1210,6 +1281,7 @@
             </button>
           </form>
           {#if mode === "login"}
+            <button type="button" class="ghost full" style="margin-top:0.6rem" onclick={loginWithPasskey} disabled={busy}>{@render lockIcon()}<span>Se connecter avec une passkey</span></button>
             <button class="link" onclick={() => { mode = "recover"; error = null; }}>Mot de passe oublié ?</button>
           {/if}
         {/if}
@@ -1246,7 +1318,7 @@
         <button class="nav-item" class:active={nav === "orgs"} onclick={() => (nav = "orgs")}>
           {@render orgIcon()}<span>Organisations</span>
         </button>
-        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; loadWebauthn(); loadActivity(); loadEmergency(); }}>
+        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; loadWebauthn(); loadActivity(); loadEmergency(); loadPasskeys(); }}>
           {@render shieldIcon()}<span>Sécurité</span>
         </button>
         <button class="nav-item" class:active={nav === "trash"} onclick={openTrash}>
@@ -1577,6 +1649,28 @@
               <p class="muted" style="margin:0 0 0.8rem">Renforce la connexion avec un code à usage unique (TOTP).</p>
               <button class="ghost" onclick={startMfaSetup}>Configurer la double authentification</button>
             {/if}
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Passkeys (connexion sans mot de passe)</h2></div>
+            <p class="muted" style="margin:0 0 0.8rem">
+              Déverrouille ton coffre avec une passkey (Face ID / Touch ID / clé FIDO2), sans mot de passe maître.
+              <span class="muted">Nécessite https ou localhost + un authentificateur compatible PRF.</span>
+            </p>
+            {#if passkeyKeys.length}
+              <ul class="list">
+                {#each passkeyKeys as k (k.id)}
+                  <li>
+                    <div class="row-main"><span class="row-title">{k.name}</span></div>
+                    <div class="row-actions"><button class="danger" onclick={() => removePasskey(k.id)}>Supprimer</button></div>
+                  </li>
+                {/each}
+              </ul>
+              <hr class="sep" />
+            {/if}
+            <button class="ghost" onclick={addPasskey} disabled={passkeyBusy}>
+              {passkeyBusy ? "Enregistrement…" : "Ajouter une passkey"}
+            </button>
           </section>
 
           <section class="panel">

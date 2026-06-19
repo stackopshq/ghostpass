@@ -106,6 +106,35 @@ export const api = {
   webauthnDeleteCredential(token: string, id: string) {
     return http<void>(`/api/mfa/webauthn/credentials/${id}`, { method: "DELETE", token });
   },
+  // ─── Passkeys (déverrouillage sans mot de passe) ───
+  passkeyRegisterOptions(token: string) {
+    return http<unknown>("/api/passkey/register/options", { method: "POST", token });
+  },
+  passkeyRegisterVerify(
+    token: string,
+    body: { response: unknown; name: string; prfWrappedUserKey: string },
+  ) {
+    return http<{ ok: boolean }>("/api/passkey/register/verify", { method: "POST", body, token });
+  },
+  passkeyCredentials(token: string) {
+    return http<{ credentials: Array<{ id: string; name: string; createdAt: number }> }>(
+      "/api/passkey/credentials",
+      { token },
+    );
+  },
+  passkeyDeleteCredential(token: string, id: string) {
+    return http<void>(`/api/passkey/credentials/${id}`, { method: "DELETE", token });
+  },
+  passkeyLoginOptions(email: string) {
+    return http<unknown>("/api/auth/passkey/options", { method: "POST", body: { email } });
+  },
+  passkeyLogin(email: string, response: unknown) {
+    return http<{ token: string; prfWrappedUserKey: string; encryptedPrivateKey: string }>(
+      "/api/auth/passkey/login",
+      { method: "POST", body: { email, response } },
+    );
+  },
+
   accountActivity(token: string) {
     return http<{
       events: Array<{ ip: string; userAgent: string; newDevice: boolean; createdAt: number }>;

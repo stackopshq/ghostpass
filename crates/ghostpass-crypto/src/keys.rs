@@ -132,6 +132,37 @@ pub struct ResetBlob {
     pub encrypted_user_key: EncString,
 }
 
+/// Enveloppe l'USK avec le secret PRF d'une passkey (déverrouillage passwordless).
+/// Le secret PRF (32 o, fourni par l'authentificateur) sert directement de clé d'enveloppe :
+/// haute entropie, et le sel PRF assure la séparation par usage.
+pub fn wrap_user_key_for_passkey(user_key: &[u8; 32], prf_secret: &[u8; 32]) -> Result<EncString> {
+    symmetric::encrypt(prf_secret, user_key)
+}
+
+/// Déverrouille un compte sans mot de passe : désenveloppe l'USK avec le secret PRF de la passkey,
+/// puis reconstitue la clé privée de partage (chiffrée par l'USK).
+pub fn unlock_with_passkey(
+    prf_secret: &[u8; 32],
+    prf_wrapped_user_key: &EncString,
+    encrypted_private_key: &EncString,
+) -> Result<AccountKeys> {
+    let user_key = Zeroizing::new(to_array_32(symmetric::decrypt(
+        prf_secret,
+        prf_wrapped_user_key,
+    )?)?);
+    let secret_bytes = Zeroizing::new(to_array_32(symmetric::decrypt(
+        &user_key,
+        encrypted_private_key,
+    )?)?);
+    let secret_key = SecretKey::from(*secret_bytes);
+    let public_key = secret_key.public_key();
+    Ok(AccountKeys {
+        user_key,
+        secret_key,
+        public_key,
+    })
+}
+
 /// Données pour réinitialiser le mot de passe maître à partir d'une USK déjà connue (accès
 /// d'urgence « takeover »). L'USK ne change pas — seule son enveloppe par le nouveau mot de
 /// passe est régénérée, donc `encrypted_private_key` reste valide.

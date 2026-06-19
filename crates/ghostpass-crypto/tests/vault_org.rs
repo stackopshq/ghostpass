@@ -208,3 +208,25 @@ fn emergency_access_read_and_takeover() {
     .unwrap();
     assert_eq!(*reopened.user_key, *grantor.user_key);
 }
+
+#[test]
+fn passkey_unlock_round_trip() {
+    use ghostpass_crypto::{keys, KdfParams};
+    let params = KdfParams {
+        mem_cost_kib: 64 * 1024,
+        time_cost: 3,
+        parallelism: 1,
+    };
+    let (acct, blob) = keys::register(b"pw", "u@x.ch", params).unwrap();
+
+    // Secret PRF simulé (fourni par l'authentificateur via l'extension WebAuthn PRF en réel).
+    let prf = [42u8; 32];
+    let wrapped = keys::wrap_user_key_for_passkey(&acct.user_key, &prf).unwrap();
+
+    // Déverrouillage sans mot de passe : on retrouve l'USK puis la clé privée.
+    let reopened = keys::unlock_with_passkey(&prf, &wrapped, &blob.encrypted_private_key).unwrap();
+    assert_eq!(*reopened.user_key, *acct.user_key);
+
+    // Un mauvais secret PRF ne déverrouille pas.
+    assert!(keys::unlock_with_passkey(&[1u8; 32], &wrapped, &blob.encrypted_private_key).is_err());
+}

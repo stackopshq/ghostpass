@@ -46,6 +46,19 @@ CREATE TABLE IF NOT EXISTS sends (
   views       INTEGER NOT NULL DEFAULT 0
 );
 
+-- Passkeys de déverrouillage SANS mot de passe (extension PRF). On stocke la clé publique du
+-- credential + l'USK enveloppée par le secret PRF (illisible sans la passkey). Zero-knowledge.
+CREATE TABLE IF NOT EXISTS passkeys (
+  id                   TEXT PRIMARY KEY,   -- credentialID (base64url)
+  user_id              TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  public_key           TEXT NOT NULL,      -- clé publique COSE (base64url)
+  counter              INTEGER NOT NULL,
+  transports           TEXT,
+  name                 TEXT NOT NULL,
+  prf_wrapped_user_key TEXT NOT NULL,      -- USK enveloppée par le secret PRF (EncString)
+  created_at           INTEGER NOT NULL
+);
+
 -- Clés de sécurité WebAuthn/FIDO2 (2e facteur). On ne stocke que la clé PUBLIQUE.
 CREATE TABLE IF NOT EXISTS webauthn_credentials (
   id          TEXT PRIMARY KEY,   -- credentialID (base64url)
@@ -138,6 +151,7 @@ CREATE TABLE IF NOT EXISTS org_items (
 
 CREATE INDEX IF NOT EXISTS idx_vault_items_user ON vault_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_webauthn_user ON webauthn_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_emergency_grantor ON emergency_access(grantor_id);
 CREATE INDEX IF NOT EXISTS idx_emergency_grantee ON emergency_access(grantee_id);

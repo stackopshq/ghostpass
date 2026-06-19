@@ -43,6 +43,17 @@ export interface LoginEventRow {
   created_at: number;
 }
 
+export interface PasskeyRow {
+  id: string;
+  user_id: string;
+  public_key: string;
+  counter: number;
+  transports: string | null;
+  name: string;
+  prf_wrapped_user_key: string;
+  created_at: number;
+}
+
 export interface WebAuthnCredentialRow {
   id: string;
   user_id: string;
