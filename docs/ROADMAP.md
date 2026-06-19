@@ -72,7 +72,7 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ✅ **MFA FIDO2 / YubiKey** (WebAuthn, 2e facteur au login ; fondation passkeys)
 - ✅ **Détection d'anomalies (base)** : historique des connexions (appareil/IP/date) + drapeau nouvel appareil ; scoring « Sentinel-like » avancé optionnel plus tard
 - ✅ **Accès d'urgence** (USK scellée pour un contact, délai géré serveur, lecture + takeover)
-- ⬜ **Passkeys passwordless** : login sans master password (PRF WebAuthn, tension ZK) — **L**
+- ✅ **Passkeys passwordless** : login & enrôlement via **PRF WebAuthn** (USK enveloppée par le secret PRF, ZK). Cœur + backend testés ; flux navigateur à vérifier sur un domaine https compatible PRF.
 
 ### Phase 4 — Différenciateurs souveraineté CH (L, à arbitrer)
 - ⬜ **Alias hide-my-email** auto-hébergés (forwarding souverain) — meilleur angle anti-Proton, infra email — **L**
