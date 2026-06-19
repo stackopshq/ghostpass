@@ -70,9 +70,9 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ✅ **Partage de lien éphémère** (Send : AES-GCM client, clé dans le fragment, expiry + one-time)
 - ✅ **Dark web monitoring** (HIBP k-anonymity, requête côté client)
 - ✅ **MFA FIDO2 / YubiKey** (WebAuthn, 2e facteur au login ; fondation passkeys)
-- 🟡 **Détection d'anomalies** : rate-limit / anti-énumération en place ; Sentinel-like à faire — **M**
-- ⬜ **Passkeys passwordless** : login sans master password (PRF WebAuthn, tension ZK) — **L**
+- ✅ **Détection d'anomalies (base)** : historique des connexions (appareil/IP/date) + drapeau nouvel appareil ; scoring « Sentinel-like » avancé optionnel plus tard
 - ⬜ **Accès d'urgence** (emergency access) — **M**
+- ⬜ **Passkeys passwordless** : login sans master password (PRF WebAuthn, tension ZK) — **L**
 
 ### Phase 4 — Différenciateurs souveraineté CH (L, à arbitrer)
 - ⬜ **Alias hide-my-email** auto-hébergés (forwarding souverain) — meilleur angle anti-Proton, infra email — **L**
