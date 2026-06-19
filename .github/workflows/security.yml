@@ -65,17 +65,15 @@ jobs:
           --config p/javascript
           --config p/typescript
 
-  codeql:
-    name: CodeQL (JS/TS)
-    runs-on: ubuntu-latest
-    # Nécessite le code scanning activé (gratuit sur dépôt public ; GitHub Advanced Security sur privé).
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
-        with:
-          languages: javascript-typescript
-      - uses: github/codeql-action/analyze@v3
+  # CodeQL (SAST GitHub) — à ajouter quand le « Code scanning » sera activé :
+  # Settings → Code security (gratuit sur dépôt public ; GitHub Advanced Security sur privé).
+  # Le SAST est déjà couvert par Semgrep ci-dessus en attendant.
+  # codeql:
+  #   name: CodeQL (JS/TS)
+  #   runs-on: ubuntu-latest
+  #   permissions: { contents: read, security-events: write, actions: read }
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: github/codeql-action/init@v3
+  #       with: { languages: javascript-typescript }
+  #     - uses: github/codeql-action/analyze@v3
