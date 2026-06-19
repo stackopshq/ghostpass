@@ -132,6 +132,32 @@ pub struct ResetBlob {
     pub encrypted_user_key: EncString,
 }
 
+/// Données pour réinitialiser le mot de passe maître à partir d'une USK déjà connue (accès
+/// d'urgence « takeover »). L'USK ne change pas — seule son enveloppe par le nouveau mot de
+/// passe est régénérée, donc `encrypted_private_key` reste valide.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TakeoverReset {
+    pub master_password_hash: String,
+    pub encrypted_user_key: EncString,
+}
+
+/// Prépare la réinitialisation du mot de passe maître à partir de l'USK récupérée (takeover).
+pub fn takeover_reset(
+    user_key: &[u8; 32],
+    email: &str,
+    new_password: &[u8],
+    params: KdfParams,
+) -> Result<TakeoverReset> {
+    let new_master_key = Zeroizing::new(kdf::derive_master_key(new_password, email, params)?);
+    let new_enc_key = Zeroizing::new(kdf::derive_encryption_key(&new_master_key));
+    let new_auth_hash = Zeroizing::new(kdf::derive_auth_hash(&new_master_key));
+    let encrypted_user_key = symmetric::encrypt(&new_enc_key, user_key)?;
+    Ok(TakeoverReset {
+        master_password_hash: STANDARD.encode(new_auth_hash.as_slice()),
+        encrypted_user_key,
+    })
+}
+
 /// Crée un kit de récupération pour une USK : génère une clé de récupération, l'utilise pour
 /// envelopper l'USK et prépare la preuve d'authentification associée.
 pub fn create_recovery(user_key: &[u8; 32]) -> Result<RecoveryArtifacts> {

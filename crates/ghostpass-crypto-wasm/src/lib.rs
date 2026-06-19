@@ -278,4 +278,73 @@ impl Account {
                 .map_err(js_err)?;
         Ok(STANDARD.encode(sealed))
     }
+
+    // ─── Accès d'urgence ───
+    /// Scelle l'USK du compte pour un contact de confiance (accès d'urgence), authentifié.
+    /// Le blob (base64) est stocké côté serveur et n'est ouvrable qu'avec la clé privée du contact.
+    pub fn seal_user_key_for(&self, contact_public_key: &str) -> Result<String, JsError> {
+        let contact_public = decode_public_key(contact_public_key)?;
+        let sealed = sharing::box_seal(
+            &self.keys.secret_key,
+            &contact_public,
+            self.keys.user_key.as_slice(),
+        )
+        .map_err(js_err)?;
+        Ok(STANDARD.encode(sealed))
+    }
+
+    /// (Contact) Ouvre un accès d'urgence reçu d'un grantor : récupère son USK en mémoire WASM,
+    /// en vérifiant que le blob provient bien de la clé publique du grantor.
+    pub fn open_emergency(
+        &self,
+        grantor_public_key: &str,
+        sealed: &str,
+    ) -> Result<EmergencyVault, JsError> {
+        let grantor_public = decode_public_key(grantor_public_key)?;
+        let sealed_bytes = STANDARD.decode(sealed).map_err(js_err)?;
+        let opened = sharing::box_open(&self.keys.secret_key, &grantor_public, &sealed_bytes)
+            .map_err(js_err)?;
+        let arr: [u8; 32] = opened
+            .try_into()
+            .map_err(|_| JsError::new("USK d'urgence invalide"))?;
+        Ok(EmergencyVault {
+            user_key: Zeroizing::new(arr),
+        })
+    }
+}
+
+/// Accès d'urgence ouvert côté contact : détient l'USK du grantor (jamais exposée au JS).
+#[wasm_bindgen]
+pub struct EmergencyVault {
+    user_key: Zeroizing<[u8; 32]>,
+}
+
+#[wasm_bindgen]
+impl EmergencyVault {
+    /// Lecture : déchiffre un item du coffre du grantor avec son USK récupéré.
+    pub fn decrypt_item(&self, encrypted_item_json: &str) -> Result<String, JsError> {
+        let enc: EncryptedItem = serde_json::from_str(encrypted_item_json).map_err(js_err)?;
+        let item = vault::decrypt_item(&self.user_key, &enc).map_err(js_err)?;
+        serde_json::to_string(&item).map_err(js_err)
+    }
+
+    /// Takeover : prépare la réinitialisation du mot de passe maître du grantor à partir de son
+    /// USK récupéré. Renvoie un JSON `{ master_password_hash, encrypted_user_key }`.
+    pub fn takeover(
+        &self,
+        grantor_email: &str,
+        kdf_params_json: &str,
+        new_password: &str,
+    ) -> Result<String, JsError> {
+        let params: KdfParams = serde_json::from_str(kdf_params_json).map_err(js_err)?;
+        params.ensure_strong().map_err(js_err)?;
+        let reset = keys::takeover_reset(
+            &self.user_key,
+            grantor_email,
+            new_password.as_bytes(),
+            params,
+        )
+        .map_err(js_err)?;
+        serde_json::to_string(&reset).map_err(js_err)
+    }
 }

@@ -4,6 +4,7 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import type { DB } from "./db/database.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerEmergencyRoutes } from "./routes/emergency.js";
 import { registerIconRoutes } from "./routes/icons.js";
 import { registerMfaRoutes } from "./routes/mfa.js";
 import { registerOrgRoutes } from "./routes/orgs.js";
@@ -49,6 +50,7 @@ export function buildApp(db: DB): FastifyInstance {
   registerIconRoutes(app);
   registerSendRoutes(app, db);
   registerWebAuthnRoutes(app, db);
+  registerEmergencyRoutes(app, db);
 
   return app;
 }

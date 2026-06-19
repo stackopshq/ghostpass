@@ -6,15 +6,21 @@
   import {
     computeLoginHash,
     createRecovery,
+    decryptEmergencyItem,
     decryptVaultItem,
+    emergencyTakeover,
     encryptFolders,
     encryptItem,
     ensureCryptoReady,
     faviconUrl,
+    FOLDERS_ITEM_NAME,
+    openEmergency,
     recoverAccount,
     register,
+    sealUserKeyFor,
     unlock,
     type DecryptedItem,
+    type EmergencyItem,
     type ItemKind,
   } from "./lib/crypto.js";
   import { generateOtp, parseOtp } from "./lib/totp.js";
@@ -218,6 +224,128 @@
       await loadWebauthn();
     } catch (err) {
       error = errMsg(err);
+    }
+  }
+
+  // ─── Accès d'urgence ───
+  type EmgEntry = {
+    id: string;
+    contactEmail: string;
+    role: string;
+    waitDays: number;
+    status: string;
+    requestedAt: number | null;
+    available?: boolean;
+  };
+  let emgGrantor = $state<EmgEntry[]>([]);
+  let emgGrantee = $state<EmgEntry[]>([]);
+  let emgBusy = $state(false);
+  let emgInfo = $state<string | null>(null);
+  let emgEmail = $state("");
+  let emgRole = $state<"view" | "takeover">("view");
+  let emgWait = $state(7);
+  let emgViewItems = $state<EmergencyItem[] | null>(null);
+  let emgViewFrom = $state("");
+  let emgViewRevealed = $state<Set<number>>(new Set());
+
+  async function loadEmergency() {
+    if (!token) return;
+    try {
+      const r = await api.listEmergency(token);
+      emgGrantor = r.asGrantor;
+      emgGrantee = r.asGrantee;
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
+
+  async function inviteEmergency() {
+    if (!token || !account || !emgEmail) return;
+    emgBusy = true;
+    error = null;
+    try {
+      const { publicKey } = await api.lookupPublicKey(token, emgEmail);
+      const sealedUserKey = sealUserKeyFor(account, publicKey);
+      await api.createEmergency(token, {
+        email: emgEmail,
+        role: emgRole,
+        waitDays: emgWait,
+        sealedUserKey,
+      });
+      emgEmail = "";
+      await loadEmergency();
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      emgBusy = false;
+    }
+  }
+
+  async function emgAct(id: string, action: "accept" | "request" | "approve" | "reject") {
+    if (!token) return;
+    emgBusy = true;
+    error = null;
+    try {
+      await api.emergencyAction(token, id, action);
+      await loadEmergency();
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      emgBusy = false;
+    }
+  }
+
+  async function emgRemove(id: string) {
+    if (!token || !confirm("Supprimer cet accès d'urgence ?")) return;
+    try {
+      await api.removeEmergency(token, id);
+      await loadEmergency();
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
+
+  async function emgView(e: EmgEntry) {
+    if (!token || !account) return;
+    emgBusy = true;
+    error = null;
+    emgViewItems = null;
+    emgViewRevealed = new Set();
+    try {
+      const data = await api.emergencyAccess(token, e.id);
+      const vault = openEmergency(account, data.grantorPublicKey, data.sealedUserKey);
+      emgViewItems = data.items
+        .map((it) => decryptEmergencyItem(vault, it.encryptedKey, it.encryptedData))
+        .filter((i) => i.name !== FOLDERS_ITEM_NAME);
+      emgViewFrom = data.grantorEmail;
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      emgBusy = false;
+    }
+  }
+
+  async function emgTakeover(e: EmgEntry) {
+    if (!token || !account) return;
+    const np = prompt(`Nouveau mot de passe maître pour le compte de ${e.contactEmail} :`);
+    if (!np) return;
+    emgBusy = true;
+    error = null;
+    emgInfo = null;
+    try {
+      const data = await api.emergencyAccess(token, e.id);
+      const vault = openEmergency(account, data.grantorPublicKey, data.sealedUserKey);
+      const reset = emergencyTakeover(vault, data.grantorEmail, data.grantorKdfParams, np);
+      await api.emergencyTakeover(token, e.id, {
+        newMasterPasswordHash: reset.masterPasswordHash,
+        newEncryptedUserKey: reset.encryptedUserKey,
+      });
+      emgInfo = `Mot de passe du compte ${e.contactEmail} réinitialisé.`;
+      await loadEmergency();
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      emgBusy = false;
     }
   }
 
@@ -824,6 +952,9 @@
     mfaMessage = null;
     webauthnKeys = [];
     activity = [];
+    emgGrantor = [];
+    emgGrantee = [];
+    emgViewItems = null;
     recoveryKitDisplay = null;
     recoveryKeyInput = "";
     recoverNewPassword = "";
@@ -1115,7 +1246,7 @@
         <button class="nav-item" class:active={nav === "orgs"} onclick={() => (nav = "orgs")}>
           {@render orgIcon()}<span>Organisations</span>
         </button>
-        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; loadWebauthn(); loadActivity(); }}>
+        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; loadWebauthn(); loadActivity(); loadEmergency(); }}>
           {@render shieldIcon()}<span>Sécurité</span>
         </button>
         <button class="nav-item" class:active={nav === "trash"} onclick={openTrash}>
@@ -1468,6 +1599,105 @@
             <button class="ghost" onclick={addSecurityKey} disabled={webauthnBusy}>
               {webauthnBusy ? "Enregistrement…" : "Ajouter une clé de sécurité"}
             </button>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Accès d'urgence</h2></div>
+            {#if emgInfo}
+              <div class="callout success" style="margin-bottom:0.8rem">{@render checkIcon()}<span>{emgInfo}</span></div>
+            {/if}
+
+            <p class="label">Contacts qui pourront accéder à mon coffre</p>
+            {#if emgGrantor.length}
+              <ul class="list">
+                {#each emgGrantor as e (e.id)}
+                  <li>
+                    <div class="row-main">
+                      <span class="row-title">{e.contactEmail}</span>
+                      <span class="row-sub"><span class="pill pill-role">{e.role}</span><span class="pill pill-muted">{e.status}</span> · délai {e.waitDays} j</span>
+                    </div>
+                    <div class="row-actions">
+                      {#if e.status === "requested"}
+                        <button class="ghost sm" onclick={() => emgAct(e.id, "approve")} disabled={emgBusy}>Approuver</button>
+                        <button class="ghost sm" onclick={() => emgAct(e.id, "reject")} disabled={emgBusy}>Refuser</button>
+                      {/if}
+                      <button class="danger" onclick={() => emgRemove(e.id)}>Retirer</button>
+                    </div>
+                  </li>
+                {/each}
+              </ul>
+            {:else}
+              <p class="muted">Aucun contact de confiance.</p>
+            {/if}
+
+            <hr class="sep" />
+            <p class="label">Inviter un contact</p>
+            <form onsubmit={(ev) => { ev.preventDefault(); inviteEmergency(); }}>
+              <div class="grid-2">
+                <label class="field"><span>Email du contact</span><input type="email" bind:value={emgEmail} required /></label>
+                <label class="field"><span>Délai (jours)</span><input type="number" min="1" max="90" bind:value={emgWait} /></label>
+              </div>
+              <label class="field">
+                <span>Niveau d'accès</span>
+                <select bind:value={emgRole}>
+                  <option value="view">Lecture seule</option>
+                  <option value="takeover">Lecture + takeover (reset du mot de passe)</option>
+                </select>
+              </label>
+              <button type="submit" disabled={emgBusy}>Inviter</button>
+            </form>
+
+            {#if emgGrantee.length}
+              <hr class="sep" />
+              <p class="label">Comptes auxquels je peux accéder</p>
+              <ul class="list">
+                {#each emgGrantee as e (e.id)}
+                  <li>
+                    <div class="row-main">
+                      <span class="row-title">{e.contactEmail}</span>
+                      <span class="row-sub"><span class="pill pill-role">{e.role}</span><span class="pill pill-muted">{e.status}</span>{#if e.available}<span class="pill pill-lock"><span class="dot"></span>disponible</span>{/if}</span>
+                    </div>
+                    <div class="row-actions">
+                      {#if e.status === "invited"}<button class="ghost sm" onclick={() => emgAct(e.id, "accept")} disabled={emgBusy}>Accepter</button>{/if}
+                      {#if e.status === "accepted"}<button class="ghost sm" onclick={() => emgAct(e.id, "request")} disabled={emgBusy}>Demander l'accès</button>{/if}
+                      {#if e.available}
+                        <button class="ghost sm" onclick={() => emgView(e)} disabled={emgBusy}>Lire le coffre</button>
+                        {#if e.role === "takeover"}<button class="danger" onclick={() => emgTakeover(e)} disabled={emgBusy}>Reprendre</button>{/if}
+                      {/if}
+                      <button class="danger" onclick={() => emgRemove(e.id)}>Retirer</button>
+                    </div>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+
+            {#if emgViewItems}
+              <hr class="sep" />
+              <p class="label">Coffre de {emgViewFrom} — lecture d'urgence ({emgViewItems.length})</p>
+              {#if emgViewItems.length === 0}
+                <p class="muted">Aucun secret.</p>
+              {:else}
+                <ul class="list">
+                  {#each emgViewItems as it, i (i)}
+                    <li>
+                      <div class="row-main">
+                        <span class="row-title">{it.name}</span>
+                        {#if it.username}<span class="row-sub"><span class="mono">{it.username}</span></span>{/if}
+                      </div>
+                      <span class="mono dots">{emgViewRevealed.has(i) ? it.password : "••••••••••"}</span>
+                      <div class="row-actions">
+                        <button class="icon-btn" aria-label="Afficher/masquer" onclick={() => { const s = new Set(emgViewRevealed); s.has(i) ? s.delete(i) : s.add(i); emgViewRevealed = s; }}>
+                          {#if emgViewRevealed.has(i)}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
+                        </button>
+                        <button class="icon-btn {copiedKey === `emg-${i}` ? 'copied' : ''}" aria-label="Copier" onclick={() => copy(it.password, `emg-${i}`)}>
+                          {#if copiedKey === `emg-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
+                        </button>
+                      </div>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            {/if}
           </section>
 
           <section class="panel">

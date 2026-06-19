@@ -164,3 +164,47 @@ fn rotation_revokes_access_for_removed_member() {
     assert_eq!(rotation.sealed_for_members.len(), 1);
     let _ = bob;
 }
+
+#[test]
+fn emergency_access_read_and_takeover() {
+    use ghostpass_crypto::{keys, KdfParams};
+    let params = KdfParams {
+        mem_cost_kib: 64 * 1024,
+        time_cost: 3,
+        parallelism: 1,
+    };
+
+    // Le grantor s'inscrit et chiffre un item ; le contact (grantee) s'inscrit aussi.
+    let (grantor, gblob) = keys::register(b"grantorpw", "g@x.ch", params).unwrap();
+    let item = sample_login();
+    let enc = vault::encrypt_item(&grantor.user_key, &item).unwrap();
+    let (grantee, _) = keys::register(b"granteepw", "c@x.ch", params).unwrap();
+
+    // Le grantor scelle son USK pour le contact ; le contact l'ouvre (origine vérifiée).
+    let sealed = sharing::box_seal(
+        &grantor.secret_key,
+        &grantee.public_key,
+        grantor.user_key.as_slice(),
+    )
+    .unwrap();
+    let recovered: [u8; 32] = sharing::box_open(&grantee.secret_key, &grantor.public_key, &sealed)
+        .unwrap()
+        .try_into()
+        .unwrap();
+    assert_eq!(recovered, *grantor.user_key);
+
+    // Lecture : le contact déchiffre l'item du grantor avec l'USK récupéré.
+    assert_eq!(vault::decrypt_item(&recovered, &enc).unwrap(), item);
+
+    // Takeover : nouveau mot de passe maître ; le grantor peut rouvrir (clé privée inchangée).
+    let reset = keys::takeover_reset(&recovered, "g@x.ch", b"newmasterpw", params).unwrap();
+    let reopened = keys::unlock(
+        b"newmasterpw",
+        "g@x.ch",
+        params,
+        &reset.encrypted_user_key,
+        &gblob.encrypted_private_key,
+    )
+    .unwrap();
+    assert_eq!(*reopened.user_key, *grantor.user_key);
+}

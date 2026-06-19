@@ -19,6 +19,21 @@ export interface UserRow {
   created_at: number;
 }
 
+export type EmergencyRole = "view" | "takeover";
+export type EmergencyStatus = "invited" | "accepted" | "requested" | "granted";
+
+export interface EmergencyAccessRow {
+  id: string;
+  grantor_id: string;
+  grantee_id: string;
+  role: EmergencyRole;
+  wait_days: number;
+  status: EmergencyStatus;
+  sealed_user_key: string;
+  requested_at: number | null;
+  created_at: number;
+}
+
 export interface LoginEventRow {
   id: string;
   user_id: string;

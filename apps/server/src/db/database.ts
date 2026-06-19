@@ -57,6 +57,22 @@ CREATE TABLE IF NOT EXISTS webauthn_credentials (
   created_at  INTEGER NOT NULL
 );
 
+-- Accès d'urgence : un grantor scelle son USK pour un contact (grantee). Le serveur stocke le
+-- blob scellé (illisible pour lui) et applique le DÉLAI : il ne le libère qu'une fois l'accès
+-- accordé (approbation du grantor, ou expiration du délai sans refus). Zero-knowledge préservé.
+CREATE TABLE IF NOT EXISTS emergency_access (
+  id               TEXT PRIMARY KEY,
+  grantor_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  grantee_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role             TEXT NOT NULL,   -- 'view' | 'takeover'
+  wait_days        INTEGER NOT NULL,
+  status           TEXT NOT NULL,   -- 'invited' | 'accepted' | 'requested' | 'granted'
+  sealed_user_key  TEXT NOT NULL,   -- USK du grantor scellée pour le grantee (base64)
+  requested_at     INTEGER,         -- début du compte à rebours (NULL hors 'requested'/'granted')
+  created_at       INTEGER NOT NULL,
+  UNIQUE (grantor_id, grantee_id)
+);
+
 -- Journal des connexions (historique / détection d'anomalies). Métadonnées non sensibles.
 CREATE TABLE IF NOT EXISTS login_events (
   id          TEXT PRIMARY KEY,
@@ -123,6 +139,8 @@ CREATE TABLE IF NOT EXISTS org_items (
 CREATE INDEX IF NOT EXISTS idx_vault_items_user ON vault_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_webauthn_user ON webauthn_credentials(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_emergency_grantor ON emergency_access(grantor_id);
+CREATE INDEX IF NOT EXISTS idx_emergency_grantee ON emergency_access(grantee_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);

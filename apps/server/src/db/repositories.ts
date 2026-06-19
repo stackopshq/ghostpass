@@ -7,6 +7,9 @@ import type {
   OrgItemRow,
   OrgMemberRow,
   OrgRole,
+  EmergencyAccessRow,
+  EmergencyRole,
+  EmergencyStatus,
   LoginEventRow,
   OrgRow,
   SendRow,
@@ -183,6 +186,80 @@ export const vaultItems = {
       .prepare(`DELETE FROM vault_items WHERE id = ? AND user_id = ?`)
       .run(args.id, args.userId);
     return result.changes > 0;
+  },
+};
+
+export const emergencyAccess = {
+  create(
+    db: DB,
+    e: {
+      id: string;
+      grantorId: string;
+      granteeId: string;
+      role: EmergencyRole;
+      waitDays: number;
+      sealedUserKey: string;
+    },
+  ): void {
+    db.prepare(
+      `INSERT INTO emergency_access
+        (id, grantor_id, grantee_id, role, wait_days, status, sealed_user_key, created_at)
+       VALUES (@id, @grantorId, @granteeId, @role, @waitDays, 'invited', @sealedUserKey, @createdAt)`,
+    ).run({ ...e, createdAt: Date.now() });
+  },
+
+  findById(db: DB, id: string): EmergencyAccessRow | undefined {
+    return db.prepare(`SELECT * FROM emergency_access WHERE id = ?`).get(id) as
+      | EmergencyAccessRow
+      | undefined;
+  },
+
+  listAsGrantor(db: DB, grantorId: string): Array<EmergencyAccessRow & { grantee_email: string }> {
+    return db
+      .prepare(
+        `SELECT ea.*, u.email AS grantee_email FROM emergency_access ea
+         JOIN users u ON u.id = ea.grantee_id WHERE ea.grantor_id = ? ORDER BY ea.created_at`,
+      )
+      .all(grantorId) as Array<EmergencyAccessRow & { grantee_email: string }>;
+  },
+
+  listAsGrantee(
+    db: DB,
+    granteeId: string,
+  ): Array<
+    EmergencyAccessRow & { grantor_email: string; grantor_public_key: string; grantor_kdf_params: string }
+  > {
+    return db
+      .prepare(
+        `SELECT ea.*, u.email AS grantor_email, u.public_key AS grantor_public_key,
+                u.kdf_params AS grantor_kdf_params
+         FROM emergency_access ea JOIN users u ON u.id = ea.grantor_id
+         WHERE ea.grantee_id = ? ORDER BY ea.created_at`,
+      )
+      .all(granteeId) as Array<
+      EmergencyAccessRow & { grantor_email: string; grantor_public_key: string; grantor_kdf_params: string }
+    >;
+  },
+
+  setStatus(db: DB, id: string, status: EmergencyStatus): void {
+    db.prepare(`UPDATE emergency_access SET status = ? WHERE id = ?`).run(status, id);
+  },
+
+  setRequested(db: DB, id: string): void {
+    db.prepare(`UPDATE emergency_access SET status = 'requested', requested_at = ? WHERE id = ?`).run(
+      Date.now(),
+      id,
+    );
+  },
+
+  clearRequest(db: DB, id: string): void {
+    db.prepare(
+      `UPDATE emergency_access SET status = 'accepted', requested_at = NULL WHERE id = ?`,
+    ).run(id);
+  },
+
+  remove(db: DB, id: string): boolean {
+    return db.prepare(`DELETE FROM emergency_access WHERE id = ?`).run(id).changes > 0;
   },
 };
 

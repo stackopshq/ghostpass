@@ -112,6 +112,51 @@ export const api = {
     }>("/api/account/activity", { token });
   },
 
+  // ─── Accès d'urgence ───
+  listEmergency(token: string) {
+    type Grantor = {
+      id: string;
+      contactEmail: string;
+      role: string;
+      waitDays: number;
+      status: string;
+      requestedAt: number | null;
+    };
+    return http<{ asGrantor: Grantor[]; asGrantee: Array<Grantor & { available: boolean }> }>(
+      "/api/emergency",
+      { token },
+    );
+  },
+  createEmergency(
+    token: string,
+    body: { email: string; role: string; waitDays: number; sealedUserKey: string },
+  ) {
+    return http<{ ok: boolean }>("/api/emergency", { method: "POST", body, token });
+  },
+  emergencyAction(token: string, id: string, action: "accept" | "request" | "approve" | "reject") {
+    return http<{ ok: boolean }>(`/api/emergency/${id}/${action}`, { method: "POST", token });
+  },
+  removeEmergency(token: string, id: string) {
+    return http<void>(`/api/emergency/${id}`, { method: "DELETE", token });
+  },
+  emergencyAccess(token: string, id: string) {
+    return http<{
+      role: string;
+      sealedUserKey: string;
+      grantorPublicKey: string;
+      grantorEmail: string;
+      grantorKdfParams: string;
+      items: Array<{ id: string; encryptedKey: string; encryptedData: string }>;
+    }>(`/api/emergency/${id}/access`, { token });
+  },
+  emergencyTakeover(
+    token: string,
+    id: string,
+    body: { newMasterPasswordHash: string; newEncryptedUserKey: string },
+  ) {
+    return http<{ ok: boolean }>(`/api/emergency/${id}/takeover`, { method: "POST", body, token });
+  },
+
   mfaSetup(token: string) {
     return http<{ secret: string; otpauthUri: string }>("/api/mfa/setup", {
       method: "POST",
