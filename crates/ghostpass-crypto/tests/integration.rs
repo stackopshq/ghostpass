@@ -75,7 +75,11 @@ fn kdf_params_rejects_downgrade() {
     // Les paramètres par défaut sont acceptés ; des paramètres affaiblis (potentiel downgrade
     // imposé par un serveur malveillant) sont refusés côté client.
     assert!(KdfParams::default().ensure_strong().is_ok());
-    let weak = KdfParams { mem_cost_kib: 8 * 1024, time_cost: 1, parallelism: 1 };
+    let weak = KdfParams {
+        mem_cost_kib: 8 * 1024,
+        time_cost: 1,
+        parallelism: 1,
+    };
     assert!(weak.ensure_strong().is_err());
 }
 

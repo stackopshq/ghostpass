@@ -110,9 +110,7 @@ impl Account {
         let epk = encrypted_private_key.parse().map_err(js_err)?;
         let account_keys =
             keys::unlock(password.as_bytes(), email, params, &euk, &epk).map_err(js_err)?;
-        Ok(Account {
-            keys: account_keys,
-        })
+        Ok(Account { keys: account_keys })
     }
 
     /// Hash d'authentification (base64) à envoyer au serveur lors d'une connexion.
@@ -147,9 +145,15 @@ impl Account {
         params.ensure_strong().map_err(js_err)?;
         let euk_rec: EncString = encrypted_user_key_recovery.parse().map_err(js_err)?;
         let epk: EncString = encrypted_private_key.parse().map_err(js_err)?;
-        let (account_keys, reset) =
-            keys::recover(recovery_key, email, new_password.as_bytes(), params, &euk_rec, &epk)
-                .map_err(js_err)?;
+        let (account_keys, reset) = keys::recover(
+            recovery_key,
+            email,
+            new_password.as_bytes(),
+            params,
+            &euk_rec,
+            &epk,
+        )
+        .map_err(js_err)?;
         let reset_json = serde_json::to_string(&reset).map_err(js_err)?;
         Ok(RecoveryResult {
             account: Some(Account { keys: account_keys }),
@@ -230,7 +234,9 @@ impl OrgCreation {
 
     /// Récupère le contexte `Org` (les clés). Ne peut être appelé qu'une fois.
     pub fn org(&mut self) -> Result<Org, JsError> {
-        self.org.take().ok_or_else(|| JsError::new("org déjà consommée"))
+        self.org
+            .take()
+            .ok_or_else(|| JsError::new("org déjà consommée"))
     }
 }
 
@@ -253,8 +259,8 @@ impl Account {
     pub fn open_org(&self, admin_public_key: &str, sealed: &str) -> Result<Org, JsError> {
         let admin_public = decode_public_key(admin_public_key)?;
         let sealed_bytes = STANDARD.decode(sealed).map_err(js_err)?;
-        let org_key =
-            org::open_org_key(&self.keys.secret_key, &admin_public, &sealed_bytes).map_err(js_err)?;
+        let org_key = org::open_org_key(&self.keys.secret_key, &admin_public, &sealed_bytes)
+            .map_err(js_err)?;
         Ok(Org {
             org_key: Zeroizing::new(org_key),
         })

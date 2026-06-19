@@ -56,7 +56,10 @@ impl KdfParams {
     /// malveillant ne doit pas pouvoir imposer un coût trivial qui rendrait le hash d'auth
     /// bruteforçable hors-ligne.
     pub fn ensure_strong(&self) -> Result<()> {
-        if self.mem_cost_kib < MIN_MEM_COST_KIB || self.time_cost < MIN_TIME_COST || self.parallelism < 1 {
+        if self.mem_cost_kib < MIN_MEM_COST_KIB
+            || self.time_cost < MIN_TIME_COST
+            || self.parallelism < 1
+        {
             return Err(CryptoError::WeakKdfParams);
         }
         Ok(())

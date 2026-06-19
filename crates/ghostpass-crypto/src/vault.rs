@@ -85,7 +85,10 @@ pub fn encrypt_item(wrapping_key: &[u8; 32], item: &VaultItem) -> Result<Encrypt
 
 /// Déchiffre un item : ouvre l'item key avec la clé d'enveloppe, puis le contenu.
 pub fn decrypt_item(wrapping_key: &[u8; 32], enc: &EncryptedItem) -> Result<VaultItem> {
-    let item_key = Zeroizing::new(to_array_32(symmetric::decrypt(wrapping_key, &enc.encrypted_key)?)?);
+    let item_key = Zeroizing::new(to_array_32(symmetric::decrypt(
+        wrapping_key,
+        &enc.encrypted_key,
+    )?)?);
     let payload = Zeroizing::new(symmetric::decrypt(&item_key, &enc.encrypted_data)?);
     serde_json::from_slice(&payload).map_err(|_| CryptoError::Decryption)
 }
@@ -97,8 +100,10 @@ pub fn rewrap_item_key(
     new_wrapping_key: &[u8; 32],
     enc: &EncryptedItem,
 ) -> Result<EncryptedItem> {
-    let item_key =
-        Zeroizing::new(to_array_32(symmetric::decrypt(old_wrapping_key, &enc.encrypted_key)?)?);
+    let item_key = Zeroizing::new(to_array_32(symmetric::decrypt(
+        old_wrapping_key,
+        &enc.encrypted_key,
+    )?)?);
     let encrypted_key = symmetric::encrypt(new_wrapping_key, item_key.as_slice())?;
     Ok(EncryptedItem {
         encrypted_key,

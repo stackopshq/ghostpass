@@ -36,7 +36,9 @@ pub fn box_seal(
 ) -> Result<Vec<u8>> {
     let b = ChaChaBox::new(recipient_public, sender_secret);
     let nonce = ChaChaBox::generate_nonce(&mut OsRng);
-    let ciphertext = b.encrypt(&nonce, plaintext).map_err(|_| CryptoError::Encryption)?;
+    let ciphertext = b
+        .encrypt(&nonce, plaintext)
+        .map_err(|_| CryptoError::Encryption)?;
     let mut out = Vec::with_capacity(NONCE_LEN + ciphertext.len());
     out.extend_from_slice(nonce.as_slice());
     out.extend_from_slice(&ciphertext);
@@ -55,5 +57,6 @@ pub fn box_open(
     let (nonce_bytes, ciphertext) = data.split_at(NONCE_LEN);
     let b = ChaChaBox::new(sender_public, recipient_secret);
     let nonce = GenericArray::from_slice(nonce_bytes);
-    b.decrypt(nonce, ciphertext).map_err(|_| CryptoError::Decryption)
+    b.decrypt(nonce, ciphertext)
+        .map_err(|_| CryptoError::Decryption)
 }

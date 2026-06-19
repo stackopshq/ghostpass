@@ -63,13 +63,18 @@ impl FromStr for EncString {
 
 // Sérialisation : une `EncString` voyage sous sa forme textuelle compacte.
 impl serde::Serialize for EncString {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        serializer: S,
+    ) -> core::result::Result<S::Ok, S::Error> {
         serializer.serialize_str(&self.to_string())
     }
 }
 
 impl<'de> serde::Deserialize<'de> for EncString {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> core::result::Result<Self, D::Error> {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> core::result::Result<Self, D::Error> {
         let s = <String as serde::Deserialize>::deserialize(deserializer)?;
         EncString::from_str(&s).map_err(serde::de::Error::custom)
     }

@@ -68,7 +68,11 @@ pub fn rotate_org_key(
 
     let mut sealed_for_members = Vec::with_capacity(remaining_member_publics.len());
     for member_public in remaining_member_publics {
-        sealed_for_members.push(seal_org_key_for_member(admin_secret, member_public, &new_org_key)?);
+        sealed_for_members.push(seal_org_key_for_member(
+            admin_secret,
+            member_public,
+            &new_org_key,
+        )?);
     }
 
     let mut rewrapped_items = Vec::with_capacity(shared_items.len());

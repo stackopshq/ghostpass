@@ -4,7 +4,11 @@ use ghostpass_crypto::{keys, KdfParams};
 
 fn fast_params() -> KdfParams {
     // Planchers ensure_strong : derive_master_key rejette désormais des paramètres plus faibles.
-    KdfParams { mem_cost_kib: 64 * 1024, time_cost: 3, parallelism: 1 }
+    KdfParams {
+        mem_cost_kib: 64 * 1024,
+        time_cost: 3,
+        parallelism: 1,
+    }
 }
 
 #[test]
@@ -58,7 +62,9 @@ fn recovery_with_wrong_key_fails() {
     let recovery = keys::create_recovery(&keys_orig.user_key).unwrap();
 
     // Une clé de récupération erronée (même format) ne doit pas déchiffrer l'USK.
-    let bogus = ghostpass_crypto::keys::create_recovery(&[0u8; 32]).unwrap().recovery_key;
+    let bogus = ghostpass_crypto::keys::create_recovery(&[0u8; 32])
+        .unwrap()
+        .recovery_key;
     let result = keys::recover(
         &bogus,
         "a@b.ch",

@@ -86,8 +86,14 @@ pub fn unlock(
     let master_key = Zeroizing::new(kdf::derive_master_key(password, email, params)?);
     let encryption_key = Zeroizing::new(kdf::derive_encryption_key(&master_key));
 
-    let user_key = Zeroizing::new(to_array_32(symmetric::decrypt(&encryption_key, encrypted_user_key)?)?);
-    let secret_bytes = Zeroizing::new(to_array_32(symmetric::decrypt(&user_key, encrypted_private_key)?)?);
+    let user_key = Zeroizing::new(to_array_32(symmetric::decrypt(
+        &encryption_key,
+        encrypted_user_key,
+    )?)?);
+    let secret_bytes = Zeroizing::new(to_array_32(symmetric::decrypt(
+        &user_key,
+        encrypted_private_key,
+    )?)?);
 
     let secret_key = SecretKey::from(*secret_bytes);
     let public_key = secret_key.public_key();
@@ -159,10 +165,14 @@ pub fn recover(
     )?);
     let rec_enc_key = Zeroizing::new(kdf::derive_encryption_key(&recovery_key));
 
-    let user_key =
-        Zeroizing::new(to_array_32(symmetric::decrypt(&rec_enc_key, encrypted_user_key_recovery)?)?);
-    let secret_bytes =
-        Zeroizing::new(to_array_32(symmetric::decrypt(&user_key, encrypted_private_key)?)?);
+    let user_key = Zeroizing::new(to_array_32(symmetric::decrypt(
+        &rec_enc_key,
+        encrypted_user_key_recovery,
+    )?)?);
+    let secret_bytes = Zeroizing::new(to_array_32(symmetric::decrypt(
+        &user_key,
+        encrypted_private_key,
+    )?)?);
     let secret_key = SecretKey::from(*secret_bytes);
     let public_key = secret_key.public_key();
 
@@ -173,9 +183,8 @@ pub fn recover(
 
     let reset = ResetBlob {
         master_password_hash: STANDARD.encode(new_auth_hash.as_slice()),
-        recovery_auth_hash: STANDARD.encode(
-            Zeroizing::new(kdf::derive_auth_hash(&recovery_key)).as_slice(),
-        ),
+        recovery_auth_hash: STANDARD
+            .encode(Zeroizing::new(kdf::derive_auth_hash(&recovery_key)).as_slice()),
         kdf_params: params,
         encrypted_user_key,
     };

@@ -145,10 +145,17 @@ fn rotation_revokes_access_for_removed_member() {
     .unwrap();
 
     // Alice récupère la nouvelle Org Key (vérifiée comme venant de l'admin) et lit l'item.
-    let alice_new_key =
-        org::open_org_key(&alice.secret, &admin.public, &rotation.sealed_for_members[0]).unwrap();
+    let alice_new_key = org::open_org_key(
+        &alice.secret,
+        &admin.public,
+        &rotation.sealed_for_members[0],
+    )
+    .unwrap();
     let rewrapped = &rotation.rewrapped_items[0];
-    assert_eq!(item, vault::decrypt_item(&alice_new_key, rewrapped).unwrap());
+    assert_eq!(
+        item,
+        vault::decrypt_item(&alice_new_key, rewrapped).unwrap()
+    );
 
     // L'ancienne Org Key ne déchiffre plus l'item re-enveloppé.
     assert!(vault::decrypt_item(&org_key, rewrapped).is_err());
