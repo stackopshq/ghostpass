@@ -12,6 +12,7 @@ import type {
   SessionRow,
   UserRow,
   VaultItemRow,
+  WebAuthnCredentialRow,
 } from "../types.js";
 
 export interface NewUser {
@@ -181,6 +182,48 @@ export const vaultItems = {
       .prepare(`DELETE FROM vault_items WHERE id = ? AND user_id = ?`)
       .run(args.id, args.userId);
     return result.changes > 0;
+  },
+};
+
+export const webauthnCredentials = {
+  create(
+    db: DB,
+    c: {
+      id: string;
+      userId: string;
+      publicKey: string;
+      counter: number;
+      transports: string | null;
+      name: string;
+    },
+  ): void {
+    db.prepare(
+      `INSERT INTO webauthn_credentials (id, user_id, public_key, counter, transports, name, created_at)
+       VALUES (@id, @userId, @publicKey, @counter, @transports, @name, @createdAt)`,
+    ).run({ ...c, createdAt: Date.now() });
+  },
+
+  listByUser(db: DB, userId: string): WebAuthnCredentialRow[] {
+    return db
+      .prepare(`SELECT * FROM webauthn_credentials WHERE user_id = ? ORDER BY created_at`)
+      .all(userId) as WebAuthnCredentialRow[];
+  },
+
+  findById(db: DB, id: string): WebAuthnCredentialRow | undefined {
+    return db.prepare(`SELECT * FROM webauthn_credentials WHERE id = ?`).get(id) as
+      | WebAuthnCredentialRow
+      | undefined;
+  },
+
+  updateCounter(db: DB, id: string, counter: number): void {
+    db.prepare(`UPDATE webauthn_credentials SET counter = ? WHERE id = ?`).run(counter, id);
+  },
+
+  remove(db: DB, args: { id: string; userId: string }): boolean {
+    const r = db
+      .prepare(`DELETE FROM webauthn_credentials WHERE id = ? AND user_id = ?`)
+      .run(args.id, args.userId);
+    return r.changes > 0;
   },
 };
 

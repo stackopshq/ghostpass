@@ -19,6 +19,16 @@ export interface UserRow {
   created_at: number;
 }
 
+export interface WebAuthnCredentialRow {
+  id: string;
+  user_id: string;
+  public_key: string;
+  counter: number;
+  transports: string | null;
+  name: string;
+  created_at: number;
+}
+
 export interface SendRow {
   id: string;
   ciphertext: string;

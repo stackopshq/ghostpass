@@ -46,6 +46,17 @@ CREATE TABLE IF NOT EXISTS sends (
   views       INTEGER NOT NULL DEFAULT 0
 );
 
+-- Clés de sécurité WebAuthn/FIDO2 (2e facteur). On ne stocke que la clé PUBLIQUE.
+CREATE TABLE IF NOT EXISTS webauthn_credentials (
+  id          TEXT PRIMARY KEY,   -- credentialID (base64url)
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  public_key  TEXT NOT NULL,      -- clé publique COSE (base64url)
+  counter     INTEGER NOT NULL,
+  transports  TEXT,               -- JSON array (ex. ["usb","nfc"])
+  name        TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
   id          TEXT PRIMARY KEY,
   user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -100,6 +111,7 @@ CREATE TABLE IF NOT EXISTS org_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_vault_items_user ON vault_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_webauthn_user ON webauthn_credentials(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);

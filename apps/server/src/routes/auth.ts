@@ -1,7 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { DB } from "../db/database.js";
-import { sessions, users } from "../db/repositories.js";
+import {
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} from "@simplewebauthn/server";
+import { sessions, users, webauthnCredentials } from "../db/repositories.js";
+import { ORIGIN, RP_ID, putChallenge, takeChallenge } from "../services/webauthn.js";
 import {
   createSessionToken,
   dummyVerify,
@@ -34,6 +39,7 @@ const loginSchema = z.object({
   email: z.string().email(),
   masterPasswordHash: z.string().min(1),
   totpCode: z.string().optional(),
+  webauthnResponse: z.any().optional(),
 });
 
 export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
@@ -94,7 +100,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     if (!parsed.success) {
       return reply.code(400).send({ error: "requête invalide" });
     }
-    const { masterPasswordHash, totpCode } = parsed.data;
+    const { masterPasswordHash, totpCode, webauthnResponse } = parsed.data;
     const email = normalizeEmail(parsed.data.email);
     const user = users.findByEmail(db, email);
     // Réponse générique + scrypt à temps égal même si l'email est inconnu (anti-énumération
@@ -107,10 +113,54 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
       return reply.code(401).send({ error: "identifiants invalides" });
     }
 
-    // Second facteur : si la 2FA est activée, un code TOTP valide est exigé.
-    if (user.mfa_enabled) {
+    // Second facteur. Priorité à WebAuthn (clé de sécurité) si l'utilisateur en a enregistré une,
+    // sinon TOTP. Le master password a déjà été vérifié → pas d'oracle d'énumération ici.
+    const creds = webauthnCredentials.listByUser(db, user.id);
+    if (creds.length > 0) {
+      if (!webauthnResponse) {
+        const options = await generateAuthenticationOptions({
+          rpID: RP_ID,
+          allowCredentials: creds.map((c) => ({
+            id: c.id,
+            transports: c.transports ? (JSON.parse(c.transports) as never) : undefined,
+          })),
+          userVerification: "preferred",
+        });
+        putChallenge(`auth:${user.id}`, options.challenge);
+        return reply.code(401).send({ mfaRequired: true, mfaType: "webauthn", options });
+      }
+      const expectedChallenge = takeChallenge(`auth:${user.id}`);
+      const cred =
+        typeof webauthnResponse?.id === "string"
+          ? webauthnCredentials.findById(db, webauthnResponse.id)
+          : undefined;
+      if (!expectedChallenge || !cred || cred.user_id !== user.id) {
+        return reply.code(401).send({ error: "authentification 2FA échouée" });
+      }
+      try {
+        const v = await verifyAuthenticationResponse({
+          response: webauthnResponse,
+          expectedChallenge,
+          expectedOrigin: ORIGIN,
+          expectedRPID: RP_ID,
+          requireUserVerification: false,
+          credential: {
+            id: cred.id,
+            publicKey: new Uint8Array(Buffer.from(cred.public_key, "base64url")),
+            counter: cred.counter,
+            transports: cred.transports ? (JSON.parse(cred.transports) as never) : undefined,
+          },
+        });
+        if (!v.verified) return reply.code(401).send({ error: "authentification 2FA échouée" });
+        webauthnCredentials.updateCounter(db, cred.id, v.authenticationInfo.newCounter);
+      } catch {
+        return reply.code(401).send({ error: "authentification 2FA échouée" });
+      }
+    } else if (user.mfa_enabled) {
       if (!totpCode || !verifyAndConsumeTotp(db, user, totpCode)) {
-        return reply.code(401).send({ error: "code 2FA requis ou invalide", mfaRequired: true });
+        return reply
+          .code(401)
+          .send({ error: "code 2FA requis ou invalide", mfaRequired: true, mfaType: "totp" });
       }
     }
 

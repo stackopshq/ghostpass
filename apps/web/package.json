@@ -11,6 +11,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
     "ghostpass-crypto-wasm": "file:../../crates/ghostpass-crypto-wasm/pkg"
   },
   "devDependencies": {

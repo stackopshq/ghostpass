@@ -22,6 +22,7 @@
   import { parseCsv } from "./lib/csv.js";
   import { pwnedCount } from "./lib/breach.js";
   import { sealSend } from "./lib/send.js";
+  import { createCredential, getAssertion } from "./lib/webauthn.js";
 
   let cryptoReady = $state(false);
   let busy = $state(false);
@@ -140,6 +141,48 @@
   let mfaSetup = $state<{ secret: string; otpauthUri: string } | null>(null);
   let mfaCode = $state("");
   let mfaMessage = $state<string | null>(null);
+
+  // Clés de sécurité WebAuthn.
+  let webauthnKeys = $state<Array<{ id: string; name: string; createdAt: number }>>([]);
+  let webauthnBusy = $state(false);
+
+  async function loadWebauthn() {
+    if (!token) return;
+    try {
+      webauthnKeys = (await api.webauthnCredentials(token)).credentials;
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
+
+  async function addSecurityKey() {
+    if (!token) return;
+    const name = prompt("Nom de la clé (ex. YubiKey perso) :", "Clé de sécurité");
+    if (name === null) return;
+    webauthnBusy = true;
+    error = null;
+    try {
+      const options = await api.webauthnRegisterOptions(token);
+      const response = await createCredential(options);
+      await api.webauthnRegisterVerify(token, { response, name: name.trim() || "Clé de sécurité" });
+      await loadWebauthn();
+    } catch (err) {
+      error = errMsg(err);
+    } finally {
+      webauthnBusy = false;
+    }
+  }
+
+  async function removeSecurityKey(id: string) {
+    if (!token) return;
+    if (!confirm("Supprimer cette clé de sécurité ?")) return;
+    try {
+      await api.webauthnDeleteCredential(token, id);
+      await loadWebauthn();
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
 
   // Liste du milieu : secrets du dossier sélectionné (ou résultats de recherche, globaux).
   const visibleItems = $derived(
@@ -570,9 +613,14 @@
       } else {
         const { kdfParams } = await api.prelogin(email);
         const hash = computeLoginHash(email, password, kdfParams);
-        const res = await api.login(email, hash, totpCode || undefined);
+        let res = await api.login(email, hash, { totpCode: totpCode || undefined });
+        // 2FA par clé de sécurité : on déclenche l'assertion puis on rejoue le login.
+        if (!res.ok && res.mfaRequired && res.mfaType === "webauthn" && res.options) {
+          const assertion = await getAssertion(res.options);
+          res = await api.login(email, hash, { webauthnResponse: assertion });
+        }
         if (!res.ok) {
-          if (res.mfaRequired) mfaRequired = true;
+          if (res.mfaRequired && res.mfaType !== "webauthn") mfaRequired = true;
           throw new Error(res.error);
         }
         account = unlock(email, password, {
@@ -737,6 +785,7 @@
     mfaSetup = null;
     mfaCode = "";
     mfaMessage = null;
+    webauthnKeys = [];
     recoveryKitDisplay = null;
     recoveryKeyInput = "";
     recoverNewPassword = "";
@@ -1028,7 +1077,7 @@
         <button class="nav-item" class:active={nav === "orgs"} onclick={() => (nav = "orgs")}>
           {@render orgIcon()}<span>Organisations</span>
         </button>
-        <button class="nav-item" class:active={nav === "security"} onclick={() => (nav = "security")}>
+        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; loadWebauthn(); }}>
           {@render shieldIcon()}<span>Sécurité</span>
         </button>
         <button class="nav-item" class:active={nav === "trash"} onclick={openTrash}>
@@ -1359,6 +1408,28 @@
               <p class="muted" style="margin:0 0 0.8rem">Renforce la connexion avec un code à usage unique (TOTP).</p>
               <button class="ghost" onclick={startMfaSetup}>Configurer la double authentification</button>
             {/if}
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Clés de sécurité (WebAuthn)</h2></div>
+            <p class="muted" style="margin:0 0 0.8rem">
+              Ajoutez une clé FIDO2 / YubiKey ou une passkey comme second facteur de connexion.
+              <span class="muted">Nécessite https ou localhost.</span>
+            </p>
+            {#if webauthnKeys.length}
+              <ul class="list">
+                {#each webauthnKeys as k (k.id)}
+                  <li>
+                    <div class="row-main"><span class="row-title">{k.name}</span></div>
+                    <div class="row-actions"><button class="danger" onclick={() => removeSecurityKey(k.id)}>Supprimer</button></div>
+                  </li>
+                {/each}
+              </ul>
+              <hr class="sep" />
+            {/if}
+            <button class="ghost" onclick={addSecurityKey} disabled={webauthnBusy}>
+              {webauthnBusy ? "Enregistrement…" : "Ajouter une clé de sécurité"}
+            </button>
           </section>
 
           <section class="panel">

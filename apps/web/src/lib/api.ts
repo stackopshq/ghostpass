@@ -55,7 +55,7 @@ export const api = {
   async login(
     email: string,
     masterPasswordHash: string,
-    totpCode?: string,
+    opts: { totpCode?: string; webauthnResponse?: unknown } = {},
   ): Promise<
     | {
         ok: true;
@@ -64,20 +64,47 @@ export const api = {
         encryptedUserKey: string;
         encryptedPrivateKey: string;
       }
-    | { ok: false; mfaRequired: boolean; error: string }
+    | { ok: false; mfaRequired: boolean; mfaType?: string; options?: unknown; error: string }
   > {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, masterPasswordHash, totpCode }),
+      body: JSON.stringify({
+        email,
+        masterPasswordHash,
+        totpCode: opts.totpCode,
+        webauthnResponse: opts.webauthnResponse,
+      }),
     });
     const data = await res.json().catch(() => ({}) as Record<string, unknown>);
     if (res.ok) return { ok: true, ...(data as Record<string, never>) } as never;
     return {
       ok: false,
       mfaRequired: data.mfaRequired === true,
+      mfaType: typeof data.mfaType === "string" ? data.mfaType : undefined,
+      options: data.options,
       error: typeof data.error === "string" ? data.error : `HTTP ${res.status}`,
     };
+  },
+
+  webauthnRegisterOptions(token: string) {
+    return http<unknown>("/api/mfa/webauthn/register/options", { method: "POST", token });
+  },
+  webauthnRegisterVerify(token: string, body: { response: unknown; name: string }) {
+    return http<{ ok: boolean }>("/api/mfa/webauthn/register/verify", {
+      method: "POST",
+      body,
+      token,
+    });
+  },
+  webauthnCredentials(token: string) {
+    return http<{ credentials: Array<{ id: string; name: string; createdAt: number }> }>(
+      "/api/mfa/webauthn/credentials",
+      { token },
+    );
+  },
+  webauthnDeleteCredential(token: string, id: string) {
+    return http<void>(`/api/mfa/webauthn/credentials/${id}`, { method: "DELETE", token });
   },
 
   mfaSetup(token: string) {

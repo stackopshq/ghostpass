@@ -11,6 +11,7 @@ import { registerOrgVaultRoutes } from "./routes/orgVault.js";
 import { registerRecoveryRoutes } from "./routes/recovery.js";
 import { registerSendRoutes } from "./routes/send.js";
 import { registerVaultRoutes } from "./routes/vault.js";
+import { registerWebAuthnRoutes } from "./routes/webauthn.js";
 
 /// Construit l'instance Fastify autour d'une base donnée.
 /// Séparé de `index.ts` pour permettre les tests via `app.inject()` sur une DB en mémoire.
@@ -47,6 +48,7 @@ export function buildApp(db: DB): FastifyInstance {
   registerOrgVaultRoutes(app, db);
   registerIconRoutes(app);
   registerSendRoutes(app, db);
+  registerWebAuthnRoutes(app, db);
 
   return app;
 }
