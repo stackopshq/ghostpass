@@ -11,4 +11,7 @@ description = "Fixtures de test (EncStrings/hash factices, non secrets)"
 paths = [
   '''apps/server/test/.*\.test\.ts$''',
   '''apps/server/scripts/e2e.*\.ts$''',
+  # Lockfiles : hashes d'intégrité et noms de crates ⇒ faux positifs (jamais de secrets).
+  '''(^|/)Cargo\.lock$''',
+  '''(^|/)package-lock\.json$''',
 ]
