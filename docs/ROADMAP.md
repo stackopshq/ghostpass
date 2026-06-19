@@ -71,7 +71,7 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ✅ **Dark web monitoring** (HIBP k-anonymity, requête côté client)
 - ✅ **MFA FIDO2 / YubiKey** (WebAuthn, 2e facteur au login ; fondation passkeys)
 - ✅ **Détection d'anomalies (base)** : historique des connexions (appareil/IP/date) + drapeau nouvel appareil ; scoring « Sentinel-like » avancé optionnel plus tard
-- ⬜ **Accès d'urgence** (emergency access) — **M**
+- ✅ **Accès d'urgence** (USK scellée pour un contact, délai géré serveur, lecture + takeover)
 - ⬜ **Passkeys passwordless** : login sans master password (PRF WebAuthn, tension ZK) — **L**
 
 ### Phase 4 — Différenciateurs souveraineté CH (L, à arbitrer)
