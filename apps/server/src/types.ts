@@ -19,6 +19,15 @@ export interface UserRow {
   created_at: number;
 }
 
+export interface LoginEventRow {
+  id: string;
+  user_id: string;
+  ip: string;
+  user_agent: string;
+  new_device: number;
+  created_at: number;
+}
+
 export interface WebAuthnCredentialRow {
   id: string;
   user_id: string;

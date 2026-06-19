@@ -146,6 +146,43 @@
   let webauthnKeys = $state<Array<{ id: string; name: string; createdAt: number }>>([]);
   let webauthnBusy = $state(false);
 
+  // Historique des connexions.
+  let activity = $state<Array<{ ip: string; userAgent: string; newDevice: boolean; createdAt: number }>>([]);
+
+  async function loadActivity() {
+    if (!token) return;
+    try {
+      activity = (await api.accountActivity(token)).events;
+    } catch (err) {
+      error = errMsg(err);
+    }
+  }
+
+  // Étiquette d'appareil lisible depuis un user-agent.
+  function deviceLabel(ua: string): string {
+    const os = /Windows/.test(ua)
+      ? "Windows"
+      : /Mac OS|Macintosh/.test(ua)
+        ? "macOS"
+        : /Android/.test(ua)
+          ? "Android"
+          : /iPhone|iPad|iOS/.test(ua)
+            ? "iOS"
+            : /Linux/.test(ua)
+              ? "Linux"
+              : "";
+    const br = /Firefox/.test(ua)
+      ? "Firefox"
+      : /Edg\//.test(ua)
+        ? "Edge"
+        : /Chrome/.test(ua)
+          ? "Chrome"
+          : /Safari/.test(ua)
+            ? "Safari"
+            : "Navigateur";
+    return [br, os].filter(Boolean).join(" · ") || ua.slice(0, 40);
+  }
+
   async function loadWebauthn() {
     if (!token) return;
     try {
@@ -786,6 +823,7 @@
     mfaCode = "";
     mfaMessage = null;
     webauthnKeys = [];
+    activity = [];
     recoveryKitDisplay = null;
     recoveryKeyInput = "";
     recoverNewPassword = "";
@@ -1077,7 +1115,7 @@
         <button class="nav-item" class:active={nav === "orgs"} onclick={() => (nav = "orgs")}>
           {@render orgIcon()}<span>Organisations</span>
         </button>
-        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; loadWebauthn(); }}>
+        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; loadWebauthn(); loadActivity(); }}>
           {@render shieldIcon()}<span>Sécurité</span>
         </button>
         <button class="nav-item" class:active={nav === "trash"} onclick={openTrash}>
@@ -1468,6 +1506,25 @@
               </label>
             </div>
             <p class="muted" style="margin:0.7rem 0 0">Colonnes reconnues : name, username, password, url, folder, totp (compatible exports 1Password / Bitwarden / Proton).</p>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Connexions récentes</h2><span class="count">{activity.length}</span></div>
+            {#if activity.length === 0}
+              <p class="muted">Aucune connexion enregistrée.</p>
+            {:else}
+              <ul class="list">
+                {#each activity as e, i (i)}
+                  <li>
+                    <div class="row-main">
+                      <span class="row-title">{deviceLabel(e.userAgent)}</span>
+                      <span class="row-sub"><span class="mono">{e.ip}</span> · {formatDate(e.createdAt)}</span>
+                    </div>
+                    {#if e.newDevice}<div class="row-actions"><span class="pill pill-warn">Nouvel appareil</span></div>{/if}
+                  </li>
+                {/each}
+              </ul>
+            {/if}
           </section>
         </div>
       {:else if nav === "trash"}

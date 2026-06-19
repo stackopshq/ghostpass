@@ -106,6 +106,11 @@ export const api = {
   webauthnDeleteCredential(token: string, id: string) {
     return http<void>(`/api/mfa/webauthn/credentials/${id}`, { method: "DELETE", token });
   },
+  accountActivity(token: string) {
+    return http<{
+      events: Array<{ ip: string; userAgent: string; newDevice: boolean; createdAt: number }>;
+    }>("/api/account/activity", { token });
+  },
 
   mfaSetup(token: string) {
     return http<{ secret: string; otpauthUri: string }>("/api/mfa/setup", {

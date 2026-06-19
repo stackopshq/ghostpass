@@ -7,6 +7,7 @@ import type {
   OrgItemRow,
   OrgMemberRow,
   OrgRole,
+  LoginEventRow,
   OrgRow,
   SendRow,
   SessionRow,
@@ -182,6 +183,30 @@ export const vaultItems = {
       .prepare(`DELETE FROM vault_items WHERE id = ? AND user_id = ?`)
       .run(args.id, args.userId);
     return result.changes > 0;
+  },
+};
+
+export const loginEvents = {
+  /// Enregistre une connexion et indique si l'appareil (user-agent) est nouveau pour l'utilisateur.
+  record(
+    db: DB,
+    e: { id: string; userId: string; ip: string; userAgent: string },
+  ): { newDevice: boolean } {
+    const seen = db
+      .prepare(`SELECT 1 FROM login_events WHERE user_id = ? AND user_agent = ? LIMIT 1`)
+      .get(e.userId, e.userAgent);
+    const newDevice = !seen;
+    db.prepare(
+      `INSERT INTO login_events (id, user_id, ip, user_agent, new_device, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(e.id, e.userId, e.ip, e.userAgent, newDevice ? 1 : 0, Date.now());
+    return { newDevice };
+  },
+
+  listByUser(db: DB, userId: string, limit = 20): LoginEventRow[] {
+    return db
+      .prepare(`SELECT * FROM login_events WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`)
+      .all(userId, limit) as LoginEventRow[];
   },
 };
 

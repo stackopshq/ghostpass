@@ -57,6 +57,16 @@ CREATE TABLE IF NOT EXISTS webauthn_credentials (
   created_at  INTEGER NOT NULL
 );
 
+-- Journal des connexions (historique / détection d'anomalies). Métadonnées non sensibles.
+CREATE TABLE IF NOT EXISTS login_events (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ip          TEXT NOT NULL,
+  user_agent  TEXT NOT NULL,
+  new_device  INTEGER NOT NULL DEFAULT 0,  -- 1 = appareil (user-agent) jamais vu auparavant
+  created_at  INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
   id          TEXT PRIMARY KEY,
   user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -112,6 +122,7 @@ CREATE TABLE IF NOT EXISTS org_items (
 
 CREATE INDEX IF NOT EXISTS idx_vault_items_user ON vault_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_webauthn_user ON webauthn_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);

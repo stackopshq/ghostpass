@@ -5,8 +5,9 @@ import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
-import { sessions, users, webauthnCredentials } from "../db/repositories.js";
+import { loginEvents, sessions, users, webauthnCredentials } from "../db/repositories.js";
 import { ORIGIN, RP_ID, putChallenge, takeChallenge } from "../services/webauthn.js";
+import { makeAuthenticate } from "../plugins/auth.js";
 import {
   createSessionToken,
   dummyVerify,
@@ -43,6 +44,14 @@ const loginSchema = z.object({
 });
 
 export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
+  const authenticate = makeAuthenticate(db);
+
+  // Enregistre une connexion (historique / détection d'anomalies).
+  const recordLogin = (req: { ip: string; headers: Record<string, unknown> }, userId: string) => {
+    const ua = String(req.headers["user-agent"] ?? "inconnu").slice(0, 300);
+    return loginEvents.record(db, { id: newId(), userId, ip: req.ip, userAgent: ua });
+  };
+
   // Inscription : stocke les blobs chiffrés et ouvre une session.
   app.post(
     "/api/auth/register",
@@ -72,6 +81,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
       publicKey: body.publicKey,
     });
 
+    recordLogin(req, userId);
     const { token, tokenHash } = createSessionToken();
     sessions.create(db, { id: newId(), userId, tokenHash, ttlMs: SESSION_TTL_MS });
     return reply.code(201).send({ userId, token });
@@ -164,6 +174,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
       }
     }
 
+    recordLogin(req, user.id);
     const { token, tokenHash } = createSessionToken();
     sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
     return reply.send({
@@ -172,6 +183,19 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
       encryptedUserKey: user.encrypted_user_key,
       encryptedPrivateKey: user.encrypted_private_key,
     });
+  });
+
+  // Historique des connexions (appareil/IP/date) — pour repérer un accès inhabituel.
+  app.get("/api/account/activity", { preHandler: authenticate }, async (req) => {
+    const events = loginEvents.listByUser(db, req.currentUser!.id);
+    return {
+      events: events.map((e) => ({
+        ip: e.ip,
+        userAgent: e.user_agent,
+        newDevice: e.new_device === 1,
+        createdAt: e.created_at,
+      })),
+    };
   });
 
   // Déconnexion : révoque la session courante (le token n'est plus valide ensuite).
