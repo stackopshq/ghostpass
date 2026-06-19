@@ -44,33 +44,35 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ✅ Zero-knowledge / E2E, cœur crypto Rust auditable isolé
 - ✅ Authenticator **TOTP avec timer** (Proton le réserve au payant)
 - ✅ Organisations / collections / rôles, **révocation par rotation de clé** (plus avancé que le « vault sharing » Proton)
-- ✅ Coffre : entrées login, **arborescence de dossiers**, favicons auto-hébergés, **édition/suppression**, thème clair/sombre, kit de récupération, MFA TOTP du compte
+- ✅ Coffre : login/**notes**/**cartes**, **arborescence de dossiers**, favicons auto-hébergés, **édition/suppression**, **corbeille**, **historique des mots de passe**, thème clair/sombre, kit de récupération, MFA TOTP du compte
+- ✅ Outils : **générateur**, **Password Health**, **import/export CSV**, **dark-web monitoring** (HIBP), **partage de lien éphémère**
+- ✅ **Audit de sécurité interne** (2026-06-19, voir `../SECURITY.md`) : aucun finding critique, correctifs Élevés/Moyens appliqués
 
-**Manques structurants** : surtout l'**usage quotidien** (clients), pas l'architecture.
+**Manques structurants** : surtout l'**usage quotidien hors web** (extension, apps natives) et l'**entreprise/SSO** — pas l'architecture.
 
 ---
 
 ## 3. Backlog priorisé
 
-### Phase 1 — Quick wins coffre (S, 100 % client, fort ROI)
-- ⬜ **Générateur** de mots de passe / phrases de passe — **S**
-- ⬜ **Password Health** : faibles, réutilisés, 2FA manquante (façon Watchtower, calcul local) — **S**
-- ⬜ **UI notes sécurisées & cartes** (le cœur Rust les gère déjà) — **S**
-- ⬜ **Historique des mots de passe** par item — **S/M**
-- ⬜ **Import / export** (CSV + formats 1P / Bitwarden / Proton) — **S/M**
-- ⬜ **Corbeille** / éléments récemment supprimés — **S**
+### Phase 1 — Quick wins coffre (S, 100 % client, fort ROI) — ✅ TERMINÉE
+- ✅ **Générateur** de mots de passe (longueur/jeux, aléa CSPRNG)
+- ✅ **Password Health** : faibles, réutilisés, 2FA manquante (calcul local)
+- ✅ **UI notes sécurisées & cartes** (sélecteur de type, détail adapté)
+- ✅ **Historique des mots de passe** par item (chiffré, max 20)
+- ✅ **Import / export** (CSV + formats 1P / Bitwarden / Proton)
+- ✅ **Corbeille** : soft-delete / restauration / purge
 
 ### Phase 2 — Usage quotidien : clients (L, vrai bloqueur d'adoption)
 - ⬜ **Extension navigateur** (autofill, capture) — *priorité produit n°1*, cœur WASM prêt — **L**
 - ⬜ **Desktop natif** (Tauri + cœur Rust) puis **mobiles** (UniFFI) — **L**
 
 ### Phase 3 — Authentification & sécurité du compte (M/L)
-- ⬜ **Passkeys / WebAuthn** : login au coffre **et** stockage/usage de passkeys pour les sites — **L**
+- ✅ **Partage de lien éphémère** (Send : AES-GCM client, clé dans le fragment, expiry + one-time)
+- ✅ **Dark web monitoring** (HIBP k-anonymity, requête côté client)
+- 🟡 **Détection d'anomalies** : rate-limit / anti-énumération en place ; Sentinel-like à faire — **M**
+- ⬜ **Passkeys / WebAuthn** : login au coffre **et** stockage/usage de passkeys — **L**
 - ⬜ **MFA FIDO2 / YubiKey** (en plus du TOTP) — **M**
 - ⬜ **Accès d'urgence** (emergency access) — **M**
-- ⬜ **Partage de lien éphémère** d'un item (façon Send / Proton link) — **M**
-- ⬜ **Détection d'anomalies** de connexion (façon Sentinel) — **M** (on a déjà rate-limit / anti-enumeration)
-- ⬜ **Dark web monitoring** (breach via HIBP k-anonymity, requête côté client) — **M**
 
 ### Phase 4 — Différenciateurs souveraineté CH (L, à arbitrer)
 - ⬜ **Alias hide-my-email** auto-hébergés (forwarding souverain) — meilleur angle anti-Proton, infra email — **L**
@@ -89,7 +91,7 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 
 ### Transverse — Mise sur le marché
 - ⬜ **PostgreSQL** prod (schéma déjà portable) — **M**
-- ⬜ **Audit externe** + bug bounty, **SOC 2 / ISO 27001**, conformité **nLPD/RGPD**, `security.txt` — **L**
+- 🟡 **Audit interne fait** (2026-06-19) ; reste : **audit externe / pentest** + bug bounty, **SOC 2 / ISO 27001**, conformité **nLPD/RGPD**, `security.txt` — **L**
 
 ---
 
