@@ -2,9 +2,9 @@
 name = "ghostpass-crypto-wasm"
 version = "0.0.0"
 edition.workspace = true
-# Chaîne explicite (et non héritée du workspace) : certaines versions de wasm-pack ne résolvent
-# pas `license.workspace = true` et rejettent le manifeste (« expected a string »).
-license = "UNLICENSED"
+# Explicit string (not inherited from the workspace): some wasm-pack versions don't resolve
+# `license.workspace = true` and reject the manifest ("expected a string").
+license = "MIT"
 publish = false
 description = "Binding WASM (web + extension navigateur) du cœur crypto GhostPass"
 
