@@ -4,6 +4,33 @@ Password manager **zero-knowledge** pour humains et équipes — avec, à terme,
 **Secrets Manager** (type HashiCorp Vault) pour les machines. Le serveur ne stocke que des
 blobs chiffrés qu'il ne peut pas lire ; tout le chiffrement a lieu côté client.
 
+## Captures d'écran
+
+<p align="center">
+  <img src="docs/screenshots/vault-dark.png" alt="Coffre GhostPass — identifiants chiffrés, dossiers, détail d'un item" width="860">
+</p>
+
+<p align="center">
+  <em>Le coffre : tout est déchiffré localement, le serveur ne voit que des blobs. Dossiers, favicons auto-hébergés, indicateur de robustesse.</em>
+</p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/generator.png" alt="Ajout d'un identifiant avec le générateur de mots de passe intégré"></td>
+    <td width="50%"><img src="docs/screenshots/security.png" alt="Sécurité : Password Health, vérification de fuites HIBP, TOTP, passkeys"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Générateur — chiffré sur l'appareil avant l'envoi</em></td>
+    <td align="center"><em>Password Health · fuites (HIBP k-anonymity) · TOTP · passkeys</em></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/vault-light.png" alt="Coffre GhostPass en thème clair" width="860">
+</p>
+
+<p align="center"><em>Thème clair également disponible.</em></p>
+
 ## Structure (monorepo)
 
 | Chemin | Rôle |
