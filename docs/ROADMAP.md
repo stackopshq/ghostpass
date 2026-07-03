@@ -85,9 +85,9 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ⬜ **Travel Mode** (masquer des coffres) — **S/M**
 
 ### Phase 5 — Entreprise (L)
-- 🟡 **SSO OIDC** — **login fédéré livré** (2026-07) : backend Authorization Code + PKCE, vérification ID token via `jose` (signature JWKS + issuer + audience + nonce), reliage à un compte existant par email vérifié ; UI web (bouton SSO → IdP → mot de passe maître → déverrouillage). **Master password conservé, ZK intact.** Reste : **Key Connector** (passwordless entreprise) + **store SSO partagé** (état PKCE en mémoire → DB/Redis pour le multi-instance).
-- ⬜ **SCIM / directory sync**, **console admin**, **groupes** — **L**
-- ⬜ **Journaux d'audit** inviolables, **policies**, rapports — **M/L**
+- 🟡 **SSO OIDC** — **login fédéré livré** (2026-07) : backend Authorization Code + PKCE, vérification ID token via `jose` (signature JWKS + issuer + audience + nonce), reliage à un compte existant par email vérifié ; UI web (bouton SSO → IdP → mot de passe maître → déverrouillage). **Master password conservé, ZK intact.** ✅ **Store SSO/WebAuthn partagé** (en base, multi-instance). Reste : **Key Connector** (passwordless entreprise) — *décision de design (change le modèle ZK)*.
+- 🟡 **Console admin + groupes** — **backend livré** : **groupes d'org** (membres + accès collections par groupe, `permissionFor` = max des accès), **gestion des rôles** (garde « ≥1 admin »). Reste : **UI web admin**, et **SCIM / directory sync** (⬜, *à concevoir : provisioning sans mot de passe maître*).
+- 🟡 **Journaux d'audit** — **self-service livré** (16 actions de sécurité, métadonnées seules, best-effort). Reste : **hash-chaining** (« inviolable »), **vue org-admin**, **policies / rapports**.
 
 ### Phase 6 — Secrets Manager (machines) (L)
 - ⬜ **KV E2E** pour **service accounts** + **CLI** + SDK (réutilise le cœur crypto) — **L**
