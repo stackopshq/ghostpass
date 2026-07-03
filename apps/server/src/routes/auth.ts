@@ -47,9 +47,9 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
   const authenticate = makeAuthenticate(db);
 
   // Enregistre une connexion (historique / détection d'anomalies).
-  const recordLogin = (req: { ip: string; headers: Record<string, unknown> }, userId: string) => {
+  const recordLogin = async (req: { ip: string; headers: Record<string, unknown> }, userId: string) => {
     const ua = String(req.headers["user-agent"] ?? "inconnu").slice(0, 300);
-    return loginEvents.record(db, { id: newId(), userId, ip: req.ip, userAgent: ua });
+    return await loginEvents.record(db, { id: newId(), userId, ip: req.ip, userAgent: ua });
   };
 
   // Inscription : stocke les blobs chiffrés et ouvre une session.
@@ -64,13 +64,13 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     const body = parsed.data;
     const email = normalizeEmail(body.email);
 
-    if (users.findByEmail(db, email)) {
+    if (await users.findByEmail(db, email)) {
       return reply.code(409).send({ error: "email déjà utilisé" });
     }
 
     const { hash, salt } = hashServerSecret(body.masterPasswordHash);
     const userId = newId();
-    users.create(db, {
+    await users.create(db, {
       id: userId,
       email,
       kdfParams: body.kdfParams,
@@ -81,9 +81,9 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
       publicKey: body.publicKey,
     });
 
-    recordLogin(req, userId);
+    await recordLogin(req, userId);
     const { token, tokenHash } = createSessionToken();
-    sessions.create(db, { id: newId(), userId, tokenHash, ttlMs: SESSION_TTL_MS });
+    await sessions.create(db, { id: newId(), userId, tokenHash, ttlMs: SESSION_TTL_MS });
     return reply.code(201).send({ userId, token });
   });
 
@@ -97,7 +97,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     if (!parsed.success) {
       return reply.code(400).send({ error: "requête invalide" });
     }
-    const user = users.findByEmail(db, normalizeEmail(parsed.data.email));
+    const user = await users.findByEmail(db, normalizeEmail(parsed.data.email));
     return reply.send({ kdfParams: user ? user.kdf_params : DEFAULT_KDF_PARAMS });
   });
 
@@ -112,7 +112,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     }
     const { masterPasswordHash, totpCode, webauthnResponse } = parsed.data;
     const email = normalizeEmail(parsed.data.email);
-    const user = users.findByEmail(db, email);
+    const user = await users.findByEmail(db, email);
     // Réponse générique + scrypt à temps égal même si l'email est inconnu (anti-énumération
     // par timing : on ne court-circuite pas le coût scrypt).
     if (!user) {
@@ -125,7 +125,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
 
     // Second facteur. Priorité à WebAuthn (clé de sécurité) si l'utilisateur en a enregistré une,
     // sinon TOTP. Le master password a déjà été vérifié → pas d'oracle d'énumération ici.
-    const creds = webauthnCredentials.listByUser(db, user.id);
+    const creds = await webauthnCredentials.listByUser(db, user.id);
     if (creds.length > 0) {
       if (!webauthnResponse) {
         const options = await generateAuthenticationOptions({
@@ -142,7 +142,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
       const expectedChallenge = takeChallenge(`auth:${user.id}`);
       const cred =
         typeof webauthnResponse?.id === "string"
-          ? webauthnCredentials.findById(db, webauthnResponse.id)
+          ? await webauthnCredentials.findById(db, webauthnResponse.id)
           : undefined;
       if (!expectedChallenge || !cred || cred.user_id !== user.id) {
         return reply.code(401).send({ error: "authentification 2FA échouée" });
@@ -162,21 +162,21 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
           },
         });
         if (!v.verified) return reply.code(401).send({ error: "authentification 2FA échouée" });
-        webauthnCredentials.updateCounter(db, cred.id, v.authenticationInfo.newCounter);
+        await webauthnCredentials.updateCounter(db, cred.id, v.authenticationInfo.newCounter);
       } catch {
         return reply.code(401).send({ error: "authentification 2FA échouée" });
       }
     } else if (user.mfa_enabled) {
-      if (!totpCode || !verifyAndConsumeTotp(db, user, totpCode)) {
+      if (!totpCode || !await verifyAndConsumeTotp(db, user, totpCode)) {
         return reply
           .code(401)
           .send({ error: "code 2FA requis ou invalide", mfaRequired: true, mfaType: "totp" });
       }
     }
 
-    recordLogin(req, user.id);
+    await recordLogin(req, user.id);
     const { token, tokenHash } = createSessionToken();
-    sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
+    await sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
     return reply.send({
       token,
       kdfParams: user.kdf_params,
@@ -187,7 +187,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
 
   // Historique des connexions (appareil/IP/date) — pour repérer un accès inhabituel.
   app.get("/api/account/activity", { preHandler: authenticate }, async (req) => {
-    const events = loginEvents.listByUser(db, req.currentUser!.id);
+    const events = await loginEvents.listByUser(db, req.currentUser!.id);
     return {
       events: events.map((e) => ({
         ip: e.ip,
@@ -202,7 +202,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
   app.post("/api/auth/logout", async (req, reply) => {
     const header = req.headers.authorization;
     if (header?.startsWith("Bearer ")) {
-      sessions.deleteByTokenHash(db, hashSessionToken(header.slice("Bearer ".length).trim()));
+      await sessions.deleteByTokenHash(db, hashSessionToken(header.slice("Bearer ".length).trim()));
     }
     return reply.code(204).send();
   });

@@ -31,7 +31,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: DB): void {
     { preHandler: authenticate, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
     async (req) => {
       const user = req.currentUser!;
-      const existing = webauthnCredentials.listByUser(db, user.id);
+      const existing = await webauthnCredentials.listByUser(db, user.id);
       const options = await generateRegistrationOptions({
         rpName: RP_NAME,
         rpID: RP_ID,
@@ -72,7 +72,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: DB): void {
           return reply.code(400).send({ error: "vérification échouée" });
         }
         const cred = verification.registrationInfo.credential;
-        webauthnCredentials.create(db, {
+        await webauthnCredentials.create(db, {
           id: cred.id,
           userId: user.id,
           publicKey: toB64Url(cred.publicKey),
@@ -88,7 +88,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: DB): void {
   );
 
   app.get("/api/mfa/webauthn/credentials", { preHandler: authenticate }, async (req) => {
-    const creds = webauthnCredentials.listByUser(db, req.currentUser!.id);
+    const creds = await webauthnCredentials.listByUser(db, req.currentUser!.id);
     return { credentials: creds.map((c) => ({ id: c.id, name: c.name, createdAt: c.created_at })) };
   });
 
@@ -96,7 +96,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: DB): void {
     "/api/mfa/webauthn/credentials/:id",
     { preHandler: authenticate },
     async (req, reply) => {
-      const ok = webauthnCredentials.remove(db, { id: req.params.id, userId: req.currentUser!.id });
+      const ok = await webauthnCredentials.remove(db, { id: req.params.id, userId: req.currentUser!.id });
       if (!ok) return reply.code(404).send({ error: "clé introuvable" });
       return reply.code(204).send();
     },

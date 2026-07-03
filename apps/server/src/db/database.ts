@@ -1,110 +1,137 @@
 import BetterSqlite3 from "better-sqlite3";
+import { Kysely, PostgresDialect, SqliteDialect, sql } from "kysely";
+import pg from "pg";
+import type {
+  CollectionAccessRow,
+  CollectionRow,
+  EmergencyAccessRow,
+  LoginEventRow,
+  OrgItemRow,
+  OrgMemberRow,
+  OrgRow,
+  PasskeyRow,
+  SendRow,
+  SessionRow,
+  UserRow,
+  VaultItemRow,
+  WebAuthnCredentialRow,
+} from "../types.js";
 
-export type DB = BetterSqlite3.Database;
+/// Schéma des tables pour Kysely (nom de table → forme de la ligne). Les colonnes `encrypted_*`
+/// sont des blobs illisibles par le serveur. `service_accounts` (futur Secrets Manager) n'est
+/// requêté par aucun repo → absent ici, mais présent dans le schéma SQL.
+export interface Database {
+  users: UserRow;
+  vault_items: VaultItemRow;
+  sessions: SessionRow;
+  emergency_access: EmergencyAccessRow;
+  login_events: LoginEventRow;
+  passkeys: PasskeyRow;
+  webauthn_credentials: WebAuthnCredentialRow;
+  sends: SendRow;
+  organizations: OrgRow;
+  org_members: OrgMemberRow;
+  collections: CollectionRow;
+  org_items: OrgItemRow;
+  collection_access: CollectionAccessRow;
+}
 
-/// Schéma. Volontairement portable (ids TEXT/UUID, timestamps INTEGER epoch-ms) pour
-/// faciliter la bascule future vers PostgreSQL. Le serveur ne stocke QUE des blobs chiffrés
-/// (`encrypted_*`, format `EncString`) ou publics (clés publiques, hash d'auth re-hashé).
+export type DB = Kysely<Database>;
+
+/// Schéma. Volontairement portable (ids TEXT/UUID, timestamps epoch-ms) pour SQLite (dev/tests)
+/// et PostgreSQL (prod). Le serveur ne stocke QUE des blobs chiffrés (`encrypted_*`, `EncString`)
+/// ou publics (clés publiques, hash d'auth re-hashé). Les booléens sont stockés en 0/1 (INTEGER
+/// SQLite / BIGINT Postgres) pour un typage uniforme côté application (`number`).
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id                     TEXT PRIMARY KEY,
   email                  TEXT NOT NULL UNIQUE,
-  kdf_params             TEXT NOT NULL,   -- JSON KdfParams (public)
-  server_password_hash   TEXT NOT NULL,   -- scrypt(hash d'auth client) en hex
-  password_salt          TEXT NOT NULL,   -- salt scrypt en hex
-  encrypted_user_key     TEXT NOT NULL,   -- EncString (USK chiffrée)
-  encrypted_private_key  TEXT NOT NULL,   -- EncString (clé privée de partage chiffrée)
-  public_key             TEXT NOT NULL,   -- base64 (clé publique de partage)
-  mfa_secret             TEXT,            -- secret TOTP base32 (NULL si pas configuré)
+  kdf_params             TEXT NOT NULL,
+  server_password_hash   TEXT NOT NULL,
+  password_salt          TEXT NOT NULL,
+  encrypted_user_key     TEXT NOT NULL,
+  encrypted_private_key  TEXT NOT NULL,
+  public_key             TEXT NOT NULL,
+  mfa_secret             TEXT,
   mfa_enabled            INTEGER NOT NULL DEFAULT 0,
-  mfa_last_counter       INTEGER NOT NULL DEFAULT 0,  -- dernier compteur TOTP consommé (anti-rejeu)
-  encrypted_user_key_recovery TEXT,       -- EncString (USK enveloppée par la clé de récupération)
-  recovery_auth_hash     TEXT,            -- scrypt(preuve de récupération) en hex
-  recovery_salt          TEXT,            -- salt scrypt de la preuve, en hex
+  mfa_last_counter       INTEGER NOT NULL DEFAULT 0,
+  encrypted_user_key_recovery TEXT,
+  recovery_auth_hash     TEXT,
+  recovery_salt          TEXT,
   created_at             INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS vault_items (
   id              TEXT PRIMARY KEY,
   user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  encrypted_key   TEXT NOT NULL,   -- EncString (item key enveloppée)
-  encrypted_data  TEXT NOT NULL,   -- EncString (contenu de l'item)
+  encrypted_key   TEXT NOT NULL,
+  encrypted_data  TEXT NOT NULL,
   created_at      INTEGER NOT NULL,
   updated_at      INTEGER NOT NULL,
-  deleted_at      INTEGER          -- corbeille : NULL = actif, sinon epoch-ms de suppression
+  deleted_at      INTEGER
 );
 
--- Partage de lien éphémère (type "Send") : le serveur ne stocke que du chiffré AES-GCM ;
--- la clé est dans le fragment d'URL côté destinataire, jamais transmise au serveur.
 CREATE TABLE IF NOT EXISTS sends (
   id          TEXT PRIMARY KEY,
-  ciphertext  TEXT NOT NULL,   -- base64 (AES-256-GCM)
-  iv          TEXT NOT NULL,   -- base64 (nonce GCM)
+  ciphertext  TEXT NOT NULL,
+  iv          TEXT NOT NULL,
   created_at  INTEGER NOT NULL,
   expires_at  INTEGER NOT NULL,
-  max_views   INTEGER NOT NULL,  -- 0 = illimité jusqu'à expiration
+  max_views   INTEGER NOT NULL,
   views       INTEGER NOT NULL DEFAULT 0
 );
 
--- Passkeys de déverrouillage SANS mot de passe (extension PRF). On stocke la clé publique du
--- credential + l'USK enveloppée par le secret PRF (illisible sans la passkey). Zero-knowledge.
 CREATE TABLE IF NOT EXISTS passkeys (
-  id                   TEXT PRIMARY KEY,   -- credentialID (base64url)
+  id                   TEXT PRIMARY KEY,
   user_id              TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  public_key           TEXT NOT NULL,      -- clé publique COSE (base64url)
+  public_key           TEXT NOT NULL,
   counter              INTEGER NOT NULL,
   transports           TEXT,
   name                 TEXT NOT NULL,
-  prf_wrapped_user_key TEXT NOT NULL,      -- USK enveloppée par le secret PRF (EncString)
+  prf_wrapped_user_key TEXT NOT NULL,
   created_at           INTEGER NOT NULL
 );
 
--- Clés de sécurité WebAuthn/FIDO2 (2e facteur). On ne stocke que la clé PUBLIQUE.
 CREATE TABLE IF NOT EXISTS webauthn_credentials (
-  id          TEXT PRIMARY KEY,   -- credentialID (base64url)
+  id          TEXT PRIMARY KEY,
   user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  public_key  TEXT NOT NULL,      -- clé publique COSE (base64url)
+  public_key  TEXT NOT NULL,
   counter     INTEGER NOT NULL,
-  transports  TEXT,               -- JSON array (ex. ["usb","nfc"])
+  transports  TEXT,
   name        TEXT NOT NULL,
   created_at  INTEGER NOT NULL
 );
 
--- Accès d'urgence : un grantor scelle son USK pour un contact (grantee). Le serveur stocke le
--- blob scellé (illisible pour lui) et applique le DÉLAI : il ne le libère qu'une fois l'accès
--- accordé (approbation du grantor, ou expiration du délai sans refus). Zero-knowledge préservé.
 CREATE TABLE IF NOT EXISTS emergency_access (
   id               TEXT PRIMARY KEY,
   grantor_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   grantee_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role             TEXT NOT NULL,   -- 'view' | 'takeover'
+  role             TEXT NOT NULL,
   wait_days        INTEGER NOT NULL,
-  status           TEXT NOT NULL,   -- 'invited' | 'accepted' | 'requested' | 'granted'
-  sealed_user_key  TEXT NOT NULL,   -- USK du grantor scellée pour le grantee (base64)
-  requested_at     INTEGER,         -- début du compte à rebours (NULL hors 'requested'/'granted')
+  status           TEXT NOT NULL,
+  sealed_user_key  TEXT NOT NULL,
+  requested_at     INTEGER,
   created_at       INTEGER NOT NULL,
   UNIQUE (grantor_id, grantee_id)
 );
 
--- Journal des connexions (historique / détection d'anomalies). Métadonnées non sensibles.
 CREATE TABLE IF NOT EXISTS login_events (
   id          TEXT PRIMARY KEY,
   user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   ip          TEXT NOT NULL,
   user_agent  TEXT NOT NULL,
-  new_device  INTEGER NOT NULL DEFAULT 0,  -- 1 = appareil (user-agent) jamais vu auparavant
+  new_device  INTEGER NOT NULL DEFAULT 0,
   created_at  INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
   id          TEXT PRIMARY KEY,
   user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  token_hash  TEXT NOT NULL UNIQUE,  -- sha256(token) en hex
+  token_hash  TEXT NOT NULL UNIQUE,
   created_at  INTEGER NOT NULL,
   expires_at  INTEGER NOT NULL
 );
 
--- Prévu pour le futur Secrets Manager (volet machine) : identités non-humaines.
 CREATE TABLE IF NOT EXISTS service_accounts (
   id               TEXT PRIMARY KEY,
   organization_id  TEXT,
@@ -113,7 +140,6 @@ CREATE TABLE IF NOT EXISTS service_accounts (
   created_at       INTEGER NOT NULL
 );
 
--- Organisations (partage en équipe).
 CREATE TABLE IF NOT EXISTS organizations (
   id          TEXT PRIMARY KEY,
   name        TEXT NOT NULL,
@@ -124,15 +150,14 @@ CREATE TABLE IF NOT EXISTS org_members (
   id                 TEXT PRIMARY KEY,
   org_id             TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id            TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role               TEXT NOT NULL,   -- 'admin' | 'member' | 'readonly'
-  status             TEXT NOT NULL,   -- 'invited' | 'active'
-  encrypted_org_key  TEXT,            -- Org Key scellée pour ce membre (base64), authentifiée
-  sealed_by_user_id  TEXT,            -- admin émetteur (sa clé publique sert à vérifier l'origine)
+  role               TEXT NOT NULL,
+  status             TEXT NOT NULL,
+  encrypted_org_key  TEXT,
+  sealed_by_user_id  TEXT,
   created_at         INTEGER NOT NULL,
   UNIQUE (org_id, user_id)
 );
 
--- Collections (regroupent des secrets partagés au sein d'une org) et items partagés.
 CREATE TABLE IF NOT EXISTS collections (
   id          TEXT PRIMARY KEY,
   org_id      TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -143,10 +168,19 @@ CREATE TABLE IF NOT EXISTS collections (
 CREATE TABLE IF NOT EXISTS org_items (
   id              TEXT PRIMARY KEY,
   collection_id   TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
-  encrypted_key   TEXT NOT NULL,   -- item key enveloppée par l'Org Key
-  encrypted_data  TEXT NOT NULL,   -- contenu chiffré
+  encrypted_key   TEXT NOT NULL,
+  encrypted_data  TEXT NOT NULL,
   created_at      INTEGER NOT NULL,
   updated_at      INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS collection_access (
+  id             TEXT PRIMARY KEY,
+  collection_id  TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  permission     TEXT NOT NULL,
+  created_at     INTEGER NOT NULL,
+  UNIQUE (collection_id, user_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_vault_items_user ON vault_items(user_id);
@@ -158,40 +192,56 @@ CREATE INDEX IF NOT EXISTS idx_emergency_grantee ON emergency_access(grantee_id)
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);
--- Permissions fines : accès d'un utilisateur à une collection donnée.
-CREATE TABLE IF NOT EXISTS collection_access (
-  id             TEXT PRIMARY KEY,
-  collection_id  TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
-  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  permission     TEXT NOT NULL,   -- 'read' | 'write' | 'manage'
-  created_at     INTEGER NOT NULL,
-  UNIQUE (collection_id, user_id)
-);
-
 CREATE INDEX IF NOT EXISTS idx_collections_org ON collections(org_id);
 CREATE INDEX IF NOT EXISTS idx_org_items_collection ON org_items(collection_id);
 CREATE INDEX IF NOT EXISTS idx_collection_access_user ON collection_access(user_id);
 CREATE INDEX IF NOT EXISTS idx_collection_access_collection ON collection_access(collection_id);
 `;
 
-/// Ouvre la base et applique le schéma. `path` vaut ":memory:" pour les tests.
+/// Schéma Postgres : identique, `INTEGER` (32 bits) → `BIGINT` (les timestamps epoch-ms
+/// dépassent 2^31). Les booléens 0/1 restent numériques.
+const POSTGRES_SCHEMA = SCHEMA.replace(/\bINTEGER\b/g, "BIGINT");
+
+/// Ouvre une base **SQLite** (dev/tests). `path` vaut ":memory:" pour les tests. Synchrone :
+/// le schéma est appliqué sur le handle better-sqlite3 avant de l'envelopper dans Kysely.
 export function openDatabase(path: string): DB {
-  const db = new BetterSqlite3(path);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  db.exec(SCHEMA);
-  migrate(db);
-  return db;
+  const handle = new BetterSqlite3(path);
+  if (path !== ":memory:") handle.pragma("journal_mode = WAL");
+  handle.pragma("foreign_keys = ON");
+  handle.exec(SCHEMA);
+  migrateSqlite(handle);
+  return new Kysely<Database>({ dialect: new SqliteDialect({ database: handle }) });
 }
 
-/// Migrations idempotentes pour les bases créées avant l'ajout d'une colonne.
-function migrate(db: DB): void {
-  ensureColumn(db, "vault_items", "deleted_at", "INTEGER");
+/// Sélectionne la base selon la config : PostgreSQL si `DATABASE_URL` est défini (prod),
+/// sinon SQLite sur `DB_PATH` (dev). Asynchrone car la création du schéma Postgres l'est.
+export async function createDb(): Promise<DB> {
+  const url = process.env.DATABASE_URL;
+  if (url) {
+    // BIGINT (int8, oid 20) → number JS (epoch-ms < 2^53, sûr) pour un typage uniforme.
+    pg.types.setTypeParser(20, (v) => (v === null ? null : Number.parseInt(v, 10)));
+    const db = new Kysely<Database>({
+      dialect: new PostgresDialect({ pool: new pg.Pool({ connectionString: url }) }),
+    });
+    await sql.raw(POSTGRES_SCHEMA).execute(db);
+    return db;
+  }
+  return openDatabase(process.env.DB_PATH ?? "ghostpass.db");
 }
 
-function ensureColumn(db: DB, table: string, column: string, type: string): void {
-  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+/// Migrations idempotentes SQLite (bases créées avant l'ajout d'une colonne).
+function migrateSqlite(handle: BetterSqlite3.Database): void {
+  ensureColumn(handle, "vault_items", "deleted_at", "INTEGER");
+}
+
+function ensureColumn(
+  handle: BetterSqlite3.Database,
+  table: string,
+  column: string,
+  type: string,
+): void {
+  const cols = handle.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
   if (!cols.some((c) => c.name === column)) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    handle.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
   }
 }

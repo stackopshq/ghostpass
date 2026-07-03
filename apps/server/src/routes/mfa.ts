@@ -27,7 +27,7 @@ export function registerMfaRoutes(app: FastifyInstance, db: DB): void {
       return reply.code(401).send({ error: "mot de passe invalide" });
     }
     const secret = generateSecret();
-    users.setMfaSecret(db, user.id, secret);
+    await users.setMfaSecret(db, user.id, secret);
     return { secret, otpauthUri: otpauthUri(secret, user.email) };
   });
 
@@ -45,7 +45,7 @@ export function registerMfaRoutes(app: FastifyInstance, db: DB): void {
     if (!verifyTOTP(secret, parsed.data.code)) {
       return reply.code(401).send({ error: "code 2FA invalide" });
     }
-    users.setMfaEnabled(db, user.id, true);
+    await users.setMfaEnabled(db, user.id, true);
     return { enabled: true };
   });
 
@@ -57,10 +57,10 @@ export function registerMfaRoutes(app: FastifyInstance, db: DB): void {
     if (!verifyServerSecret(parsed.data.masterPasswordHash, user.server_password_hash, user.password_salt)) {
       return reply.code(401).send({ error: "mot de passe invalide" });
     }
-    if (!user.mfa_enabled || !verifyAndConsumeTotp(db, user, parsed.data.code)) {
+    if (!user.mfa_enabled || !await verifyAndConsumeTotp(db, user, parsed.data.code)) {
       return reply.code(401).send({ error: "code 2FA invalide" });
     }
-    users.setMfaEnabled(db, user.id, false);
+    await users.setMfaEnabled(db, user.id, false);
     return { enabled: false };
   });
 }

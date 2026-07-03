@@ -25,7 +25,7 @@ export function registerSendRoutes(app: FastifyInstance, db: DB): void {
       const parsed = createSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
       const id = newId();
-      sends.create(db, {
+      await sends.create(db, {
         id,
         ciphertext: parsed.data.ciphertext,
         iv: parsed.data.iv,
@@ -41,15 +41,15 @@ export function registerSendRoutes(app: FastifyInstance, db: DB): void {
     "/api/send/:id",
     { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
     async (req, reply) => {
-      const row = sends.get(db, req.params.id);
+      const row = await sends.get(db, req.params.id);
       const gone = { error: "lien introuvable ou expiré" };
       if (!row) return reply.code(404).send(gone);
       if (row.expires_at < Date.now() || (row.max_views > 0 && row.views >= row.max_views)) {
-        sends.remove(db, row.id);
+        await sends.remove(db, row.id);
         return reply.code(404).send(gone);
       }
-      sends.incrementViews(db, row.id);
-      if (row.max_views > 0 && row.views + 1 >= row.max_views) sends.remove(db, row.id);
+      await sends.incrementViews(db, row.id);
+      if (row.max_views > 0 && row.views + 1 >= row.max_views) await sends.remove(db, row.id);
       return { ciphertext: row.ciphertext, iv: row.iv };
     },
   );
