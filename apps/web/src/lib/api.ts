@@ -87,6 +87,23 @@ export const api = {
     };
   },
 
+  // ─── SSO OIDC (identité fédérée ; le mot de passe maître reste requis pour déverrouiller) ───
+  ssoStatus() {
+    return http<{ enabled: boolean }>("/api/auth/sso/status");
+  },
+  ssoLogin() {
+    return http<{ url: string }>("/api/auth/sso/login");
+  },
+  ssoCallback(code: string, state: string) {
+    return http<{
+      token: string;
+      email: string;
+      kdfParams: string;
+      encryptedUserKey: string;
+      encryptedPrivateKey: string;
+    }>(`/api/auth/sso/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
+  },
+
   webauthnRegisterOptions(token: string) {
     return http<unknown>("/api/mfa/webauthn/register/options", { method: "POST", token });
   },

@@ -37,6 +37,16 @@
   let error = $state<string | null>(null);
 
   let mode = $state<"login" | "register" | "recover">("login");
+  // SSO OIDC : `ssoEnabled` pilote le bouton ; `ssoPending` = retour du callback (session + blobs)
+  // en attente du mot de passe maître pour déverrouiller côté client.
+  let ssoEnabled = $state(false);
+  let ssoPending = $state<{
+    token: string;
+    email: string;
+    kdfParams: string;
+    encryptedUserKey: string;
+    encryptedPrivateKey: string;
+  } | null>(null);
   let email = $state("");
   let password = $state("");
   let totpCode = $state("");
@@ -811,7 +821,70 @@
   onMount(async () => {
     await ensureCryptoReady();
     cryptoReady = true;
+    try {
+      ssoEnabled = (await api.ssoStatus()).enabled;
+    } catch {
+      ssoEnabled = false;
+    }
+    await handleSsoReturn();
   });
+
+  /// Démarre le flux SSO : le backend renvoie l'URL d'autorisation, on y redirige le navigateur.
+  async function startSso() {
+    error = null;
+    busy = true;
+    try {
+      const { url } = await api.ssoLogin();
+      window.location.assign(url);
+    } catch (err) {
+      error = errMsg(err);
+      busy = false;
+    }
+  }
+
+  /// Retour de l'IdP sur `/sso/callback?code&state` : on échange côté backend, puis on attend le
+  /// mot de passe maître (l'identité est prouvée par le SSO ; le déchiffrement reste local).
+  async function handleSsoReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state");
+    if (window.location.pathname !== "/sso/callback" && !(code && state)) return;
+    window.history.replaceState(null, "", "/");
+    if (!code || !state) return;
+    busy = true;
+    try {
+      const res = await api.ssoCallback(code, state);
+      ssoPending = res;
+      email = res.email;
+    } catch {
+      error = "Échec de la connexion SSO.";
+    } finally {
+      busy = false;
+    }
+  }
+
+  /// Termine le SSO : déverrouille l'USK avec le mot de passe maître + les blobs renvoyés.
+  async function finishSso(e: SubmitEvent) {
+    e.preventDefault();
+    error = null;
+    busy = true;
+    try {
+      const r = ssoPending!;
+      account = unlock(r.email, password, {
+        kdfParams: r.kdfParams,
+        encryptedUserKey: r.encryptedUserKey,
+        encryptedPrivateKey: r.encryptedPrivateKey,
+      });
+      token = r.token;
+      password = "";
+      ssoPending = null;
+      await loadItems();
+    } catch {
+      error = "Mot de passe maître invalide.";
+    } finally {
+      busy = false;
+    }
+  }
 
   async function loadItems() {
     if (!token || !account) return;
@@ -1232,7 +1305,19 @@
           <div class="callout success" style="margin-bottom:1.25rem">{@render checkIcon()}<span>{infoMessage}</span></div>
         {/if}
 
-        {#if mode === "recover"}
+        {#if ssoPending}
+          <h2 class="auth-title">Connexion SSO</h2>
+          <p class="auth-sub">Identité vérifiée. Saisissez votre mot de passe maître pour déverrouiller votre coffre.</p>
+          <form onsubmit={finishSso}>
+            <label class="field"><span>Email</span><input type="email" value={ssoPending.email} readonly /></label>
+            <label class="field">
+              <span>Mot de passe maître</span>
+              <input type="password" bind:value={password} required autocomplete="current-password" />
+            </label>
+            <button type="submit" disabled={busy}>{busy ? "Déverrouillage…" : "Déverrouiller"}</button>
+          </form>
+          <button class="link" onclick={() => { ssoPending = null; error = null; }}>← Annuler</button>
+        {:else if mode === "recover"}
           <h2 class="auth-title">Mot de passe oublié</h2>
           <p class="auth-sub">Réinitialisez votre mot de passe maître avec votre clé de récupération.</p>
           <form onsubmit={submitRecover}>
@@ -1282,6 +1367,9 @@
           </form>
           {#if mode === "login"}
             <button type="button" class="ghost full" style="margin-top:0.6rem" onclick={loginWithPasskey} disabled={busy}>{@render lockIcon()}<span>Se connecter avec une passkey</span></button>
+            {#if ssoEnabled}
+              <button type="button" class="ghost full" style="margin-top:0.6rem" onclick={startSso} disabled={busy}>{@render lockIcon()}<span>Se connecter en SSO</span></button>
+            {/if}
             <button class="link" onclick={() => { mode = "recover"; error = null; }}>Mot de passe oublié ?</button>
           {/if}
         {/if}

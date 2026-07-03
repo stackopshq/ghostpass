@@ -86,6 +86,7 @@ export function registerSsoRoutes(app: FastifyInstance, db: DB): void {
       await sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
       return reply.send({
         token,
+        email: user.email,
         kdfParams: user.kdf_params,
         encryptedUserKey: user.encrypted_user_key,
         encryptedPrivateKey: user.encrypted_private_key,

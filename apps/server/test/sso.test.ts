@@ -120,6 +120,7 @@ test("callback: id_token valide pour un compte existant → session + blobs", as
   assert.equal(res.statusCode, 200);
   const body = res.json();
   assert.ok(body.token, "token attendu");
+  assert.equal(body.email, USER.email, "email renvoyé (nécessaire au déverrouillage client)");
   assert.equal(body.kdfParams, USER.kdfParams);
   assert.equal(body.encryptedUserKey, USER.encryptedUserKey);
   assert.equal(body.encryptedPrivateKey, USER.encryptedPrivateKey);
