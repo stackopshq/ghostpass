@@ -44,7 +44,7 @@ export function registerRecoveryRoutes(app: FastifyInstance, db: DB): void {
     const parsed = enrollSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
     const { hash, salt } = hashServerSecret(parsed.data.recoveryAuthHash);
-    users.setRecovery(db, req.currentUser!.id, {
+    await users.setRecovery(db, req.currentUser!.id, {
       encryptedUserKeyRecovery: parsed.data.encryptedUserKeyRecovery,
       recoveryAuthHash: hash,
       recoverySalt: salt,
@@ -60,7 +60,7 @@ export function registerRecoveryRoutes(app: FastifyInstance, db: DB): void {
     const parsed = blobSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
     const email = normalizeEmail(parsed.data.email);
-    const user = users.findByEmail(db, email);
+    const user = await users.findByEmail(db, email);
     if (user && user.encrypted_user_key_recovery) {
       return reply.send({
         kdfParams: user.kdf_params,
@@ -83,7 +83,7 @@ export function registerRecoveryRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
     const parsed = recoverSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-    const user = users.findByEmail(db, normalizeEmail(parsed.data.email));
+    const user = await users.findByEmail(db, normalizeEmail(parsed.data.email));
     // Scrypt à temps égal même sans cible (anti-énumération par timing).
     if (!user || !user.recovery_auth_hash || !user.recovery_salt) {
       dummyVerify(parsed.data.recoveryAuthHash);
@@ -94,13 +94,13 @@ export function registerRecoveryRoutes(app: FastifyInstance, db: DB): void {
     }
 
     const { hash, salt } = hashServerSecret(parsed.data.newMasterPasswordHash);
-    users.resetPassword(db, user.id, {
+    await users.resetPassword(db, user.id, {
       serverPasswordHash: hash,
       passwordSalt: salt,
       encryptedUserKey: parsed.data.newEncryptedUserKey,
     });
     // Toutes les sessions existantes sont invalidées par sécurité.
-    sessions.deleteByUser(db, user.id);
+    await sessions.deleteByUser(db, user.id);
     return reply.send({ ok: true });
   });
 }

@@ -16,28 +16,32 @@ const accessSchema = z.object({
   permission: z.enum(["read", "write", "manage"]),
 });
 
-function activeMember(db: DB, orgId: string, userId: string): OrgMemberRow | null {
-  const m = orgMembers.findByOrgAndUser(db, orgId, userId);
+async function activeMember(db: DB, orgId: string, userId: string): Promise<OrgMemberRow | null> {
+  const m = await orgMembers.findByOrgAndUser(db, orgId, userId);
   return m && m.status === "active" ? m : null;
 }
 
 /// Permission effective d'un membre sur une collection : l'admin d'org a `manage` implicite
 /// sur toutes les collections ; les autres dépendent de `collection_access`.
-function permissionFor(
+async function permissionFor(
   db: DB,
   collectionId: string,
   member: OrgMemberRow,
-): CollectionPermission | null {
+): Promise<CollectionPermission | null> {
   if (member.role === "admin") return "manage";
-  return collectionAccess.findFor(db, collectionId, member.user_id)?.permission ?? null;
+  return (await collectionAccess.findFor(db, collectionId, member.user_id))?.permission ?? null;
 }
 
 function canWrite(p: CollectionPermission | null): boolean {
   return p === "write" || p === "manage";
 }
 
-function collectionInOrg(db: DB, orgId: string, collectionId: string): CollectionRow | null {
-  const c = collections.findById(db, collectionId);
+async function collectionInOrg(
+  db: DB,
+  orgId: string,
+  collectionId: string,
+): Promise<CollectionRow | null> {
+  const c = await collections.findById(db, collectionId);
   return c && c.org_id === orgId ? c : null;
 }
 
@@ -61,13 +65,13 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
       const parsed = collectionSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-      const member = activeMember(db, req.params.id, req.currentUser!.id);
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
       if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
       if (member.role === "readonly") return reply.code(403).send({ error: "accès en lecture seule" });
       const id = newId();
-      collections.create(db, { id, orgId: req.params.id, name: parsed.data.name });
+      await collections.create(db, { id, orgId: req.params.id, name: parsed.data.name });
       if (member.role !== "admin") {
-        collectionAccess.grant(db, {
+        await collectionAccess.grant(db, {
           id: newId(),
           collectionId: id,
           userId: member.user_id,
@@ -83,12 +87,12 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     "/api/orgs/:id/collections",
     { preHandler: authenticate },
     async (req, reply) => {
-      const member = activeMember(db, req.params.id, req.currentUser!.id);
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
       if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
       const rows =
         member.role === "admin"
-          ? collections.listByOrg(db, req.params.id)
-          : collectionAccess.listCollectionsForUser(db, req.params.id, member.user_id);
+          ? await collections.listByOrg(db, req.params.id)
+          : await collectionAccess.listCollectionsForUser(db, req.params.id, member.user_id);
       return { collections: rows.map((c) => ({ id: c.id, name: c.name })) };
     },
   );
@@ -98,11 +102,11 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     "/api/orgs/:id/items",
     { preHandler: authenticate },
     async (req, reply) => {
-      const member = activeMember(db, req.params.id, req.currentUser!.id);
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
       if (!member || member.role !== "admin") {
         return reply.code(403).send({ error: "réservé à l'administrateur de l'organisation" });
       }
-      return { items: orgItems.listByOrg(db, req.params.id).map(itemDto) };
+      return { items: (await orgItems.listByOrg(db, req.params.id)).map(itemDto) };
     },
   );
 
@@ -111,15 +115,15 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     "/api/orgs/:id/collections/:cid/items",
     { preHandler: authenticate },
     async (req, reply) => {
-      const member = activeMember(db, req.params.id, req.currentUser!.id);
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
       if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
-      if (!collectionInOrg(db, req.params.id, req.params.cid)) {
+      if (!await collectionInOrg(db, req.params.id, req.params.cid)) {
         return reply.code(404).send({ error: "collection introuvable" });
       }
-      if (permissionFor(db, req.params.cid, member) === null) {
+      if (await permissionFor(db, req.params.cid, member) === null) {
         return reply.code(403).send({ error: "accès refusé à cette collection" });
       }
-      return { items: orgItems.listByCollection(db, req.params.cid).map(itemDto) };
+      return { items: (await orgItems.listByCollection(db, req.params.cid)).map(itemDto) };
     },
   );
 
@@ -130,15 +134,15 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
       const parsed = itemSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-      const member = activeMember(db, req.params.id, req.currentUser!.id);
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
       if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
-      if (!collectionInOrg(db, req.params.id, req.params.cid)) {
+      if (!await collectionInOrg(db, req.params.id, req.params.cid)) {
         return reply.code(404).send({ error: "collection introuvable" });
       }
-      if (!canWrite(permissionFor(db, req.params.cid, member))) {
+      if (!canWrite(await permissionFor(db, req.params.cid, member))) {
         return reply.code(403).send({ error: "accès en écriture refusé" });
       }
-      const row = orgItems.create(db, {
+      const row = await orgItems.create(db, {
         id: newId(),
         collectionId: req.params.cid,
         encryptedKey: parsed.data.encryptedKey,
@@ -155,15 +159,15 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
       const parsed = itemSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-      const member = activeMember(db, req.params.id, req.currentUser!.id);
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
       if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
-      if (!collectionInOrg(db, req.params.id, req.params.cid)) {
+      if (!await collectionInOrg(db, req.params.id, req.params.cid)) {
         return reply.code(404).send({ error: "collection introuvable" });
       }
-      if (!canWrite(permissionFor(db, req.params.cid, member))) {
+      if (!canWrite(await permissionFor(db, req.params.cid, member))) {
         return reply.code(403).send({ error: "accès en écriture refusé" });
       }
-      const row = orgItems.update(db, {
+      const row = await orgItems.update(db, {
         id: req.params.itemId,
         collectionId: req.params.cid,
         encryptedKey: parsed.data.encryptedKey,
@@ -179,15 +183,15 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     "/api/orgs/:id/collections/:cid/items/:itemId",
     { preHandler: authenticate },
     async (req, reply) => {
-      const member = activeMember(db, req.params.id, req.currentUser!.id);
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
       if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
-      if (!collectionInOrg(db, req.params.id, req.params.cid)) {
+      if (!await collectionInOrg(db, req.params.id, req.params.cid)) {
         return reply.code(404).send({ error: "collection introuvable" });
       }
-      if (!canWrite(permissionFor(db, req.params.cid, member))) {
+      if (!canWrite(await permissionFor(db, req.params.cid, member))) {
         return reply.code(403).send({ error: "accès en écriture refusé" });
       }
-      if (!orgItems.remove(db, { id: req.params.itemId, collectionId: req.params.cid })) {
+      if (!await orgItems.remove(db, { id: req.params.itemId, collectionId: req.params.cid })) {
         return reply.code(404).send({ error: "item introuvable" });
       }
       return reply.code(204).send();
@@ -201,19 +205,19 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
       const parsed = accessSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-      const member = activeMember(db, req.params.id, req.currentUser!.id);
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
       if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
-      if (!collectionInOrg(db, req.params.id, req.params.cid)) {
+      if (!await collectionInOrg(db, req.params.id, req.params.cid)) {
         return reply.code(404).send({ error: "collection introuvable" });
       }
-      if (permissionFor(db, req.params.cid, member) !== "manage") {
+      if (await permissionFor(db, req.params.cid, member) !== "manage") {
         return reply.code(403).send({ error: "gestion de la collection requise" });
       }
       // Le bénéficiaire doit être membre de l'org (l'accès peut être pré-accordé avant acceptation).
-      if (!orgMembers.findByOrgAndUser(db, req.params.id, parsed.data.userId)) {
+      if (!await orgMembers.findByOrgAndUser(db, req.params.id, parsed.data.userId)) {
         return reply.code(404).send({ error: "membre introuvable dans l'organisation" });
       }
-      collectionAccess.grant(db, {
+      await collectionAccess.grant(db, {
         id: newId(),
         collectionId: req.params.cid,
         userId: parsed.data.userId,

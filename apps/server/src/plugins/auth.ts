@@ -24,7 +24,7 @@ export function makeAuthenticate(db: DB): preHandlerHookHandler {
     if (!token) {
       return reply.code(401).send({ error: "non authentifié" });
     }
-    const user = sessions.findValidUser(db, hashSessionToken(token));
+    const user = await sessions.findValidUser(db, hashSessionToken(token));
     if (!user) {
       return reply.code(401).send({ error: "session invalide ou expirée" });
     }

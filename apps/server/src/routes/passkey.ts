@@ -37,7 +37,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
     { preHandler: authenticate, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
     async (req) => {
       const user = req.currentUser!;
-      const existing = passkeys.listByUser(db, user.id);
+      const existing = await passkeys.listByUser(db, user.id);
       const options = await generateRegistrationOptions({
         rpName: RP_NAME,
         rpID: RP_ID,
@@ -78,7 +78,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
         return reply.code(400).send({ error: "vérification échouée" });
       }
       const cred = verification.registrationInfo.credential;
-      passkeys.create(db, {
+      await passkeys.create(db, {
         id: cred.id,
         userId: user.id,
         publicKey: toB64Url(cred.publicKey),
@@ -94,10 +94,9 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
   });
 
   app.get("/api/passkey/credentials", { preHandler: authenticate }, async (req) => {
+    const creds = await passkeys.listByUser(db, req.currentUser!.id);
     return {
-      credentials: passkeys
-        .listByUser(db, req.currentUser!.id)
-        .map((c) => ({ id: c.id, name: c.name, createdAt: c.created_at })),
+      credentials: creds.map((c) => ({ id: c.id, name: c.name, createdAt: c.created_at })),
     };
   });
 
@@ -105,7 +104,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
     "/api/passkey/credentials/:id",
     { preHandler: authenticate },
     async (req, reply) => {
-      const ok = passkeys.remove(db, { id: req.params.id, userId: req.currentUser!.id });
+      const ok = await passkeys.remove(db, { id: req.params.id, userId: req.currentUser!.id });
       if (!ok) return reply.code(404).send({ error: "passkey introuvable" });
       return reply.code(204).send();
     },
@@ -120,8 +119,8 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
       const parsed = optionsSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
       const email = normalizeEmail(parsed.data.email);
-      const user = users.findByEmail(db, email);
-      const creds = user ? passkeys.listByUser(db, user.id) : [];
+      const user = await users.findByEmail(db, email);
+      const creds = user ? await passkeys.listByUser(db, user.id) : [];
       if (!user || creds.length === 0) {
         return reply.code(404).send({ error: "aucune passkey pour ce compte" });
       }
@@ -146,11 +145,11 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
       const parsed = loginSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
       const email = normalizeEmail(parsed.data.email);
-      const user = users.findByEmail(db, email);
+      const user = await users.findByEmail(db, email);
       const expectedChallenge = takeChallenge(`pklogin:${email}`);
       const cred =
         typeof parsed.data.response?.id === "string"
-          ? passkeys.findById(db, parsed.data.response.id)
+          ? await passkeys.findById(db, parsed.data.response.id)
           : undefined;
       if (!user || !expectedChallenge || !cred || cred.user_id !== user.id) {
         return reply.code(401).send({ error: "authentification par passkey échouée" });
@@ -170,13 +169,13 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
           },
         });
         if (!v.verified) return reply.code(401).send({ error: "authentification par passkey échouée" });
-        passkeys.updateCounter(db, cred.id, v.authenticationInfo.newCounter);
+        await passkeys.updateCounter(db, cred.id, v.authenticationInfo.newCounter);
       } catch {
         return reply.code(401).send({ error: "authentification par passkey échouée" });
       }
 
       const { token, tokenHash } = createSessionToken();
-      sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
+      await sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
       // Le client déverrouille l'USK avec le secret PRF + ces deux blobs.
       return reply.send({
         token,

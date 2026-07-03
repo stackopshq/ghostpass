@@ -25,12 +25,12 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
   const authenticate = makeAuthenticate(db);
 
   // Charge l'entrée et vérifie que l'appelant est bien le rôle attendu (anti-IDOR).
-  const loadFor = (
+  const loadFor = async (
     req: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
     who: "grantor" | "grantee",
-  ): EmergencyAccessRow | null => {
-    const row = emergencyAccess.findById(db, req.params.id);
+  ): Promise<EmergencyAccessRow | null> => {
+    const row = await emergencyAccess.findById(db, req.params.id);
     if (!row) {
       reply.code(404).send({ error: "introuvable" });
       return null;
@@ -54,11 +54,11 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
     const parsed = inviteSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
     const me = req.currentUser!;
-    const grantee = users.findByEmail(db, normalizeEmail(parsed.data.email));
+    const grantee = await users.findByEmail(db, normalizeEmail(parsed.data.email));
     if (!grantee) return reply.code(404).send({ error: "utilisateur introuvable" });
     if (grantee.id === me.id) return reply.code(400).send({ error: "impossible de s'inviter soi-même" });
     try {
-      emergencyAccess.create(db, {
+      await emergencyAccess.create(db, {
         id: newId(),
         grantorId: me.id,
         granteeId: grantee.id,
@@ -76,7 +76,7 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
   app.get("/api/emergency", { preHandler: authenticate }, async (req) => {
     const me = req.currentUser!.id;
     return {
-      asGrantor: emergencyAccess.listAsGrantor(db, me).map((r) => ({
+      asGrantor: (await emergencyAccess.listAsGrantor(db, me)).map((r) => ({
         id: r.id,
         contactEmail: r.grantee_email,
         role: r.role,
@@ -84,7 +84,7 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
         status: r.status,
         requestedAt: r.requested_at,
       })),
-      asGrantee: emergencyAccess.listAsGrantee(db, me).map((r) => ({
+      asGrantee: (await emergencyAccess.listAsGrantee(db, me)).map((r) => ({
         id: r.id,
         contactEmail: r.grantor_email,
         role: r.role,
@@ -101,10 +101,10 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
     "/api/emergency/:id/accept",
     { preHandler: authenticate },
     async (req, reply) => {
-      const row = loadFor(req, reply, "grantee");
+      const row = await loadFor(req, reply, "grantee");
       if (!row) return;
       if (row.status !== "invited") return reply.code(409).send({ error: "déjà accepté" });
-      emergencyAccess.setStatus(db, row.id, "accepted");
+      await emergencyAccess.setStatus(db, row.id, "accepted");
       return { ok: true };
     },
   );
@@ -113,10 +113,10 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
     "/api/emergency/:id/request",
     { preHandler: authenticate },
     async (req, reply) => {
-      const row = loadFor(req, reply, "grantee");
+      const row = await loadFor(req, reply, "grantee");
       if (!row) return;
       if (row.status !== "accepted") return reply.code(409).send({ error: "état invalide" });
-      emergencyAccess.setRequested(db, row.id);
+      await emergencyAccess.setRequested(db, row.id);
       return { ok: true };
     },
   );
@@ -126,10 +126,10 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
     "/api/emergency/:id/approve",
     { preHandler: authenticate },
     async (req, reply) => {
-      const row = loadFor(req, reply, "grantor");
+      const row = await loadFor(req, reply, "grantor");
       if (!row) return;
       if (row.status !== "requested") return reply.code(409).send({ error: "aucune demande" });
-      emergencyAccess.setStatus(db, row.id, "granted");
+      await emergencyAccess.setStatus(db, row.id, "granted");
       return { ok: true };
     },
   );
@@ -138,10 +138,10 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
     "/api/emergency/:id/reject",
     { preHandler: authenticate },
     async (req, reply) => {
-      const row = loadFor(req, reply, "grantor");
+      const row = await loadFor(req, reply, "grantor");
       if (!row) return;
       if (row.status !== "requested") return reply.code(409).send({ error: "aucune demande" });
-      emergencyAccess.clearRequest(db, row.id);
+      await emergencyAccess.clearRequest(db, row.id);
       return { ok: true };
     },
   );
@@ -151,13 +151,13 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
     "/api/emergency/:id",
     { preHandler: authenticate },
     async (req, reply) => {
-      const row = emergencyAccess.findById(db, req.params.id);
+      const row = await emergencyAccess.findById(db, req.params.id);
       if (!row) return reply.code(404).send({ error: "introuvable" });
       const me = req.currentUser!.id;
       if (row.grantor_id !== me && row.grantee_id !== me) {
         return reply.code(403).send({ error: "interdit" });
       }
-      emergencyAccess.remove(db, row.id);
+      await emergencyAccess.remove(db, row.id);
       return reply.code(204).send();
     },
   );
@@ -167,12 +167,12 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
     "/api/emergency/:id/access",
     { preHandler: authenticate },
     async (req, reply) => {
-      const row = loadFor(req, reply, "grantee");
+      const row = await loadFor(req, reply, "grantee");
       if (!row) return;
       if (!accessAllowed(row)) {
         return reply.code(403).send({ error: "accès non disponible (délai en cours ou non demandé)" });
       }
-      const grantor = users.findById(db, row.grantor_id);
+      const grantor = await users.findById(db, row.grantor_id);
       if (!grantor) return reply.code(404).send({ error: "grantor introuvable" });
       return {
         role: row.role,
@@ -180,7 +180,7 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
         grantorPublicKey: grantor.public_key,
         grantorEmail: grantor.email,
         grantorKdfParams: grantor.kdf_params,
-        items: vaultItems.listByUser(db, grantor.id).map(itemDto),
+        items: (await vaultItems.listByUser(db, grantor.id)).map(itemDto),
       };
     },
   );
@@ -194,19 +194,19 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
     "/api/emergency/:id/takeover",
     { preHandler: authenticate },
     async (req, reply) => {
-      const row = loadFor(req, reply, "grantee");
+      const row = await loadFor(req, reply, "grantee");
       if (!row) return;
       if (row.role !== "takeover") return reply.code(403).send({ error: "takeover non autorisé" });
       if (!accessAllowed(row)) return reply.code(403).send({ error: "accès non disponible" });
       const parsed = takeoverSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
       const { hash, salt } = hashServerSecret(parsed.data.newMasterPasswordHash);
-      users.resetPassword(db, row.grantor_id, {
+      await users.resetPassword(db, row.grantor_id, {
         serverPasswordHash: hash,
         passwordSalt: salt,
         encryptedUserKey: parsed.data.newEncryptedUserKey,
       });
-      sessions.deleteByUser(db, row.grantor_id); // révoque les sessions du grantor
+      await sessions.deleteByUser(db, row.grantor_id); // révoque les sessions du grantor
       return { ok: true };
     },
   );

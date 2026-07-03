@@ -1,0 +1,39 @@
+# Stack de dev prod-like : PostgreSQL + le backend GhostPass.
+# Conformément aux règles du poste, construire/lancer avec Podman :
+#   podman compose up -d        (ou: podman-compose up -d)
+# Le backend passe automatiquement sur Postgres via DATABASE_URL (sinon il tombe sur SQLite).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ghostpass
+      POSTGRES_PASSWORD: ghostpass
+      POSTGRES_DB: ghostpass
+    volumes:
+      - pgdata:/var/lib/postgresql/data:Z
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ghostpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    image: docker.io/library/node:22-bookworm
+    working_dir: /app/apps/server
+    command: sh -c "npm ci && npm start"
+    environment:
+      DATABASE_URL: postgres://ghostpass:ghostpass@postgres:5432/ghostpass
+      PORT: "3000"
+      # WEBAUTHN_RP_ID / WEBAUTHN_ORIGIN / WEBAUTHN_EXTRA_ORIGINS : voir apps/server/.env.example
+    volumes:
+      - .:/app:Z
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

@@ -27,7 +27,7 @@ export function registerVaultRoutes(app: FastifyInstance, db: DB): void {
 
   // Toutes les routes du coffre exigent une session valide.
   app.get("/api/vault/items", { preHandler: authenticate }, async (req) => {
-    const items = vaultItems.listByUser(db, req.currentUser!.id);
+    const items = await vaultItems.listByUser(db, req.currentUser!.id);
     return { items: items.map(toDto) };
   });
 
@@ -36,7 +36,7 @@ export function registerVaultRoutes(app: FastifyInstance, db: DB): void {
     if (!parsed.success) {
       return reply.code(400).send({ error: "requête invalide" });
     }
-    const row = vaultItems.create(db, {
+    const row = await vaultItems.create(db, {
       id: newId(),
       userId: req.currentUser!.id,
       encryptedKey: parsed.data.encryptedKey,
@@ -53,7 +53,7 @@ export function registerVaultRoutes(app: FastifyInstance, db: DB): void {
       if (!parsed.success) {
         return reply.code(400).send({ error: "requête invalide" });
       }
-      const row = vaultItems.update(db, {
+      const row = await vaultItems.update(db, {
         id: req.params.id,
         userId: req.currentUser!.id,
         encryptedKey: parsed.data.encryptedKey,
@@ -69,7 +69,7 @@ export function registerVaultRoutes(app: FastifyInstance, db: DB): void {
     "/api/vault/items/:id",
     { preHandler: authenticate },
     async (req, reply) => {
-      const ok = vaultItems.softDelete(db, { id: req.params.id, userId: req.currentUser!.id });
+      const ok = await vaultItems.softDelete(db, { id: req.params.id, userId: req.currentUser!.id });
       if (!ok) return reply.code(404).send({ error: "item introuvable" });
       return reply.code(204).send();
     },
@@ -77,7 +77,7 @@ export function registerVaultRoutes(app: FastifyInstance, db: DB): void {
 
   // Corbeille : liste des items supprimés.
   app.get("/api/vault/trash", { preHandler: authenticate }, async (req) => {
-    const items = vaultItems.listDeleted(db, req.currentUser!.id);
+    const items = await vaultItems.listDeleted(db, req.currentUser!.id);
     return { items: items.map(toDto) };
   });
 
@@ -86,7 +86,7 @@ export function registerVaultRoutes(app: FastifyInstance, db: DB): void {
     "/api/vault/trash/:id/restore",
     { preHandler: authenticate },
     async (req, reply) => {
-      const ok = vaultItems.restore(db, { id: req.params.id, userId: req.currentUser!.id });
+      const ok = await vaultItems.restore(db, { id: req.params.id, userId: req.currentUser!.id });
       if (!ok) return reply.code(404).send({ error: "item introuvable" });
       return { ok: true };
     },
@@ -97,7 +97,7 @@ export function registerVaultRoutes(app: FastifyInstance, db: DB): void {
     "/api/vault/trash/:id",
     { preHandler: authenticate },
     async (req, reply) => {
-      const removed = vaultItems.remove(db, { id: req.params.id, userId: req.currentUser!.id });
+      const removed = await vaultItems.remove(db, { id: req.params.id, userId: req.currentUser!.id });
       if (!removed) return reply.code(404).send({ error: "item introuvable" });
       return reply.code(204).send();
     },

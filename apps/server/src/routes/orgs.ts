@@ -33,7 +33,7 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
       const email = req.query.email ? normalizeEmail(req.query.email) : "";
       if (!email) return reply.code(400).send({ error: "email requis" });
-      const user = users.findByEmail(db, email);
+      const user = await users.findByEmail(db, email);
       if (!user) return reply.code(404).send({ error: "utilisateur introuvable" });
       return { userId: user.id, publicKey: user.public_key };
     },
@@ -45,8 +45,8 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
     const me = req.currentUser!;
     const orgId = newId();
-    organizations.create(db, { id: orgId, name: parsed.data.name });
-    orgMembers.create(db, {
+    await organizations.create(db, { id: orgId, name: parsed.data.name });
+    await orgMembers.create(db, {
       id: newId(),
       orgId,
       userId: me.id,
@@ -60,7 +60,7 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
 
   // Mes organisations (toutes, avec mon rôle et mon statut).
   app.get("/api/orgs", { preHandler: authenticate }, async (req) => {
-    const rows = orgMembers.listForUser(db, req.currentUser!.id);
+    const rows = await orgMembers.listForUser(db, req.currentUser!.id);
     return {
       organizations: rows.map((r) => ({
         orgId: r.org_id,
@@ -78,16 +78,16 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
       const parsed = addMemberSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-      const me = orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
+      const me = await orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
       if (!me || me.status !== "active" || me.role !== "admin") {
         return reply.code(403).send({ error: "réservé à l'administrateur de l'organisation" });
       }
-      const invitee = users.findByEmail(db, normalizeEmail(parsed.data.email));
+      const invitee = await users.findByEmail(db, normalizeEmail(parsed.data.email));
       if (!invitee) return reply.code(404).send({ error: "utilisateur introuvable" });
-      if (orgMembers.findByOrgAndUser(db, req.params.id, invitee.id)) {
+      if (await orgMembers.findByOrgAndUser(db, req.params.id, invitee.id)) {
         return reply.code(409).send({ error: "déjà membre" });
       }
-      orgMembers.create(db, {
+      await orgMembers.create(db, {
         id: newId(),
         orgId: req.params.id,
         userId: invitee.id,
@@ -105,10 +105,10 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
     "/api/orgs/:id/accept",
     { preHandler: authenticate },
     async (req, reply) => {
-      const m = orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
+      const m = await orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
       if (!m) return reply.code(404).send({ error: "aucune invitation" });
       if (m.status !== "invited") return reply.code(409).send({ error: "déjà membre" });
-      orgMembers.setActive(db, m.id);
+      await orgMembers.setActive(db, m.id);
       return { status: "active" };
     },
   );
@@ -118,9 +118,9 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
     "/api/orgs/:id/membership",
     { preHandler: authenticate },
     async (req, reply) => {
-      const m = orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
+      const m = await orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
       if (!m) return reply.code(404).send({ error: "non membre" });
-      const sealedBy = m.sealed_by_user_id ? users.findById(db, m.sealed_by_user_id) : undefined;
+      const sealedBy = m.sealed_by_user_id ? await users.findById(db, m.sealed_by_user_id) : undefined;
       return {
         role: m.role,
         status: m.status,
@@ -135,20 +135,23 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
     "/api/orgs/:id/members",
     { preHandler: authenticate },
     async (req, reply) => {
-      const me = orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
+      const me = await orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
       if (!me || me.status !== "active" || me.role !== "admin") {
         return reply.code(403).send({ error: "réservé à l'administrateur de l'organisation" });
       }
-      const members = orgMembers.listByOrg(db, req.params.id).map((m) => {
-        const u = users.findById(db, m.user_id);
-        return {
-          userId: m.user_id,
-          email: u?.email ?? null,
-          publicKey: u?.public_key ?? null,
-          role: m.role,
-          status: m.status,
-        };
-      });
+      const rows = await orgMembers.listByOrg(db, req.params.id);
+      const members = await Promise.all(
+        rows.map(async (m) => {
+          const u = await users.findById(db, m.user_id);
+          return {
+            userId: m.user_id,
+            email: u?.email ?? null,
+            publicKey: u?.public_key ?? null,
+            role: m.role,
+            status: m.status,
+          };
+        }),
+      );
       return { members };
     },
   );
@@ -162,7 +165,7 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
       const parsed = rotateSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-      const me = orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
+      const me = await orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
       if (!me || me.status !== "active" || me.role !== "admin") {
         return reply.code(403).send({ error: "réservé à l'administrateur de l'organisation" });
       }
@@ -171,12 +174,15 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
         return reply.code(400).send({ error: "impossible de se révoquer soi-même" });
       }
       const adminId = req.currentUser!.id;
-      const validItemIds = new Set(orgItems.listByOrg(db, req.params.id).map((i) => i.id));
+      const validItemIds = new Set(
+        (await orgItems.listByOrg(db, req.params.id)).map((i) => i.id),
+      );
 
-      db.transaction(() => {
-        if (revokeUserId) orgMembers.remove(db, { orgId: req.params.id, userId: revokeUserId });
+      await db.transaction().execute(async (trx) => {
+        if (revokeUserId)
+          await orgMembers.remove(trx, { orgId: req.params.id, userId: revokeUserId });
         for (const m of members) {
-          orgMembers.setKey(db, {
+          await orgMembers.setKey(trx, {
             orgId: req.params.id,
             userId: m.userId,
             encryptedOrgKey: m.encryptedOrgKey,
@@ -185,10 +191,10 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
         }
         for (const it of items) {
           if (validItemIds.has(it.id)) {
-            orgItems.setEncryptedKey(db, { id: it.id, encryptedKey: it.encryptedKey });
+            await orgItems.setEncryptedKey(trx, { id: it.id, encryptedKey: it.encryptedKey });
           }
         }
-      })();
+      });
 
       return { ok: true };
     },
