@@ -6,7 +6,10 @@ import type {
   CollectionAccessRow,
   CollectionRow,
   EmergencyAccessRow,
+  GroupCollectionAccessRow,
   LoginEventRow,
+  OrgGroupMemberRow,
+  OrgGroupRow,
   OrgItemRow,
   OrgMemberRow,
   OrgRow,
@@ -35,6 +38,9 @@ export interface Database {
   collections: CollectionRow;
   org_items: OrgItemRow;
   collection_access: CollectionAccessRow;
+  org_groups: OrgGroupRow;
+  org_group_members: OrgGroupMemberRow;
+  group_collection_access: GroupCollectionAccessRow;
   // Store éphémère partagé (challenges WebAuthn, état SSO/PKCE) : en base plutôt qu'en mémoire,
   // pour que login/callback fonctionnent sur n'importe quelle instance (déploiement multi-instance).
   auth_ephemeral: { key: string; value: string; expires_at: number };
@@ -224,6 +230,36 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
+
+-- Groupes d'organisation (couche de contrôle d'accès, pas de crypto) : regroupent des membres et
+-- reçoivent des permissions sur des collections. La permission effective d'un membre = max de son
+-- accès direct et des accès de ses groupes. La décryption reste via l'Org Key (tous les membres).
+CREATE TABLE IF NOT EXISTS org_groups (
+  id          TEXT PRIMARY KEY,
+  org_id      TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS org_group_members (
+  id          TEXT PRIMARY KEY,
+  group_id    TEXT NOT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  INTEGER NOT NULL,
+  UNIQUE (group_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS group_collection_access (
+  id             TEXT PRIMARY KEY,
+  group_id       TEXT NOT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+  collection_id  TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  permission     TEXT NOT NULL,
+  created_at     INTEGER NOT NULL,
+  UNIQUE (group_id, collection_id)
+);
+CREATE INDEX IF NOT EXISTS idx_org_groups_org ON org_groups(org_id);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_group ON org_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_user ON org_group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_group_collection_access_group ON group_collection_access(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_collection_access_collection ON group_collection_access(collection_id);
 `;
 
 /// Schéma Postgres : identique, `INTEGER` (32 bits) → `BIGINT` (les timestamps epoch-ms

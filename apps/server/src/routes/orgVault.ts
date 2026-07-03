@@ -2,7 +2,13 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { DB } from "../db/database.js";
 import type { CollectionPermission, CollectionRow, OrgItemRow, OrgMemberRow } from "../types.js";
-import { collectionAccess, collections, orgItems, orgMembers } from "../db/repositories.js";
+import {
+  collectionAccess,
+  collections,
+  groupCollectionAccess,
+  orgItems,
+  orgMembers,
+} from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { newId } from "../services/security.js";
 
@@ -21,15 +27,33 @@ async function activeMember(db: DB, orgId: string, userId: string): Promise<OrgM
   return m && m.status === "active" ? m : null;
 }
 
-/// Permission effective d'un membre sur une collection : l'admin d'org a `manage` implicite
-/// sur toutes les collections ; les autres dépendent de `collection_access`.
+const PERM_RANK: Record<CollectionPermission, number> = { read: 1, write: 2, manage: 3 };
+function maxPermission(perms: CollectionPermission[]): CollectionPermission | null {
+  return perms.reduce<CollectionPermission | null>(
+    (best, p) => (best === null || PERM_RANK[p] > PERM_RANK[best] ? p : best),
+    null,
+  );
+}
+
+/// Permission effective d'un membre sur une collection : l'admin d'org a `manage` implicite ;
+/// sinon, le **maximum** entre son accès direct (`collection_access`) et les accès de ses groupes.
 async function permissionFor(
   db: DB,
   collectionId: string,
   member: OrgMemberRow,
 ): Promise<CollectionPermission | null> {
   if (member.role === "admin") return "manage";
-  return (await collectionAccess.findFor(db, collectionId, member.user_id))?.permission ?? null;
+  const perms: CollectionPermission[] = [];
+  const direct = await collectionAccess.findFor(db, collectionId, member.user_id);
+  if (direct) perms.push(direct.permission);
+  perms.push(
+    ...(await groupCollectionAccess.permissionsForUserOnCollection(
+      db,
+      collectionId,
+      member.user_id,
+    )),
+  );
+  return maxPermission(perms);
 }
 
 function canWrite(p: CollectionPermission | null): boolean {
@@ -89,10 +113,19 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     async (req, reply) => {
       const member = await activeMember(db, req.params.id, req.currentUser!.id);
       if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
-      const rows =
-        member.role === "admin"
-          ? await collections.listByOrg(db, req.params.id)
-          : await collectionAccess.listCollectionsForUser(db, req.params.id, member.user_id);
+      let rows: CollectionRow[];
+      if (member.role === "admin") {
+        rows = await collections.listByOrg(db, req.params.id);
+      } else {
+        // Accès direct + accès via groupes (dédupliqués par id).
+        const [direct, viaGroups] = await Promise.all([
+          collectionAccess.listCollectionsForUser(db, req.params.id, member.user_id),
+          groupCollectionAccess.listCollectionsForUser(db, req.params.id, member.user_id),
+        ]);
+        const byId = new Map<string, CollectionRow>();
+        for (const c of [...direct, ...viaGroups]) byId.set(c.id, c);
+        rows = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+      }
       return { collections: rows.map((c) => ({ id: c.id, name: c.name })) };
     },
   );

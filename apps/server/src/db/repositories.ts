@@ -7,8 +7,11 @@ import type {
   EmergencyAccessRow,
   EmergencyRole,
   EmergencyStatus,
+  GroupCollectionAccessRow,
   LoginEventRow,
   MemberStatus,
+  OrgGroupMemberRow,
+  OrgGroupRow,
   OrgItemRow,
   OrgMemberRow,
   OrgRole,
@@ -632,6 +635,19 @@ export const orgMembers = {
       .executeTakeFirst();
   },
 
+  /// Change le rôle d'un membre (sans toucher aux clés).
+  async setRole(
+    db: DB,
+    args: { orgId: string; userId: string; role: OrgRole },
+  ): Promise<void> {
+    await db
+      .updateTable("org_members")
+      .set({ role: args.role })
+      .where("org_id", "=", args.orgId)
+      .where("user_id", "=", args.userId)
+      .execute();
+  },
+
   listByOrg(db: DB, orgId: string): Promise<OrgMemberRow[]> {
     return db
       .selectFrom("org_members")
@@ -852,5 +868,147 @@ export const ephemeral = {
   /// Balaye les entrées expirées (à appeler périodiquement).
   async purgeExpired(db: DB): Promise<void> {
     await db.deleteFrom("auth_ephemeral").where("expires_at", "<", Date.now()).execute();
+  },
+};
+
+// ─── Groupes d'organisation (contrôle d'accès) ───
+
+export const orgGroups = {
+  async create(db: DB, g: { id: string; orgId: string; name: string }): Promise<void> {
+    await db
+      .insertInto("org_groups")
+      .values({ id: g.id, org_id: g.orgId, name: g.name, created_at: Date.now() })
+      .execute();
+  },
+
+  listByOrg(db: DB, orgId: string): Promise<OrgGroupRow[]> {
+    return db
+      .selectFrom("org_groups")
+      .selectAll()
+      .where("org_id", "=", orgId)
+      .orderBy("name")
+      .execute();
+  },
+
+  findById(db: DB, id: string): Promise<OrgGroupRow | undefined> {
+    return db.selectFrom("org_groups").selectAll().where("id", "=", id).executeTakeFirst();
+  },
+
+  async remove(db: DB, id: string): Promise<boolean> {
+    const r = await db.deleteFrom("org_groups").where("id", "=", id).executeTakeFirst();
+    return Number(r.numDeletedRows) > 0;
+  },
+};
+
+export const orgGroupMembers = {
+  async add(db: DB, m: { id: string; groupId: string; userId: string }): Promise<void> {
+    await db
+      .insertInto("org_group_members")
+      .values({ id: m.id, group_id: m.groupId, user_id: m.userId, created_at: Date.now() })
+      .onConflict((oc) => oc.columns(["group_id", "user_id"]).doNothing())
+      .execute();
+  },
+
+  async remove(db: DB, args: { groupId: string; userId: string }): Promise<boolean> {
+    const r = await db
+      .deleteFrom("org_group_members")
+      .where("group_id", "=", args.groupId)
+      .where("user_id", "=", args.userId)
+      .executeTakeFirst();
+    return Number(r.numDeletedRows) > 0;
+  },
+
+  /// Membres d'un groupe, avec l'email de chacun.
+  listByGroup(db: DB, groupId: string): Promise<Array<OrgGroupMemberRow & { email: string }>> {
+    return db
+      .selectFrom("org_group_members as gm")
+      .innerJoin("users as u", "u.id", "gm.user_id")
+      .where("gm.group_id", "=", groupId)
+      .orderBy("u.email")
+      .selectAll("gm")
+      .select("u.email as email")
+      .execute();
+  },
+
+  /// Groupes d'une org auxquels l'utilisateur appartient.
+  listGroupsForUser(db: DB, orgId: string, userId: string): Promise<OrgGroupRow[]> {
+    return db
+      .selectFrom("org_groups as g")
+      .innerJoin("org_group_members as gm", "gm.group_id", "g.id")
+      .where("g.org_id", "=", orgId)
+      .where("gm.user_id", "=", userId)
+      .orderBy("g.name")
+      .selectAll("g")
+      .execute();
+  },
+};
+
+export const groupCollectionAccess = {
+  /// Accorde (ou met à jour) la permission d'un groupe sur une collection.
+  async grant(
+    db: DB,
+    a: { id: string; groupId: string; collectionId: string; permission: CollectionPermission },
+  ): Promise<void> {
+    await db
+      .insertInto("group_collection_access")
+      .values({
+        id: a.id,
+        group_id: a.groupId,
+        collection_id: a.collectionId,
+        permission: a.permission,
+        created_at: Date.now(),
+      })
+      .onConflict((oc) =>
+        oc.columns(["group_id", "collection_id"]).doUpdateSet({
+          permission: (eb) => eb.ref("excluded.permission"),
+        }),
+      )
+      .execute();
+  },
+
+  async revoke(db: DB, args: { groupId: string; collectionId: string }): Promise<boolean> {
+    const r = await db
+      .deleteFrom("group_collection_access")
+      .where("group_id", "=", args.groupId)
+      .where("collection_id", "=", args.collectionId)
+      .executeTakeFirst();
+    return Number(r.numDeletedRows) > 0;
+  },
+
+  listByGroup(db: DB, groupId: string): Promise<GroupCollectionAccessRow[]> {
+    return db
+      .selectFrom("group_collection_access")
+      .selectAll()
+      .where("group_id", "=", groupId)
+      .execute();
+  },
+
+  /// Collections d'une org accessibles à l'utilisateur via ses groupes.
+  listCollectionsForUser(db: DB, orgId: string, userId: string): Promise<CollectionRow[]> {
+    return db
+      .selectFrom("collections as c")
+      .innerJoin("group_collection_access as a", "a.collection_id", "c.id")
+      .innerJoin("org_group_members as gm", "gm.group_id", "a.group_id")
+      .where("c.org_id", "=", orgId)
+      .where("gm.user_id", "=", userId)
+      .distinct()
+      .selectAll("c")
+      .execute();
+  },
+
+  /// Permissions que les groupes de l'utilisateur lui confèrent sur une collection donnée.
+  async permissionsForUserOnCollection(
+    db: DB,
+    collectionId: string,
+    userId: string,
+  ): Promise<CollectionPermission[]> {
+    const rows = await db
+      .selectFrom("group_collection_access as a")
+      .innerJoin("org_group_members as gm", "gm.group_id", "a.group_id")
+      .where("a.collection_id", "=", collectionId)
+      .where("gm.user_id", "=", userId)
+      .select("a.permission")
+      .execute();
+    return rows.map((r) => r.permission);
   },
 };
