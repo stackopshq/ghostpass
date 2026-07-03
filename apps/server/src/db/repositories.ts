@@ -785,3 +785,32 @@ export const collectionAccess = {
       .execute();
   },
 };
+
+/// Store éphémère partagé (usage unique + TTL) : challenges WebAuthn, état SSO/PKCE. En base
+/// pour fonctionner en multi-instance. `take` consomme et vérifie l'expiration.
+export const ephemeral = {
+  async put(db: DB, key: string, value: string, ttlMs: number): Promise<void> {
+    const expiresAt = Date.now() + ttlMs;
+    await db
+      .insertInto("auth_ephemeral")
+      .values({ key, value, expires_at: expiresAt })
+      .onConflict((oc) => oc.column("key").doUpdateSet({ value, expires_at: expiresAt }))
+      .execute();
+  },
+
+  async take(db: DB, key: string): Promise<string | null> {
+    const row = await db
+      .selectFrom("auth_ephemeral")
+      .select(["value", "expires_at"])
+      .where("key", "=", key)
+      .executeTakeFirst();
+    await db.deleteFrom("auth_ephemeral").where("key", "=", key).execute();
+    if (!row || row.expires_at < Date.now()) return null;
+    return row.value;
+  },
+
+  /// Balaye les entrées expirées (à appeler périodiquement).
+  async purgeExpired(db: DB): Promise<void> {
+    await db.deleteFrom("auth_ephemeral").where("expires_at", "<", Date.now()).execute();
+  },
+};

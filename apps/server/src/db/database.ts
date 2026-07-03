@@ -34,6 +34,9 @@ export interface Database {
   collections: CollectionRow;
   org_items: OrgItemRow;
   collection_access: CollectionAccessRow;
+  // Store éphémère partagé (challenges WebAuthn, état SSO/PKCE) : en base plutôt qu'en mémoire,
+  // pour que login/callback fonctionnent sur n'importe quelle instance (déploiement multi-instance).
+  auth_ephemeral: { key: string; value: string; expires_at: number };
 }
 
 export type DB = Kysely<Database>;
@@ -196,6 +199,15 @@ CREATE INDEX IF NOT EXISTS idx_collections_org ON collections(org_id);
 CREATE INDEX IF NOT EXISTS idx_org_items_collection ON org_items(collection_id);
 CREATE INDEX IF NOT EXISTS idx_collection_access_user ON collection_access(user_id);
 CREATE INDEX IF NOT EXISTS idx_collection_access_collection ON collection_access(collection_id);
+
+-- Store éphémère partagé (challenges WebAuthn à usage unique, état SSO/PKCE). En base pour
+-- fonctionner en multi-instance ; l'expiration est vérifiée à la lecture et purgeable par balayage.
+CREATE TABLE IF NOT EXISTS auth_ephemeral (
+  key         TEXT PRIMARY KEY,
+  value       TEXT NOT NULL,
+  expires_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_auth_ephemeral_expires ON auth_ephemeral(expires_at);
 `;
 
 /// Schéma Postgres : identique, `INTEGER` (32 bits) → `BIGINT` (les timestamps epoch-ms

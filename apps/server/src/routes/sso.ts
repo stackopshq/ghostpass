@@ -35,7 +35,7 @@ export function registerSsoRoutes(app: FastifyInstance, db: DB): void {
         const state = randomToken();
         const nonce = randomToken();
         const codeVerifier = randomToken();
-        putState(state, { nonce, codeVerifier });
+        await putState(db, state, { nonce, codeVerifier });
         const url = buildAuthUrl(d, cfg, {
           state,
           nonce,
@@ -57,7 +57,7 @@ export function registerSsoRoutes(app: FastifyInstance, db: DB): void {
       if (!cfg) return reply.code(404).send({ error: "SSO désactivé" });
       const parsed = callbackSchema.safeParse(req.query);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-      const st = takeState(parsed.data.state);
+      const st = await takeState(db, parsed.data.state);
       if (!st) return reply.code(400).send({ error: "état SSO invalide ou expiré" });
 
       let email = "";

@@ -4,6 +4,9 @@
 // Configurer en prod via WEBAUTHN_RP_ID (ex. "ghostpass.ch") et WEBAUTHN_ORIGIN
 // (ex. "https://ghostpass.ch"). Défauts adaptés au dev local (localhost).
 
+import type { DB } from "../db/database.js";
+import { ephemeral } from "../db/repositories.js";
+
 export const RP_ID = process.env.WEBAUTHN_RP_ID ?? "localhost";
 export const RP_NAME = "GhostPass";
 export const ORIGIN = process.env.WEBAUTHN_ORIGIN ?? "http://localhost:5173";
@@ -26,17 +29,13 @@ export function getAllowedOrigins(): string[] {
 }
 
 const CHALLENGE_TTL_MS = 120_000;
-const challenges = new Map<string, { challenge: string; expires: number }>();
 
-/// Stocke un challenge à usage unique pour une clé donnée (`reg:<userId>` ou `auth:<userId>`).
-export function putChallenge(key: string, challenge: string): void {
-  challenges.set(key, { challenge, expires: Date.now() + CHALLENGE_TTL_MS });
+/// Stocke un challenge à usage unique (`reg:`/`auth:`/`pkreg:`/`pklogin:`) dans le store partagé.
+export function putChallenge(db: DB, key: string, challenge: string): Promise<void> {
+  return ephemeral.put(db, `wa:${key}`, challenge, CHALLENGE_TTL_MS);
 }
 
 /// Récupère ET consomme le challenge (usage unique). Null si absent ou expiré.
-export function takeChallenge(key: string): string | null {
-  const entry = challenges.get(key);
-  challenges.delete(key);
-  if (!entry || entry.expires < Date.now()) return null;
-  return entry.challenge;
+export function takeChallenge(db: DB, key: string): Promise<string | null> {
+  return ephemeral.take(db, `wa:${key}`);
 }
