@@ -8,6 +8,23 @@ export const RP_ID = process.env.WEBAUTHN_RP_ID ?? "localhost";
 export const RP_NAME = "GhostPass";
 export const ORIGIN = process.env.WEBAUTHN_ORIGIN ?? "http://localhost:5173";
 
+// Origines supplémentaires autorisées pour WebAuthn (Related Origin Requests) : typiquement les
+// extensions navigateur (`chrome-extension://<id>`), qui ne sont pas same-site avec le `rpID`.
+// Renseigner via WEBAUTHN_EXTRA_ORIGINS (séparées par des virgules). Lues dynamiquement pour
+// rester testables. Ces origines sont exposées via `/.well-known/webauthn` ET acceptées à la
+// vérification des assertions.
+export function getExtraOrigins(): string[] {
+  return (process.env.WEBAUTHN_EXTRA_ORIGINS ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+}
+
+/// Toutes les origines acceptées : l'origine principale + les origines liées configurées.
+export function getAllowedOrigins(): string[] {
+  return [ORIGIN, ...getExtraOrigins()];
+}
+
 const CHALLENGE_TTL_MS = 120_000;
 const challenges = new Map<string, { challenge: string; expires: number }>();
 
