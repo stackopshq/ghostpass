@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { DB } from "../db/database.js";
 import { loginEvents, sessions, users } from "../db/repositories.js";
+import { recordAudit } from "../services/audit.js";
 import { createSessionToken, newId, normalizeEmail } from "../services/security.js";
 import {
   buildAuthUrl,
@@ -84,6 +85,7 @@ export function registerSsoRoutes(app: FastifyInstance, db: DB): void {
       await loginEvents.record(db, { id: newId(), userId: user.id, ip: req.ip, userAgent: ua });
       const { token, tokenHash } = createSessionToken();
       await sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
+      await recordAudit(db, req, "login.sso", { userId: user.id, actorEmail: user.email });
       return reply.send({
         token,
         email: user.email,

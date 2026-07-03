@@ -2,6 +2,7 @@ import BetterSqlite3 from "better-sqlite3";
 import { Kysely, PostgresDialect, SqliteDialect, sql } from "kysely";
 import pg from "pg";
 import type {
+  AuditLogRow,
   CollectionAccessRow,
   CollectionRow,
   EmergencyAccessRow,
@@ -37,6 +38,7 @@ export interface Database {
   // Store éphémère partagé (challenges WebAuthn, état SSO/PKCE) : en base plutôt qu'en mémoire,
   // pour que login/callback fonctionnent sur n'importe quelle instance (déploiement multi-instance).
   auth_ephemeral: { key: string; value: string; expires_at: number };
+  audit_log: AuditLogRow;
 }
 
 export type DB = Kysely<Database>;
@@ -208,6 +210,20 @@ CREATE TABLE IF NOT EXISTS auth_ephemeral (
   expires_at  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_auth_ephemeral_expires ON auth_ephemeral(expires_at);
+
+-- Journal d'audit sécurité (append-only) : login/SSO/passkey, changements d'identifiants, org…
+-- Métadonnées seulement (jamais de secret). Le chaînage par hash (« inviolable ») viendra ensuite.
+CREATE TABLE IF NOT EXISTS audit_log (
+  id           TEXT PRIMARY KEY,
+  user_id      TEXT REFERENCES users(id) ON DELETE SET NULL,
+  actor_email  TEXT,
+  action       TEXT NOT NULL,
+  target       TEXT,
+  ip           TEXT NOT NULL,
+  created_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
 `;
 
 /// Schéma Postgres : identique, `INTEGER` (32 bits) → `BIGINT` (les timestamps epoch-ms

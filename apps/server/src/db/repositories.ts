@@ -1,5 +1,6 @@
 import type { DB } from "./database.js";
 import type {
+  AuditLogRow,
   CollectionAccessRow,
   CollectionPermission,
   CollectionRow,
@@ -388,6 +389,45 @@ export const loginEvents = {
   listByUser(db: DB, userId: string, limit = 20): Promise<LoginEventRow[]> {
     return db
       .selectFrom("login_events")
+      .selectAll()
+      .where("user_id", "=", userId)
+      .orderBy("created_at", "desc")
+      .limit(limit)
+      .execute();
+  },
+};
+
+/// Journal d'audit sécurité (append-only). `record` insère un événement ; `listByUser` renvoie
+/// l'historique de l'utilisateur (le plus récent d'abord).
+export const audit = {
+  async record(
+    db: DB,
+    e: {
+      id: string;
+      userId: string | null;
+      actorEmail: string | null;
+      action: string;
+      target: string | null;
+      ip: string;
+    },
+  ): Promise<void> {
+    await db
+      .insertInto("audit_log")
+      .values({
+        id: e.id,
+        user_id: e.userId,
+        actor_email: e.actorEmail,
+        action: e.action,
+        target: e.target,
+        ip: e.ip,
+        created_at: Date.now(),
+      })
+      .execute();
+  },
+
+  listByUser(db: DB, userId: string, limit = 100): Promise<AuditLogRow[]> {
+    return db
+      .selectFrom("audit_log")
       .selectAll()
       .where("user_id", "=", userId)
       .orderBy("created_at", "desc")

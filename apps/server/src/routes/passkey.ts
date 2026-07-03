@@ -9,6 +9,7 @@ import {
 import type { DB } from "../db/database.js";
 import { passkeys, sessions, users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
+import { recordAudit } from "../services/audit.js";
 import { RP_ID, RP_NAME, getAllowedOrigins, putChallenge, takeChallenge } from "../services/webauthn.js";
 import { createSessionToken, newId, normalizeEmail } from "../services/security.js";
 
@@ -87,6 +88,11 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
         name: parsed.data.name?.trim() || "Passkey",
         prfWrappedUserKey: parsed.data.prfWrappedUserKey,
       });
+      await recordAudit(db, req, "passkey.add", {
+        userId: user.id,
+        actorEmail: user.email,
+        target: parsed.data.name?.trim() || "Passkey",
+      });
       return reply.code(201).send({ ok: true });
     } catch {
       return reply.code(400).send({ error: "vérification échouée" });
@@ -104,8 +110,14 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
     "/api/passkey/credentials/:id",
     { preHandler: authenticate },
     async (req, reply) => {
-      const ok = await passkeys.remove(db, { id: req.params.id, userId: req.currentUser!.id });
+      const me = req.currentUser!;
+      const ok = await passkeys.remove(db, { id: req.params.id, userId: me.id });
       if (!ok) return reply.code(404).send({ error: "passkey introuvable" });
+      await recordAudit(db, req, "passkey.remove", {
+        userId: me.id,
+        actorEmail: me.email,
+        target: req.params.id,
+      });
       return reply.code(204).send();
     },
   );
@@ -176,6 +188,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
 
       const { token, tokenHash } = createSessionToken();
       await sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
+      await recordAudit(db, req, "login.passkey", { userId: user.id, actorEmail: user.email });
       // Le client déverrouille l'USK avec le secret PRF + ces deux blobs.
       return reply.send({
         token,

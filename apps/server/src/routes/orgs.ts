@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { DB } from "../db/database.js";
 import { organizations, orgItems, orgMembers, users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
+import { recordAudit } from "../services/audit.js";
 import { newId, normalizeEmail } from "../services/security.js";
 
 const createOrgSchema = z.object({
@@ -95,6 +96,11 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
         status: "invited",
         encryptedOrgKey: parsed.data.encryptedOrgKey,
         sealedByUserId: req.currentUser!.id,
+      });
+      await recordAudit(db, req, "org.member.add", {
+        userId: req.currentUser!.id,
+        actorEmail: req.currentUser!.email,
+        target: invitee.email,
       });
       return reply.code(201).send({ ok: true });
     },
@@ -196,6 +202,11 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
         }
       });
 
+      await recordAudit(db, req, "org.key.rotate", {
+        userId: req.currentUser!.id,
+        actorEmail: req.currentUser!.email,
+        target: revokeUserId || req.params.id,
+      });
       return { ok: true };
     },
   );
