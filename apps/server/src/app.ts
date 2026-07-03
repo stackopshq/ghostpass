@@ -12,6 +12,7 @@ import { registerOrgRoutes } from "./routes/orgs.js";
 import { registerOrgVaultRoutes } from "./routes/orgVault.js";
 import { registerRecoveryRoutes } from "./routes/recovery.js";
 import { registerSendRoutes } from "./routes/send.js";
+import { registerSsoRoutes } from "./routes/sso.js";
 import { registerVaultRoutes } from "./routes/vault.js";
 import { registerWebAuthnRoutes } from "./routes/webauthn.js";
 import { getAllowedOrigins } from "./services/webauthn.js";
@@ -49,6 +50,7 @@ export function buildApp(db: DB): FastifyInstance {
   app.get("/.well-known/webauthn", async () => ({ origins: getAllowedOrigins() }));
 
   registerAuthRoutes(app, db);
+  registerSsoRoutes(app, db);
   registerMfaRoutes(app, db);
   registerRecoveryRoutes(app, db);
   registerVaultRoutes(app, db);
