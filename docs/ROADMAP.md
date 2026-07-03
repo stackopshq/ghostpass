@@ -85,7 +85,7 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ⬜ **Travel Mode** (masquer des coffres) — **S/M**
 
 ### Phase 5 — Entreprise (L)
-- ⬜ **SSO OIDC** (master password conservé, puis Key Connector) — **L**
+- 🟡 **SSO OIDC** — **login fédéré livré** (2026-07) : backend Authorization Code + PKCE, vérification ID token via `jose` (signature JWKS + issuer + audience + nonce), reliage à un compte existant par email vérifié ; UI web (bouton SSO → IdP → mot de passe maître → déverrouillage). **Master password conservé, ZK intact.** Reste : **Key Connector** (passwordless entreprise) + **store SSO partagé** (état PKCE en mémoire → DB/Redis pour le multi-instance).
 - ⬜ **SCIM / directory sync**, **console admin**, **groupes** — **L**
 - ⬜ **Journaux d'audit** inviolables, **policies**, rapports — **M/L**
 
