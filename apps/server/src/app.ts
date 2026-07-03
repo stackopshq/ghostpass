@@ -9,6 +9,7 @@ import { registerEmergencyRoutes } from "./routes/emergency.js";
 import { registerIconRoutes } from "./routes/icons.js";
 import { registerMfaRoutes } from "./routes/mfa.js";
 import { registerPasskeyRoutes } from "./routes/passkey.js";
+import { registerOrgAdminRoutes } from "./routes/orgAdmin.js";
 import { registerOrgRoutes } from "./routes/orgs.js";
 import { registerOrgVaultRoutes } from "./routes/orgVault.js";
 import { registerRecoveryRoutes } from "./routes/recovery.js";
@@ -58,6 +59,7 @@ export function buildApp(db: DB): FastifyInstance {
   registerVaultRoutes(app, db);
   registerOrgRoutes(app, db);
   registerOrgVaultRoutes(app, db);
+  registerOrgAdminRoutes(app, db);
   registerIconRoutes(app);
   registerSendRoutes(app, db);
   registerWebAuthnRoutes(app, db);

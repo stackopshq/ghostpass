@@ -148,3 +148,27 @@ export interface CollectionAccessRow {
   permission: CollectionPermission;
   created_at: number;
 }
+
+// ─── Groupes d'organisation (contrôle d'accès, pas de crypto) ───
+
+export interface OrgGroupRow {
+  id: string;
+  org_id: string;
+  name: string;
+  created_at: number;
+}
+
+export interface OrgGroupMemberRow {
+  id: string;
+  group_id: string;
+  user_id: string;
+  created_at: number;
+}
+
+export interface GroupCollectionAccessRow {
+  id: string;
+  group_id: string;
+  collection_id: string;
+  permission: CollectionPermission;
+  created_at: number;
+}
