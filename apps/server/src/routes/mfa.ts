@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { DB } from "../db/database.js";
 import { users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
+import { recordAudit } from "../services/audit.js";
 import { verifyAndConsumeTotp } from "../services/mfa.js";
 import { verifyServerSecret } from "../services/security.js";
 import { generateSecret, otpauthUri, verifyTOTP } from "../services/totp.js";
@@ -46,6 +47,7 @@ export function registerMfaRoutes(app: FastifyInstance, db: DB): void {
       return reply.code(401).send({ error: "code 2FA invalide" });
     }
     await users.setMfaEnabled(db, user.id, true);
+    await recordAudit(db, req, "mfa.enable", { userId: user.id, actorEmail: user.email });
     return { enabled: true };
   });
 
@@ -61,6 +63,7 @@ export function registerMfaRoutes(app: FastifyInstance, db: DB): void {
       return reply.code(401).send({ error: "code 2FA invalide" });
     }
     await users.setMfaEnabled(db, user.id, false);
+    await recordAudit(db, req, "mfa.disable", { userId: user.id, actorEmail: user.email });
     return { enabled: false };
   });
 }

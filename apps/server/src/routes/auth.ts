@@ -8,6 +8,7 @@ import {
 import { loginEvents, sessions, users, webauthnCredentials } from "../db/repositories.js";
 import { ORIGIN, RP_ID, putChallenge, takeChallenge } from "../services/webauthn.js";
 import { makeAuthenticate } from "../plugins/auth.js";
+import { recordAudit } from "../services/audit.js";
 import {
   createSessionToken,
   dummyVerify,
@@ -177,6 +178,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     await recordLogin(req, user.id);
     const { token, tokenHash } = createSessionToken();
     await sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
+    await recordAudit(db, req, "login.password", { userId: user.id, actorEmail: user.email });
     return reply.send({
       token,
       kdfParams: user.kdf_params,
@@ -202,7 +204,10 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
   app.post("/api/auth/logout", async (req, reply) => {
     const header = req.headers.authorization;
     if (header?.startsWith("Bearer ")) {
-      await sessions.deleteByTokenHash(db, hashSessionToken(header.slice("Bearer ".length).trim()));
+      const hash = hashSessionToken(header.slice("Bearer ".length).trim());
+      const u = await sessions.findValidUser(db, hash);
+      await sessions.deleteByTokenHash(db, hash);
+      if (u) await recordAudit(db, req, "logout", { userId: u.id, actorEmail: u.email });
     }
     return reply.code(204).send();
   });

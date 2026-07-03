@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { DB } from "../db/database.js";
 import { sessions, users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
+import { recordAudit } from "../services/audit.js";
 import { createHash } from "node:crypto";
 import {
   dummyVerify,
@@ -99,6 +100,7 @@ export function registerRecoveryRoutes(app: FastifyInstance, db: DB): void {
       passwordSalt: salt,
       encryptedUserKey: parsed.data.newEncryptedUserKey,
     });
+    await recordAudit(db, req, "recovery.reset", { userId: user.id, actorEmail: user.email });
     // Toutes les sessions existantes sont invalidées par sécurité.
     await sessions.deleteByUser(db, user.id);
     return reply.send({ ok: true });

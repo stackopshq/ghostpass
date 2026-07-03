@@ -4,6 +4,7 @@ import type { DB } from "../db/database.js";
 import type { EmergencyAccessRow, VaultItemRow } from "../types.js";
 import { emergencyAccess, sessions, users, vaultItems } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
+import { recordAudit } from "../services/audit.js";
 import { hashServerSecret, newId, normalizeEmail } from "../services/security.js";
 
 // Accès d'urgence. Le serveur ne lit jamais l'USK (scellée pour le contact) ; il applique le
@@ -69,6 +70,11 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
     } catch {
       return reply.code(409).send({ error: "contact déjà invité" });
     }
+    await recordAudit(db, req, "emergency.grant", {
+      userId: me.id,
+      actorEmail: me.email,
+      target: grantee.email,
+    });
     return reply.code(201).send({ ok: true });
   });
 
@@ -117,6 +123,11 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
       if (!row) return;
       if (row.status !== "accepted") return reply.code(409).send({ error: "état invalide" });
       await emergencyAccess.setRequested(db, row.id);
+      await recordAudit(db, req, "emergency.request", {
+        userId: req.currentUser!.id,
+        actorEmail: req.currentUser!.email,
+        target: row.id,
+      });
       return { ok: true };
     },
   );
@@ -130,6 +141,11 @@ export function registerEmergencyRoutes(app: FastifyInstance, db: DB): void {
       if (!row) return;
       if (row.status !== "requested") return reply.code(409).send({ error: "aucune demande" });
       await emergencyAccess.setStatus(db, row.id, "granted");
+      await recordAudit(db, req, "emergency.approve", {
+        userId: req.currentUser!.id,
+        actorEmail: req.currentUser!.email,
+        target: row.id,
+      });
       return { ok: true };
     },
   );

@@ -43,6 +43,17 @@ export interface LoginEventRow {
   created_at: number;
 }
 
+/// Journal d'audit sécurité (append-only). Métadonnées uniquement — jamais de secret/blob.
+export interface AuditLogRow {
+  id: string;
+  user_id: string | null;
+  actor_email: string | null;
+  action: string;
+  target: string | null;
+  ip: string;
+  created_at: number;
+}
+
 export interface PasskeyRow {
   id: string;
   user_id: string;

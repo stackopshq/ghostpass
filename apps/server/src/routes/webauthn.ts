@@ -7,6 +7,7 @@ import {
 import type { DB } from "../db/database.js";
 import { webauthnCredentials } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
+import { recordAudit } from "../services/audit.js";
 import { ORIGIN, RP_ID, RP_NAME, putChallenge, takeChallenge } from "../services/webauthn.js";
 
 const toB64Url = (u: Uint8Array): string => Buffer.from(u).toString("base64url");
@@ -80,6 +81,11 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: DB): void {
           transports: cred.transports ? JSON.stringify(cred.transports) : null,
           name: parsed.data.name?.trim() || "Clé de sécurité",
         });
+        await recordAudit(db, req, "webauthn.add", {
+          userId: user.id,
+          actorEmail: user.email,
+          target: parsed.data.name?.trim() || "Clé de sécurité",
+        });
         return reply.code(201).send({ ok: true });
       } catch {
         return reply.code(400).send({ error: "vérification échouée" });
@@ -96,8 +102,14 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: DB): void {
     "/api/mfa/webauthn/credentials/:id",
     { preHandler: authenticate },
     async (req, reply) => {
-      const ok = await webauthnCredentials.remove(db, { id: req.params.id, userId: req.currentUser!.id });
+      const me = req.currentUser!;
+      const ok = await webauthnCredentials.remove(db, { id: req.params.id, userId: me.id });
       if (!ok) return reply.code(404).send({ error: "clé introuvable" });
+      await recordAudit(db, req, "webauthn.remove", {
+        userId: me.id,
+        actorEmail: me.email,
+        target: req.params.id,
+      });
       return reply.code(204).send();
     },
   );
