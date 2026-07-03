@@ -95,7 +95,7 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ⬜ Moteurs actifs **auto-hébergeables** : secrets dynamiques, PKI, Transit (non-ZK) — **L**
 
 ### Transverse — Mise sur le marché
-- ⬜ **PostgreSQL** prod (schéma déjà portable) — **M**
+- ✅ **PostgreSQL** prod — **fait** : couche DB portée sur **Kysely** (async), un seul code pour **SQLite** (dev/tests) et **PostgreSQL** (prod via `DATABASE_URL`) ; `docker-compose` Postgres, `pg-smoke` de bout en bout. Débloque le déploiement multi-instance.
 - 🟡 **Audit interne fait** (2026-06-19) ; reste : **audit externe / pentest** + bug bounty, **SOC 2 / ISO 27001**, conformité **nLPD/RGPD**, `security.txt` — **L**
 
 ---
@@ -104,7 +104,7 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 1. ✅ **Phase 1** — démo crédible (générateur + Password Health).
 2. ✅ **Phase 2 — extension navigateur** — livrée (Chrome/Firefox/Safari) ; reste **publication stores** + desktop/mobile natifs.
 3. 🟡 **Phase 3 — passkeys + santé/monitoring** — l'essentiel est là ; reste le **login passkey dans le popup** (une fois l'extension publiée) et le scoring d'anomalies avancé.
-4. Prochaines cibles : **PostgreSQL prod** (mise sur le marché), puis **entreprise** et/ou **Secrets Manager** selon la cible commerciale.
+4. ✅ **PostgreSQL prod** — fait (bascule Kysely SQLite/Postgres). Prochaines cibles : **entreprise** (SSO OIDC, SCIM, console admin) et/ou **Secrets Manager** selon la cible commerciale.
 
 ---
 
