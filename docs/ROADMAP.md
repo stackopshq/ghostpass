@@ -63,7 +63,12 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ✅ **Corbeille** : soft-delete / restauration / purge
 
 ### Phase 2 — Usage quotidien : clients (L, vrai bloqueur d'adoption)
-- ⬜ **Extension navigateur** (autofill, capture) — *priorité produit n°1*, cœur WASM prêt — **L**
+- ✅ **Extension navigateur** (dépôt `ghostpass-extension`, MV3) — *priorité produit n°1* — **livrée** (2026-07) :
+  - MVP durci : CSP `wasm-unsafe-eval` (cœur WASM), backend configurable (page d'options), presse-papier auto-effacé.
+  - **Session dans le service worker** + **verrouillage automatique** (délai réglable) — plus de re-login à chaque ouverture, rien de sensible sur disque.
+  - **Autofill à la demande** (`activeTab` + `scripting`, geste utilisateur) : détection multi-formulaires, matching par domaine, flux « identifiant d'abord ».
+  - **Cross-browser** (un seul code, `browser.* ?? chrome.*`) : **Chrome/Edge/Brave** (testé E2E : unlock, session, autofill), **Firefox** (`build:firefox`, chargé sur ESR 140 ; runtime à confirmer sur desktop), **Safari** (`build:safari`, converti + compilé en **CI macOS**).
+  - *Reste : publication sur les stores + login passkey dans le popup (voir Phase 3).*
 - ⬜ **Desktop natif** (Tauri + cœur Rust) puis **mobiles** (UniFFI) — **L**
 
 ### Phase 3 — Authentification & sécurité du compte (M/L)
@@ -72,7 +77,7 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ✅ **MFA FIDO2 / YubiKey** (WebAuthn, 2e facteur au login ; fondation passkeys)
 - ✅ **Détection d'anomalies (base)** : historique des connexions (appareil/IP/date) + drapeau nouvel appareil ; scoring « Sentinel-like » avancé optionnel plus tard
 - ✅ **Accès d'urgence** (USK scellée pour un contact, délai géré serveur, lecture + takeover)
-- ✅ **Passkeys passwordless** : login & enrôlement via **PRF WebAuthn** (USK enveloppée par le secret PRF, ZK). Cœur + backend testés ; flux navigateur à vérifier sur un domaine https compatible PRF.
+- ✅ **Passkeys passwordless** : login & enrôlement via **PRF WebAuthn** (USK enveloppée par le secret PRF, ZK). **Web app fonctionnelle**. **Backend Related Origin Requests** ajouté (`/.well-known/webauthn` + `WEBAUTHN_EXTRA_ORIGINS`, `expectedOrigin` multi-origines) pour autoriser des origines non same-site — prérequis des passkeys **dans l'extension**. *Flux passkey côté extension différé* : Chrome-only (nécessite un `chrome-extension://<id>` **publié et stable** dans `WEBAUTHN_EXTRA_ORIGINS`) ; Firefox/Safari ont des origines non stables.
 
 ### Phase 4 — Différenciateurs souveraineté CH (L, à arbitrer)
 - ⬜ **Alias hide-my-email** auto-hébergés (forwarding souverain) — meilleur angle anti-Proton, infra email — **L**
@@ -96,10 +101,10 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 ---
 
 ## 4. Séquencement recommandé
-1. **Phase 1** — rend la démo crédible rapidement (générateur + Password Health en tête).
-2. **Phase 2 — extension navigateur** — débloque l'usage réel quotidien.
-3. **Phase 3 — passkeys + santé/monitoring** — table-stakes 2026.
-4. Puis **entreprise** et/ou **Secrets Manager** selon la cible commerciale.
+1. ✅ **Phase 1** — démo crédible (générateur + Password Health).
+2. ✅ **Phase 2 — extension navigateur** — livrée (Chrome/Firefox/Safari) ; reste **publication stores** + desktop/mobile natifs.
+3. 🟡 **Phase 3 — passkeys + santé/monitoring** — l'essentiel est là ; reste le **login passkey dans le popup** (une fois l'extension publiée) et le scoring d'anomalies avancé.
+4. Prochaines cibles : **PostgreSQL prod** (mise sur le marché), puis **entreprise** et/ou **Secrets Manager** selon la cible commerciale.
 
 ---
 
