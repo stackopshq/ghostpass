@@ -4,6 +4,8 @@
 // compte EXISTANT via l'email vérifié.
 import { createHash, randomBytes } from "node:crypto";
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import type { DB } from "../db/database.js";
+import { ephemeral } from "../db/repositories.js";
 
 export interface OidcConfig {
   issuer: string;
@@ -54,25 +56,24 @@ function jwksFor(jwksUri: string): ReturnType<typeof createRemoteJWKSet> {
   return set;
 }
 
-// ─── État éphémère par tentative (state → nonce + PKCE verifier), côté serveur uniquement ───
-interface SsoState {
-  nonce: string;
-  codeVerifier: string;
-  expires: number;
-}
+// ─── État éphémère par tentative (state → nonce + PKCE verifier), dans le store partagé (DB) ───
 const STATE_TTL_MS = 600_000; // 10 min
-const states = new Map<string, SsoState>();
 
-export function putState(state: string, s: { nonce: string; codeVerifier: string }): void {
-  states.set(state, { ...s, expires: Date.now() + STATE_TTL_MS });
+export function putState(
+  db: DB,
+  state: string,
+  s: { nonce: string; codeVerifier: string },
+): Promise<void> {
+  return ephemeral.put(db, `sso:${state}`, JSON.stringify(s), STATE_TTL_MS);
 }
 
 /// Récupère ET consomme l'état (usage unique). Null si absent ou expiré.
-export function takeState(state: string): SsoState | null {
-  const e = states.get(state);
-  states.delete(state);
-  if (!e || e.expires < Date.now()) return null;
-  return e;
+export async function takeState(
+  db: DB,
+  state: string,
+): Promise<{ nonce: string; codeVerifier: string } | null> {
+  const v = await ephemeral.take(db, `sso:${state}`);
+  return v ? (JSON.parse(v) as { nonce: string; codeVerifier: string }) : null;
 }
 
 const b64url = (b: Buffer): string => b.toString("base64url");

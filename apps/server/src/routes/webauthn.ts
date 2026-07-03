@@ -44,7 +44,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: DB): void {
         })),
         authenticatorSelection: { residentKey: "discouraged", userVerification: "preferred" },
       });
-      putChallenge(`reg:${user.id}`, options.challenge);
+      await putChallenge(db, `reg:${user.id}`, options.challenge);
       return options;
     },
   );
@@ -57,7 +57,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: DB): void {
       const parsed = verifySchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
       const user = req.currentUser!;
-      const expectedChallenge = takeChallenge(`reg:${user.id}`);
+      const expectedChallenge = await takeChallenge(db, `reg:${user.id}`);
       if (!expectedChallenge) return reply.code(400).send({ error: "challenge expiré" });
 
       try {

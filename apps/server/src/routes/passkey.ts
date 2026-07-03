@@ -50,7 +50,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
         })),
         authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
       });
-      putChallenge(`pkreg:${user.id}`, options.challenge);
+      await putChallenge(db, `pkreg:${user.id}`, options.challenge);
       return options;
     },
   );
@@ -64,7 +64,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
     const parsed = verifySchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
     const user = req.currentUser!;
-    const expectedChallenge = takeChallenge(`pkreg:${user.id}`);
+    const expectedChallenge = await takeChallenge(db, `pkreg:${user.id}`);
     if (!expectedChallenge) return reply.code(400).send({ error: "challenge expiré" });
     try {
       const verification = await verifyRegistrationResponse({
@@ -132,7 +132,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
         })),
         userVerification: "preferred",
       });
-      putChallenge(`pklogin:${email}`, options.challenge);
+      await putChallenge(db, `pklogin:${email}`, options.challenge);
       return options;
     },
   );
@@ -146,7 +146,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
       if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
       const email = normalizeEmail(parsed.data.email);
       const user = await users.findByEmail(db, email);
-      const expectedChallenge = takeChallenge(`pklogin:${email}`);
+      const expectedChallenge = await takeChallenge(db, `pklogin:${email}`);
       const cred =
         typeof parsed.data.response?.id === "string"
           ? await passkeys.findById(db, parsed.data.response.id)

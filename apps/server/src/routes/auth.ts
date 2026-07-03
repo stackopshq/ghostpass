@@ -136,10 +136,10 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
           })),
           userVerification: "preferred",
         });
-        putChallenge(`auth:${user.id}`, options.challenge);
+        await putChallenge(db, `auth:${user.id}`, options.challenge);
         return reply.code(401).send({ mfaRequired: true, mfaType: "webauthn", options });
       }
-      const expectedChallenge = takeChallenge(`auth:${user.id}`);
+      const expectedChallenge = await takeChallenge(db, `auth:${user.id}`);
       const cred =
         typeof webauthnResponse?.id === "string"
           ? await webauthnCredentials.findById(db, webauthnResponse.id)
