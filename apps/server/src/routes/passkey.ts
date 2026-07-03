@@ -9,7 +9,7 @@ import {
 import type { DB } from "../db/database.js";
 import { passkeys, sessions, users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
-import { ORIGIN, RP_ID, RP_NAME, putChallenge, takeChallenge } from "../services/webauthn.js";
+import { RP_ID, RP_NAME, getAllowedOrigins, putChallenge, takeChallenge } from "../services/webauthn.js";
 import { createSessionToken, newId, normalizeEmail } from "../services/security.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
@@ -70,7 +70,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
       const verification = await verifyRegistrationResponse({
         response: parsed.data.response,
         expectedChallenge,
-        expectedOrigin: ORIGIN,
+        expectedOrigin: getAllowedOrigins(),
         expectedRPID: RP_ID,
         requireUserVerification: false,
       });
@@ -159,7 +159,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
         const v = await verifyAuthenticationResponse({
           response: parsed.data.response,
           expectedChallenge,
-          expectedOrigin: ORIGIN,
+          expectedOrigin: getAllowedOrigins(),
           expectedRPID: RP_ID,
           requireUserVerification: false,
           credential: {

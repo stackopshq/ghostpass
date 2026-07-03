@@ -14,6 +14,7 @@ import { registerRecoveryRoutes } from "./routes/recovery.js";
 import { registerSendRoutes } from "./routes/send.js";
 import { registerVaultRoutes } from "./routes/vault.js";
 import { registerWebAuthnRoutes } from "./routes/webauthn.js";
+import { getAllowedOrigins } from "./services/webauthn.js";
 
 /// Construit l'instance Fastify autour d'une base donnée.
 /// Séparé de `index.ts` pour permettre les tests via `app.inject()` sur une DB en mémoire.
@@ -41,6 +42,11 @@ export function buildApp(db: DB): FastifyInstance {
   });
 
   app.get("/health", async () => ({ status: "ok" }));
+
+  // WebAuthn Related Origin Requests : permet à des origines liées (ex. l'extension navigateur,
+  // `chrome-extension://…`, non same-site avec le rpID) de faire des cérémonies WebAuthn contre ce
+  // RP. Renseigner WEBAUTHN_EXTRA_ORIGINS pour les lister ici. https://w3c.github.io/webauthn/#sctn-related-origins
+  app.get("/.well-known/webauthn", async () => ({ origins: getAllowedOrigins() }));
 
   registerAuthRoutes(app, db);
   registerMfaRoutes(app, db);
