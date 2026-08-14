@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo/ghostpass.png" alt="GhostPass" width="90">
+</p>
+
 <h1 align="center">GhostPass 👻</h1>
 
 <p align="center">
