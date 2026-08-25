@@ -6,7 +6,7 @@ name: Publish WASM
 #
 # Consommation côté client (.npmrc du dépôt qui dépend du paquet) :
 #   @stackops:registry=https://git.stackops.ch/api/packages/stackops/npm/
-#   //git.stackops.ch/api/packages/stackops/npm/:_authToken=${GITEA_TOKEN}
+#   //git.stackops.ch/api/packages/stackops/npm/:_authToken=${NODE_AUTH_TOKEN}
 #
 # Le registre npm de Gitea refuse d'écraser une version déjà publiée : incrémenter la version.
 on:
@@ -51,7 +51,15 @@ jobs:
           npm pkg set publishConfig.registry="${NPM_REGISTRY}"
       - name: Publish
         working-directory: crates/ghostpass-crypto-wasm/pkg
-        run: npm publish
+        # Le jeton auto-injecté (GITEA_TOKEN / GITHUB_TOKEN) ne porte pas le scope
+        # `write:package` sur Gitea : `npm publish` échoue en E401. On passe donc par un PAT en
+        # secret de dépôt, comme les autres dépôts de la suite (cf. stackops/os-images-exporter,
+        # qui utilise la même paire REGISTRY_USER / REGISTRY_TOKEN).
+        run: |
+          if [[ -z "${NODE_AUTH_TOKEN}" ]]; then
+            echo "::error::Secret REGISTRY_TOKEN manquant (PAT avec le scope write:package)"
+            exit 1
+          fi
+          npm publish
         env:
-          # Jeton injecté automatiquement par Gitea Actions (équivalent de GITHUB_TOKEN).
-          NODE_AUTH_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
