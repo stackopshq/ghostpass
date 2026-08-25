@@ -35,6 +35,7 @@ struct ItemEditView: View {
             Form {
                 Section {
                     TextField("Nom", text: $name)
+                        .accessibilityIdentifier("field.name")
                     if isNew {
                         Picker("Type", selection: $kind) {
                             ForEach(Kind.allCases) { Text($0.rawValue).tag($0) }
@@ -46,10 +47,13 @@ struct ItemEditView: View {
                 case .login:
                     Section("Identifiants") {
                         TextField("Nom d'utilisateur", text: $username)
+                            .accessibilityIdentifier("field.username")
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                         SecureField("Mot de passe", text: $password)
+                            .accessibilityIdentifier("field.password")
                         TextField("Adresse du site", text: $uri)
+                            .accessibilityIdentifier("field.uri")
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
@@ -80,6 +84,7 @@ struct ItemEditView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler") { dismiss() }
+                        .accessibilityIdentifier("button.cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer") {
@@ -89,6 +94,7 @@ struct ItemEditView: View {
                         }
                     }
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .accessibilityIdentifier("button.save")
                 }
             }
             .onAppear(perform: load)

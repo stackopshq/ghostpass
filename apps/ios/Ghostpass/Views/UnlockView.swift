@@ -19,21 +19,25 @@ struct UnlockView: View {
                         LabeledContent("Compte", value: store.savedEmail)
                         SecureField("Mot de passe maître", text: $password)
                             .textContentType(.password)
+                            .accessibilityIdentifier("field.master")
                     }
                 } else {
                     Section("Serveur") {
                         TextField("https://ghostpass.stackops.ch", text: $server)
+                            .accessibilityIdentifier("field.server")
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
                     }
                     Section("Compte") {
                         TextField("Adresse e-mail", text: $email)
+                            .accessibilityIdentifier("field.email")
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.emailAddress)
                         SecureField("Mot de passe maître", text: $password)
                             .textContentType(.password)
+                            .accessibilityIdentifier("field.master")
                         if needsTotp {
                             TextField("Code à 6 chiffres", text: $totpCode)
                                 .keyboardType(.numberPad)
@@ -56,12 +60,14 @@ struct UnlockView: View {
                         }
                     }
                     .disabled(store.isBusy || password.isEmpty)
+                    .accessibilityIdentifier("button.submit")
 
                     if useSavedSession && store.canUnlockWithBiometrics {
                         Button("Déverrouiller avec \(store.biometryLabel)") {
                             Task { await store.unlockWithBiometrics() }
                         }
                         .disabled(store.isBusy)
+                        .accessibilityIdentifier("button.biometric")
                     }
 
                     if store.hasSavedSession {
@@ -70,6 +76,7 @@ struct UnlockView: View {
                             password = ""
                         }
                         .font(.footnote)
+                        .accessibilityIdentifier("button.switchAccount")
                     }
                 }
             }

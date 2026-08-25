@@ -30,6 +30,35 @@ Rien de ce que produisent ces trois commandes n'est versionné : `Ghostpass.xcod
 du projet vit dans `project.yml`, qui se relit et se fusionne — contrairement à un
 `.xcodeproj`, que deux personnes ne peuvent pas modifier sans conflit.
 
+## Tests
+
+```sh
+./tools/ios/run-ios-tests.sh              # tout : contrat + parcours de bout en bout
+./tools/ios/run-ios-tests.sh --unit-only  # contrat seulement, quelques secondes
+```
+
+Le script se suffit à lui-même : il construit l'XCFramework, crée un **simulateur
+éphémère** (le trousseau d'un simulateur survit à la désinstallation — sans cela un run
+hériterait des choix du précédent), démarre un serveur GhostPass sur SQLite jetable,
+amorce un compte de test, puis nettoie tout. En cas d'échec, les rapports restent dans
+`apps/ios/TestResults/` ; la CI les publie en artefact.
+
+| Cible | Ce qu'elle couvre |
+|---|---|
+| `Tests/` | **Contrat** : décodage des réponses du serveur, aller-retour d'un `VaultItem` à travers le vrai binding Rust, filtrage du registre `gp:folders`, refus d'activer la biométrie sur un mot de passe faux. Ni réseau ni interface, moins d'une seconde. |
+| `UITests/` | **Parcours réel** : connexion, liste, création, modification, suppression, verrouillage, réouverture au seul mot de passe maître — et l'absence de ligne fantôme à chaque étape. |
+
+Les deux régressions qui rendaient l'application inutilisable (paramètres KDF pris pour un
+objet JSON, horodatages pris pour des chaînes) sont des divergences de contrat : elles sont
+tenues par `Tests/`, qui les rattraperait en une seconde et sans simulateur.
+
+**Limite connue** : le déverrouillage biométrique de bout en bout n'est pas exerçable de
+façon fiable dans le simulateur — l'inscription simulée (`BiometricKit.enrollmentChanged`)
+ne survit pas toujours au recyclage que fait `xcodebuild`. Quand l'application ne voit pas
+de biométrie, `test02Biometrie` **s'ignore explicitement** plutôt que de passer au vert
+sans rien avoir exercé. Ce qui reste couvert sans elle : le refus d'activer sur un mot de
+passe faux, et le fait qu'aucune session n'autorise l'activation.
+
 ## Structure
 
 | Chemin | Rôle |
@@ -63,7 +92,10 @@ du projet vit dans `project.yml`, qui se relit et se fusionne — contrairement 
   visage invalide l'entrée** — sans quoi qui connaît le code de l'appareil ouvrirait le
   coffre. Le déverrouillage reste une dérivation Argon2id faite par le cœur Rust ; la
   biométrie n'ouvre que le tiroir où dort le mot de passe. Un refus n'enferme personne :
-  la saisie manuelle reste disponible.
+  la saisie manuelle reste disponible, et le menu du coffre permet d'activer ou de retirer
+  le déverrouillage biométrique à tout moment. Activer à froid **redemande** le mot de
+  passe maître et le vérifie en rouvrant réellement le coffre : on ne confie au trousseau
+  qu'un secret dont on sait qu'il ouvre.
 - Les paramètres KDF transitent **verbatim** du serveur au cœur Rust. Le serveur les
   stocke en colonne TEXT : `kdfParams` est une *chaîne* contenant du JSON, jamais un
   objet JSON. La décoder pour la ré-encoder donnerait une chaîne doublement échappée,

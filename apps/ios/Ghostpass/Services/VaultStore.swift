@@ -144,9 +144,18 @@ final class VaultStore: ObservableObject {
 
     var biometryLabel: String { Biometrics.label }
 
+    /// La biométrie est-elle disponible sur cet appareil, indépendamment du choix fait ?
+    var biometryAvailable: Bool { Biometrics.isAvailable }
+
+    /// Le déverrouillage biométrique est-il actif ?
+    var isBiometricEnabled: Bool { Keychain.get(Keychain.Key.biometricsEnabled) == "1" }
+
     /// Déverrouille sans saisie : la biométrie autorise la relecture du mot de passe
     /// maître, et c'est toujours lui qui ouvre le coffre côté Rust.
     func unlockWithBiometrics() async {
+        NSLog("GP-BIO tentative flag=%@ dispo=%@",
+              Keychain.get(Keychain.Key.biometricsEnabled) ?? "(absent)",
+              Biometrics.isAvailable ? "oui" : "non")
         guard Keychain.get(Keychain.Key.biometricsEnabled) == "1" else { return }
         isBusy = true
         let prompt = "Déverrouiller votre coffre GhostPass"
@@ -155,6 +164,7 @@ final class VaultStore: ObservableObject {
             Keychain.getBiometric(Keychain.Key.masterPassword, prompt: prompt)
         }.value
         isBusy = false
+        NSLog("GP-BIO relecture=%@", password == nil ? "échec" : "ok")
         guard let password else {
             // Refus, échec, ou entrée invalidée par un nouvel enrôlement : on ne
             // reste pas coincé, le mot de passe maître marche toujours.
@@ -173,21 +183,53 @@ final class VaultStore: ObservableObject {
         offersBiometricEnrollment = true
     }
 
-    /// L'utilisateur accepte : le mot de passe part au trousseau, sous garde biométrique.
-    func enableBiometrics() {
+    /// L'utilisateur accepte la proposition faite juste après un déverrouillage : le mot
+    /// de passe est encore en main, inutile de le redemander.
+    func acceptOfferedBiometrics() {
         defer { pendingPassword = nil; offersBiometricEnrollment = false }
         guard let password = pendingPassword else { return }
-        let status = Keychain.setBiometric(password, for: Keychain.Key.masterPassword)
-        if status == errSecSuccess {
-            Keychain.set("1", for: Keychain.Key.biometricsEnabled)
-        } else {
-            NSLog("GP-KEYCHAIN setBiometric a échoué : OSStatus %d", status)
-            errorMessage = "\(Biometrics.label) n'a pas pu être activé (code \(status))."
-        }
+        store(password)
     }
 
-    /// L'utilisateur refuse : on oublie le mot de passe, et on ne reposera pas la question
-    /// à chaque ouverture — le drapeau distingue « refusé » de « jamais proposé ».
+    /// Active la biométrie à froid, depuis les réglages. Le mot de passe maître n'est plus
+    /// en mémoire : on le redemande, et surtout **on le vérifie** en rouvrant réellement le
+    /// coffre avec — on ne dépose au trousseau qu'un secret dont on sait qu'il ouvre.
+    @discardableResult
+    func enableBiometrics(password: String) -> Bool {
+        guard let email = Keychain.get(Keychain.Key.email),
+            let kdf = Keychain.get(Keychain.Key.kdfParams),
+            let euk = Keychain.get(Keychain.Key.encryptedUserKey),
+            let epk = Keychain.get(Keychain.Key.encryptedPrivateKey)
+        else {
+            errorMessage = "Aucune session enregistrée sur cet appareil."
+            return false
+        }
+        do {
+            _ = try Account.unlock(
+                password: password, email: email, kdfParamsJson: kdf,
+                encryptedUserKey: euk, encryptedPrivateKey: epk)
+        } catch {
+            errorMessage = "Mot de passe maître incorrect."
+            return false
+        }
+        return store(password)
+    }
+
+    @discardableResult
+    private func store(_ password: String) -> Bool {
+        let status = Keychain.setBiometric(password, for: Keychain.Key.masterPassword)
+        NSLog("GP-BIO store status=%d", status)
+        guard status == errSecSuccess else {
+            errorMessage = "\(Biometrics.label) n'a pas pu être activé (code \(status))."
+            return false
+        }
+        Keychain.set("1", for: Keychain.Key.biometricsEnabled)
+        return true
+    }
+
+    /// L'utilisateur refuse : on oublie le mot de passe et on ne repose pas la question à
+    /// chaque ouverture. Le refus n'est pas définitif : les réglages du coffre permettent
+    /// de revenir dessus, sans quoi un « Plus tard » condamnerait la fonction.
     func declineBiometrics() {
         pendingPassword = nil
         offersBiometricEnrollment = false
@@ -207,10 +249,8 @@ final class VaultStore: ObservableObject {
         do {
             let dtos = try await api.listItems(token: token)
             entries = dtos.compactMap { dto in
-                guard let item = try? decrypt(dto, with: account) else { return nil }
-                // L'item de registre des dossiers est un détail d'implémentation partagé
-                // avec la web app : il n'a rien à faire dans la liste.
-                guard item.name != VaultConstants.foldersItemName else { return nil }
+                guard let item = try? Self.decrypt(dto, with: account) else { return nil }
+                guard !Self.isRegistry(item) else { return nil }
                 return VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt)
             }
             .sorted { $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending }
@@ -225,7 +265,7 @@ final class VaultStore: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         do {
-            let (key, data) = try encrypt(item, with: account)
+            let (key, data) = try Self.encrypt(item, with: account)
             if let id {
                 _ = try await api.updateItem(
                     token: token, id: id, encryptedKey: key, encryptedData: data)
@@ -249,17 +289,31 @@ final class VaultStore: ObservableObject {
     }
 
     // ─── Passage de frontière ───
+    //
+    // `static` et non `private` : c'est la couture où le JSON du serveur rencontre celui
+    // du cœur Rust, donc l'endroit exact où une divergence de contrat se paie. Les tests
+    // l'exercent directement, sans monter ni session ni interface.
+
+    /// Un item de registre interne — l'arborescence des dossiers partagée avec la web app —
+    /// n'a rien à faire dans la liste. L'afficher serait une régression visible.
+    nonisolated static func isRegistry(_ item: VaultItem) -> Bool {
+        item.name == VaultConstants.foldersItemName
+    }
 
     /// Le cœur échange des `EncryptedItem` en JSON (`encrypted_key` / `encrypted_data`),
     /// l'API les expose en camelCase et à plat. La conversion tient ici, en un seul endroit.
-    private func decrypt(_ dto: EncryptedItemDTO, with account: Account) throws -> VaultItem {
+    nonisolated static func decrypt(_ dto: EncryptedItemDTO, with account: Account) throws
+        -> VaultItem
+    {
         let envelope = ["encrypted_key": dto.encryptedKey, "encrypted_data": dto.encryptedData]
         let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8) ?? "{}"
         let clear = try account.decryptItem(encryptedItemJson: json)
         return try JSONDecoder().decode(VaultItem.self, from: Data(clear.utf8))
     }
 
-    private func encrypt(_ item: VaultItem, with account: Account) throws -> (String, String) {
+    nonisolated static func encrypt(_ item: VaultItem, with account: Account) throws
+        -> (String, String)
+    {
         let json = String(data: try JSONEncoder().encode(item), encoding: .utf8) ?? "{}"
         let encrypted = try account.encryptItem(itemJson: json)
         let fields = try JSONDecoder().decode(

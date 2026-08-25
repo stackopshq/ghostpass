@@ -1,0 +1,220 @@
+import LocalAuthentication
+import XCTest
+
+/// Parcours de bout en bout contre un serveur GhostPass local, amorcé par
+/// `tools/ios/run-ios-tests.sh` avec un compte de test et un item de registre.
+///
+/// Les champs sont adressés par `accessibilityIdentifier` — jamais par position ni par
+/// libellé, qui dépendent tous deux de la mise en page et de la langue. La frappe passe
+/// par `app.typeText` plutôt que par l'élément : re-résoudre une requête pendant que le
+/// curseur clignote fait expirer la recherche d'instantané.
+///
+/// L'adresse du serveur et le compte sont ceux qu'amorce le script ; les variables
+/// d'environnement ne servent qu'à lancer ces tests à la main depuis Xcode. `xcodebuild`
+/// ne transmet pas d'environnement au processus de test, d'où ces valeurs par défaut —
+/// elles doivent rester alignées sur celles de `tools/ios/run-ios-tests.sh`.
+final class VaultFlowTests: XCTestCase {
+    private lazy var env = ProcessInfo.processInfo.environment
+    private var server: String { env["GHOSTPASS_SERVER"] ?? "http://127.0.0.1:3111" }
+    private var email: String { env["GHOSTPASS_EMAIL"] ?? "clara@ghostpass.test" }
+    private var master: String { env["GHOSTPASS_PASSWORD"] ?? "correct horse battery staple" }
+    private var demoItem: String { env["GHOSTPASS_DEMO_ITEM"] ?? "GitHub" }
+
+    override func setUp() {
+        continueAfterFailure = false
+        NSLog("GP-CONF serveur=%@ email=%@", server, email)
+    }
+
+    private func shot(_ app: XCUIApplication, _ name: String) {
+        let a = XCTAttachment(screenshot: app.screenshot())
+        a.name = name
+        a.lifetime = .keepAlways
+        add(a)
+    }
+
+    /// Un tap sur un champ SwiftUI en sélectionne tout le contenu : la frappe le remplace.
+    private func remplir(_ app: XCUIApplication, _ id: String, _ text: String) {
+        let field = app.descendants(matching: .any).matching(identifier: id).firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 30), "champ « \(id) » absent")
+        field.tap()
+        app.typeText(text)
+    }
+
+    private func seConnecter(_ app: XCUIApplication) {
+        let champServeur = app.descendants(matching: .any)
+            .matching(identifier: "field.server").firstMatch
+        if !champServeur.waitForExistence(timeout: 8) {
+            // Une session est déjà enregistrée : l'écran ne demande que le mot de passe.
+            let autre = app.buttons["button.switchAccount"]
+            XCTAssertTrue(
+                autre.waitForExistence(timeout: 20),
+                "ni formulaire de connexion, ni bascule vers un autre compte")
+            autre.tap()
+        }
+        remplir(app, "field.server", server)
+        remplir(app, "field.email", email)
+        remplir(app, "field.master", master)
+        app.buttons["button.submit"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Coffre"].waitForExistence(timeout: 180),
+            "le coffre ne s'est pas ouvert — serveur injoignable ou identifiants refusés")
+    }
+
+    private func aucuneLigneFantome(_ app: XCUIApplication, _ contexte: String) {
+        let fantome = app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS[c] %@", "gp:folders"))
+        XCTAssertEqual(fantome.count, 0, "ligne fantôme gp:folders visible (\(contexte))")
+    }
+
+    func test01ParcoursComplet() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        // 1. Connexion
+        seConnecter(app)
+        // Sur un simulateur où une biométrie est inscrite, l'app propose de l'activer.
+        // On écarte la proposition explicitement : la subir ferait échouer les taps
+        // suivants pour une raison sans rapport avec ce que ce test vérifie.
+        let plusTard = app.buttons["button.laterBiometric"].firstMatch
+        if plusTard.waitForExistence(timeout: 5) { plusTard.tap() }
+        shot(app, "1-coffre")
+
+        // 2. La liste montre le coffre, et rien de ce qui doit rester caché
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 30),
+            "l'item de démonstration « \(demoItem) » est absent : la liste n'a pas pu se charger")
+        aucuneLigneFantome(app, "après connexion")
+
+        // 3. Création
+        let plus = app.buttons["button.add"]
+        XCTAssertTrue(plus.waitForExistence(timeout: 30))
+        plus.tap()
+        if !app.buttons["button.cancel"].waitForExistence(timeout: 10) {
+            plus.tap()  // la feuille rate parfois le premier tap juste après le chargement
+            XCTAssertTrue(
+                app.buttons["button.cancel"].waitForExistence(timeout: 30),
+                "la feuille de création ne s'ouvre pas")
+        }
+        remplir(app, "field.name", "Forgejo")
+        remplir(app, "field.username", "clara")
+        remplir(app, "field.password", "s3cret-initial")
+        remplir(app, "field.uri", "https://git.stackops.ch")
+        app.buttons["button.save"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Forgejo"].waitForExistence(timeout: 60),
+            "l'item créé n'apparaît pas dans la liste")
+
+        // 4. Modification
+        app.buttons["Forgejo, clara"].tap()
+        XCTAssertTrue(app.buttons["button.edit"].waitForExistence(timeout: 30))
+        app.buttons["button.edit"].tap()
+        XCTAssertTrue(app.buttons["button.cancel"].waitForExistence(timeout: 30))
+        remplir(app, "field.name", "Forgejo prod")
+        app.buttons["button.save"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Forgejo prod"].waitForExistence(timeout: 60),
+            "l'écran de détail garde l'ancien contenu après modification")
+
+        // 4b. Une modification ne doit pas emporter le mot de passe qu'on n'a pas touché
+        app.buttons["button.reveal"].tap()
+        XCTAssertTrue(
+            app.staticTexts["s3cret-initial"].waitForExistence(timeout: 30),
+            "le mot de passe a été écrasé par l'édition")
+        shot(app, "2-detail")
+
+        // 5. Suppression
+        if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
+        let ligne = app.buttons["Forgejo prod, clara"]
+        XCTAssertTrue(ligne.waitForExistence(timeout: 30))
+        ligne.swipeLeft()
+        XCTAssertTrue(app.buttons["Supprimer"].waitForExistence(timeout: 30))
+        app.buttons["Supprimer"].tap()
+        expectation(
+            for: NSPredicate(format: "exists == false"),
+            evaluatedWith: app.staticTexts["Forgejo prod"])
+        waitForExpectations(timeout: 60)
+
+        // 6. Verrouiller relâche vraiment les clés
+        app.buttons["button.lock"].tap()
+        XCTAssertTrue(app.buttons["button.submit"].waitForExistence(timeout: 30))
+        XCTAssertFalse(app.staticTexts[demoItem].exists, "le coffre reste visible après verrouillage")
+
+        // 7. Réouverture avec le seul mot de passe maître, sans réseau ni ressaisie du compte
+        remplir(app, "field.master", master)
+        app.buttons["button.submit"].tap()
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 180),
+            "la réouverture au mot de passe maître a échoué")
+        aucuneLigneFantome(app, "après réouverture")
+        XCTAssertFalse(app.staticTexts["Forgejo prod"].exists, "l'item supprimé est revenu")
+        shot(app, "3-reouvert")
+    }
+
+    /// Enrôlement puis réouverture biométrique. Ne s'exécute que si le script a inscrit
+    /// une biométrie dans le simulateur et se charge d'envoyer les correspondances :
+    /// sinon le test est ignoré, jamais vert par accident.
+    func test02Biometrie() throws {
+        // On interroge le simulateur plutôt que de se fier à une variable transmise :
+        // `xcodebuild` n'en propage aucune jusqu'ici. Le script inscrit une biométrie et
+        // envoie les correspondances ; sans lui, ce test est ignoré, jamais vert par défaut.
+        try XCTSkipUnless(
+            LAContext().canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil),
+            "aucune biométrie inscrite : lancez tools/ios/run-ios-tests.sh")
+
+        let app = XCUIApplication()
+        app.launch()
+
+        // Si la biométrie est déjà active, l'app se déverrouille seule au lancement.
+        if !app.navigationBars["Coffre"].waitForExistence(timeout: 45) {
+            seConnecter(app)
+            let plusTard = app.buttons["button.laterBiometric"].firstMatch
+            if plusTard.waitForExistence(timeout: 5) { plusTard.tap() }
+        }
+
+        // Activation par les réglages, et non par la proposition qui suit la connexion :
+        // celle-ci ne paraît qu'une fois, alors que le réglage est toujours là — c'est
+        // d'ailleurs le seul recours après un « Plus tard ».
+        let reglages = app.buttons["button.settings"]
+        XCTAssertTrue(reglages.waitForExistence(timeout: 30), "menu des réglages absent")
+        reglages.tap()
+
+        let activer = app.buttons["button.biometricOn"].firstMatch
+        let desactiver = app.buttons["button.biometricOff"].firstMatch
+        if activer.waitForExistence(timeout: 10) {
+            activer.tap()
+            remplir(app, "field.masterConfirm", master)
+            app.buttons["button.confirmBiometric"].firstMatch.tap()
+            // La feuille ne se referme que si le mot de passe a ouvert le coffre : la
+            // voir rester, c'est un refus du trousseau, qu'on remonte plutôt que
+            // d'échouer trois écrans plus loin sur un symptôme.
+            if app.buttons["button.confirmBiometric"].firstMatch.waitForExistence(timeout: 5),
+                app.navigationBars.staticTexts.containing(
+                    NSPredicate(format: "label BEGINSWITH %@", "Activer")).element.exists
+            {
+                shot(app, "4-echec-activation")
+                XCTFail("activation biométrique refusée par le trousseau")
+            }
+        } else if desactiver.exists {
+            // Déjà active : refermer le menu sans y toucher.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+        } else {
+            // Le menu ne propose rien : l'application ne voit aucune biométrie, alors même
+            // que le runner en voyait une. L'inscription simulée du simulateur ne survit
+            // pas toujours au recyclage que fait xcodebuild entre deux invocations. On
+            // s'arrête là plutôt que de rendre vert un chemin qu'on n'a pas exercé.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+            throw XCTSkip(
+                "l'application ne voit pas de biométrie sur ce simulateur — "
+                    + "déverrouillage biométrique non vérifié")
+        }
+
+        // Le cycle qui compte : verrouiller, puis rouvrir sans aucune saisie.
+        app.buttons["button.lock"].tap()
+        sleep(5)
+        shot(app, "4-apres-verrouillage")
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 120),
+            "la biométrie n'a pas rouvert le coffre")
+        shot(app, "4-biometrie")
+    }
+}

@@ -78,3 +78,42 @@ jobs:
       - name: Build
         working-directory: apps/web
         run: npm run build
+
+  ios:
+    name: App iOS (SwiftUI + UniFFI)
+    # Xcode et le simulateur n'existent que sur macOS. Attention : sur un dépôt privé,
+    # les minutes macOS comptent dix fois — d'où un job qui ne tourne pas pour rien.
+    runs-on: macos-latest
+    # Le cœur crypto et son binding doivent déjà être verts : sans eux, l'app n'a rien
+    # à lier, et un échec ici ne dirait pas où le problème se trouve.
+    needs: crypto
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/server/package-lock.json
+      - name: XcodeGen
+        run: brew install xcodegen
+      - name: Dépendances du serveur de test
+        working-directory: apps/server
+        run: npm ci
+      # Construit l'XCFramework et les bindings, monte un serveur GhostPass local, amorce
+      # un coffre de test (registre gp:folders compris), puis déroule les deux suites.
+      - name: Tests iOS
+        run: ./tools/ios/run-ios-tests.sh
+      # Un échec ne laisse qu'un nom de test : les rapports portent les captures d'écran
+      # et le journal du serveur, seuls moyens de comprendre sans reproduire localement.
+      - name: Rapports de test
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-results
+          path: apps/ios/TestResults/
+          retention-days: 7
+

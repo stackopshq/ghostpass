@@ -3,7 +3,9 @@ import SwiftUI
 struct VaultListView: View {
     @EnvironmentObject private var store: VaultStore
     @State private var search = ""
-    @State private var editing: EditTarget?
+    /// Une seule feuille à la fois : deux modificateurs `.sheet` sur la même vue se
+    /// marchent dessus, et c'est la première déclarée qui cesse de s'ouvrir.
+    @State private var sheet: VaultSheet?
 
     private var visible: [VaultEntry] {
         guard !search.isEmpty else { return store.entries }
@@ -33,7 +35,7 @@ struct VaultListView: View {
                 // capturée à la navigation : sinon une seconde modification rouvrirait
                 // le formulaire avec le contenu d'avant la première.
                 ItemDetailView(entry: entry) {
-                    editing = .existing(store.entries.first { $0.id == entry.id } ?? entry)
+                    sheet = .editItem(store.entries.first { $0.id == entry.id } ?? entry)
                 }
             }
             .searchable(text: $search, prompt: "Rechercher")
@@ -49,18 +51,50 @@ struct VaultListView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Verrouiller") { store.lock() }
+                        .accessibilityIdentifier("button.lock")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        if store.biometryAvailable {
+                            if store.isBiometricEnabled {
+                                Button("Désactiver \(store.biometryLabel)", role: .destructive) {
+                                    store.disableBiometrics()
+                                }
+                                .accessibilityIdentifier("button.biometricOff")
+                            } else {
+                                Button("Activer \(store.biometryLabel)") {
+                                    sheet = .biometrics
+                                }
+                                .accessibilityIdentifier("button.biometricOn")
+                            }
+                        }
+                        Button("Se déconnecter", role: .destructive) {
+                            Task { await store.signOut() }
+                        }
+                        .accessibilityIdentifier("button.signOut")
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .accessibilityIdentifier("button.settings")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        editing = .new
+                        sheet = .newItem
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .accessibilityIdentifier("button.add")
                 }
             }
-            .sheet(item: $editing) { target in
-                ItemEditView(target: target)
-                    .environmentObject(store)
+            .sheet(item: $sheet) { destination in
+                switch destination {
+                case .newItem:
+                    ItemEditView(target: .new).environmentObject(store)
+                case .editItem(let entry):
+                    ItemEditView(target: .existing(entry)).environmentObject(store)
+                case .biometrics:
+                    BiometricSetupView().environmentObject(store)
+                }
             }
             .alert(
                 "Erreur", isPresented: .constant(store.errorMessage != nil),
@@ -70,14 +104,31 @@ struct VaultListView: View {
                 "Utiliser \(store.biometryLabel) ?",
                 isPresented: $store.offersBiometricEnrollment,
                 actions: {
-                    Button("Activer") { store.enableBiometrics() }
+                    Button("Activer") { store.acceptOfferedBiometrics() }
+                        .accessibilityIdentifier("button.acceptBiometric")
                     Button("Plus tard", role: .cancel) { store.declineBiometrics() }
+                        .accessibilityIdentifier("button.laterBiometric")
                 },
                 message: {
                     Text(
                         "Votre mot de passe maître sera conservé dans le trousseau de cet "
                             + "appareil, relisible par \(store.biometryLabel) seul.")
                 })
+        }
+    }
+}
+
+/// Ce que la liste peut présenter par-dessus elle.
+enum VaultSheet: Identifiable {
+    case newItem
+    case editItem(VaultEntry)
+    case biometrics
+
+    var id: String {
+        switch self {
+        case .newItem: return "new"
+        case .editItem(let entry): return entry.id
+        case .biometrics: return "biometrics"
         }
     }
 }

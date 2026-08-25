@@ -43,3 +43,41 @@ targets:
           Face ID déverrouille votre coffre sans ressaisir le mot de passe maître.
         OTHER_LDFLAGS: -lc++
 
+  # Tests de contrat : la couture JSON serveur ↔ cœur Rust ↔ types Swift.
+  # Ni réseau ni interface — ils tournent en quelques secondes.
+  GhostpassTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: Ghostpass
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Ghostpass.app/Ghostpass
+        BUNDLE_LOADER: $(TEST_HOST)
+
+  # Parcours de bout en bout. Exige un serveur GhostPass amorcé : passer par
+  # tools/ios/run-ios-tests.sh, qui le démarre et crée le compte de test.
+  GhostpassUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Ghostpass
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Ghostpass
+
+schemes:
+  Ghostpass:
+    build:
+      targets:
+        Ghostpass: all
+    test:
+      targets:
+        - GhostpassTests
+        - GhostpassUITests

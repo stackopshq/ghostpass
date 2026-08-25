@@ -50,6 +50,7 @@ struct ItemDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             Button("Modifier", action: onEdit)
+                .accessibilityIdentifier("button.edit")
         }
     }
 }
@@ -102,6 +103,7 @@ private struct SecretRow: View {
                 Image(systemName: revealed ? "eye.slash" : "eye")
             }
             .buttonStyle(.borderless)
+            .accessibilityIdentifier("button.reveal")
             Button {
                 UIPasteboard.general.string = value
             } label: {
