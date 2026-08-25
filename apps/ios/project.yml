@@ -33,7 +33,13 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass
         GENERATE_INFOPLIST_FILE: YES
+        # Icône dérivée du logo du produit (assets/logo/ghostpass.svg).
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: GhostPass
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # Sans cette clé, iOS tue l'app à la première demande biométrique.
+        INFOPLIST_KEY_NSFaceIDUsageDescription: >-
+          Face ID déverrouille votre coffre sans ressaisir le mot de passe maître.
         OTHER_LDFLAGS: -lc++
+

@@ -20,14 +20,17 @@ enum APIError: LocalizedError, Equatable {
 }
 
 struct PreloginResponse: Decodable {
-    /// Le serveur renvoie l'objet KDF ; le cœur Rust l'attend en JSON, on le
-    /// garde donc sous forme brute plutôt que de le décoder puis de le ré-encoder.
-    let kdfParams: JSONValue
+    /// Le serveur stocke les paramètres KDF en colonne TEXT et les renvoie **tels quels** :
+    /// `kdfParams` est donc une chaîne contenant du JSON, pas un objet JSON. C'est
+    /// exactement ce que le cœur Rust attend, et c'est ce que fait déjà la web app.
+    /// La décoder puis la ré-encoder produirait une chaîne doublement échappée, que
+    /// `serde` rejette (« invalid type: string, expected struct KdfParams »).
+    let kdfParams: String
 }
 
 struct LoginResponse: Decodable {
     let token: String
-    let kdfParams: JSONValue
+    let kdfParams: String
     let encryptedUserKey: String
     let encryptedPrivateKey: String
 }
@@ -36,8 +39,11 @@ struct EncryptedItemDTO: Codable, Identifiable {
     let id: String
     let encryptedKey: String
     let encryptedData: String
-    var updatedAt: String?
-    var deletedAt: String?
+    /// Horodatages en millisecondes depuis l'epoch : les colonnes sont des `INTEGER`
+    /// et le serveur les expose tels quels. Les attendre en `String` faisait échouer
+    /// le décodage de la liste entière, donc du coffre entier.
+    var updatedAt: Int?
+    var deletedAt: Int?
 }
 
 private struct ItemsEnvelope: Decodable {

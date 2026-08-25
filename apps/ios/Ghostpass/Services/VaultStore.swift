@@ -11,10 +11,16 @@ final class VaultStore: ObservableObject {
     @Published private(set) var isUnlocked = false
     @Published private(set) var isBusy = false
     @Published var errorMessage: String?
+    /// Vrai juste après un déverrouillage réussi, quand la biométrie est disponible mais
+    /// pas encore configurée : l'UI peut alors proposer de l'activer.
+    @Published var offersBiometricEnrollment = false
 
     private var account: Account?
     private var token: String?
     private var api: APIClient?
+    /// Mot de passe maître retenu le temps de proposer l'enrôlement biométrique, jamais
+    /// au-delà : `enableBiometrics` et `declineBiometrics` l'effacent tous les deux.
+    private var pendingPassword: String?
 
     var hasSavedSession: Bool {
         Keychain.get(Keychain.Key.token) != nil && Keychain.get(Keychain.Key.email) != nil
@@ -37,7 +43,7 @@ final class VaultStore: ObservableObject {
         defer { isBusy = false }
         do {
             let client = APIClient(baseURL: url)
-            let kdf = try await client.prelogin(email: email).kdfParams.jsonString
+            let kdf = try await client.prelogin(email: email).kdfParams
             let hash = try masterPasswordHash(
                 password: password, email: email, kdfParamsJson: kdf)
             let session = try await client.login(
@@ -46,7 +52,7 @@ final class VaultStore: ObservableObject {
             let unlocked = try Account.unlock(
                 password: password,
                 email: email,
-                kdfParamsJson: session.kdfParams.jsonString,
+                kdfParamsJson: session.kdfParams,
                 encryptedUserKey: session.encryptedUserKey,
                 encryptedPrivateKey: session.encryptedPrivateKey)
 
@@ -59,10 +65,11 @@ final class VaultStore: ObservableObject {
             Keychain.set(server, for: Keychain.Key.serverURL)
             Keychain.set(email, for: Keychain.Key.email)
             Keychain.set(session.token, for: Keychain.Key.token)
-            Keychain.set(session.kdfParams.jsonString, for: Keychain.Key.kdfParams)
+            Keychain.set(session.kdfParams, for: Keychain.Key.kdfParams)
             Keychain.set(session.encryptedUserKey, for: Keychain.Key.encryptedUserKey)
             Keychain.set(session.encryptedPrivateKey, for: Keychain.Key.encryptedPrivateKey)
 
+            proposeBiometricsIfPossible(password)
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
@@ -93,6 +100,7 @@ final class VaultStore: ObservableObject {
             api = APIClient(baseURL: url)
             isUnlocked = true
             errorMessage = nil
+            proposeBiometricsIfPossible(password)
             await refresh()
         } catch {
             errorMessage = "Mot de passe maître incorrect."
@@ -104,6 +112,8 @@ final class VaultStore: ObservableObject {
         account = nil
         entries = []
         isUnlocked = false
+        pendingPassword = nil
+        offersBiometricEnrollment = false
     }
 
     /// Déconnexion : révoque la session côté serveur et efface tout localement.
@@ -116,10 +126,78 @@ final class VaultStore: ObservableObject {
         api = nil
         for key in [
             Keychain.Key.token, Keychain.Key.kdfParams, Keychain.Key.encryptedUserKey,
-            Keychain.Key.encryptedPrivateKey,
+            Keychain.Key.encryptedPrivateKey, Keychain.Key.masterPassword,
+            Keychain.Key.biometricsEnabled,
         ] {
             Keychain.remove(key)
         }
+    }
+
+    // ─── Biométrie ───
+
+    /// Le bouton « Déverrouiller avec Face ID » a-t-il un sens ici et maintenant ?
+    var canUnlockWithBiometrics: Bool {
+        Biometrics.isAvailable
+            && Keychain.get(Keychain.Key.biometricsEnabled) == "1"
+            && hasSavedSession
+    }
+
+    var biometryLabel: String { Biometrics.label }
+
+    /// Déverrouille sans saisie : la biométrie autorise la relecture du mot de passe
+    /// maître, et c'est toujours lui qui ouvre le coffre côté Rust.
+    func unlockWithBiometrics() async {
+        guard Keychain.get(Keychain.Key.biometricsEnabled) == "1" else { return }
+        isBusy = true
+        let prompt = "Déverrouiller votre coffre GhostPass"
+        // La demande biométrique bloque le fil sur lequel elle est faite.
+        let password = await Task.detached {
+            Keychain.getBiometric(Keychain.Key.masterPassword, prompt: prompt)
+        }.value
+        isBusy = false
+        guard let password else {
+            // Refus, échec, ou entrée invalidée par un nouvel enrôlement : on ne
+            // reste pas coincé, le mot de passe maître marche toujours.
+            errorMessage = "\(Biometrics.label) n'a pas permis d'ouvrir le coffre."
+            return
+        }
+        await unlockOffline(password: password)
+    }
+
+    /// Retient le mot de passe le temps de poser la question, si elle a lieu d'être.
+    private func proposeBiometricsIfPossible(_ password: String) {
+        guard Biometrics.isAvailable,
+            Keychain.get(Keychain.Key.biometricsEnabled) == nil
+        else { return }
+        pendingPassword = password
+        offersBiometricEnrollment = true
+    }
+
+    /// L'utilisateur accepte : le mot de passe part au trousseau, sous garde biométrique.
+    func enableBiometrics() {
+        defer { pendingPassword = nil; offersBiometricEnrollment = false }
+        guard let password = pendingPassword else { return }
+        let status = Keychain.setBiometric(password, for: Keychain.Key.masterPassword)
+        if status == errSecSuccess {
+            Keychain.set("1", for: Keychain.Key.biometricsEnabled)
+        } else {
+            NSLog("GP-KEYCHAIN setBiometric a échoué : OSStatus %d", status)
+            errorMessage = "\(Biometrics.label) n'a pas pu être activé (code \(status))."
+        }
+    }
+
+    /// L'utilisateur refuse : on oublie le mot de passe, et on ne reposera pas la question
+    /// à chaque ouverture — le drapeau distingue « refusé » de « jamais proposé ».
+    func declineBiometrics() {
+        pendingPassword = nil
+        offersBiometricEnrollment = false
+        Keychain.set("0", for: Keychain.Key.biometricsEnabled)
+    }
+
+    /// Retire le déverrouillage biométrique sans se déconnecter.
+    func disableBiometrics() {
+        Keychain.remove(Keychain.Key.masterPassword)
+        Keychain.set("0", for: Keychain.Key.biometricsEnabled)
     }
 
     // ─── Coffre ───

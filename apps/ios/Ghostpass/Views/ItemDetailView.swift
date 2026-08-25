@@ -4,11 +4,17 @@ struct ItemDetailView: View {
     let entry: VaultEntry
     var onEdit: () -> Void
 
+    @EnvironmentObject private var store: VaultStore
     @State private var revealed = false
+
+    /// L'entrée telle qu'elle est *maintenant* dans le coffre. Sans cela, l'écran garderait
+    /// la copie reçue à la navigation et continuerait d'afficher l'ancien contenu après une
+    /// modification — l'utilisateur croirait son enregistrement perdu.
+    private var live: VaultEntry { store.entries.first { $0.id == entry.id } ?? entry }
 
     var body: some View {
         Form {
-            switch entry.item.data {
+            switch live.item.data {
             case .login(let login):
                 Section("Identifiants") {
                     CopyRow(label: "Nom d'utilisateur", value: login.username)
@@ -33,14 +39,14 @@ struct ItemDetailView: View {
                 }
             }
 
-            if let notes = entry.item.notes, !notes.isEmpty {
+            if let notes = live.item.notes, !notes.isEmpty {
                 Section("Notes") { Text(notes).textSelection(.enabled) }
             }
-            if let folder = entry.item.folder, !folder.isEmpty {
+            if let folder = live.item.folder, !folder.isEmpty {
                 Section("Dossier") { Text(folder).foregroundStyle(.secondary) }
             }
         }
-        .navigationTitle(entry.item.name)
+        .navigationTitle(live.item.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             Button("Modifier", action: onEdit)
@@ -77,9 +83,17 @@ private struct SecretRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label).font(.caption).foregroundStyle(.secondary)
-                Text(revealed ? value : String(repeating: "•", count: max(value.count, 8)))
-                    .font(.system(.body, design: .monospaced))
-                    .textSelection(revealed ? .enabled : .disabled)
+                // `.enabled` et `.disabled` sont deux types distincts : un ternaire ne les
+                // unifie pas. Le modificateur ne porte donc que sur le cas révélé — masqué,
+                // il n'y aurait de toute façon que des puces à sélectionner.
+                Group {
+                    if revealed {
+                        Text(value).textSelection(.enabled)
+                    } else {
+                        Text(String(repeating: "•", count: max(value.count, 8)))
+                    }
+                }
+                .font(.system(.body, design: .monospaced))
             }
             Spacer()
             Button {

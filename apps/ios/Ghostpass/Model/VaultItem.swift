@@ -64,7 +64,7 @@ extension ItemData: Codable {
         default:
             throw DecodingError.dataCorruptedError(
                 forKey: .kind, in: container,
-                reason: "type d'item inconnu : \(kind)")
+                debugDescription: "type d'item inconnu : \(kind)")
         }
     }
 
@@ -88,7 +88,8 @@ extension ItemData: Codable {
 struct VaultEntry: Identifiable, Hashable {
     let id: String
     var item: VaultItem
-    var updatedAt: String?
+    /// Millisecondes depuis l'epoch, telles que renvoyées par le serveur.
+    var updatedAt: Int?
 
     var login: Login? {
         if case .login(let l) = item.data { return l }

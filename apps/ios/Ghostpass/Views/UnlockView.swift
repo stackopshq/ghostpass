@@ -57,6 +57,13 @@ struct UnlockView: View {
                     }
                     .disabled(store.isBusy || password.isEmpty)
 
+                    if useSavedSession && store.canUnlockWithBiometrics {
+                        Button("Déverrouiller avec \(store.biometryLabel)") {
+                            Task { await store.unlockWithBiometrics() }
+                        }
+                        .disabled(store.isBusy)
+                    }
+
                     if store.hasSavedSession {
                         Button(useSavedSession ? "Utiliser un autre compte" : "Coffre enregistré") {
                             useSavedSession.toggle()
@@ -70,6 +77,11 @@ struct UnlockView: View {
             .onAppear {
                 if store.hasSavedSession {
                     useSavedSession = true
+                    // Une session enregistrée + biométrie configurée : on la propose
+                    // d'emblée, c'est le geste attendu à l'ouverture de l'app.
+                    if store.canUnlockWithBiometrics {
+                        Task { await store.unlockWithBiometrics() }
+                    }
                 } else {
                     server = store.savedServer
                     email = store.savedEmail

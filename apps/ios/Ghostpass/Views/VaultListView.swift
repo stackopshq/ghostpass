@@ -29,7 +29,12 @@ struct VaultListView: View {
                 }
             }
             .navigationDestination(for: VaultEntry.self) { entry in
-                ItemDetailView(entry: entry) { editing = .existing(entry) }
+                // On repart de l'entrée telle qu'elle est dans le coffre, pas de la copie
+                // capturée à la navigation : sinon une seconde modification rouvrirait
+                // le formulaire avec le contenu d'avant la première.
+                ItemDetailView(entry: entry) {
+                    editing = .existing(store.entries.first { $0.id == entry.id } ?? entry)
+                }
             }
             .searchable(text: $search, prompt: "Rechercher")
             .overlay {
@@ -61,6 +66,18 @@ struct VaultListView: View {
                 "Erreur", isPresented: .constant(store.errorMessage != nil),
                 actions: { Button("OK") { store.errorMessage = nil } },
                 message: { Text(store.errorMessage ?? "") })
+            .alert(
+                "Utiliser \(store.biometryLabel) ?",
+                isPresented: $store.offersBiometricEnrollment,
+                actions: {
+                    Button("Activer") { store.enableBiometrics() }
+                    Button("Plus tard", role: .cancel) { store.declineBiometrics() }
+                },
+                message: {
+                    Text(
+                        "Votre mot de passe maître sera conservé dans le trousseau de cet "
+                            + "appareil, relisible par \(store.biometryLabel) seul.")
+                })
         }
     }
 }
