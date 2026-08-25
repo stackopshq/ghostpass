@@ -1,0 +1,56 @@
+name: Renovate
+
+# Remplace Dependabot, qui est propre à GitHub et donc inerte depuis le passage sur Gitea.
+# Renovate tourne ici en self-hosted, dans un job planifié, et ouvre ses PR sur cette instance.
+#
+# Prérequis : un secret `RENOVATE_TOKEN` contenant un PAT Gitea avec les scopes
+# `read:user`, `write:issue` et `write:repository` (droit d'ouvrir des PR sur ce dépôt).
+# Le jeton auto-injecté par Gitea Actions ne suffit pas : Renovate doit pousser des branches
+# et ouvrir des PR en tant qu'utilisateur.
+#
+# Configuration des mises à jour : `renovate.json` à la racine.
+
+on:
+  schedule:
+    # Lundi 5h UTC, avant la fenêtre `before 6am on monday` de renovate.json (Europe/Zurich).
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Mettre 'full' pour un passage à blanc (aucune PR créée)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    name: Mise à jour des dépendances
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Renovate
+        run: |
+          if [[ -z "${RENOVATE_TOKEN}" ]]; then
+            echo "::error::Secret RENOVATE_TOKEN manquant (PAT Gitea autorisé à ouvrir des PR)"
+            exit 1
+          fi
+          npx --yes renovate@44.45.0
+        env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          RENOVATE_PLATFORM: gitea
+          RENOVATE_ENDPOINT: https://git.stackops.ch/api/v1
+          RENOVATE_REPOSITORIES: stackops/ghostpass
+          RENOVATE_GIT_AUTHOR: "Renovate Bot <renovate@stackops.ch>"
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: "required"
+          RENOVATE_DRY_RUN: ${{ inputs.dry_run }}
+          LOG_LEVEL: info
