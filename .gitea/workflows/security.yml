@@ -6,8 +6,10 @@ on:
   pull_request:
   schedule:
     # Hebdomadaire : capte les nouvelles advisories sur des dépendances figées.
+    # Gitea n'évalue les `schedule` que sur la branche par défaut.
     - cron: "0 6 * * 1"
 
+# Voir la note sur `permissions` dans ci.yml.
 permissions:
   contents: read
 
@@ -54,10 +56,19 @@ jobs:
   sast:
     name: SAST (Semgrep)
     runs-on: ubuntu-latest
-    container: semgrep/semgrep
+    # Pas de `container: semgrep/semgrep` ici : Gitea Actions (act) exécute les actions JS avec le
+    # `node` du conteneur de job, or l'image Semgrep n'en contient pas, si bien que `actions/checkout` y
+    # échouait en exit 127 (« executable file `node` not found »). Semgrep est donc installé dans
+    # l'image standard du runner.
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Installation de Semgrep
+        run: pip install --disable-pip-version-check semgrep==1.174.0
       - name: Analyse statique (règles sécurité + secrets + JS/TS)
+        # Les `p/...` sont téléchargés depuis le registre semgrep.dev : le runner doit y accéder.
         run: >
           semgrep scan --error --skip-unknown-extensions
           --config p/security-audit
@@ -65,15 +76,4 @@ jobs:
           --config p/javascript
           --config p/typescript
 
-  # CodeQL (SAST GitHub) — à ajouter quand le « Code scanning » sera activé :
-  # Settings → Code security (gratuit sur dépôt public ; GitHub Advanced Security sur privé).
-  # Le SAST est déjà couvert par Semgrep ci-dessus en attendant.
-  # codeql:
-  #   name: CodeQL (JS/TS)
-  #   runs-on: ubuntu-latest
-  #   permissions: { contents: read, security-events: write, actions: read }
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: github/codeql-action/init@v3
-  #       with: { languages: javascript-typescript }
-  #     - uses: github/codeql-action/analyze@v3
+  # Pas d'équivalent CodeQL sur Gitea : le SAST reste couvert par Semgrep ci-dessus.

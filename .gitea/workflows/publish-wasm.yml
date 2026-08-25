@@ -1,8 +1,14 @@
 name: Publish WASM
 
-# Publie le cœur crypto compilé (`ghostpass-crypto-wasm`) sur GitHub Packages (npm), scope
-# @stackopshq, pour que l'extension (et autres clients) en dépendent par version plutôt qu'en
-# `file:` cross-repo. Déclenchement manuel avec une version.
+# Publie le cœur crypto compilé (`ghostpass-crypto-wasm`) sur le registre npm de Gitea, sous
+# `@stackops/ghostpass-crypto-wasm`, pour que l'extension (et autres clients) en dépendent par
+# version plutôt qu'en `file:` cross-repo. Déclenchement manuel avec une version.
+#
+# Consommation côté client (.npmrc du dépôt qui dépend du paquet) :
+#   @stackops:registry=https://git.stackops.ch/api/packages/stackops/npm/
+#   //git.stackops.ch/api/packages/stackops/npm/:_authToken=${GITEA_TOKEN}
+#
+# Le registre npm de Gitea refuse d'écraser une version déjà publiée : incrémenter la version.
 on:
   workflow_dispatch:
     inputs:
@@ -13,6 +19,9 @@ on:
 permissions:
   contents: read
   packages: write
+
+env:
+  NPM_REGISTRY: https://git.stackops.ch/api/packages/stackops/npm/
 
 jobs:
   publish:
@@ -32,16 +41,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@stackopshq"
+          registry-url: https://git.stackops.ch/api/packages/stackops/npm/
+          scope: "@stackops"
       - name: Scope + version du paquet généré
         working-directory: crates/ghostpass-crypto-wasm/pkg
         run: |
-          npm pkg set name="@stackopshq/ghostpass-crypto-wasm"
+          npm pkg set name="@stackops/ghostpass-crypto-wasm"
           npm version "${{ inputs.version }}" --no-git-tag-version --allow-same-version
-          npm pkg set publishConfig.registry="https://npm.pkg.github.com"
+          npm pkg set publishConfig.registry="${NPM_REGISTRY}"
       - name: Publish
         working-directory: crates/ghostpass-crypto-wasm/pkg
         run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Jeton injecté automatiquement par Gitea Actions (équivalent de GITHUB_TOKEN).
+          NODE_AUTH_TOKEN: ${{ secrets.GITEA_TOKEN }}

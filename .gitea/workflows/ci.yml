@@ -5,7 +5,9 @@ on:
     branches: [main]
   pull_request:
 
-# Principe du moindre privilège : lecture seule par défaut.
+# Principe du moindre privilège : lecture seule par défaut. Conservé pour Gitea Actions ; si
+# l'instance ne l'applique pas, la portée réelle du jeton (`secrets.GITEA_TOKEN`) est celle
+# configurée dans Settings > Actions du dépôt.
 permissions:
   contents: read
 
