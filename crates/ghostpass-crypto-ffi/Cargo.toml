@@ -1,0 +1,24 @@
+[package]
+name = "ghostpass-crypto-ffi"
+version = "0.0.0"
+edition.workspace = true
+license = "MIT"
+publish = false
+description = "Binding UniFFI (iOS, Android) du cœur crypto GhostPass"
+
+[lib]
+# `staticlib` : c'est cette forme que l'XCFramework iOS embarque.
+# `lib` : nécessaire au binaire `uniffi-bindgen` et aux tests Rust.
+crate-type = ["lib", "staticlib", "cdylib"]
+name = "ghostpass_crypto_ffi"
+
+[dependencies]
+ghostpass-crypto = { path = "../ghostpass-crypto" }
+uniffi = { version = "0.29", features = ["cli"] }
+serde_json = "1.0.150"
+base64 = "0.22.1"
+thiserror = "2.0.18"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
