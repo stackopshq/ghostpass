@@ -1,0 +1,39 @@
+# Projet Xcode décrit en texte : `xcodegen generate` reconstruit le .xcodeproj.
+# Un .xcodeproj est un format que deux personnes ne peuvent pas éditer sans conflit ;
+# ce fichier-ci se relit, se diffe et se fusionne. Le .xcodeproj n'est pas versionné.
+name: Ghostpass
+options:
+  bundleIdPrefix: ch.stackops
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    # Vide en local : Xcode signe alors avec un profil de développement automatique.
+    # La CI et les builds TestFlight l'injectent.
+    DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  Ghostpass:
+    type: application
+    platform: iOS
+    sources:
+      - path: Ghostpass
+      # Bindings produits par tools/ios/build-xcframework.sh : compilés avec l'app,
+      # jamais édités à la main, jamais versionnés.
+      - path: Generated
+    dependencies:
+      # Bibliothèque statique : liée, jamais embarquée (embed: false).
+      - framework: GhostpassCrypto.xcframework
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: GhostPass
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        OTHER_LDFLAGS: -lc++

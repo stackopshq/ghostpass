@@ -20,3 +20,9 @@ dist/
 CLAUDE.md
 .claude/
 
+
+# iOS : tout ceci est produit par tools/ios/build-xcframework.sh ou par XcodeGen.
+apps/ios/Ghostpass.xcodeproj/
+apps/ios/Generated/
+apps/ios/Headers/
+apps/ios/GhostpassCrypto.xcframework/
