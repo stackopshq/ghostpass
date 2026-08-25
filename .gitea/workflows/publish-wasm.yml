@@ -56,10 +56,17 @@ jobs:
         # secret de dépôt, comme les autres dépôts de la suite (cf. stackops/os-images-exporter,
         # qui utilise la même paire REGISTRY_USER / REGISTRY_TOKEN).
         run: |
-          if [[ -z "${NODE_AUTH_TOKEN}" ]]; then
+          if [[ -z "${REGISTRY_TOKEN}" ]]; then
             echo "::error::Secret REGISTRY_TOKEN manquant (PAT avec le scope write:package)"
             exit 1
           fi
-          npm publish
+          # Le secret est nettoyé de tout espace/saut de ligne avant usage. Un secret collé avec
+          # un « \n » final produit l'en-tête « Bearer <jeton>\n », que Node rejette comme illégal,
+          # et npm recrache alors l'en-tête complet dans son message d'erreur : le masquage de
+          # Gitea ne matche pas cette forme et le jeton se retrouve en clair dans le log.
+          NODE_AUTH_TOKEN="$(printf '%s' "${REGISTRY_TOKEN}" | tr -d '[:space:]')"
+          export NODE_AUTH_TOKEN
+          # --loglevel=error suffit pour diagnostiquer sans que npm réaffiche des en-têtes.
+          npm publish --loglevel=error
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
