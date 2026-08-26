@@ -52,7 +52,11 @@ cleanup() {
   if [[ $code -ne 0 || "${GHOSTPASS_KEEP_RESULTS:-}" == "1" ]]; then
     mkdir -p "$RESULTS"
     for bundle in "$WORK"/*.xcresult; do
-      [[ -e "$bundle" ]] && cp -R "$bundle" "$RESULTS/" 2>/dev/null || true
+      # `cp -R` sur une destination qui existe déjà copie *dedans* : le rapport du run
+      # précédent avalerait le nouveau, qu'on chercherait ensuite en vain.
+      [[ -e "$bundle" ]] || continue
+      rm -rf "$RESULTS/$(basename "$bundle")"
+      cp -R "$bundle" "$RESULTS/" 2>/dev/null || true
     done
     [[ -e "$WORK/server.log" ]] && cp "$WORK/server.log" "$RESULTS/" 2>/dev/null || true
     echo "Rapports conservés dans apps/ios/TestResults/" >&2
@@ -219,7 +223,8 @@ say "Parcours de bout en bout"
 # script — d'où le port et le compte figés plus haut.
 if ! run_tests GhostpassUITests/VaultFlowTests/test01ParcoursComplet \
   -only-testing:GhostpassUITests/VaultFlowTests/test02Biometrie \
-  -only-testing:GhostpassUITests/VaultFlowTests/test05Preferences; then
+  -only-testing:GhostpassUITests/VaultFlowTests/test05Preferences \
+  -only-testing:GhostpassUITests/VaultFlowTests/test06Recuperation; then
   echo "--- journal de l'application ---" >&2
   xcrun simctl spawn "$DEVICE" log show --last 15m --style compact \
     --predicate 'process == "Ghostpass"' 2>/dev/null | grep -a "GP-" | tail -25 >&2 ||

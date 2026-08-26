@@ -37,6 +37,15 @@ final class VaultFlowTests: XCTestCase {
     private func remplir(_ app: XCUIApplication, _ id: String, _ text: String) {
         let field = app.descendants(matching: .any).matching(identifier: id).firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 30), "champ « \(id) » absent")
+        // Exister ne suffit pas : un champ apparaît dans la hiérarchie avant d'être
+        // frappable — une feuille finit de se refermer, un écran de s'installer. Le
+        // frapper trop tôt échoue sur « not hittable », ce qui ne ressemble en rien à
+        // sa cause.
+        let frappable = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isHittable == true"), object: field)
+        XCTAssertEqual(
+            XCTWaiter().wait(for: [frappable], timeout: 15), .completed,
+            "champ « \(id) » hors d'atteinte — voici l'écran :\n\(app.debugDescription)")
         field.tap()
         app.typeText(text)
     }
@@ -76,6 +85,41 @@ final class VaultFlowTests: XCTestCase {
             element.tap()
         } else {
             element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+    }
+
+    /// Une connexion complète avec le mot de passe donné. Après une déconnexion il n'y a
+    /// plus de session enregistrée : le formulaire redemande tout, serveur compris.
+    private func seConnecterAvec(_ app: XCUIApplication, _ motDePasse: String) {
+        remplir(app, "field.server", server)
+        remplir(app, "field.email", email)
+        remplir(app, "field.master", motDePasse)
+        let valider = app.buttons["button.submit"]
+        degager(app, valider)
+        taper(valider)
+    }
+
+    /// Referme et rouvre l'application, puis attend le formulaire de connexion.
+    private func relancer(_ app: XCUIApplication) {
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(
+            app.descendants(matching: .any).matching(identifier: "field.master").firstMatch
+                .waitForExistence(timeout: 60),
+            "le formulaire de connexion ne revient pas après relance")
+    }
+
+    /// Amène un élément à portée : referme le clavier, qui couvre le bas de l'écran, et
+    /// fait défiler si l'élément reste hors champ.
+    ///
+    /// Ce qui se trouve sous le clavier n'est pas « atteignable » : le tap ordinaire
+    /// échoue, et le tap en coordonnées de secours frappe une touche du clavier. Un tap
+    /// dans le vide ne referme rien en SwiftUI — c'est le défilement qui le fait, l'écran
+    /// le déclarant avec `.scrollDismissesKeyboard(.immediately)`.
+    private func degager(_ app: XCUIApplication, _ element: XCUIElement) {
+        for _ in 0..<3 {
+            if element.exists && element.isHittable { return }
+            app.swipeUp()
         }
     }
 
@@ -555,5 +599,101 @@ final class VaultFlowTests: XCTestCase {
         XCTAssertTrue(
             app.navigationBars["Coffre"].waitForExistence(timeout: 30),
             "le retour au réglage du système n'a pas ramené le français")
+    }
+
+    /// Le parcours de récupération, en entier : créer une clé, oublier le mot de passe,
+    /// réinitialiser, rouvrir.
+    ///
+    /// C'est le seul chemin de l'application où une erreur coûte le coffre entier : sans
+    /// clé de récupération, un mot de passe maître oublié rend un coffre chiffré de bout
+    /// en bout définitivement illisible. Le test repose ensuite le compte comme il l'a
+    /// trouvé — il réinitialise une seconde fois vers le mot de passe d'origine — pour que
+    /// la suite hors ligne retrouve la session qu'elle attend.
+    func test06Recuperation() throws {
+        let app = XCUIApplication()
+        app.launch()
+        seConnecter(app)
+
+        // 1. Créer la clé, et la lire pendant qu'elle est affichée : elle ne le sera plus.
+        ouvrirLeMenu(app, "button.recoveryKey")
+        let creer = app.buttons["button.createRecovery"]
+        XCTAssertTrue(creer.waitForExistence(timeout: 30), "l'écran de la clé ne s'ouvre pas")
+        taper(creer)
+        let affichee = app.staticTexts["text.recoveryKey"]
+        XCTAssertTrue(
+            affichee.waitForExistence(timeout: 60), "aucune clé de récupération n'est produite")
+        let cle = affichee.label
+        XCTAssertGreaterThan(cle.count, 8, "clé de récupération suspecte : « \(cle) »")
+        shot(app, "10-cle-recuperation")
+        app.buttons["button.closeRecovery"].tap()
+
+        // 2. Se déconnecter : le mot de passe maître est « oublié ».
+        ouvrirLeMenu(app, "button.signOut")
+        XCTAssertTrue(
+            app.descendants(matching: .any).matching(identifier: "field.server").firstMatch
+                .waitForExistence(timeout: 60),
+            "la déconnexion ne ramène pas au formulaire de connexion")
+
+        // 3. Réinitialiser vers un nouveau mot de passe, puis s'en servir.
+        reinitialiser(app, cle: cle, versLeMotDePasse: "nouveau mot de passe maître")
+        // On repart d'un écran neuf : une feuille qui vient de se refermer laisse parfois
+        // le clavier ou un voile de présentation devant les champs, et c'est de toute
+        // façon ce que ferait quelqu'un qui vient de réinitialiser son mot de passe.
+        relancer(app)
+        seConnecterAvec(app, "nouveau mot de passe maître")
+        XCTAssertTrue(
+            app.navigationBars["Coffre"].waitForExistence(timeout: 180),
+            "le nouveau mot de passe n'ouvre pas le coffre")
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 60),
+            "le coffre s'ouvre mais son contenu ne se déchiffre plus")
+        shot(app, "11-recupere")
+
+        // 4. Reposer le compte comme on l'a trouvé.
+        ouvrirLeMenu(app, "button.signOut")
+        XCTAssertTrue(
+            app.descendants(matching: .any).matching(identifier: "field.server").firstMatch
+                .waitForExistence(timeout: 60))
+        reinitialiser(app, cle: cle, versLeMotDePasse: master)
+        relancer(app)
+        seConnecterAvec(app, master)
+        XCTAssertTrue(
+            app.navigationBars["Coffre"].waitForExistence(timeout: 180),
+            "le mot de passe d'origine ne revient pas")
+        ecarterLaPropositionBiometrique(app, delai: 5)
+    }
+
+    /// Remplit le formulaire « mot de passe oublié » et attend la confirmation. Laisse
+    /// l'écran de connexion prêt, serveur et compte déjà saisis.
+    private func reinitialiser(
+        _ app: XCUIApplication, cle: String, versLeMotDePasse motDePasse: String
+    ) {
+        remplir(app, "field.server", server)
+        remplir(app, "field.email", email)
+        let oublie = app.buttons["button.forgotPassword"]
+        XCTAssertTrue(oublie.waitForExistence(timeout: 30), "« Mot de passe oublié » est absent")
+        degager(app, oublie)
+        XCTAssertTrue(
+            oublie.isHittable,
+            "« Mot de passe oublié » reste hors d'atteinte — clavier ou défilement")
+        oublie.tap()
+        XCTAssertTrue(
+            app.buttons["button.submitRecovery"].waitForExistence(timeout: 30),
+            "l'écran de réinitialisation ne s'ouvre pas")
+        remplir(app, "field.recoveryKey", cle)
+        remplir(app, "field.newMaster", motDePasse)
+        let valider = app.buttons["button.submitRecovery"]
+        degager(app, valider)
+        taper(valider)
+        XCTAssertTrue(
+            app.staticTexts.matching(identifier: "text.recovered").firstMatch
+                .waitForExistence(timeout: 120),
+            "la réinitialisation n'aboutit pas")
+        // Ce qui est derrière une feuille existe encore : le message de confirmation se
+        // trouve sur l'écran de connexion, et se voit donc avant même que la feuille soit
+        // partie. Sans cette attente, la frappe suivante viserait un champ recouvert.
+        XCTAssertTrue(
+            aDisparu(valider, delai: 30),
+            "la feuille de réinitialisation ne se referme pas")
     }
 }

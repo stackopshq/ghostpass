@@ -454,6 +454,101 @@ final class VaultStore: ObservableObject {
             echec: tr("Serveur injoignable : les favoris n'ont pas été enregistrés."))
     }
 
+    // ─── Récupération de compte ───
+
+    /// Fabrique un kit de récupération et le dépose au serveur. Rend la clé à afficher —
+    /// une seule fois, car personne ne la conserve : ni le serveur, qui n'en reçoit qu'une
+    /// preuve re-hachée, ni l'application. C'est tout l'intérêt, et c'est aussi ce qui
+    /// rend l'écran qui l'affiche irremplaçable.
+    func createRecoveryKit() async -> String? {
+        guard let api, let token, let account else { return nil }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let json = try account.createRecovery()
+            let kit = try JSONDecoder().decode(RecoveryKit.self, from: Data(json.utf8))
+            try await api.enrollRecovery(
+                token: token, recoveryAuthHash: kit.recoveryAuthHash,
+                encryptedUserKeyRecovery: kit.encryptedUserKeyRecovery)
+            errorMessage = nil
+            return kit.recoveryKey
+        } catch is URLError {
+            errorMessage = tr("Serveur injoignable : la clé de récupération n'a pas été enregistrée.")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        return nil
+    }
+
+    /// Réinitialise le mot de passe maître à partir de la clé de récupération.
+    ///
+    /// Rien n'est déverrouillé ici : le serveur invalide toutes les sessions, et c'est
+    /// voulu — si quelqu'un a réinitialisé le mot de passe, les sessions ouvertes ailleurs
+    /// n'ont plus lieu d'être. L'utilisateur se reconnecte ensuite, avec le nouveau.
+    func recoverAccount(server: String, email: String, recoveryKey: String, newPassword: String)
+        async -> Bool
+    {
+        guard let url = URL(string: server) else {
+            errorMessage = tr("Adresse de serveur invalide.")
+            return false
+        }
+        isBusy = true
+        defer { isBusy = false }
+        let client = APIClient(baseURL: url)
+        do {
+            let blob = try await client.recoveryBlob(email: email)
+            // `recover` est une fonction libre du binding, pas une méthode d'`Account` :
+            // il n'y a pas encore de compte ouvert au moment où on l'appelle.
+            let resultat = try recover(
+                recoveryKey: recoveryKey.trimmingCharacters(in: .whitespacesAndNewlines),
+                email: email, newPassword: newPassword, kdfParamsJson: blob.kdfParams,
+                encryptedUserKeyRecovery: blob.encryptedUserKeyRecovery,
+                encryptedPrivateKey: blob.encryptedPrivateKey)
+            let reset = try JSONDecoder().decode(ResetBlob.self, from: Data(resultat.reset().utf8))
+            try await client.recover(
+                email: email, recoveryAuthHash: reset.recoveryAuthHash,
+                newMasterPasswordHash: reset.masterPasswordHash,
+                newEncryptedUserKey: reset.encryptedUserKey)
+            errorMessage = nil
+            return true
+        } catch is URLError {
+            errorMessage = tr("Serveur injoignable.")
+        } catch is DecodingError {
+            errorMessage = tr("Réponse du serveur incompréhensible.")
+        } catch {
+            // Le serveur répond de la même façon pour une clé fausse et pour un compte
+            // sans kit : le dire autrement révélerait lequel des deux.
+            errorMessage = tr("Clé de récupération refusée.")
+        }
+        return false
+    }
+
+    /// Le JSON que rend `createRecovery()`. Les noms sont ceux de serde, côté Rust.
+    private struct RecoveryKit: Decodable {
+        let recoveryKey: String
+        let recoveryAuthHash: String
+        let encryptedUserKeyRecovery: String
+
+        enum CodingKeys: String, CodingKey {
+            case recoveryKey = "recovery_key"
+            case recoveryAuthHash = "recovery_auth_hash"
+            case encryptedUserKeyRecovery = "encrypted_user_key_recovery"
+        }
+    }
+
+    /// Le JSON que rend `RecoveryResult.reset()`, à transmettre tel quel au serveur.
+    private struct ResetBlob: Decodable {
+        let masterPasswordHash: String
+        let recoveryAuthHash: String
+        let encryptedUserKey: String
+
+        enum CodingKeys: String, CodingKey {
+            case masterPasswordHash = "master_password_hash"
+            case recoveryAuthHash = "recovery_auth_hash"
+            case encryptedUserKey = "encrypted_user_key"
+        }
+    }
+
     // ─── Registres ───
 
     /// Écrit un registre : un `SecureNote` dont le contenu est un tableau JSON, sous un nom

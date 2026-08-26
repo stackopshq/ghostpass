@@ -730,3 +730,102 @@ final class PasswordHistoryTests: XCTestCase {
         XCTAssertEqual(VaultConstants.passwordHistoryLimit, 20)
     }
 }
+
+// ─── Récupération de compte ───────────────────────────────────────────────────
+
+/// La clé de récupération est la seule issue d'un mot de passe maître oublié : sans elle,
+/// un coffre chiffré de bout en bout est perdu pour de bon. Ce qui casserait sans bruit,
+/// ce sont les noms de champs — le cœur Rust les écrit en `snake_case`, l'API les attend
+/// en camelCase — et le fait que la clé du coffre survive à la réinitialisation. Un coffre
+/// qu'on rouvre mais dont les items ne se déchiffrent plus n'est pas un coffre récupéré.
+final class RecoveryTests: XCTestCase {
+    private let motDePasse = "correct horse battery staple"
+    private let mail = "clara@ghostpass.test"
+
+    /// Le blob d'inscription porte les paramètres KDF comme **objet** JSON, alors que le
+    /// serveur les stocke — et les rend — comme une chaîne contenant du JSON. C'est la
+    /// même couture qu'au prélogin, et c'est là qu'une régression s'était déjà logée : le
+    /// cœur Rust veut la chaîne, pas l'objet.
+    private func parametresKdf(_ blobs: [String: Any]) throws -> String {
+        let objet = try XCTUnwrap(blobs["kdf_params"])
+        return String(
+            decoding: try JSONSerialization.data(withJSONObject: objet), as: UTF8.self)
+    }
+
+    /// Les clefs du JSON de `create_recovery()` sont celles que l'application décode.
+    func testLeKitPorteLesTroisChampsAttendus() throws {
+        let account = try register(password: motDePasse, email: mail).account()
+        let json = try account.createRecovery()
+        let kit = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+
+        for clef in ["recovery_key", "recovery_auth_hash", "encrypted_user_key_recovery"] {
+            XCTAssertNotNil(kit[clef], "le kit de récupération n'a pas de champ « \(clef) »")
+            XCTAssertFalse(
+                (kit[clef] as? String ?? "").isEmpty, "le champ « \(clef) » est vide")
+        }
+    }
+
+    /// Le parcours entier, contre le vrai binding : un coffre, une clé de récupération,
+    /// un nouveau mot de passe — et l'item d'origine qui se relit.
+    func testUnCoffreSeRouvreApresReinitialisation() throws {
+        let inscription = try register(password: motDePasse, email: mail)
+        let account = try inscription.account()
+        let blobs = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(inscription.blob().utf8)) as? [String: Any])
+        let kdf = try parametresKdf(blobs)
+        let clePrivee = try XCTUnwrap(blobs["encrypted_private_key"] as? String)
+
+        // Un item déposé avant l'oubli : c'est lui qui dira si la clé du coffre a survécu.
+        let item = VaultItem(
+            name: "Forgejo", notes: nil, folder: nil,
+            data: .login(Login(username: "clara", password: "s3cret-initial")))
+        let (key, data) = try VaultStore.encrypt(item, with: account)
+
+        let kit = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(try account.createRecovery().utf8))
+                as? [String: Any])
+        let cleDeRecuperation = try XCTUnwrap(kit["recovery_key"] as? String)
+        let uskRecuperation = try XCTUnwrap(kit["encrypted_user_key_recovery"] as? String)
+
+        // Le mot de passe maître est oublié : on repart de la clé de récupération seule.
+        let resultat = try recover(
+            recoveryKey: cleDeRecuperation, email: mail, newPassword: "nouveau mot de passe maître",
+            kdfParamsJson: kdf, encryptedUserKeyRecovery: uskRecuperation,
+            encryptedPrivateKey: clePrivee)
+
+        let reset = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(resultat.reset().utf8)) as? [String: Any])
+        for clef in ["master_password_hash", "recovery_auth_hash", "encrypted_user_key"] {
+            XCTAssertNotNil(reset[clef], "le blob de réinitialisation n'a pas de champ « \(clef) »")
+        }
+
+        let dto = EncryptedItemDTO(
+            id: "x", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
+        let relu = try VaultStore.decrypt(dto, with: resultat.account())
+        XCTAssertEqual(
+            relu.name, "Forgejo",
+            "le coffre ne se relit plus après récupération : la clé du coffre n'a pas survécu")
+    }
+
+    /// Une clé fausse ne doit pas ouvrir le coffre — et doit échouer ici, dans le cœur,
+    /// pas seulement au refus du serveur.
+    func testUneCleFausseEstRefusee() throws {
+        let inscription = try register(password: motDePasse, email: mail)
+        let blobs = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(inscription.blob().utf8)) as? [String: Any])
+        let kdf = try parametresKdf(blobs)
+        let clePrivee = try XCTUnwrap(blobs["encrypted_private_key"] as? String)
+        let kit = try XCTUnwrap(
+            try JSONSerialization.jsonObject(
+                with: Data(try inscription.account().createRecovery().utf8)) as? [String: Any])
+        let uskRecuperation = try XCTUnwrap(kit["encrypted_user_key_recovery"] as? String)
+
+        XCTAssertThrowsError(
+            try recover(
+                recoveryKey: "AAAA-AAAA-AAAA-AAAA-AAAA-AAAA", email: mail,
+                newPassword: "nouveau mot de passe maître", kdfParamsJson: kdf,
+                encryptedUserKeyRecovery: uskRecuperation, encryptedPrivateKey: clePrivee),
+            "une clé de récupération fausse a été acceptée")
+    }
+}

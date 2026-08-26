@@ -119,6 +119,10 @@ struct VaultListView: View {
                             sheet = .health
                         }
                         .accessibilityIdentifier("button.health")
+                        Button("Clé de récupération", systemImage: "key.horizontal") {
+                            sheet = .recoveryKey
+                        }
+                        .accessibilityIdentifier("button.recoveryKey")
                         Button("Corbeille", systemImage: "trash") { sheet = .trash }
                             .accessibilityIdentifier("button.trash")
                         Button("Réglages", systemImage: "gearshape") { sheet = .settings }
@@ -161,6 +165,8 @@ struct VaultListView: View {
                     BiometricOfferView().environmentObject(store)
                 case .health:
                     HealthView { aOuvrir = $0 }.environmentObject(store)
+                case .recoveryKey:
+                    RecoveryKeyView().environmentObject(store)
                 }
             }
             // Une seule alerte, et rien d'autre par-dessus : deux modificateurs `.alert`
@@ -338,6 +344,7 @@ enum VaultSheet: Identifiable {
     case settings
     case biometricOffer
     case health
+    case recoveryKey
 
     var id: String {
         switch self {
@@ -349,6 +356,7 @@ enum VaultSheet: Identifiable {
         case .settings: return "settings"
         case .biometricOffer: return "biometricOffer"
         case .health: return "health"
+        case .recoveryKey: return "recoveryKey"
         }
     }
 }

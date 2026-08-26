@@ -28,6 +28,14 @@ struct PreloginResponse: Decodable {
     let kdfParams: String
 }
 
+/// Ce que le serveur rend pour tenter une récupération. `kdfParams` est ici aussi une
+/// chaîne contenant du JSON, pour la même raison qu'au prélogin.
+struct RecoveryBlobResponse: Decodable {
+    let kdfParams: String
+    let encryptedUserKeyRecovery: String
+    let encryptedPrivateKey: String
+}
+
 struct LoginResponse: Decodable {
     let token: String
     let kdfParams: String
@@ -120,6 +128,44 @@ struct APIClient {
 
     func logout(token: String) async throws {
         _ = try await request("POST", "api/auth/logout", token: token)
+    }
+
+    // ─── Récupération de compte ───
+    //
+    // Le serveur ne voit jamais la clé de récupération : il reçoit une preuve dérivée
+    // d'elle, qu'il re-hache avant de la stocker, et une copie de la clé du coffre
+    // enveloppée par cette même clé de récupération. Sans la clé, les deux ne valent rien.
+
+    func enrollRecovery(token: String, recoveryAuthHash: String, encryptedUserKeyRecovery: String)
+        async throws
+    {
+        let body = try JSONEncoder().encode([
+            "recoveryAuthHash": recoveryAuthHash,
+            "encryptedUserKeyRecovery": encryptedUserKeyRecovery,
+        ])
+        _ = try await request("POST", "api/account/recovery", token: token, body: body)
+    }
+
+    /// Les blobs nécessaires à une tentative de récupération. Le serveur répond de la même
+    /// façon pour un compte sans kit — avec des leurres — pour ne pas révéler qui existe.
+    func recoveryBlob(email: String) async throws -> RecoveryBlobResponse {
+        let body = try JSONEncoder().encode(["email": email])
+        return try decode(
+            RecoveryBlobResponse.self,
+            from: await request("POST", "api/auth/recovery-blob", body: body))
+    }
+
+    func recover(
+        email: String, recoveryAuthHash: String, newMasterPasswordHash: String,
+        newEncryptedUserKey: String
+    ) async throws {
+        let body = try JSONEncoder().encode([
+            "email": email,
+            "recoveryAuthHash": recoveryAuthHash,
+            "newMasterPasswordHash": newMasterPasswordHash,
+            "newEncryptedUserKey": newEncryptedUserKey,
+        ])
+        _ = try await request("POST", "api/auth/recover", body: body)
     }
 
     // ─── Coffre ───

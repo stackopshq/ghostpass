@@ -13,6 +13,11 @@ struct UnlockView: View {
     @State private var needsTotp = false
     /// Une session enregistrée se rouvre avec le seul mot de passe maître, sans réseau.
     @State private var useSavedSession = false
+    /// L'écran de réinitialisation, ouvert depuis « Mot de passe maître oublié ? ».
+    @State private var recuperation = false
+    /// Affiché après une réinitialisation réussie : sans un mot, on retomberait sur le
+    /// formulaire de connexion sans savoir si quelque chose s'est passé.
+    @State private var messageDeReinitialisation = false
 
     var body: some View {
         ZStack {
@@ -29,6 +34,17 @@ struct UnlockView: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollBounceBehavior(.basedOnSize)
+            // Le clavier couvre le bas de la carte — le lien de récupération, notamment.
+            // Un tap dans le vide ne le referme pas en SwiftUI ; faire défiler, si.
+            .scrollDismissesKeyboard(.immediately)
+        }
+        .sheet(isPresented: $recuperation) {
+            RecoverAccountView(serveur: serveurEffectif, email: email) {
+                messageDeReinitialisation = true
+                password = ""
+                useSavedSession = false
+            }
+            .environmentObject(store)
         }
         .onAppear {
             if store.hasSavedSession {
@@ -114,6 +130,18 @@ struct UnlockView: View {
                 }
             }
 
+            if messageDeReinitialisation {
+                Label {
+                    Text("Mot de passe réinitialisé. Connectez-vous avec le nouveau.")
+                } icon: {
+                    Image(systemName: "checkmark.circle.fill")
+                }
+                .font(.footnote)
+                .foregroundStyle(Color.gpSuccess)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("text.recovered")
+            }
+
             if let message = store.errorMessage {
                 // Le message arrive déjà traduit : les services passent par `tr(…)`.
                 // Le réafficher comme une clef le ferait chercher une seconde fois.
@@ -150,6 +178,21 @@ struct UnlockView: View {
                     .accessibilityIdentifier("button.biometric")
                 }
 
+                // La récupération n'a de sens que sur une connexion complète : elle a
+                // besoin de l'adresse du serveur et du compte, et elle réinitialise pour
+                // de bon. On ne la propose donc pas derrière une session déjà enregistrée.
+                if !useSavedSession {
+                    Button("Mot de passe maître oublié ?") {
+                        store.errorMessage = nil
+                        recuperation = true
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(Color.gpAccentText)
+                    .disabled(email.isEmpty || store.isBusy)
+                    .padding(.top, 2)
+                    .accessibilityIdentifier("button.forgotPassword")
+                }
+
                 if store.hasSavedSession {
                     Button {
                         useSavedSession.toggle()
@@ -170,6 +213,13 @@ struct UnlockView: View {
             }
         }
         .glassCard()
+    }
+
+    /// L'adresse saisie, ou celle de la session enregistrée si le champ est vide : la
+    /// récupération part du même serveur que la connexion.
+    private var serveurEffectif: String {
+        let saisi = server.trimmingCharacters(in: .whitespacesAndNewlines)
+        return saisi.isEmpty ? store.savedServer : saisi
     }
 
     private func champ<Contenu: View>(

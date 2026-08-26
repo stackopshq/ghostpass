@@ -122,6 +122,16 @@
         }
       }
     },
+    "Adresse de serveur invalide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid server address."
+          }
+        }
+      }
+    },
     "Adresse du site": {
       "localizations": {
         "en": {
@@ -312,6 +322,26 @@
         }
       }
     },
+    "Clé de récupération": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery key"
+          }
+        }
+      }
+    },
+    "Clé de récupération refusée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery key refused."
+          }
+        }
+      }
+    },
     "Clé de vérification illisible.": {
       "localizations": {
         "en": {
@@ -432,6 +462,16 @@
         }
       }
     },
+    "Copier la clé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy key"
+          }
+        }
+      }
+    },
     "Copier le code": {
       "localizations": {
         "en": {
@@ -458,6 +498,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copy username"
+          }
+        }
+      }
+    },
+    "Copiée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
           }
         }
       }
@@ -508,6 +558,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Create"
+          }
+        }
+      }
+    },
+    "Créer une clé de récupération": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a recovery key"
           }
         }
       }
@@ -578,6 +638,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unlock with %@"
+          }
+        }
+      }
+    },
+    "Elle ne sera plus affichée. Sans elle, un mot de passe maître oublié rend le coffre définitivement illisible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It will not be shown again. Without it, a forgotten master password makes the vault permanently unreadable."
           }
         }
       }
@@ -712,6 +782,16 @@
         }
       }
     },
+    "Huit caractères au minimum.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eight characters minimum."
+          }
+        }
+      }
+    },
     "Identifiant": {
       "localizations": {
         "en": {
@@ -728,6 +808,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Credentials"
+          }
+        }
+      }
+    },
+    "La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recovery key is the only way out. Write it down and keep it somewhere other than this vault."
           }
         }
       }
@@ -768,6 +858,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "The local vault is empty."
+          }
+        }
+      }
+    },
+    "Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste intact : rien n'est perdu, rien n'est déchiffré côté serveur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The new password re-encrypts the vault key. Its contents stay intact: nothing is lost, nothing is decrypted on the server."
           }
         }
       }
@@ -902,6 +1002,36 @@
         }
       }
     },
+    "Mot de passe maître oublié ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forgotten master password?"
+          }
+        }
+      }
+    },
+    "Mot de passe oublié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forgotten password"
+          }
+        }
+      }
+    },
+    "Mot de passe réinitialisé. Connectez-vous avec le nouveau.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password reset. Sign in with the new one."
+          }
+        }
+      }
+    },
     "Mots de passe faibles": {
       "localizations": {
         "en": {
@@ -978,6 +1108,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notes"
+          }
+        }
+      }
+    },
+    "Nouveau mot de passe maître": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New master password"
           }
         }
       }
@@ -1162,6 +1302,26 @@
         }
       }
     },
+    "Réinitialiser": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
+          }
+        }
+      }
+    },
+    "Réponse du serveur incompréhensible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server’s response could not be understood."
+          }
+        }
+      }
+    },
     "Sans code à usage unique": {
       "localizations": {
         "en": {
@@ -1232,6 +1392,16 @@
         }
       }
     },
+    "Serveur injoignable : la clé de récupération n'a pas été enregistrée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: the recovery key was not saved."
+          }
+        }
+      }
+    },
     "Serveur injoignable : la modification n'a pas été enregistrée.": {
       "localizations": {
         "en": {
@@ -1268,6 +1438,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Server unreachable: favourites were not saved."
+          }
+        }
+      }
+    },
+    "Serveur injoignable.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable."
           }
         }
       }
@@ -1432,6 +1612,16 @@
         }
       }
     },
+    "Un coffre chiffré de bout en bout ne se rouvre pas sans son mot de passe maître : personne, pas même le serveur, ne peut le retrouver à votre place.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An end-to-end encrypted vault does not reopen without its master password: nobody, not even the server, can retrieve it for you."
+          }
+        }
+      }
+    },
     "Une seule fuite suffit alors à ouvrir plusieurs comptes.": {
       "localizations": {
         "en": {
@@ -1478,6 +1668,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lock"
+          }
+        }
+      }
+    },
+    "Votre clé de récupération": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your recovery key"
           }
         }
       }
