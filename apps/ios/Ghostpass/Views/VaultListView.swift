@@ -7,11 +7,18 @@ struct VaultListView: View {
     /// Une seule feuille à la fois : deux modificateurs `.sheet` sur la même vue se
     /// marchent dessus, et c'est la première déclarée qui cesse de s'ouvrir.
     @State private var sheet: VaultSheet?
+    /// Dossier affiché ; `nil` pour tout le coffre.
+    @State private var folder: String?
 
     private var visible: [VaultEntry] {
-        guard !search.isEmpty else { return store.entries }
-        return store.entries.filter { entry in
-            entry.item.name.localizedCaseInsensitiveContains(search)
+        store.entries.filter { entry in
+            // Un dossier contient aussi ce que rangent ses sous-dossiers.
+            if let folder {
+                let range = entry.item.folder ?? ""
+                guard range == folder || range.hasPrefix(folder + "/") else { return false }
+            }
+            guard !search.isEmpty else { return true }
+            return entry.item.name.localizedCaseInsensitiveContains(search)
                 || (entry.login?.username.localizedCaseInsensitiveContains(search) ?? false)
                 || (entry.login?.uris.contains { $0.localizedCaseInsensitiveContains(search) } ?? false)
         }
@@ -29,6 +36,11 @@ struct VaultListView: View {
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                     }
+
+                    filtreDeDossier
+                        .listRowInsets(.init(top: 0, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
 
                     ForEach(visible) { entry in
                         // Un lien en bonne et due forme : masquer le NavigationLink sous
@@ -120,6 +132,8 @@ struct VaultListView: View {
                     BiometricSetupView().environmentObject(store)
                 case .trash:
                     TrashView().environmentObject(store)
+                case .folders:
+                    FoldersView(selection: $folder).environmentObject(store)
                 }
             }
             .alert(
@@ -142,6 +156,40 @@ struct VaultListView: View {
                 })
         }
         .tint(Color.gpAccentText)
+    }
+
+    /// Le filtre courant, toujours visible : un dossier sélectionné qu'on aurait oublié
+    /// donnerait l'impression d'un coffre amputé.
+    private var filtreDeDossier: some View {
+        Button {
+            sheet = .folders
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: folder == nil ? "tray.full" : "folder.fill")
+                    .font(.system(size: 13, weight: .medium))
+                Text(folder ?? "Tous les éléments")
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                Spacer(minLength: 4)
+                Text("\(visible.count)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Color.gpMuted)
+            }
+            .foregroundStyle(folder == nil ? Color.gpMuted : Color.gpAccentText)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                folder == nil ? Color.gpSurface2 : Color.gpAccent.opacity(0.16),
+                in: RoundedRectangle(cornerRadius: GP.radius)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GP.radius)
+                    .strokeBorder(folder == nil ? Color.gpBorder : Color.gpAccent, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("button.folderFilter")
     }
 
     private var bandeauHorsLigne: some View {
@@ -176,6 +224,7 @@ enum VaultSheet: Identifiable {
     case editItem(VaultEntry)
     case biometrics
     case trash
+    case folders
 
     var id: String {
         switch self {
@@ -183,6 +232,7 @@ enum VaultSheet: Identifiable {
         case .editItem(let entry): return entry.id
         case .biometrics: return "biometrics"
         case .trash: return "trash"
+        case .folders: return "folders"
         }
     }
 }

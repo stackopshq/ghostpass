@@ -13,6 +13,13 @@ final class VaultStore: ObservableObject {
     @Published var errorMessage: String?
     /// Le coffre affiché vient du disque, faute d'avoir pu joindre le serveur.
     @Published private(set) var isOffline = false
+    /// Dossiers **vides**, ceux qu'aucun élément n'habite. Les autres se déduisent des
+    /// éléments eux-mêmes ; seuls ceux-ci ont besoin d'être écrits quelque part, faute
+    /// de quoi créer un dossier avant d'y ranger quoi que ce soit ne laisserait aucune
+    /// trace. C'est le rôle de l'item de registre, partagé avec la web app.
+    @Published private(set) var emptyFolders: [String] = []
+    /// Identité de cet item de registre, pour le mettre à jour plutôt que le multiplier.
+    private var folderRegistryID: String?
     /// Vrai juste après un déverrouillage réussi, quand la biométrie est disponible mais
     /// pas encore configurée : l'UI peut alors proposer de l'activer.
     @Published var offersBiometricEnrollment = false
@@ -113,6 +120,8 @@ final class VaultStore: ObservableObject {
         isOffline = false
         pendingPassword = nil
         offersBiometricEnrollment = false
+        emptyFolders = []
+        folderRegistryID = nil
     }
 
     /// Déconnexion : révoque la session côté serveur et efface tout localement.
@@ -243,14 +252,14 @@ final class VaultStore: ObservableObject {
     func refresh() async {
         guard let account else { return }
         if entries.isEmpty, let caches = VaultCache.load() {
-            entries = Self.entries(from: caches, with: account)
+            appliquer(Self.lecture(caches, account))
             isOffline = true
         }
         guard let api, let token else { return }
         do {
             let dtos = try await api.listItems(token: token)
             VaultCache.save(dtos)
-            entries = Self.entries(from: dtos, with: account)
+            appliquer(Self.lecture(dtos, account))
             isOffline = false
             errorMessage = nil
             await CredentialIdentities.sync(entries)
@@ -267,11 +276,38 @@ final class VaultStore: ObservableObject {
     private static func entries(from dtos: [EncryptedItemDTO], with account: Account)
         -> [VaultEntry]
     {
-        dtos.compactMap { dto in
-            guard let item = try? decrypt(dto, with: account), !isRegistry(item) else { return nil }
-            return VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt)
+        lecture(dtos, account).entries
+    }
+
+    /// Le même travail, mais en retenant au passage le registre des dossiers : il traverse
+    /// la liste comme les autres éléments, autant le cueillir là plutôt que de refaire un
+    /// tour de déchiffrement pour lui seul.
+    private static func lecture(_ dtos: [EncryptedItemDTO], _ account: Account)
+        -> (entries: [VaultEntry], registryID: String?, folders: [String])
+    {
+        var entries: [VaultEntry] = []
+        var registryID: String?
+        var folders: [String] = []
+
+        for dto in dtos {
+            guard let item = try? decrypt(dto, with: account) else { continue }
+            if isRegistry(item) {
+                registryID = dto.id
+                if case .secureNote(let note) = item.data,
+                    let data = note.content.data(using: .utf8),
+                    let chemins = try? JSONDecoder().decode([String].self, from: data)
+                {
+                    folders = chemins
+                }
+                continue
+            }
+            entries.append(VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt))
         }
-        .sorted { $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending }
+
+        entries.sort {
+            $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending
+        }
+        return (entries, registryID, folders.sorted { $0.localizedCompare($1) == .orderedAscending })
     }
 
     func save(_ item: VaultItem, id: String?) async {
@@ -306,6 +342,83 @@ final class VaultStore: ObservableObject {
             }
         } catch is URLError {
             errorMessage = "Serveur injoignable : la suppression n'a pas été enregistrée."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func appliquer(
+        _ lecture: (entries: [VaultEntry], registryID: String?, folders: [String])
+    ) {
+        entries = lecture.entries
+        folderRegistryID = lecture.registryID
+        emptyFolders = lecture.folders
+    }
+
+    // ─── Dossiers ───
+
+    /// Tous les chemins de dossiers : ceux qu'habitent des éléments, et ceux que le
+    /// registre garde en mémoire faute d'occupant.
+    var folderPaths: [String] {
+        let occupes = entries.compactMap { $0.item.folder }.filter { !$0.isEmpty }
+        return Array(Set(occupes).union(emptyFolders))
+            .sorted { $0.localizedCompare($1) == .orderedAscending }
+    }
+
+    /// Combien d'éléments habitent ce dossier — ses sous-dossiers compris, sans quoi un
+    /// dossier parent paraîtrait vide alors qu'il ne l'est pas.
+    func itemCount(in path: String) -> Int {
+        entries.filter { entry in
+            guard let folder = entry.item.folder else { return false }
+            return folder == path || folder.hasPrefix(path + "/")
+        }
+        .count
+    }
+
+    /// Crée un dossier vide. Un chemin est normalisé — sans blancs ni barres aux extrémités —
+    /// car « Travail/ » et « Travail » désignent le même endroit et ne doivent pas coexister.
+    func createFolder(_ chemin: String) async {
+        let path = Self.normaliser(chemin)
+        guard !path.isEmpty, !folderPaths.contains(path) else { return }
+        emptyFolders = (emptyFolders + [path])
+            .sorted { $0.localizedCompare($1) == .orderedAscending }
+        await saveFolders()
+    }
+
+    /// Retire un dossier du registre, ses sous-dossiers avec lui. Les éléments qui s'y
+    /// trouvent ne bougent pas : supprimer un rangement n'est pas supprimer ce qu'il range.
+    func removeFolder(_ path: String) async {
+        emptyFolders.removeAll { $0 == path || $0.hasPrefix(path + "/") }
+        await saveFolders()
+    }
+
+    nonisolated static func normaliser(_ chemin: String) -> String {
+        chemin.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    /// Écrit le registre : un `SecureNote` dont le contenu est la liste des chemins, sous
+    /// un nom que l'interface masque. Même format que la web app, au caractère près.
+    private func saveFolders() async {
+        guard let api, let token, let account else { return }
+        let contenu = String(
+            decoding: (try? JSONEncoder().encode(emptyFolders)) ?? Data("[]".utf8), as: UTF8.self)
+        let item = VaultItem(
+            name: VaultConstants.foldersItemName, notes: nil, folder: nil,
+            data: .secureNote(SecureNote(content: contenu)))
+        do {
+            let (key, data) = try Self.encrypt(item, with: account)
+            if let folderRegistryID {
+                _ = try await api.updateItem(
+                    token: token, id: folderRegistryID, encryptedKey: key, encryptedData: data)
+            } else {
+                let cree = try await api.createItem(
+                    token: token, encryptedKey: key, encryptedData: data)
+                folderRegistryID = cree.id
+            }
+            await refresh()
+        } catch is URLError {
+            errorMessage = "Serveur injoignable : les dossiers n'ont pas été enregistrés."
         } catch {
             errorMessage = error.localizedDescription
         }

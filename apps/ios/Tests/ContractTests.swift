@@ -493,3 +493,48 @@ final class AutoFillLogicTests: XCTestCase {
         XCTAssertTrue(visibles.filter { SiteMatching.matches($0, domains: ["exemple.test"]) }.isEmpty)
     }
 }
+
+/// Le registre des dossiers, partagé avec la web app.
+///
+/// Seuls les dossiers **vides** y figurent : les autres se déduisent des éléments qui les
+/// habitent. Le format est celui qu'écrit `encryptFolders` côté web — un `SecureNote` dont
+/// le contenu est la liste des chemins en JSON, sous un nom que les deux clients masquent.
+/// Un écart ici et chaque client verrait des dossiers que l'autre ignore.
+final class FolderRegistryTests: XCTestCase {
+
+    private func compte() throws -> Account {
+        try register(password: "correct horse battery staple", email: "clara@ghostpass.test")
+            .account()
+    }
+
+    /// Le registre tel que l'écrirait l'application doit se relire à l'identique, et
+    /// rester invisible dans la liste.
+    func testLeRegistreSeRelitEtResteMasque() throws {
+        let account = try compte()
+        let chemins = ["Perso", "Travail", "Travail/Serveurs"]
+        let contenu = String(decoding: try JSONEncoder().encode(chemins), as: UTF8.self)
+        let registre = VaultItem(
+            name: VaultConstants.foldersItemName, notes: nil, folder: nil,
+            data: .secureNote(SecureNote(content: contenu)))
+
+        let (key, data) = try VaultStore.encrypt(registre, with: account)
+        let dto = EncryptedItemDTO(
+            id: "r", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
+        let relu = try VaultStore.decrypt(dto, with: account)
+
+        XCTAssertTrue(VaultStore.isRegistry(relu), "le registre doit rester masqué")
+        guard case .secureNote(let note) = relu.data else { return XCTFail("un SecureNote était attendu") }
+        XCTAssertEqual(
+            try JSONDecoder().decode([String].self, from: Data(note.content.utf8)), chemins)
+    }
+
+    /// « Travail/ », « /Travail » et « Travail » désignent le même endroit : sans
+    /// normalisation, ils coexisteraient dans le registre comme trois dossiers distincts.
+    func testLesCheminsSontNormalises() {
+        XCTAssertEqual(VaultStore.normaliser("  Travail  "), "Travail")
+        XCTAssertEqual(VaultStore.normaliser("/Travail/"), "Travail")
+        XCTAssertEqual(VaultStore.normaliser("Travail/Serveurs/"), "Travail/Serveurs")
+        XCTAssertEqual(VaultStore.normaliser("   "), "")
+        XCTAssertEqual(VaultStore.normaliser("//"), "")
+    }
+}

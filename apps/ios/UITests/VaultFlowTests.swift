@@ -144,6 +144,46 @@ final class VaultFlowTests: XCTestCase {
         XCTAssertTrue(code.label.allSatisfy(\.isNumber), "code TOTP non numérique : « \(code.label) »")
         shot(app, "2-detail")
 
+        // 4c. Dossiers : en créer un, y ranger l'élément, filtrer dessus
+        if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
+        app.buttons["button.folderFilter"].tap()
+        XCTAssertTrue(
+            app.buttons["button.newFolder"].waitForExistence(timeout: 20), "écran des dossiers absent")
+        app.buttons["button.newFolder"].tap()
+        remplir(app, "field.folderName", "Travail")
+        app.buttons["button.createFolder"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["Travail"].waitForExistence(timeout: 30),
+            "le dossier créé n'apparaît pas")
+        app.buttons["button.closeFolders"].firstMatch.tap()
+
+        // On y range l'élément, puis on filtre : le dossier doit le contenir.
+        app.buttons["Forgejo prod, clara"].tap()
+        XCTAssertTrue(app.buttons["button.edit"].waitForExistence(timeout: 20))
+        app.buttons["button.edit"].tap()
+        XCTAssertTrue(app.buttons["button.cancel"].waitForExistence(timeout: 20))
+        remplir(app, "field.folder", "Travail")
+        app.buttons["button.save"].tap()
+        sleep(2)
+        if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
+
+        app.buttons["button.folderFilter"].tap()
+        XCTAssertTrue(app.staticTexts["Travail"].waitForExistence(timeout: 20))
+        app.staticTexts["Travail"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Forgejo prod"].waitForExistence(timeout: 30),
+            "l'élément rangé n'apparaît pas dans son dossier")
+        XCTAssertFalse(
+            app.staticTexts[demoItem].exists,
+            "le filtre laisse passer un élément d'un autre dossier")
+        shot(app, "4c-dossier")
+
+        // Retour à la vue complète, sans quoi la suite filtrerait sans le savoir.
+        app.buttons["button.folderFilter"].tap()
+        XCTAssertTrue(app.staticTexts["Tous les éléments"].waitForExistence(timeout: 20))
+        app.staticTexts["Tous les éléments"].tap()
+        XCTAssertTrue(app.staticTexts[demoItem].waitForExistence(timeout: 30))
+
         // 5. Suppression
         if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
         let ligne = app.buttons["Forgejo prod, clara"]
