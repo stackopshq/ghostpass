@@ -38,7 +38,7 @@ struct AutoFillView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 7) {
                             Text("Compte").sectionLabel()
-                            Text(store.account)
+                            Text(verbatim: store.account)
                                 .foregroundStyle(Color.gpMuted)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .ghostField()
@@ -51,7 +51,11 @@ struct AutoFillView: View {
                         }
 
                         if let message = store.errorMessage {
-                            Label(message, systemImage: "exclamationmark.triangle.fill")
+                            Label {
+                                Text(verbatim: message)
+                            } icon: {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                            }
                                 .font(.footnote)
                                 .foregroundStyle(Color.gpDanger)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -104,10 +108,12 @@ struct AutoFillView: View {
     private var liste: some View {
         List {
             if !store.suggested.isEmpty {
-                section("Pour ce site", store.suggested)
+                section(Text("Pour ce site"), store.suggested)
             }
             if !store.others.isEmpty {
-                section(store.suggested.isEmpty ? "Coffre" : "Autres identifiants", store.others)
+                section(
+                    store.suggested.isEmpty ? Text("Coffre") : Text("Autres identifiants"),
+                    store.others)
             }
         }
         .listStyle(.plain)
@@ -117,14 +123,18 @@ struct AutoFillView: View {
                 ContentUnavailableView {
                     Label("Aucun identifiant", systemImage: "key")
                 } description: {
-                    Text(store.errorMessage ?? "Le coffre local ne contient rien.")
+                    if let message = store.errorMessage {
+                        Text(verbatim: message)
+                    } else {
+                        Text("Le coffre local ne contient rien.")
+                    }
                 }
                 .foregroundStyle(Color.gpMuted)
             }
         }
     }
 
-    private func section(_ titre: String, _ entries: [VaultEntry]) -> some View {
+    private func section(_ titre: Text, _ entries: [VaultEntry]) -> some View {
         Section {
             ForEach(entries) { entry in
                 ligne(entry)
@@ -133,7 +143,7 @@ struct AutoFillView: View {
                     .listRowSeparator(.hidden)
             }
         } header: {
-            Text(titre).sectionLabel().padding(.leading, 2)
+            titre.sectionLabel().padding(.leading, 2)
         }
     }
 
@@ -148,11 +158,12 @@ struct AutoFillView: View {
                     .frame(width: 34, height: 34)
                     .background(Color.gpAccent.opacity(0.16), in: RoundedRectangle(cornerRadius: 9))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.item.name)
+                    Text(verbatim: entry.item.name)
                         .font(.system(.body, weight: .medium))
                         .foregroundStyle(Color.gpInk)
                     if let login = entry.login, !login.username.isEmpty {
-                        Text(login.username).font(.caption).foregroundStyle(Color.gpMuted)
+                        Text(verbatim: login.username).font(.caption)
+                            .foregroundStyle(Color.gpMuted)
                     }
                 }
                 Spacer(minLength: 8)
@@ -167,7 +178,7 @@ struct AutoFillView: View {
         .buttonStyle(.plain)
     }
 
-    private func invite(_ texte: String) -> Text {
+    private func invite(_ texte: LocalizedStringKey) -> Text {
         Text(texte).foregroundColor(Color.gpMuted.opacity(0.7))
     }
 }

@@ -200,8 +200,10 @@ struct GhostScreen<Contenu: View>: View {
 
 /// Une section : un intitulé en petites capitales, puis une carte qui réunit ses lignes.
 struct GhostSection<Contenu: View>: View {
-    var titre: String?
-    var note: String?
+    // Clefs de traduction, pas des chaînes : ce qui s'écrit ici s'affiche, et doit donc
+    // passer par le catalogue. Une `String` s'afficherait telle quelle, en français.
+    var titre: LocalizedStringKey?
+    var note: LocalizedStringKey?
     @ViewBuilder var contenu: () -> Contenu
 
     var body: some View {
@@ -237,7 +239,8 @@ struct GhostDivider: View {
 
 /// Une ligne de consultation : un intitulé, une valeur, et ce qu'on peut en faire.
 struct GhostRow<Actions: View>: View {
-    let intitule: String
+    let intitule: LocalizedStringKey
+    /// Le contenu du coffre, jamais traduit : un mot de passe reste ce qu'il est.
     let valeur: String
     var monospace = false
     var estSecret = false
@@ -253,9 +256,9 @@ struct GhostRow<Actions: View>: View {
                 // les unifie pas. Le modificateur ne porte donc que sur ce qui se copie.
                 Group {
                     if estSecret {
-                        Text(valeur)
+                        Text(verbatim: valeur)
                     } else {
-                        Text(valeur).textSelection(.enabled)
+                        Text(verbatim: valeur).textSelection(.enabled)
                     }
                 }
                 .font(monospace ? .system(.body, design: .monospaced) : .body)

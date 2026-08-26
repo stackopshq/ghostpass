@@ -25,4 +25,16 @@ enum Biometrics {
         default: return "la biométrie"
         }
     }
+
+    /// Le symbole qui va avec ce nom : un visage ou une empreinte, jamais un cadenas
+    /// générique — c'est le geste attendu qu'il faut annoncer.
+    static var icon: String {
+        let context = LAContext()
+        _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+        switch context.biometryType {
+        case .faceID: return "faceid"
+        case .touchID: return "touchid"
+        default: return "lock.shield"
+        }
+    }
 }

@@ -7,6 +7,11 @@ options:
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
+  # L'interface s'écrit en français ; c'est donc le français qui sert de clef dans le
+  # catalogue, et l'anglais qui en est une traduction. Déclarer les deux régions ici
+  # évite qu'un `en` oublié fasse retomber l'app sur la langue de développement.
+  developmentLanguage: fr
+  knownRegions: [fr, en, Base]
 
 settings:
   base:
@@ -15,6 +20,9 @@ settings:
     # La CI et les builds TestFlight l'injectent.
     DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
     CODE_SIGN_STYLE: Automatic
+    # Sans cela, la compilation ne relève pas les chaînes du code et le catalogue reste
+    # vide : on croirait l'application traduite alors que rien n'aurait été extrait.
+    SWIFT_EMIT_LOC_STRINGS: YES
 
 targets:
   Ghostpass:
@@ -59,6 +67,9 @@ targets:
       - path: Ghostpass/Model
       - path: Ghostpass/Services
       - path: Ghostpass/Theme
+      # L'extension a son propre paquet : sans le catalogue, ses écrans resteraient
+      # en français quelle que soit la langue choisie dans l'application.
+      - path: Ghostpass/Resources
       - path: Generated
     dependencies:
       - framework: GhostpassCrypto.xcframework

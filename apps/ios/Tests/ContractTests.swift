@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 
 @testable import Ghostpass
@@ -536,5 +537,68 @@ final class FolderRegistryTests: XCTestCase {
         XCTAssertEqual(VaultStore.normaliser("Travail/Serveurs/"), "Travail/Serveurs")
         XCTAssertEqual(VaultStore.normaliser("   "), "")
         XCTAssertEqual(VaultStore.normaliser("//"), "")
+    }
+}
+
+// ─── Traduction ───────────────────────────────────────────────────────────────
+
+/// L'application se veut disponible en français et en anglais. Ce qui peut casser sans
+/// bruit, ce n'est pas le sélecteur de langue — c'est le catalogue : une chaîne oubliée,
+/// une région non déclarée, et l'écran reste en français en jurant que la langue a changé.
+/// Ces tests interrogent le paquet réellement construit, pas le fichier source.
+final class TraductionTests: XCTestCase {
+    /// Le paquet anglais existe : sans lui, choisir « English » ne changerait rien.
+    func testLePaquetAnglaisEstEmbarque() throws {
+        let chemin = try XCTUnwrap(
+            Bundle.main.path(forResource: "en", ofType: "lproj"),
+            "aucun en.lproj dans l'application : le catalogue n'a pas été compilé")
+        let paquet = try XCTUnwrap(Bundle(path: chemin))
+        XCTAssertEqual(paquet.localizedString(forKey: "Coffre", value: nil, table: nil), "Vault")
+        XCTAssertEqual(
+            paquet.localizedString(forKey: "Réglages", value: nil, table: nil), "Settings")
+    }
+
+    /// Le français est la langue de développement : ses clefs sont ses propres textes,
+    /// et une clef absente du catalogue s'affiche telle quelle plutôt que de disparaître.
+    func testLeFrancaisResteLaLangueDeDeveloppement() {
+        XCTAssertEqual(Bundle.main.developmentLocalization, "fr")
+        XCTAssertTrue(
+            Bundle.main.localizations.contains("en"),
+            "l'anglais n'est pas déclaré parmi les localisations de l'application")
+    }
+
+    /// Les écrans les plus exposés — déverrouillage, coffre, réglages — sont traduits.
+    /// Une chaîne oubliée laisse ici sa clef française en évidence.
+    func testLesEcransPrincipauxSontTraduits() throws {
+        let chemin = try XCTUnwrap(Bundle.main.path(forResource: "en", ofType: "lproj"))
+        let paquet = try XCTUnwrap(Bundle(path: chemin))
+        let attendus = [
+            "Mot de passe maître": "Master password",
+            "Se connecter": "Sign in",
+            "Verrouiller": "Lock",
+            "Nouvel élément": "New item",
+            "Corbeille": "Trash",
+            "Apparence": "Appearance",
+            "Langue": "Language",
+            "Sombre": "Dark",
+            "Mot de passe maître incorrect.": "Incorrect master password.",
+        ]
+        for (clef, traduction) in attendus {
+            XCTAssertEqual(
+                paquet.localizedString(forKey: clef, value: nil, table: nil), traduction,
+                "« \(clef) » n'est pas traduit")
+        }
+    }
+
+    /// Les deux réglages ne sont que des choix : ce qu'ils désignent doit rester juste.
+    func testLesChoixDeThemeEtDeLangueDesignentBienCeQuIlFaut() {
+        XCTAssertNil(Apparence.systeme.colorScheme, "« Système » ne doit rien imposer")
+        XCTAssertEqual(Apparence.clair.colorScheme, .light)
+        XCTAssertEqual(Apparence.sombre.colorScheme, .dark)
+
+        XCTAssertNil(Langue.systeme.code, "« Système » ne doit forcer aucune langue")
+        XCTAssertEqual(Langue.francais.code, "fr")
+        XCTAssertEqual(Langue.anglais.code, "en")
+        XCTAssertEqual(Langue.anglais.locale?.identifier, "en")
     }
 }

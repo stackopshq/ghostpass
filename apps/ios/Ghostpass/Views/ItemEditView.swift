@@ -26,10 +26,20 @@ struct ItemEditView: View {
     @State private var generating = false
 
     enum Kind: String, CaseIterable, Identifiable {
-        case login = "Identifiant"
-        case note = "Note"
-        case card = "Carte"
+        case login
+        case note
+        case card
         var id: String { rawValue }
+
+        /// Une clef de traduction, pas le `rawValue` : celui-ci identifie le cas dans le
+        /// code, ce qui s'affiche est autre chose et change avec la langue.
+        var libelle: LocalizedStringKey {
+            switch self {
+            case .login: return "Identifiant"
+            case .note: return "Note"
+            case .card: return "Carte"
+            }
+        }
 
         var icone: String {
             switch self {
@@ -73,7 +83,7 @@ struct ItemEditView: View {
                         .accessibilityIdentifier("field.notes")
                 }
             }
-            .navigationTitle(isNew ? "Nouvel élément" : "Modifier")
+            .navigationTitle(isNew ? Text("Nouvel élément") : Text("Modifier"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -112,7 +122,7 @@ struct ItemEditView: View {
                 } label: {
                     VStack(spacing: 6) {
                         Image(systemName: cas.icone).font(.system(size: 17, weight: .medium))
-                        Text(cas.rawValue).font(.caption.weight(.medium))
+                        Text(cas.libelle).font(.caption.weight(.medium))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
@@ -206,7 +216,7 @@ struct ItemEditView: View {
         }
     }
 
-    private func invite(_ texte: String) -> Text {
+    private func invite(_ texte: LocalizedStringKey) -> Text {
         Text(texte).foregroundColor(Color.gpMuted.opacity(0.7))
     }
 

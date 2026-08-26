@@ -41,7 +41,11 @@ struct BiometricSetupView: View {
                 }
 
                 if let message = store.errorMessage {
-                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                    Label {
+                        Text(verbatim: message)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
                         .font(.footnote)
                         .foregroundStyle(Color.gpDanger)
                         .fixedSize(horizontal: false, vertical: true)
@@ -72,7 +76,7 @@ struct BiometricSetupView: View {
         .tint(Color.gpAccentText)
     }
 
-    private func invite(_ texte: String) -> Text {
+    private func invite(_ texte: LocalizedStringKey) -> Text {
         Text(texte).foregroundColor(Color.gpMuted.opacity(0.7))
     }
 }

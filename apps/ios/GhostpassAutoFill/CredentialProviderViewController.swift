@@ -52,7 +52,16 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
                     user: identifiant, password: motDePasse))
         }
 
-        let root = UIHostingController(rootView: AutoFillView().environmentObject(store))
+        // L'extension est un autre processus : elle relit les mêmes préférences pour ne
+        // pas surgir en plein Safari dans un thème ou une langue que l'utilisateur a
+        // justement écartés.
+        let prefs = Preferences.shared
+        let root = UIHostingController(
+            rootView: AutoFillView()
+                .environmentObject(store)
+                .environmentObject(prefs)
+                .preferredColorScheme(prefs.colorScheme)
+                .environment(\.locale, prefs.locale ?? Locale.autoupdatingCurrent))
         addChild(root)
         root.view.frame = view.bounds
         root.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]

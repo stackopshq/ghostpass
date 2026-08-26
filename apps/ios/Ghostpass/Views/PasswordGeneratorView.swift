@@ -17,7 +17,7 @@ struct PasswordGeneratorView: View {
             GhostScreen {
                 GhostSection {
                     VStack(spacing: 14) {
-                        Text(password.isEmpty ? " " : password)
+                        Text(verbatim: password.isEmpty ? " " : password)
                             .font(.system(.title3, design: .monospaced, weight: .medium))
                             .foregroundStyle(Color.gpInk)
                             .textSelection(.enabled)
@@ -85,12 +85,14 @@ struct PasswordGeneratorView: View {
     }
 
     private func bascule(
-        _ titre: String, _ exemple: String, _ path: WritableKeyPath<GeneratorOptions, Bool>
+        _ titre: LocalizedStringKey, _ exemple: String,
+        _ path: WritableKeyPath<GeneratorOptions, Bool>
     ) -> some View {
         Toggle(isOn: binding(path)) {
             HStack(spacing: 8) {
                 Text(titre).foregroundStyle(Color.gpInk)
-                Text(exemple)
+                // « a-z », « 0-9 » : des exemples de caractères, pas de la prose.
+                Text(verbatim: exemple)
                     .font(.caption.monospaced())
                     .foregroundStyle(Color.gpMuted)
             }
@@ -105,7 +107,7 @@ struct PasswordGeneratorView: View {
     /// seulement de ce qu'il en coûterait de le deviner.
     private var force: some View {
         let bits = entropie
-        let (libelle, couleur): (String, Color) =
+        let (libelle, couleur): (LocalizedStringKey, Color) =
             bits >= 100 ? ("Excellent", .gpSuccess)
             : bits >= 72 ? ("Solide", .gpSuccess)
             : bits >= 50 ? ("Correct", .gpAccentText)

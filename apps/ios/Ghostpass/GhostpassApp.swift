@@ -15,6 +15,7 @@ struct GhostpassApp: App {
     }
 
     @StateObject private var store = VaultStore()
+    @StateObject private var prefs = Preferences.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -27,6 +28,12 @@ struct GhostpassApp: App {
                 }
             }
             .environmentObject(store)
+            .environmentObject(prefs)
+            // Les deux réglages s'appliquent à la racine : tout ce qui est présenté
+            // par-dessus — feuilles, alertes — en hérite, alors qu'un réglage posé
+            // écran par écran laisserait des îlots dans l'autre thème ou l'autre langue.
+            .preferredColorScheme(prefs.colorScheme)
+            .environment(\.locale, prefs.locale ?? Locale.autoupdatingCurrent)
         }
         .onChange(of: scenePhase) { _, phase in
             // Passer en arrière-plan relâche les clés. Un coffre qui reste ouvert

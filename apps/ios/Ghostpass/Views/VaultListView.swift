@@ -102,6 +102,8 @@ struct VaultListView: View {
                         }
                         Button("Corbeille", systemImage: "trash") { sheet = .trash }
                             .accessibilityIdentifier("button.trash")
+                        Button("Réglages", systemImage: "gearshape") { sheet = .settings }
+                            .accessibilityIdentifier("button.preferences")
                         Button("Se déconnecter", role: .destructive) {
                             Task { await store.signOut() }
                         }
@@ -134,28 +136,45 @@ struct VaultListView: View {
                     TrashView().environmentObject(store)
                 case .folders:
                     FoldersView(selection: $folder).environmentObject(store)
+                case .settings:
+                    SettingsView().environmentObject(Preferences.shared)
+                case .biometricOffer:
+                    BiometricOfferView().environmentObject(store)
                 }
             }
+            // Une seule alerte, et rien d'autre par-dessus : deux modificateurs `.alert`
+            // sur la même vue se marchent dessus exactement comme deux `.sheet`. La
+            // liaison écrit en retour — un `.constant` ignore la fermeture que le système
+            // lui demande d'enregistrer, et SwiftUI croit ensuite l'alerte encore là.
             .alert(
-                "Erreur", isPresented: .constant(store.errorMessage != nil),
+                "Erreur", isPresented: erreurAffichee,
                 actions: { Button("OK") { store.errorMessage = nil } },
-                message: { Text(store.errorMessage ?? "") })
-            .alert(
-                "Utiliser \(store.biometryLabel) ?",
-                isPresented: $store.offersBiometricEnrollment,
-                actions: {
-                    Button("Activer") { store.acceptOfferedBiometrics() }
-                        .accessibilityIdentifier("button.acceptBiometric")
-                    Button("Plus tard", role: .cancel) { store.declineBiometrics() }
-                        .accessibilityIdentifier("button.laterBiometric")
-                },
-                message: {
-                    Text(
-                        "Votre mot de passe maître sera conservé dans le trousseau de cet "
-                            + "appareil, relisible par \(store.biometryLabel) seul.")
-                })
+                message: { Text(verbatim: store.errorMessage ?? "") })
+            // La proposition d'activer la biométrie arrive avec le coffre, une fois le
+            // déchiffrement terminé.
+            .onAppear { proposerLaBiometrieSiBesoin() }
+            .onChange(of: store.offersBiometricEnrollment) { _, _ in
+                proposerLaBiometrieSiBesoin()
+            }
         }
         .tint(Color.gpAccentText)
+    }
+
+    /// Une liaison qui écrit en retour : fermer l'alerte efface le message qu'elle
+    /// portait, plutôt que de laisser SwiftUI la croire encore présentée.
+    private var erreurAffichee: Binding<Bool> {
+        Binding(
+            get: { store.errorMessage != nil },
+            set: { presente in
+                if !presente { store.errorMessage = nil }
+            })
+    }
+
+    /// N'ouvre la feuille que si rien d'autre n'est déjà présenté : deux feuilles qui se
+    /// succèdent trop vite s'annulent, et l'utilisateur se retrouve devant rien.
+    private func proposerLaBiometrieSiBesoin() {
+        guard store.offersBiometricEnrollment, sheet == nil else { return }
+        sheet = .biometricOffer
     }
 
     /// Le filtre courant, toujours visible : un dossier sélectionné qu'on aurait oublié
@@ -167,9 +186,15 @@ struct VaultListView: View {
             HStack(spacing: 8) {
                 Image(systemName: folder == nil ? "tray.full" : "folder.fill")
                     .font(.system(size: 13, weight: .medium))
-                Text(folder ?? "Tous les éléments")
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(1)
+                Group {
+                    if let folder {
+                        Text(verbatim: folder)
+                    } else {
+                        Text("Tous les éléments")
+                    }
+                }
+                .font(.subheadline.weight(.medium))
+                .lineLimit(1)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .semibold))
                 Spacer(minLength: 4)
@@ -225,6 +250,8 @@ enum VaultSheet: Identifiable {
     case biometrics
     case trash
     case folders
+    case settings
+    case biometricOffer
 
     var id: String {
         switch self {
@@ -233,6 +260,8 @@ enum VaultSheet: Identifiable {
         case .biometrics: return "biometrics"
         case .trash: return "trash"
         case .folders: return "folders"
+        case .settings: return "settings"
+        case .biometricOffer: return "biometricOffer"
         }
     }
 }
@@ -266,12 +295,12 @@ private struct VaultRow: View {
             .frame(width: 38, height: 38)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.item.name)
+                Text(verbatim: entry.item.name)
                     .font(.system(.body, weight: .medium))
                     .foregroundStyle(Color.gpInk)
                     .lineLimit(1)
                 if let subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
+                    Text(verbatim: subtitle)
                         .font(.caption)
                         .foregroundStyle(Color.gpMuted)
                         .lineLimit(1)

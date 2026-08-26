@@ -1,4 +1,5 @@
 import LocalAuthentication
+import UIKit
 import XCTest
 
 /// Parcours de bout en bout contre un serveur GhostPass local, amorcé par
@@ -58,6 +59,50 @@ final class VaultFlowTests: XCTestCase {
         XCTAssertTrue(
             app.navigationBars["Coffre"].waitForExistence(timeout: 180),
             "le coffre ne s'est pas ouvert — serveur injoignable ou identifiants refusés")
+        // La liste apparaît avant que le coffre ne soit déchiffré : tant que `refresh()`
+        // occupe le fil principal, aucune alerte ne peut se poser. On attend donc que
+        // l'écran soit vraiment en place avant de chercher la proposition biométrique.
+        _ = app.buttons["button.add"].waitForExistence(timeout: 60)
+        ecarterLaPropositionBiometrique(app)
+    }
+
+    /// Frappe un élément même si l'interface vient de changer.
+    ///
+    /// Un `tap()` ordinaire commence par calculer un point de frappe ; sur une vue encore
+    /// en cours d'animation, ce calcul rend {-1, -1} et le geste se perd en silence. Le
+    /// tap en coordonnées, lui, vise le centre du cadre sans rien demander à personne.
+    private func taper(_ element: XCUIElement) {
+        if element.isHittable {
+            element.tap()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+    }
+
+    private func aDisparu(_ element: XCUIElement, delai: TimeInterval) -> Bool {
+        let attente = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: element)
+        return XCTWaiter().wait(for: [attente], timeout: delai) == .completed
+    }
+
+    /// Écarte la proposition d'activer la biométrie, si elle se présente.
+    ///
+    /// Cette alerte ne surgit qu'après le premier déverrouillage d'un appareil où une
+    /// biométrie est inscrite — et elle surgit à son rythme, une fois le déchiffrement du
+    /// coffre terminé. Tant qu'elle est là, elle intercepte toutes les frappes, et les
+    /// échecs qui suivent ne ressemblent en rien à leur cause. On l'attend donc pour de
+    /// bon, et on vérifie qu'elle est bien partie : le premier tap sur une alerte qui
+    /// s'anime encore ne porte pas.
+    private func ecarterLaPropositionBiometrique(
+        _ app: XCUIApplication, delai: TimeInterval = 20
+    ) {
+        let plusTard = app.buttons["button.laterBiometric"].firstMatch
+        guard plusTard.waitForExistence(timeout: delai) else { return }
+        for _ in 0..<5 {
+            taper(plusTard)
+            if aDisparu(plusTard, delai: 3) { return }
+        }
+        XCTFail("la proposition d'activer la biométrie ne se referme pas")
     }
 
     private func aucuneLigneFantome(_ app: XCUIApplication, _ contexte: String) {
@@ -66,17 +111,59 @@ final class VaultFlowTests: XCTestCase {
         XCTAssertEqual(fantome.count, 0, "ligne fantôme gp:folders visible (\(contexte))")
     }
 
+    private func ouvrirReglages(_ app: XCUIApplication) {
+        let menu = app.buttons["button.settings"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 30), "le menu du coffre est absent")
+        let entree = app.buttons["button.preferences"]
+        // Un tap sur une barre de navigation encore en cours de mise en page ne porte
+        // pas : XCUITest calcule un point de frappe {-1, -1} et le menu ne s'ouvre
+        // jamais. On réessaie plutôt que d'en conclure que l'entrée n'existe pas.
+        var ouvert = false
+        for _ in 0..<4 {
+            taper(menu)
+            if entree.waitForExistence(timeout: 5) {
+                ouvert = true
+                break
+            }
+        }
+        XCTAssertTrue(ouvert, "« Réglages » absent du menu")
+        entree.tap()
+        XCTAssertTrue(
+            app.buttons["button.doneSettings"].waitForExistence(timeout: 20),
+            "l'écran des réglages ne s'est pas ouvert")
+    }
+
+    /// La luminance moyenne d'une capture, entre 0 et 1.
+    ///
+    /// C'est la seule façon honnête de vérifier qu'un thème s'applique : les couleurs ne
+    /// sont pas des éléments d'accessibilité, et se contenter de constater que la case
+    /// « Sombre » est cochée reviendrait à tester la case, pas le thème.
+    private func luminance(_ capture: XCUIScreenshot) -> Double {
+        guard let cg = capture.image.cgImage else { return -1 }
+        let largeur = 32, hauteur = 64
+        var pixels = [UInt8](repeating: 0, count: largeur * hauteur * 4)
+        guard
+            let ctx = CGContext(
+                data: &pixels, width: largeur, height: hauteur, bitsPerComponent: 8,
+                bytesPerRow: largeur * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return -1 }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: largeur, height: hauteur))
+        var total = 0.0
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            total +=
+                0.2126 * Double(pixels[i]) + 0.7152 * Double(pixels[i + 1])
+                + 0.0722 * Double(pixels[i + 2])
+        }
+        return total / Double(largeur * hauteur) / 255
+    }
+
     func test01ParcoursComplet() throws {
         let app = XCUIApplication()
         app.launch()
 
         // 1. Connexion
         seConnecter(app)
-        // Sur un simulateur où une biométrie est inscrite, l'app propose de l'activer.
-        // On écarte la proposition explicitement : la subir ferait échouer les taps
-        // suivants pour une raison sans rapport avec ce que ce test vérifie.
-        let plusTard = app.buttons["button.laterBiometric"].firstMatch
-        if plusTard.waitForExistence(timeout: 5) { plusTard.tap() }
         shot(app, "1-coffre")
 
         // 2. La liste montre le coffre, et rien de ce qui doit rester caché
@@ -357,5 +444,64 @@ final class VaultFlowTests: XCTestCase {
             "rien n'indique que le coffre affiché vient de l'appareil")
         aucuneLigneFantome(app, "hors ligne")
         shot(app, "6-hors-ligne")
+    }
+
+    /// Le thème et la langue appartiennent à l'utilisateur, pas au système.
+    ///
+    /// Ce test ne se contente pas de cliquer : il vérifie que le titre du coffre change
+    /// bien de langue, que le choix survit à une relance, et que le fond de l'écran
+    /// s'éclaircit vraiment. Il repose ensuite tout comme il l'a trouvé — la suite qui
+    /// vient après lui attend une application en français.
+    func test05Preferences() throws {
+        let app = XCUIApplication()
+        app.launch()
+        seConnecter(app)
+
+        // 1. Passage à l'anglais
+        ouvrirReglages(app)
+        app.buttons["row.langue.anglais"].tap()
+        app.buttons["button.doneSettings"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Vault"].waitForExistence(timeout: 30),
+            "le coffre est resté en français après le passage à l'anglais")
+        shot(app, "7-anglais")
+
+        // 2. Le choix survit à une relance : sinon ce ne serait qu'un état d'écran.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(
+            app.staticTexts["Vault saved on this device"].waitForExistence(timeout: 60),
+            "la langue choisie a été oubliée au redémarrage")
+        remplir(app, "field.master", master)
+        app.buttons["button.submit"].tap()
+        XCTAssertTrue(app.navigationBars["Vault"].waitForExistence(timeout: 180))
+
+        // 3. Thème clair, puis sombre, mesurés à l'écran
+        ouvrirReglages(app)
+        app.buttons["tile.apparence.clair"].tap()
+        app.buttons["button.doneSettings"].tap()
+        XCTAssertTrue(app.navigationBars["Vault"].waitForExistence(timeout: 20))
+        let clair = luminance(app.screenshot())
+        shot(app, "8-clair")
+
+        ouvrirReglages(app)
+        app.buttons["tile.apparence.sombre"].tap()
+        app.buttons["button.doneSettings"].tap()
+        XCTAssertTrue(app.navigationBars["Vault"].waitForExistence(timeout: 20))
+        let sombre = luminance(app.screenshot())
+        shot(app, "9-sombre")
+
+        XCTAssertGreaterThan(
+            clair, sombre + 0.25,
+            "le thème clair (\(clair)) ne se distingue pas du sombre (\(sombre))")
+
+        // 4. Retour aux réglages du système, pour la suite des tests
+        ouvrirReglages(app)
+        app.buttons["tile.apparence.systeme"].tap()
+        app.buttons["row.langue.systeme"].tap()
+        app.buttons["button.doneSettings"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Coffre"].waitForExistence(timeout: 30),
+            "le retour au réglage du système n'a pas ramené le français")
     }
 }

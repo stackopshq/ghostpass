@@ -54,9 +54,17 @@ struct UnlockView: View {
             Text("GhostPass")
                 .font(.system(.title, design: .rounded, weight: .bold))
                 .foregroundStyle(Color.gpInk)
-            Text(useSavedSession ? "Coffre enregistré sur cet appareil" : "Coffre chiffré de bout en bout")
-                .font(.footnote)
-                .foregroundStyle(Color.gpMuted)
+            Group {
+                // Deux `Text` plutôt qu'un ternaire : les deux branches sont des clefs de
+                // traduction, et un ternaire les ramènerait à de simples chaînes.
+                if useSavedSession {
+                    Text("Coffre enregistré sur cet appareil")
+                } else {
+                    Text("Coffre chiffré de bout en bout")
+                }
+            }
+            .font(.footnote)
+            .foregroundStyle(Color.gpMuted)
         }
     }
 
@@ -64,7 +72,7 @@ struct UnlockView: View {
         VStack(alignment: .leading, spacing: 18) {
             if useSavedSession {
                 champ("Compte") {
-                    Text(store.savedEmail)
+                    Text(verbatim: store.savedEmail)
                         .foregroundStyle(Color.gpMuted)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .ghostField()
@@ -107,7 +115,13 @@ struct UnlockView: View {
             }
 
             if let message = store.errorMessage {
-                Label(message, systemImage: "exclamationmark.triangle.fill")
+                // Le message arrive déjà traduit : les services passent par `tr(…)`.
+                // Le réafficher comme une clef le ferait chercher une seconde fois.
+                Label {
+                    Text(verbatim: message)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
                     .font(.footnote)
                     .foregroundStyle(Color.gpDanger)
                     .fixedSize(horizontal: false, vertical: true)
@@ -117,8 +131,10 @@ struct UnlockView: View {
                 Button(action: submit) {
                     if store.isBusy {
                         ProgressView().tint(Color.gpOnAccent)
+                    } else if useSavedSession {
+                        Text("Déverrouiller")
                     } else {
-                        Text(useSavedSession ? "Déverrouiller" : "Se connecter")
+                        Text("Se connecter")
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle(enabled: !store.isBusy && !password.isEmpty))
@@ -135,10 +151,16 @@ struct UnlockView: View {
                 }
 
                 if store.hasSavedSession {
-                    Button(useSavedSession ? "Utiliser un autre compte" : "Revenir au coffre enregistré") {
+                    Button {
                         useSavedSession.toggle()
                         password = ""
                         store.errorMessage = nil
+                    } label: {
+                        if useSavedSession {
+                            Text("Utiliser un autre compte")
+                        } else {
+                            Text("Revenir au coffre enregistré")
+                        }
                     }
                     .font(.footnote)
                     .foregroundStyle(Color.gpAccentText)
@@ -151,7 +173,7 @@ struct UnlockView: View {
     }
 
     private func champ<Contenu: View>(
-        _ intitule: String, @ViewBuilder _ contenu: () -> Contenu
+        _ intitule: LocalizedStringKey, @ViewBuilder _ contenu: () -> Contenu
     ) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(intitule).sectionLabel()
@@ -160,7 +182,7 @@ struct UnlockView: View {
     }
 
     /// Un texte d'invite lisible : le gris par défaut de SwiftUI disparaît sur nos surfaces.
-    private func invite(_ texte: String) -> Text {
+    private func invite(_ texte: LocalizedStringKey) -> Text {
         Text(texte).foregroundColor(Color.gpMuted.opacity(0.7))
     }
 

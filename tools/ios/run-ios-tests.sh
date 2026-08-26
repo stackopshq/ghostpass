@@ -113,6 +113,14 @@ $booted || { echo "Le simulateur n'a pas démarré en 90 s." >&2; exit 1; }
 # presse-papiers avec l'hôte : le clavier interroge le pasteboard à chaque prise de focus.
 defaults write com.apple.iphonesimulator PasteboardAutomaticSync -bool false
 
+# L'application existe en français et en anglais, et suit la langue de l'appareil tant
+# que l'utilisateur n'en choisit pas une. Les tests, eux, attendent des libellés précis :
+# on fixe donc la langue du simulateur plutôt que d'hériter de celle du poste, sur lequel
+# la même suite passerait ou échouerait selon les réglages de son propriétaire. Le
+# réglage vaut aussi pour Safari, qui héberge l'extension de remplissage.
+xcrun simctl spawn "$DEVICE" defaults write .GlobalPreferences AppleLanguages -array fr
+xcrun simctl spawn "$DEVICE" defaults write .GlobalPreferences AppleLocale -string fr_CH
+
 # ── Biométrie simulée ─────────────────────────────────────────────────────────
 # Sans inscription, `test02Biometrie` se met en skip plutôt que de passer par hasard.
 BIOMETRICS=0
@@ -210,7 +218,8 @@ say "Parcours de bout en bout"
 # test. Les tests connaissent ces valeurs par défaut ; c'est le contrat entre eux et ce
 # script — d'où le port et le compte figés plus haut.
 if ! run_tests GhostpassUITests/VaultFlowTests/test01ParcoursComplet \
-  -only-testing:GhostpassUITests/VaultFlowTests/test02Biometrie; then
+  -only-testing:GhostpassUITests/VaultFlowTests/test02Biometrie \
+  -only-testing:GhostpassUITests/VaultFlowTests/test05Preferences; then
   echo "--- journal de l'application ---" >&2
   xcrun simctl spawn "$DEVICE" log show --last 15m --style compact \
     --predicate 'process == "Ghostpass"' 2>/dev/null | grep -a "GP-" | tail -25 >&2 ||

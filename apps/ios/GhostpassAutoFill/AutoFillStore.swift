@@ -41,7 +41,7 @@ final class AutoFillStore: ObservableObject {
 
     func unlock(password: String) async {
         guard let session = SharedStore.load() else {
-            errorMessage = "Ouvrez GhostPass une fois pour activer le remplissage."
+            errorMessage = tr("Ouvrez GhostPass une fois pour activer le remplissage.")
             return
         }
         isBusy = true
@@ -53,7 +53,7 @@ final class AutoFillStore: ObservableObject {
                 encryptedPrivateKey: session.encryptedPrivateKey)
             load(with: account)
         } catch {
-            errorMessage = "Mot de passe maître incorrect."
+            errorMessage = tr("Mot de passe maître incorrect.")
         }
     }
 
@@ -66,7 +66,7 @@ final class AutoFillStore: ObservableObject {
         }.value
         isBusy = false
         guard let password else {
-            errorMessage = "\(Biometrics.label) n'a pas permis d'ouvrir le coffre."
+            errorMessage = tr("\(Biometrics.label) n'a pas permis d'ouvrir le coffre.")
             return
         }
         await unlock(password: password)

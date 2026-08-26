@@ -91,7 +91,7 @@ final class VaultStore: ObservableObject {
     /// pouvoir déverrouiller sans dépendre de la disponibilité du serveur.
     func unlockOffline(password: String) async {
         guard let session = SharedStore.load(), let url = URL(string: session.serverURL) else {
-            errorMessage = "Aucune session enregistrée sur cet appareil."
+            errorMessage = tr("Aucune session enregistrée sur cet appareil.")
             return
         }
         isBusy = true
@@ -108,7 +108,7 @@ final class VaultStore: ObservableObject {
             proposeBiometricsIfPossible(password)
             await refresh()
         } catch {
-            errorMessage = "Mot de passe maître incorrect."
+            errorMessage = tr("Mot de passe maître incorrect.")
         }
     }
 
@@ -152,6 +152,7 @@ final class VaultStore: ObservableObject {
     }
 
     var biometryLabel: String { Biometrics.label }
+    var biometryIcon: String { Biometrics.icon }
 
     /// La biométrie est-elle disponible sur cet appareil, indépendamment du choix fait ?
     var biometryAvailable: Bool { Biometrics.isAvailable }
@@ -174,7 +175,7 @@ final class VaultStore: ObservableObject {
         guard let password else {
             // Refus, échec, ou entrée invalidée par un nouvel enrôlement : on ne
             // reste pas coincé, le mot de passe maître marche toujours.
-            errorMessage = "\(Biometrics.label) n'a pas permis d'ouvrir le coffre."
+            errorMessage = tr("\(Biometrics.label) n'a pas permis d'ouvrir le coffre.")
             return
         }
         await unlockOffline(password: password)
@@ -187,6 +188,7 @@ final class VaultStore: ObservableObject {
         else { return }
         pendingPassword = password
         offersBiometricEnrollment = true
+        NSLog("GP-BIO proposition")
     }
 
     /// L'utilisateur accepte la proposition faite juste après un déverrouillage : le mot
@@ -203,7 +205,7 @@ final class VaultStore: ObservableObject {
     @discardableResult
     func enableBiometrics(password: String) -> Bool {
         guard let session = SharedStore.load() else {
-            errorMessage = "Aucune session enregistrée sur cet appareil."
+            errorMessage = tr("Aucune session enregistrée sur cet appareil.")
             return false
         }
         do {
@@ -212,7 +214,7 @@ final class VaultStore: ObservableObject {
                 encryptedUserKey: session.encryptedUserKey,
                 encryptedPrivateKey: session.encryptedPrivateKey)
         } catch {
-            errorMessage = "Mot de passe maître incorrect."
+            errorMessage = tr("Mot de passe maître incorrect.")
             return false
         }
         return store(password)
@@ -222,7 +224,7 @@ final class VaultStore: ObservableObject {
     private func store(_ password: String) -> Bool {
         let status = Keychain.setBiometric(password, for: Keychain.Key.masterPassword)
         guard status == errSecSuccess else {
-            errorMessage = "\(Biometrics.label) n'a pas pu être activé (code \(status))."
+            errorMessage = tr("\(Biometrics.label) n'a pas pu être activé (code \(status)).")
             return false
         }
         Keychain.set("1", for: Keychain.Key.biometricsEnabled)
@@ -233,6 +235,7 @@ final class VaultStore: ObservableObject {
     /// chaque ouverture. Le refus n'est pas définitif : les réglages du coffre permettent
     /// de revenir dessus, sans quoi un « Plus tard » condamnerait la fonction.
     func declineBiometrics() {
+        NSLog("GP-BIO refus")
         pendingPassword = nil
         offersBiometricEnrollment = false
         Keychain.set("0", for: Keychain.Key.biometricsEnabled)
@@ -326,7 +329,7 @@ final class VaultStore: ObservableObject {
         } catch is URLError {
             // Écrire suppose le serveur : il n'y a pas de file d'attente hors ligne, et
             // laisser croire à un enregistrement serait pire que de le refuser.
-            errorMessage = "Serveur injoignable : la modification n'a pas été enregistrée."
+            errorMessage = tr("Serveur injoignable : la modification n'a pas été enregistrée.")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -341,7 +344,7 @@ final class VaultStore: ObservableObject {
                 VaultCache.save(dtos.filter { $0.id != entry.id })
             }
         } catch is URLError {
-            errorMessage = "Serveur injoignable : la suppression n'a pas été enregistrée."
+            errorMessage = tr("Serveur injoignable : la suppression n'a pas été enregistrée.")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -418,7 +421,7 @@ final class VaultStore: ObservableObject {
             }
             await refresh()
         } catch is URLError {
-            errorMessage = "Serveur injoignable : les dossiers n'ont pas été enregistrés."
+            errorMessage = tr("Serveur injoignable : les dossiers n'ont pas été enregistrés.")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -446,7 +449,7 @@ final class VaultStore: ObservableObject {
             try await api.restoreItem(token: token, id: entry.id)
             await refresh()
         } catch is URLError {
-            errorMessage = "Serveur injoignable : l'item n'a pas été restauré."
+            errorMessage = tr("Serveur injoignable : l'item n'a pas été restauré.")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -459,7 +462,7 @@ final class VaultStore: ObservableObject {
         do {
             try await api.purgeItem(token: token, id: entry.id)
         } catch is URLError {
-            errorMessage = "Serveur injoignable : l'item n'a pas été supprimé."
+            errorMessage = tr("Serveur injoignable : l'item n'a pas été supprimé.")
         } catch {
             errorMessage = error.localizedDescription
         }

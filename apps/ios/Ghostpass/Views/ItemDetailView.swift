@@ -7,7 +7,9 @@ struct ItemDetailView: View {
 
     @EnvironmentObject private var store: VaultStore
     @State private var revealed = false
-    @State private var copie: String?
+    /// Le libellé de la dernière copie — une clef de traduction, pas un texte tout fait :
+    /// il s'affiche, donc il se traduit.
+    @State private var copie: LocalizedStringKey?
 
     /// L'entrée telle qu'elle est *maintenant* dans le coffre. Sans cela, l'écran garderait
     /// la copie reçue à la navigation et continuerait d'afficher l'ancien contenu après une
@@ -24,7 +26,7 @@ struct ItemDetailView: View {
 
             if let notes = live.item.notes, !notes.isEmpty {
                 GhostSection(titre: "Notes") {
-                    Text(notes)
+                    Text(verbatim: notes)
                         .foregroundStyle(Color.gpInk)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -33,14 +35,20 @@ struct ItemDetailView: View {
             }
             if let folder = live.item.folder, !folder.isEmpty {
                 GhostSection(titre: "Dossier") {
-                    Label(folder, systemImage: "folder")
-                        .foregroundStyle(Color.gpMuted)
+                    // Le nom du dossier est celui qu'a choisi l'utilisateur : il se
+                    // montre tel quel, sans passer par le catalogue.
+                    Label {
+                        Text(verbatim: folder)
+                    } icon: {
+                        Image(systemName: "folder")
+                    }
+                    .foregroundStyle(Color.gpMuted)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
                 }
             }
         }
-        .navigationTitle(live.item.name)
+        .navigationTitle(Text(verbatim: live.item.name))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             Button("Modifier", action: onEdit)
@@ -82,7 +90,7 @@ struct ItemDetailView: View {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     if let otp = Totp.code(for: config, at: context.date) {
                         HStack(spacing: 14) {
-                            Text(otp.code)
+                            Text(verbatim: otp.code)
                                 .font(.system(.title2, design: .monospaced, weight: .semibold))
                                 .foregroundStyle(Color.gpInk)
                                 .accessibilityIdentifier("text.totp")
@@ -108,7 +116,7 @@ struct ItemDetailView: View {
                 ForEach(Array(login.uris.enumerated()), id: \.offset) { index, uri in
                     if index > 0 { GhostDivider() }
                     HStack {
-                        Text(uri)
+                        Text(verbatim: uri)
                             .font(.callout)
                             .foregroundStyle(Color.gpInk)
                             .textSelection(.enabled)
@@ -125,7 +133,7 @@ struct ItemDetailView: View {
     @ViewBuilder
     private func contenuNote(_ note: SecureNote) -> some View {
         GhostSection(titre: "Note") {
-            Text(note.content)
+            Text(verbatim: note.content)
                 .foregroundStyle(Color.gpInk)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,7 +189,13 @@ struct ItemDetailView: View {
     @ViewBuilder
     private var confirmationDeCopie: some View {
         if let copie {
-            Label(copie, systemImage: "checkmark.circle.fill")
+            Label {
+                // Le délai s'ajoute au message plutôt que d'y être interpolé : deux clefs
+                // de traduction se composent, une clef ne s'insère pas dans une autre.
+                Text(copie) + Text(" — effacé dans \(Int(Clipboard.lifetime)) s")
+            } icon: {
+                Image(systemName: "checkmark.circle.fill")
+            }
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(Color.gpInk)
                 .padding(.horizontal, 16)
@@ -193,9 +207,9 @@ struct ItemDetailView: View {
         }
     }
 
-    private func copier(_ valeur: String, _ message: String) {
+    private func copier(_ valeur: String, _ message: LocalizedStringKey) {
         Clipboard.copy(valeur)
-        copie = "\(message) — effacé dans \(Int(Clipboard.lifetime)) s"
+        copie = message
         Task {
             try? await Task.sleep(for: .seconds(2.5))
             copie = nil

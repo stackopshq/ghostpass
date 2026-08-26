@@ -95,11 +95,12 @@ struct TrashView: View {
                 .frame(width: 34, height: 34)
                 .background(Color.gpSurface2, in: RoundedRectangle(cornerRadius: 9))
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.item.name)
+                Text(verbatim: entry.item.name)
                     .font(.system(.body, weight: .medium))
                     .foregroundStyle(Color.gpInk)
                 if let login = entry.login, !login.username.isEmpty {
-                    Text(login.username).font(.caption).foregroundStyle(Color.gpMuted)
+                    Text(verbatim: login.username).font(.caption)
+                        .foregroundStyle(Color.gpMuted)
                 }
             }
             Spacer(minLength: 8)

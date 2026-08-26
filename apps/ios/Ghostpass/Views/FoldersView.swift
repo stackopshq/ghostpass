@@ -29,14 +29,16 @@ struct FoldersView: View {
                     }
 
                     ligne(
-                        titre: "Tous les éléments", icone: "tray.full",
+                        titre: Text("Tous les éléments"), icone: "tray.full",
                         compte: store.entries.count, chemin: nil)
 
                     if !store.folderPaths.isEmpty {
                         Section {
                             ForEach(store.folderPaths, id: \.self) { chemin in
                                 ligne(
-                                    titre: chemin, icone: "folder",
+                                    // Un nom de dossier appartient à l'utilisateur : il
+                                    // s'affiche tel quel, jamais traduit.
+                                    titre: Text(verbatim: chemin), icone: "folder",
                                     compte: store.itemCount(in: chemin), chemin: chemin
                                 )
                                 .swipeActions {
@@ -146,7 +148,7 @@ struct FoldersView: View {
         Task { await store.createFolder(chemin) }
     }
 
-    private func ligne(titre: String, icone: String, compte: Int, chemin: String?) -> some View {
+    private func ligne(titre: Text, icone: String, compte: Int, chemin: String?) -> some View {
         Button {
             selection = chemin
             dismiss()
@@ -158,7 +160,7 @@ struct FoldersView: View {
                     .frame(width: 34, height: 34)
                     .background(Color.gpAccent.opacity(0.16), in: RoundedRectangle(cornerRadius: 9))
 
-                Text(titre)
+                titre
                     .font(.system(.body, weight: .medium))
                     .foregroundStyle(Color.gpInk)
                     .lineLimit(1)
