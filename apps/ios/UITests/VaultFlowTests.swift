@@ -267,6 +267,22 @@ final class VaultFlowTests: XCTestCase {
         XCTAssertTrue(code.label.allSatisfy(\.isNumber), "code TOTP non numérique : « \(code.label) »")
         shot(app, "2-detail")
 
+        // 6b. Changer le mot de passe archive l'ancien. C'est ce qui sauve un compte dont
+        // le changement a échoué à mi-chemin ; encore faut-il que l'écran le montre.
+        app.buttons["button.edit"].tap()
+        XCTAssertTrue(app.buttons["button.cancel"].waitForExistence(timeout: 30))
+        remplir(app, "field.password", "s3cret-remplace")
+        app.buttons["button.save"].tap()
+        let historique = app.buttons["button.history"]
+        XCTAssertTrue(
+            historique.waitForExistence(timeout: 60),
+            "l'ancien mot de passe n'a pas été archivé")
+        taper(historique)
+        XCTAssertTrue(
+            app.staticTexts["Remplacé"].waitForExistence(timeout: 20),
+            "l'historique ne montre rien une fois déplié")
+        shot(app, "2-historique")
+
         // 4c. Dossiers : en créer un, y ranger l'élément, filtrer dessus
         if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
         app.buttons["button.folderFilter"].tap()

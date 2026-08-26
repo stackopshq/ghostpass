@@ -112,4 +112,8 @@ enum VaultConstants {
 
     /// Les identifiants des éléments mis en favori.
     static let favoritesItemName = registryPrefix + "favorites"
+
+    /// Combien d'anciens mots de passe un élément conserve. Le même nombre que la web
+    /// app : un historique plus long d'un côté que de l'autre ferait croire à une perte.
+    static let passwordHistoryLimit = 20
 }

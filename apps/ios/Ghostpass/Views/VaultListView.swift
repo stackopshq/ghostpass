@@ -215,6 +215,38 @@ struct VaultListView: View {
                 Task { await store.delete(entry) }
             }
         }
+        // Sur un téléphone, la raison d'ouvrir un identifiant est le plus souvent de le
+        // recopier. L'appui long l'offre depuis la liste, sans traverser deux écrans.
+        .contextMenu {
+            if let login = entry.login {
+                if !login.password.isEmpty {
+                    Button("Copier le mot de passe", systemImage: "key") {
+                        Clipboard.copy(login.password)
+                    }
+                }
+                if !login.username.isEmpty {
+                    Button("Copier le nom d'utilisateur", systemImage: "person") {
+                        Clipboard.copy(login.username)
+                    }
+                }
+                if let config = login.totp.flatMap(Totp.parse),
+                    let otp = Totp.code(for: config)
+                {
+                    Button("Copier le code", systemImage: "number") {
+                        Clipboard.copy(otp.code)
+                    }
+                }
+            }
+            Button(
+                store.isFavorite(entry) ? "Retirer des favoris" : "Mettre en favori",
+                systemImage: store.isFavorite(entry) ? "star.slash" : "star"
+            ) {
+                Task { await store.toggleFavorite(entry) }
+            }
+            Button("Supprimer", systemImage: "trash", role: .destructive) {
+                Task { await store.delete(entry) }
+            }
+        }
     }
 
     private func ouvrirLElementDemande() {

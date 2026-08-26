@@ -89,7 +89,7 @@ struct FoldersView: View {
                 }
             }
             .alert(
-                "Supprimer ce dossier ?", isPresented: .constant(aSupprimer != nil),
+                "Supprimer ce dossier ?", isPresented: presentation($aSupprimer),
                 presenting: aSupprimer,
                 actions: { chemin in
                     Button("Supprimer", role: .destructive) {
@@ -190,5 +190,17 @@ struct FoldersView: View {
         .listRowInsets(.init(top: 4, leading: 16, bottom: 4, trailing: 16))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
+    }
+
+    /// Une liaison qui écrit en retour. `.constant` refuse la fermeture que le système
+    /// lui demande d'enregistrer : SwiftUI croit alors l'alerte encore présentée, et la
+    /// suivante ne s'affiche plus — le défaut qui a rendu la proposition biométrique
+    /// intapable, en plus discret ici puisqu'il n'y a qu'une alerte sur cet écran.
+    private func presentation<T>(_ valeur: Binding<T?>) -> Binding<Bool> {
+        Binding(
+            get: { valeur.wrappedValue != nil },
+            set: { presente in
+                if !presente { valeur.wrappedValue = nil }
+            })
     }
 }

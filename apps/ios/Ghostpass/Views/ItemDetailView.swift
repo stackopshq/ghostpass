@@ -7,6 +7,12 @@ struct ItemDetailView: View {
 
     @EnvironmentObject private var store: VaultStore
     @State private var revealed = false
+    /// L'historique est replié par défaut : ce sont des mots de passe périmés, on ne les
+    /// consulte qu'en cas de besoin, et les déployer d'office allongerait l'écran pour rien.
+    @State private var historiqueDeploye = false
+    /// Les anciens mots de passe dévoilés, par rang. Un par un : les afficher tous d'un
+    /// coup exposerait sans nécessité tout ce que l'élément a jamais protégé.
+    @State private var anciensDevoiles: Set<Int> = []
     /// Le libellé de la dernière copie — une clef de traduction, pas un texte tout fait :
     /// il s'affiche, donc il se traduit.
     @State private var copie: LocalizedStringKey?
@@ -96,6 +102,10 @@ struct ItemDetailView: View {
             }
         }
 
+        if !login.passwordHistory.isEmpty {
+            historique(login.passwordHistory)
+        }
+
         if let config = login.totp.flatMap(Totp.parse) {
             GhostSection(titre: "Code à usage unique", note: "Renouvelé toutes les \(config.period) secondes.") {
                 // `TimelineView` réévalue chaque seconde : pas de minuterie à démarrer ni
@@ -173,6 +183,61 @@ struct ItemDetailView: View {
             GhostDivider()
             GhostRow(intitule: "Expiration", valeur: "\(card.expMonth)/\(card.expYear)") {}
         }
+    }
+
+    /// Les mots de passe qu'on a remplacés. Ils servent le jour où un changement a échoué
+    /// à mi-chemin — le service a gardé l'ancien, l'application le nouveau — et ce jour-là,
+    /// les avoir gardés fait la différence entre récupérer un compte et le perdre.
+    private func historique(_ anciens: [String]) -> some View {
+        GhostSection {
+            Button {
+                historiqueDeploye.toggle()
+                if !historiqueDeploye { anciensDevoiles = [] }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.gpMuted)
+                    Text("Anciens mots de passe (\(anciens.count))")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.gpInk)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.gpMuted)
+                        .rotationEffect(.degrees(historiqueDeploye ? 90 : 0))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("button.history")
+
+            if historiqueDeploye {
+                ForEach(Array(anciens.enumerated()), id: \.offset) { rang, ancien in
+                    GhostDivider()
+                    let devoile = anciensDevoiles.contains(rang)
+                    GhostRow(
+                        intitule: "Remplacé",
+                        valeur: devoile ? ancien : String(repeating: "•", count: max(ancien.count, 8)),
+                        monospace: true, estSecret: !devoile
+                    ) {
+                        GhostIconButton(systemImage: devoile ? "eye.slash" : "eye") {
+                            if devoile {
+                                anciensDevoiles.remove(rang)
+                            } else {
+                                anciensDevoiles.insert(rang)
+                            }
+                        }
+                        GhostIconButton(systemImage: "doc.on.doc") {
+                            copier(ancien, "Ancien mot de passe copié")
+                        }
+                    }
+                }
+            }
+        }
+        .animation(.snappy, value: historiqueDeploye)
     }
 
     /// La force du mot de passe, au même barème que la web app : une jauge et un mot.

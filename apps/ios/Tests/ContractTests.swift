@@ -690,3 +690,43 @@ final class RegistryTests: XCTestCase {
         XCTAssertFalse(VaultStore.isRegistry(item("")))
     }
 }
+
+// ─── Historique des mots de passe ─────────────────────────────────────────────
+
+/// Un mot de passe remplacé rejoint l'historique. C'est ce qui sauve un compte dont le
+/// changement a échoué à mi-chemin — le service a gardé l'ancien, l'application le
+/// nouveau. Encore faut-il que l'historique traverse le chiffrement intact, et qu'il
+/// cesse de grossir : un item qui enfle à chaque modification finit par coûter cher.
+final class PasswordHistoryTests: XCTestCase {
+    private func compte() throws -> Account {
+        try register(password: "correct horse battery staple", email: "clara@ghostpass.test")
+            .account()
+    }
+
+    func testLHistoriqueSurvitAuChiffrement() throws {
+        let account = try compte()
+        let anciens = ["premier", "deuxième", "troisième"]
+        let item = VaultItem(
+            name: "Forgejo", notes: nil, folder: nil,
+            data: .login(
+                Login(
+                    username: "clara", password: "actuel", uris: [], totp: nil,
+                    passwordHistory: anciens)))
+
+        let (key, data) = try VaultStore.encrypt(item, with: account)
+        let dto = EncryptedItemDTO(
+            id: "x", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
+        let relu = try VaultStore.decrypt(dto, with: account)
+
+        guard case .login(let login) = relu.data else { return XCTFail("un Login était attendu") }
+        XCTAssertEqual(
+            login.passwordHistory, anciens,
+            "l'historique ne traverse pas le chiffrement — le champ `password_history` a changé de nom")
+    }
+
+    /// Le plafond est celui de la web app. S'il divergeait, un même coffre montrerait
+    /// plus d'anciens mots de passe d'un côté que de l'autre, et on croirait à une perte.
+    func testLePlafondEstCeluiDeLaWebApp() {
+        XCTAssertEqual(VaultConstants.passwordHistoryLimit, 20)
+    }
+}

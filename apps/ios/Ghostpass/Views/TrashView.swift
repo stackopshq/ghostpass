@@ -66,7 +66,7 @@ struct TrashView: View {
             // Une suppression définitive ne se rattrape pas : elle se confirme.
             .alert(
                 "Supprimer définitivement ?",
-                isPresented: .constant(aPurger != nil),
+                isPresented: presentation($aPurger),
                 presenting: aPurger,
                 actions: { entry in
                     Button("Supprimer", role: .destructive) {
@@ -117,5 +117,17 @@ struct TrashView: View {
         chargement = true
         entries = await store.loadTrash()
         chargement = false
+    }
+
+    /// Une liaison qui écrit en retour. `.constant` refuse la fermeture que le système
+    /// lui demande d'enregistrer : SwiftUI croit alors l'alerte encore présentée, et la
+    /// suivante ne s'affiche plus — le défaut qui a rendu la proposition biométrique
+    /// intapable, en plus discret ici puisqu'il n'y a qu'une alerte sur cet écran.
+    private func presentation<T>(_ valeur: Binding<T?>) -> Binding<Bool> {
+        Binding(
+            get: { valeur.wrappedValue != nil },
+            set: { presente in
+                if !presente { valeur.wrappedValue = nil }
+            })
     }
 }

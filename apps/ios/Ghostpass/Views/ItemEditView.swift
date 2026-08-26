@@ -284,11 +284,17 @@ struct ItemEditView: View {
     /// Un mot de passe remplacé rejoint l'historique plutôt que de disparaître : c'est
     /// ce que fait la web app, et c'est ce qui permet de récupérer un compte dont le
     /// changement de mot de passe a échoué à mi-chemin.
+    ///
+    /// L'historique est plafonné, comme sur le web. Sans plafond il grossirait sans fin,
+    /// et un item chiffré qui enfle à chaque modification finit par coûter cher à
+    /// transporter — pour des mots de passe que personne ne remontera jamais si loin.
     private func previousPasswords() -> [String] {
         guard case .existing(let entry) = target, let login = entry.login else { return [] }
         guard login.password != password, !login.password.isEmpty else {
-            return login.passwordHistory
+            return Array(login.passwordHistory.prefix(VaultConstants.passwordHistoryLimit))
         }
-        return [login.password] + login.passwordHistory
+        return Array(
+            ([login.password] + login.passwordHistory)
+                .prefix(VaultConstants.passwordHistoryLimit))
     }
 }

@@ -162,6 +162,26 @@
         }
       }
     },
+    "Ancien mot de passe copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous password copied"
+          }
+        }
+      }
+    },
+    "Anciens mots de passe (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous passwords (%lld)"
+          }
+        }
+      }
+    },
     "Annuler": {
       "localizations": {
         "en": {
@@ -408,6 +428,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Content"
+          }
+        }
+      }
+    },
+    "Copier le code": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy code"
+          }
+        }
+      }
+    },
+    "Copier le mot de passe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy password"
+          }
+        }
+      }
+    },
+    "Copier le nom d'utilisateur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy username"
           }
         }
       }
@@ -1028,6 +1078,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search"
+          }
+        }
+      }
+    },
+    "Remplacé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replaced"
           }
         }
       }
