@@ -67,9 +67,24 @@ passe faux, et le fait qu'aucune session n'autorise l'activation.
 | `Ghostpass/Services/APIClient.swift` | Routes du serveur : prelogin, login, CRUD du coffre |
 | `Ghostpass/Services/Keychain.swift` | Jeton de session et blobs chiffrés, non exportables |
 | `Ghostpass/Services/Biometrics.swift` | Disponibilité et nom de la biométrie (Face ID / Touch ID) |
+| `Ghostpass/Services/VaultCache.swift` | Copie locale du coffre, déjà chiffrée : le coffre s'ouvre sans réseau |
+| `Ghostpass/Services/PasswordGenerator.swift` | Générateur, transposition de `apps/web/src/lib/generator.ts` |
+| `Ghostpass/Services/Totp.swift` | Codes TOTP (RFC 6238), transposition de `apps/web/src/lib/totp.ts` |
+| `Ghostpass/Services/Clipboard.swift` | Copie de secrets, toujours avec expiration |
 | `Ghostpass/Assets.xcassets` | Icône, dérivée de `assets/logo/ghostpass.svg` |
 | `Ghostpass/Services/VaultStore.swift` | État de l'app, passage de frontière chiffré/clair |
 | `Ghostpass/Views/` | SwiftUI : déverrouillage, liste, détail, édition |
+
+## Hors ligne
+
+Le coffre s'ouvre sans réseau. `VaultCache` conserve sur l'appareil les blobs **tels que
+le serveur les stocke** — déjà chiffrés, inutilisables sans l'USK — sous
+`.completeFileProtection`. Au déverrouillage, la copie locale s'affiche d'abord ; le
+serveur reprend la main dès qu'il répond, et un bandeau signale l'écart.
+
+En revanche **écrire suppose le serveur** : il n'y a pas de file d'attente hors ligne.
+Une création ou une suppression sans réseau est refusée avec un message explicite, plutôt
+que d'être acceptée en apparence puis perdue.
 
 ## Ce qui n'y est pas encore
 
@@ -79,6 +94,9 @@ passe faux, et le fait qu'aucune session n'autorise l'activation.
   *sans* mot de passe maître, Face ID ne fait qu'en autoriser la relecture.
 - **Organisations et accès d'urgence** : absents du binding tant qu'aucun écran n'en a besoin.
 - **Corbeille** : la suppression est douce côté serveur, mais l'app n'affiche pas la corbeille.
+- **Modifications hors ligne** : lecture oui, écriture non — pas de file de synchronisation.
+- **Santé du coffre** (mots de passe faibles, réutilisés, compromis) : le web a `breach.ts`, pas l'iOS.
+- **Localisation** : l'interface est en français, sans catalogue de traductions.
 
 ## Points de vigilance
 
@@ -96,6 +114,14 @@ passe faux, et le fait qu'aucune session n'autorise l'activation.
   le déverrouillage biométrique à tout moment. Activer à froid **redemande** le mot de
   passe maître et le vérifie en rouvrant réellement le coffre : on ne confie au trousseau
   qu'un secret dont on sait qu'il ouvre.
+- **Le presse-papiers expire.** Toute copie de secret porte une date d'expiration
+  (`Clipboard.lifetime`, 30 s) : le presse-papiers d'iOS est lisible par n'importe quelle
+  application au premier plan et se synchronise entre appareils iCloud. Un mot de passe
+  qui y resterait jusqu'à la copie suivante serait un mot de passe posé sur la table.
+- **Le générateur et le TOTP n'utilisent pas le cœur Rust** — il n'expose ni l'un ni
+  l'autre, et la web app fait de même en TypeScript. Ils s'appuient sur les primitives du
+  système (`SecRandomCopyBytes`, CryptoKit), comme la web app s'appuie sur WebCrypto :
+  rien de cryptographique n'est réimplémenté ici, et les secrets ne quittent pas l'appareil.
 - Les paramètres KDF transitent **verbatim** du serveur au cœur Rust. Le serveur les
   stocke en colonne TEXT : `kdfParams` est une *chaîne* contenant du JSON, jamais un
   objet JSON. La décoder pour la ré-encoder donnerait une chaîne doublement échappée,

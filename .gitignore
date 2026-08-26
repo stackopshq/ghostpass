@@ -29,3 +29,4 @@ apps/ios/GhostpassCrypto.xcframework/
 
 # Rapports de tests iOS (conservés en cas d'échec, régénérables)
 apps/ios/TestResults/
+apps/ios/.build/

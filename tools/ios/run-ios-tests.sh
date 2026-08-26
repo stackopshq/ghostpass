@@ -12,6 +12,8 @@
 #   defaults write com.apple.iphonesimulator PasteboardAutomaticSync -bool true
 #
 # Usage : ./tools/ios/run-ios-tests.sh [--unit-only]
+#   GHOSTPASS_KEEP_RESULTS=1  conserve aussi les rapports d'un run réussi (captures
+#                             d'écran comprises), pour inspecter ce qu'a vu le test.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -28,6 +30,10 @@ WORK="$(mktemp -d)"
 # Les rapports d'un run raté survivent au nettoyage : sans eux, il ne reste qu'un nom de
 # test et aucune trace de ce que montrait l'écran. La CI les publie en artefact.
 RESULTS="$ROOT/apps/ios/TestResults"
+# Les produits de compilation, eux, survivent d'un run à l'autre : les remettre dans un
+# répertoire temporaire ferait tout recompiler à chaque fois — quatre minutes pour rien
+# en local. La CI part d'une machine neuve, cela ne change rien pour elle.
+DERIVED="$ROOT/apps/ios/.build"
 SERVER_PID=""
 BIO_PID=""
 DEVICE=""
@@ -41,7 +47,7 @@ cleanup() {
   local lingering
   lingering="$(lsof -ti "tcp:$PORT" 2>/dev/null || true)"
   [[ -n "$lingering" ]] && kill $lingering 2>/dev/null || true
-  if [[ $code -ne 0 ]]; then
+  if [[ $code -ne 0 || "${GHOSTPASS_KEEP_RESULTS:-}" == "1" ]]; then
     mkdir -p "$RESULTS"
     for bundle in "$WORK"/*.xcresult; do
       [[ -e "$bundle" ]] && cp -R "$bundle" "$RESULTS/" 2>/dev/null || true
@@ -88,7 +94,18 @@ print(phones[-1]["identifier"], runtime["identifier"])
 DEVICE="$(xcrun simctl create "ghostpass-tests-$$" "$DEVTYPE" "$RUNTIME")"
 say "Simulateur éphémère $DEVICE ($DEVTYPE)"
 xcrun simctl boot "$DEVICE" >/dev/null 2>&1 || true
-xcrun simctl bootstatus "$DEVICE" -b >/dev/null 2>&1 || true
+# `simctl bootstatus -b` peut ne jamais rendre la main sur un simulateur qu'on vient de
+# créer — en intégration continue, le job tournerait alors jusqu'à son propre délai.
+# On interroge nous-mêmes, avec une borne.
+booted=false
+for _ in $(seq 1 90); do
+  if xcrun simctl list devices | grep -q "$DEVICE.*Booted"; then
+    booted=true
+    break
+  fi
+  sleep 1
+done
+$booted || { echo "Le simulateur n'a pas démarré en 90 s." >&2; exit 1; }
 
 # La saisie de texte gèle une minute si le simulateur tente de synchroniser son
 # presse-papiers avec l'hôte : le clavier interroge le pasteboard à chaque prise de focus.
@@ -124,9 +141,12 @@ say "Génération du projet Xcode"
 
 run_tests() {
   local only="$1"; shift
+  # Un identifiant de test contient des « / » : tels quels, ils feraient du rapport un
+  # sous-dossier, que la conservation en cas d'échec ne ramasserait pas.
+  local nom="${only//\//-}"
   xcodebuild -project "$IOS/Ghostpass.xcodeproj" -scheme Ghostpass \
     -sdk iphonesimulator -destination "platform=iOS Simulator,id=$DEVICE" \
-    -derivedDataPath "$WORK/dd" -resultBundlePath "$WORK/$only.xcresult" \
+    -derivedDataPath "$DERIVED" -resultBundlePath "$WORK/$nom.xcresult" \
     -only-testing:"$only" "$@" test
 }
 
@@ -187,11 +207,28 @@ say "Parcours de bout en bout"
 # Pas d'environnement à passer : `xcodebuild` n'en propage aucun jusqu'au processus de
 # test. Les tests connaissent ces valeurs par défaut ; c'est le contrat entre eux et ce
 # script — d'où le port et le compte figés plus haut.
-if ! run_tests GhostpassUITests; then
+if ! run_tests GhostpassUITests/VaultFlowTests/test01ParcoursComplet \
+  -only-testing:GhostpassUITests/VaultFlowTests/test02Biometrie; then
   echo "--- journal de l'application ---" >&2
   xcrun simctl spawn "$DEVICE" log show --last 15m --style compact \
     --predicate 'process == "Ghostpass"' 2>/dev/null | grep -a "GP-" | tail -25 >&2 ||
     echo "(journal indisponible)" >&2
+  exit 1
+fi
+
+# ── Hors ligne ────────────────────────────────────────────────────────────────
+# Le coffre doit s'ouvrir sans serveur. On coupe pour de bon : simuler l'absence de
+# réseau autrement reviendrait à éprouver le simulacre plutôt que l'application.
+say "Coupure du serveur, puis réouverture hors ligne"
+kill "$SERVER_PID" 2>/dev/null || true
+lingering="$(lsof -ti "tcp:$PORT" 2>/dev/null || true)"
+[[ -n "$lingering" ]] && kill $lingering 2>/dev/null || true
+SERVER_PID=""
+sleep 2
+
+if ! run_tests GhostpassUITests/VaultFlowTests/test03HorsLigne; then
+  echo "--- journal du serveur ---" >&2
+  tail -20 "$WORK/server.log" >&2 || true
   exit 1
 fi
 

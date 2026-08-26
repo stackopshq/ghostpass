@@ -11,6 +11,8 @@ final class VaultStore: ObservableObject {
     @Published private(set) var isUnlocked = false
     @Published private(set) var isBusy = false
     @Published var errorMessage: String?
+    /// Le coffre affiché vient du disque, faute d'avoir pu joindre le serveur.
+    @Published private(set) var isOffline = false
     /// Vrai juste après un déverrouillage réussi, quand la biométrie est disponible mais
     /// pas encore configurée : l'UI peut alors proposer de l'activer.
     @Published var offersBiometricEnrollment = false
@@ -112,6 +114,7 @@ final class VaultStore: ObservableObject {
         account = nil
         entries = []
         isUnlocked = false
+        isOffline = false
         pendingPassword = nil
         offersBiometricEnrollment = false
     }
@@ -124,6 +127,7 @@ final class VaultStore: ObservableObject {
         lock()
         token = nil
         api = nil
+        VaultCache.clear()
         for key in [
             Keychain.Key.token, Keychain.Key.kdfParams, Keychain.Key.encryptedUserKey,
             Keychain.Key.encryptedPrivateKey, Keychain.Key.masterPassword,
@@ -244,20 +248,40 @@ final class VaultStore: ObservableObject {
 
     // ─── Coffre ───
 
+    /// Recharge le coffre. La copie locale s'affiche d'abord : un coffre qui reste vide
+    /// parce que le réseau manque n'est pas un coffre. Le serveur, lui, fait autorité dès
+    /// qu'il répond.
     func refresh() async {
-        guard let api, let token, let account else { return }
+        guard let account else { return }
+        if entries.isEmpty, let caches = VaultCache.load() {
+            entries = Self.entries(from: caches, with: account)
+            isOffline = true
+        }
+        guard let api, let token else { return }
         do {
             let dtos = try await api.listItems(token: token)
-            entries = dtos.compactMap { dto in
-                guard let item = try? Self.decrypt(dto, with: account) else { return nil }
-                guard !Self.isRegistry(item) else { return nil }
-                return VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt)
-            }
-            .sorted { $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending }
+            VaultCache.save(dtos)
+            entries = Self.entries(from: dtos, with: account)
+            isOffline = false
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            // Avec une copie locale sous la main, l'absence de réseau se signale sans
+            // rien interrompre. Sans elle, il n'y a rien à montrer : c'est une erreur.
+            isOffline = true
+            errorMessage = entries.isEmpty ? error.localizedDescription : nil
         }
+    }
+
+    /// Déchiffre, écarte le registre interne, ordonne. Un item illisible est ignoré
+    /// plutôt que de faire échouer la liste entière.
+    private static func entries(from dtos: [EncryptedItemDTO], with account: Account)
+        -> [VaultEntry]
+    {
+        dtos.compactMap { dto in
+            guard let item = try? decrypt(dto, with: account), !isRegistry(item) else { return nil }
+            return VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt)
+        }
+        .sorted { $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending }
     }
 
     func save(_ item: VaultItem, id: String?) async {
@@ -273,6 +297,10 @@ final class VaultStore: ObservableObject {
                 _ = try await api.createItem(token: token, encryptedKey: key, encryptedData: data)
             }
             await refresh()
+        } catch is URLError {
+            // Écrire suppose le serveur : il n'y a pas de file d'attente hors ligne, et
+            // laisser croire à un enregistrement serait pire que de le refuser.
+            errorMessage = "Serveur injoignable : la modification n'a pas été enregistrée."
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -283,6 +311,11 @@ final class VaultStore: ObservableObject {
         do {
             try await api.deleteItem(token: token, id: entry.id)
             entries.removeAll { $0.id == entry.id }
+            if let dtos = VaultCache.load() {
+                VaultCache.save(dtos.filter { $0.id != entry.id })
+            }
+        } catch is URLError {
+            errorMessage = "Serveur injoignable : la suppression n'a pas été enregistrée."
         } catch {
             errorMessage = error.localizedDescription
         }

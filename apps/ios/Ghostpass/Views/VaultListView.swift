@@ -19,6 +19,15 @@ struct VaultListView: View {
     var body: some View {
         NavigationStack {
             List {
+                if store.isOffline {
+                    Label(
+                        "Hors ligne — coffre affiché depuis cet appareil",
+                        systemImage: "wifi.slash"
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("banner.offline")
+                }
                 ForEach(visible) { entry in
                     NavigationLink(value: entry) {
                         VaultRow(entry: entry)

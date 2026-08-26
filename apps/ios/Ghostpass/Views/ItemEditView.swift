@@ -16,6 +16,8 @@ struct ItemEditView: View {
     @State private var username = ""
     @State private var password = ""
     @State private var uri = ""
+    @State private var totp = ""
+    @State private var generating = false
     @State private var noteContent = ""
     @State private var cardholder = ""
     @State private var cardNumber = ""
@@ -50,13 +52,34 @@ struct ItemEditView: View {
                             .accessibilityIdentifier("field.username")
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                        SecureField("Mot de passe", text: $password)
-                            .accessibilityIdentifier("field.password")
+                        HStack {
+                            SecureField("Mot de passe", text: $password)
+                                .accessibilityIdentifier("field.password")
+                            Button {
+                                generating = true
+                            } label: {
+                                Image(systemName: "dice")
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityIdentifier("button.generate")
+                        }
                         TextField("Adresse du site", text: $uri)
                             .accessibilityIdentifier("field.uri")
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
+                    }
+                    Section {
+                        TextField("Clé ou URI otpauth://", text: $totp)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .accessibilityIdentifier("field.totp")
+                    } header: {
+                        Text("Code à usage unique")
+                    } footer: {
+                        Text(
+                            "La clé reste chiffrée dans l'item ; les codes sont calculés "
+                                + "sur l'appareil.")
                     }
                 case .note:
                     Section("Contenu") {
@@ -98,6 +121,9 @@ struct ItemEditView: View {
                 }
             }
             .onAppear(perform: load)
+            .sheet(isPresented: $generating) {
+                PasswordGeneratorView { password = $0 }
+            }
         }
     }
 
@@ -122,6 +148,7 @@ struct ItemEditView: View {
             username = login.username
             password = login.password
             uri = login.uris.first ?? ""
+            totp = login.totp ?? ""
         case .secureNote(let note):
             kind = .note
             noteContent = note.content
@@ -142,7 +169,9 @@ struct ItemEditView: View {
             data = .login(
                 Login(
                     username: username, password: password,
-                    uris: uri.isEmpty ? [] : [uri], totp: nil,
+                    uris: uri.isEmpty ? [] : [uri],
+                    // Sans cette ligne, modifier un item effaçait sa clé TOTP en silence.
+                    totp: totp.isEmpty ? nil : totp,
                     passwordHistory: previousPasswords()))
         case .note:
             data = .secureNote(SecureNote(content: noteContent))

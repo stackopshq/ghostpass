@@ -20,6 +20,36 @@ struct ItemDetailView: View {
                     CopyRow(label: "Nom d'utilisateur", value: login.username)
                     SecretRow(label: "Mot de passe", value: login.password, revealed: $revealed)
                 }
+                if let config = login.totp.flatMap(Totp.parse) {
+                    Section("Code à usage unique") {
+                        // `TimelineView` réévalue chaque seconde : pas de minuterie à
+                        // démarrer ni à arrêter, et rien ne continue de tourner une fois
+                        // l'écran quitté.
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            if let otp = Totp.code(for: config, at: context.date) {
+                                HStack {
+                                    Text(otp.code)
+                                        .font(.system(.title2, design: .monospaced))
+                                        .accessibilityIdentifier("text.totp")
+                                    Spacer()
+                                    Text("\(otp.remaining) s")
+                                        .font(.footnote)
+                                        .foregroundStyle(otp.remaining <= 5 ? .red : .secondary)
+                                        .monospacedDigit()
+                                    Button {
+                                        Clipboard.copy(otp.code)
+                                    } label: {
+                                        Image(systemName: "doc.on.doc")
+                                    }
+                                    .buttonStyle(.borderless)
+                                }
+                            } else {
+                                Text("Clé de vérification illisible.")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
                 if !login.uris.isEmpty {
                     Section("Adresses") {
                         ForEach(login.uris, id: \.self) { uri in
@@ -64,7 +94,7 @@ private struct CopyRow: View {
             LabeledContent(label, value: value)
             Spacer()
             Button {
-                UIPasteboard.general.string = value
+                Clipboard.copy(value)
             } label: {
                 Image(systemName: "doc.on.doc")
             }
@@ -105,7 +135,7 @@ private struct SecretRow: View {
             .buttonStyle(.borderless)
             .accessibilityIdentifier("button.reveal")
             Button {
-                UIPasteboard.general.string = value
+                Clipboard.copy(value)
             } label: {
                 Image(systemName: "doc.on.doc")
             }

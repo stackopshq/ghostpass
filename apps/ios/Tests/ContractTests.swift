@@ -199,3 +199,149 @@ final class ContractTests: XCTestCase {
         XCTAssertFalse(store.isBiometricEnabled)
     }
 }
+
+/// Copie locale du coffre : ce sont les blobs chiffrés du serveur, reposés tels quels.
+final class VaultCacheTests: XCTestCase {
+    private let items = [
+        EncryptedItemDTO(
+            id: "a", encryptedKey: "2.kkk.kkk", encryptedData: "2.ddd.ddd",
+            updatedAt: 1_787_669_299_110, deletedAt: nil)
+    ]
+
+    override func setUp() { VaultCache.clear() }
+    override func tearDown() { VaultCache.clear() }
+
+    /// Sans copie locale, un coffre sans réseau s'affiche vide — ce qui ressemble à s'y
+    /// méprendre à un coffre qu'on aurait perdu.
+    func testLaCopieLocaleSeRelit() throws {
+        XCTAssertNil(VaultCache.load(), "on part d'un cache vide")
+        VaultCache.save(items)
+        let relu = try XCTUnwrap(VaultCache.load())
+        XCTAssertEqual(relu.map(\.id), ["a"])
+        XCTAssertEqual(relu.first?.encryptedData, "2.ddd.ddd")
+        XCTAssertEqual(relu.first?.updatedAt, 1_787_669_299_110)
+    }
+
+    /// Se déconnecter doit effacer la copie : laisser le coffre d'un compte sur
+    /// l'appareil après son départ serait une fuite, même chiffré.
+    func testLaCopieLocaleSEfface() {
+        VaultCache.save(items)
+        XCTAssertNotNil(VaultCache.load())
+        VaultCache.clear()
+        XCTAssertNil(VaultCache.load())
+    }
+}
+
+/// Générateur et TOTP : ils ne touchent pas au cœur Rust, mais ils doivent se comporter
+/// exactement comme leurs équivalents de la web app — un mot de passe généré ici et un
+/// code lu là doivent être de même nature, sinon les deux clients divergent en silence.
+final class GeneratorAndTotpTests: XCTestCase {
+
+    // ─── Générateur ───
+
+    func testLeMotDePasseRespecteLaLongueurDemandee() {
+        for longueur in [8, 20, 64, 128] {
+            var options = GeneratorOptions()
+            options.length = longueur
+            XCTAssertEqual(PasswordGenerator.generate(options).count, longueur)
+        }
+    }
+
+    /// Cocher « chiffres » et n'en obtenir aucun serait un mot de passe qui ne respecte
+    /// pas la consigne — le générateur garantit au moins un caractère par jeu demandé.
+    func testChaqueJeuDemandeEstRepresente() {
+        var options = GeneratorOptions()
+        options.length = 8
+        for _ in 0..<200 {
+            let mot = PasswordGenerator.generate(options)
+            XCTAssertTrue(mot.contains { $0.isLowercase }, "minuscule absente de « \(mot) »")
+            XCTAssertTrue(mot.contains { $0.isUppercase }, "majuscule absente de « \(mot) »")
+            XCTAssertTrue(mot.contains { $0.isNumber }, "chiffre absent de « \(mot) »")
+            XCTAssertTrue(
+                mot.contains { "!@#$%^&*()-_=+[]{};:,.?/".contains($0) },
+                "symbole absent de « \(mot) »")
+        }
+    }
+
+    func testUnSeulJeuNeProduitQueCeJeu() {
+        var options = GeneratorOptions(length: 40, lowercase: false, uppercase: false, digits: true, symbols: false)
+        options.length = 40
+        let mot = PasswordGenerator.generate(options)
+        XCTAssertTrue(mot.allSatisfy(\.isNumber), "« \(mot) » ne devrait contenir que des chiffres")
+    }
+
+    /// Tout décocher ne doit pas rendre un mot de passe vide.
+    func testAucunJeuRetombeSurLesMinuscules() {
+        let options = GeneratorOptions(
+            length: 16, lowercase: false, uppercase: false, digits: false, symbols: false)
+        let mot = PasswordGenerator.generate(options)
+        XCTAssertEqual(mot.count, 16)
+        XCTAssertTrue(mot.allSatisfy(\.isLowercase))
+    }
+
+    func testDeuxAppelsNeDonnentPasLeMemeMotDePasse() {
+        let options = GeneratorOptions()
+        XCTAssertNotEqual(PasswordGenerator.generate(options), PasswordGenerator.generate(options))
+    }
+
+    // ─── TOTP ───
+
+    /// Vecteurs de la RFC 6238 (secret ASCII « 12345678901234567890 », SHA-1, 8 chiffres).
+    /// S'ils passent, la mécanique est celle que tout le monde attend.
+    func testVecteursDeLaRfc6238() throws {
+        let config = OtpConfig(
+            secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", period: 30, digits: 8, algorithm: .sha1)
+        let attendus: [(TimeInterval, String)] = [
+            (59, "94287082"),
+            (1_111_111_109, "07081804"),
+            (1_111_111_111, "14050471"),
+            (1_234_567_890, "89005924"),
+            (2_000_000_000, "69279037"),
+        ]
+        for (instant, attendu) in attendus {
+            let resultat = try XCTUnwrap(Totp.code(for: config, at: Date(timeIntervalSince1970: instant)))
+            XCTAssertEqual(resultat.code, attendu, "à t=\(Int(instant))")
+        }
+    }
+
+    func testLeTempsRestantDecroitDansLaPeriode() throws {
+        let config = OtpConfig(secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ")
+        let debut = try XCTUnwrap(Totp.code(for: config, at: Date(timeIntervalSince1970: 60)))
+        let fin = try XCTUnwrap(Totp.code(for: config, at: Date(timeIntervalSince1970: 89)))
+        XCTAssertEqual(debut.remaining, 30)
+        XCTAssertEqual(fin.remaining, 1)
+        XCTAssertEqual(debut.code, fin.code, "le code ne change qu'au changement de période")
+    }
+
+    func testUneUriOtpauthEstComprise() throws {
+        let config = try XCTUnwrap(
+            Totp.parse("otpauth://totp/GhostPass:clara?secret=GEZDGNBVGY3TQOJQ&period=60&digits=8&algorithm=SHA256"))
+        XCTAssertEqual(config.secret, "GEZDGNBVGY3TQOJQ")
+        XCTAssertEqual(config.period, 60)
+        XCTAssertEqual(config.digits, 8)
+        XCTAssertEqual(config.algorithm, .sha256)
+    }
+
+    /// Un secret recopié à la main arrive avec des espaces et en minuscules.
+    func testUnSecretBrutEstNormalise() throws {
+        let config = try XCTUnwrap(Totp.parse("  gezd gnbv gy3t qojq  "))
+        XCTAssertEqual(config.secret, "GEZDGNBVGY3TQOJQ")
+        XCTAssertEqual(config.period, 30)
+        XCTAssertEqual(config.digits, 6)
+    }
+
+    func testUnChampVideNEstPasUneErreur() {
+        XCTAssertNil(Totp.parse(""))
+        XCTAssertNil(Totp.parse("   "))
+    }
+
+    /// Des paramètres absurdes sont ramenés à des valeurs utilisables plutôt que
+    /// propagés jusqu'au calcul.
+    func testDesParametresAbsurdesSontCorriges() throws {
+        let config = try XCTUnwrap(
+            Totp.parse("otpauth://totp/x?secret=GEZDGNBVGY3TQOJQ&period=0&digits=42"))
+        XCTAssertEqual(config.period, 30)
+        XCTAssertEqual(config.digits, 6)
+        XCTAssertNotNil(Totp.code(for: config))
+    }
+}

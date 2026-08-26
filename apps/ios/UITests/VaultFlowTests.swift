@@ -97,8 +97,22 @@ final class VaultFlowTests: XCTestCase {
         }
         remplir(app, "field.name", "Forgejo")
         remplir(app, "field.username", "clara")
+
+        // Le générateur : on vérifie qu'il propose bien quelque chose, puis on renonce —
+        // la suite du parcours a besoin d'un mot de passe connu.
+        app.buttons["button.generate"].tap()
+        let propose = app.staticTexts["text.generated"]
+        XCTAssertTrue(propose.waitForExistence(timeout: 20), "le générateur ne s'ouvre pas")
+        let premier = propose.label
+        XCTAssertGreaterThanOrEqual(premier.count, 8, "mot de passe généré trop court")
+        app.buttons["button.regenerate"].tap()
+        XCTAssertNotEqual(propose.label, premier, "régénérer redonne le même mot de passe")
+        shot(app, "5-generateur")
+        app.buttons["Annuler"].firstMatch.tap()
+
         remplir(app, "field.password", "s3cret-initial")
         remplir(app, "field.uri", "https://git.stackops.ch")
+        remplir(app, "field.totp", "GEZDGNBVGY3TQOJQ")
         app.buttons["button.save"].tap()
         XCTAssertTrue(
             app.staticTexts["Forgejo"].waitForExistence(timeout: 60),
@@ -115,11 +129,19 @@ final class VaultFlowTests: XCTestCase {
             app.staticTexts["Forgejo prod"].waitForExistence(timeout: 60),
             "l'écran de détail garde l'ancien contenu après modification")
 
-        // 4b. Une modification ne doit pas emporter le mot de passe qu'on n'a pas touché
+        // 4b. Une modification ne doit emporter ni le mot de passe ni la clé TOTP :
+        // ni l'un ni l'autre n'a été touché, et leur disparition serait silencieuse.
         app.buttons["button.reveal"].tap()
         XCTAssertTrue(
             app.staticTexts["s3cret-initial"].waitForExistence(timeout: 30),
             "le mot de passe a été écrasé par l'édition")
+        let code = app.staticTexts["text.totp"]
+        XCTAssertTrue(
+            code.waitForExistence(timeout: 30),
+            "la clé TOTP a été effacée par l'édition")
+        XCTAssertEqual(
+            code.label.count, 6, "un code TOTP à six chiffres était attendu, pas « \(code.label) »")
+        XCTAssertTrue(code.label.allSatisfy(\.isNumber), "code TOTP non numérique : « \(code.label) »")
         shot(app, "2-detail")
 
         // 5. Suppression
@@ -216,5 +238,35 @@ final class VaultFlowTests: XCTestCase {
             app.staticTexts[demoItem].waitForExistence(timeout: 120),
             "la biométrie n'a pas rouvert le coffre")
         shot(app, "4-biometrie")
+    }
+
+    /// Le coffre doit s'ouvrir **sans serveur**. Lancé par le script après extinction du
+    /// backend, ce test suppose qu'un run précédent a laissé une session et une copie
+    /// locale — c'est-à-dire l'état d'un téléphone qui perd le réseau.
+    func test03HorsLigne() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        // Une session est enregistrée : l'écran ne demande que le mot de passe maître.
+        let champ = app.descendants(matching: .any)
+            .matching(identifier: "field.master").firstMatch
+        XCTAssertTrue(
+            champ.waitForExistence(timeout: 30),
+            "aucune session enregistrée : lancez ce test après le parcours complet")
+        champ.tap()
+        app.typeText(master)
+        app.buttons["button.submit"].tap()
+
+        // Déverrouiller ne demande pas le réseau : les blobs sont sur l'appareil.
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 180),
+            "le coffre ne s'ouvre pas hors ligne")
+        XCTAssertTrue(
+            app.otherElements["banner.offline"].waitForExistence(timeout: 30)
+                || app.staticTexts.containing(
+                    NSPredicate(format: "label CONTAINS[c] %@", "Hors ligne")).element.exists,
+            "rien n'indique que le coffre affiché vient de l'appareil")
+        aucuneLigneFantome(app, "hors ligne")
+        shot(app, "6-hors-ligne")
     }
 }
