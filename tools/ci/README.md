@@ -21,6 +21,26 @@ Le jeton d'enregistrement s'obtient dans la forge : **Settings > Actions > Runne
 Create new runner**, au niveau du dépôt ou de l'organisation pour le partager entre les
 projets de la suite.
 
+> **La portée du jeton décide de tout, et l'erreur est silencieuse.** Les pages
+> *Paramètres **utilisateur** > Actions > Exécuteurs* et *Paramètres du **dépôt** >
+> Actions > Exécuteurs* se ressemblent et délivrent chacune un jeton. Un runner
+> enregistré avec le premier ne recevra jamais de tâche d'un dépôt appartenant à une
+> organisation : `register` répond « registered successfully », le daemon annonce son
+> étiquette, et le job attend indéfiniment un exécuteur que le dépôt ne voit pas. On l'a
+> payé deux fois. L'URL sans ambiguïté :
+> `https://git.stackops.ch/stackops/ghostpass/settings/actions/runners`, ou
+> `.../org/stackops/settings/actions/runners` pour toute l'organisation.
+>
+> Pour vérifier plutôt que d'espérer, une fois enregistré :
+>
+> ```sh
+> curl -sS -H "Authorization: token <JETON_API>" \
+>   https://git.stackops.ch/api/v1/repos/stackops/ghostpass/actions/runners | jq .
+> ```
+>
+> Une liste vide veut dire que le runner est ailleurs. (L'exécuteur Linux partagé n'y
+> figure pas : il est de type *Global*, la page web agrège les portées, l'API non.)
+
 `register` écrit un fichier `.runner` — son identité auprès de la forge — **dans le
 répertoire courant**, et `daemon` le cherche au même endroit. D'où un dossier à soi,
 plutôt qu'un fichier égaré dans le dépôt ou au fond du dossier personnel :
@@ -37,6 +57,17 @@ gitea-runner register --no-interactive \
 `macos:host` — le suffixe compte. Il fait exécuter les tâches **directement sur la
 machine** plutôt que dans un conteneur : macOS n'en a pas, et le job a besoin de l'Xcode
 du poste, pas d'une image.
+
+**Une tâche à la fois.** `run-ios-tests.sh` prend le port 3111 en dur, pilote un
+simulateur nommé et écrit dans `apps/ios/TestResults/` : deux jobs iOS concurrents sur la
+même machine se marchent dessus, et le second meurt sur « Le port 3111 est déjà occupé ».
+Or un même commit en déclenche deux — celui du `push` et celui de la pull request. Il faut
+donc borner le runner, dans `~/.gitea-runner/config.yaml` :
+
+```yaml
+runner:
+  capacity: 1
+```
 
 ## En dépannage, sur un poste personnel
 
