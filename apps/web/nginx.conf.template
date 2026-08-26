@@ -1,0 +1,40 @@
+# Gabarit rempli au démarrage par l'image nginx (envsubst sur ${GHOSTPASS_API}).
+#
+# Le relais et le lot statique partagent une origine unique : c'est ce que
+# WebAuthn exige, et ce que le code de l'interface suppose en appelant `/api/…`
+# sans préfixe.
+
+server {
+    # Port non privilégié : l'image tourne sans droits particuliers.
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # En-têtes que le serveur d'API pose déjà de son côté (helmet) mais que le
+    # lot statique ne recevrait pas autrement.
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy no-referrer always;
+
+    # Tout ce qui appartient au serveur. `/.well-known/webauthn` en fait partie :
+    # c'est lui qui déclare les origines liées, et le servir en statique ferait
+    # échouer l'enrôlement d'une clé sans message clair.
+    location ~ ^/(api|health|\.well-known/webauthn) {
+        proxy_pass ${GHOSTPASS_API};
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Un coffre-fort ne doit jamais servir une réponse d'API mise en cache.
+        proxy_buffering off;
+    }
+
+    # Application à page unique : toute route inconnue rend l'index, sinon un
+    # rechargement sur une URL profonde répond 404.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

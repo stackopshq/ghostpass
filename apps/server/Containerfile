@@ -1,0 +1,74 @@
+# Image du backend GhostPass.
+#
+# POURQUOI CE FICHIER EXISTE
+# --------------------------
+# Le dépôt n'avait qu'un `docker-compose.yml` qui dit lui-même « stack de dev » :
+# un Node vierge, le source monté depuis le poste, et `npm ci && npm start` à
+# chaque démarrage. Ça se lance sur une machine de développement ; ça ne se
+# déploie pas — rien n'est figé, la version installée dépend du jour.
+#
+# DEUX CHOIX À CONNAÎTRE AVANT DE LA MODIFIER
+# -------------------------------------------
+# 1. `tsx` est une dépendance de DÉVELOPPEMENT, et pourtant `npm start` s'en
+#    sert (`tsx src/index.ts`). Une installation `--omit=dev` produirait donc
+#    une image qui construit sans erreur et meurt au premier démarrage. On
+#    installe l'arbre complet, délibérément.
+#
+#    L'alternative — compiler en JavaScript et lancer `node` — serait plus
+#    propre, mais elle change le mode d'exécution d'un gestionnaire de mots de
+#    passe. Le conservatisme l'emporte : l'image lance ce que les tests
+#    exercent.
+#
+# 2. `better-sqlite3` est une dépendance native. Elle est nécessaire même en
+#    PostgreSQL, parce que le module est importé quel que soit le moteur. Ses
+#    binaires précompilés couvrent Node 22 sur linux/amd64 ; les outils de
+#    compilation restent installés dans l'étage jetable au cas où npm doive
+#    reconstruire, et n'atteignent jamais l'image finale.
+
+# ---------------------------------------------------------------------------
+# Étage de dépendances — jetable
+# ---------------------------------------------------------------------------
+FROM docker.io/library/node:22.20.0-bookworm-slim AS deps
+
+# Nécessaires seulement si un binaire précompilé manque pour cette plateforme.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/apps/server
+COPY apps/server/package.json apps/server/package-lock.json ./
+# `npm ci` et non `npm install` : le verrou fait foi, sinon l'image dépend du
+# jour où elle est construite.
+RUN npm ci
+
+# ---------------------------------------------------------------------------
+# Image finale
+# ---------------------------------------------------------------------------
+FROM docker.io/library/node:22.20.0-bookworm-slim
+
+ENV NODE_ENV=production \
+    PORT=3000
+
+# Utilisateur non privilégié : l'image `node` fournit déjà `node` (uid 1000).
+# Le processus n'a aucune raison d'être root, et un gestionnaire de mots de
+# passe encore moins que les autres.
+WORKDIR /app/apps/server
+COPY --from=deps --chown=node:node /app/apps/server/node_modules ./node_modules
+COPY --chown=node:node apps/server/package.json apps/server/tsconfig.json ./
+COPY --chown=node:node apps/server/src ./src
+
+USER node
+EXPOSE 3000
+
+# ATTENTION : podman construit en format OCI par défaut, et le format OCI
+# **ignore HEALTHCHECK** — avec un simple avertissement qu'on ne lit pas. Il
+# faut donc `podman build --format docker`, sans quoi cette directive ne sert
+# à rien. Le Quadlet pose de son côté un `HealthCmd=` équivalent, pour que la
+# surveillance tienne quel que soit le format de l'image.
+#
+# `/health` existe et ne touche pas la base : il dit que le processus répond,
+# pas que le stockage est sain. Ne pas en déduire davantage.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+CMD ["npm", "start"]
