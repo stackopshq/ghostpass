@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
+          }
+        }
+      }
+    },
     " — effacé dans %lld s": {
       "localizations": {
         "en": {
@@ -32,12 +42,38 @@
         }
       }
     },
+    "%@ n'a pas pu être activé (code %d).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ n'a pas pu être activé (code %2$d)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ could not be enabled (code %d)."
+          }
+        }
+      }
+    },
     "%lld": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld"
+          }
+        }
+      }
+    },
+    "%lld entrées importées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld entries imported."
           }
         }
       }
@@ -68,6 +104,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld items examined"
+          }
+        }
+      }
+    },
+    "(sans nom)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(no name)"
           }
         }
       }
@@ -202,6 +248,16 @@
         }
       }
     },
+    "Aperçu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview"
+          }
+        }
+      }
+    },
     "Apparence": {
       "localizations": {
         "en": {
@@ -238,6 +294,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "No password known to public breaches."
+          }
+        }
+      }
+    },
+    "Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont pas reconnues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No entry found: the file is empty, or its columns are not recognised."
           }
         }
       }
@@ -298,6 +364,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Digits"
+          }
+        }
+      }
+    },
+    "Choisir un fichier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a file"
+          }
+        }
+      }
+    },
+    "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, 1Password, LastPass et Chrome sont reconnues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the CSV file exported by your current manager. Bitwarden, 1Password, LastPass and Chrome column names are recognised."
           }
         }
       }
@@ -662,6 +748,16 @@
         }
       }
     },
+    "Entrées trouvées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entries found"
+          }
+        }
+      }
+    },
     "Erreur": {
       "localizations": {
         "en": {
@@ -718,6 +814,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Close"
+          }
+        }
+      }
+    },
+    "Fichier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File"
           }
         }
       }
@@ -812,6 +918,36 @@
         }
       }
     },
+    "Importer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        }
+      }
+    },
+    "Importer %lld entrées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import %lld entries"
+          }
+        }
+      }
+    },
+    "Importer un CSV": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import a CSV"
+          }
+        }
+      }
+    },
     "La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre.": {
       "localizations": {
         "en": {
@@ -858,6 +994,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "The local vault is empty."
+          }
+        }
+      }
+    },
+    "Le fichier est lu sur l'appareil et rien d'autre n'en sort : chaque entrée est chiffrée avant d'être déposée. Pensez à l'effacer ensuite — un export CSV contient vos mots de passe en clair.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is read on the device and nothing else leaves it: each entry is encrypted before being uploaded. Remember to delete it afterwards — a CSV export holds your passwords in the clear."
+          }
+        }
+      }
+    },
+    "Le fichier n'a pas pu être lu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be read."
+          }
+        }
+      }
+    },
+    "Le fichier n'a pas pu être ouvert.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be opened."
           }
         }
       }
@@ -1058,6 +1224,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Medium"
+          }
+        }
+      }
+    },
+    "N'oubliez pas d'effacer le fichier CSV : il contient vos mots de passe en clair.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do not forget to delete the CSV file: it holds your passwords in the clear."
           }
         }
       }
@@ -1272,6 +1448,16 @@
         }
       }
     },
+    "Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing has been uploaded yet. The entries will join the vault as they are; none overwrites what is already there."
+          }
+        }
+      }
+    },
     "Rien à signaler": {
       "localizations": {
         "en": {
@@ -1368,6 +1554,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Server"
+          }
+        }
+      }
+    },
+    "Serveur injoignable : l'import s'est arrêté en chemin.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: the import stopped partway."
           }
         }
       }
@@ -1732,6 +1928,16 @@
         }
       }
     },
+    "et %lld autres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "and %lld more"
+          }
+        }
+      }
+    },
     "https://ghostpass.stackops.ch": {
       "localizations": {
         "en": {
@@ -1778,6 +1984,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“System” follows the device setting, including its automatic switch to night."
+          }
+        }
+      }
+    },
+    "À importer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To import"
           }
         }
       }

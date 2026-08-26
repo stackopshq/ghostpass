@@ -454,6 +454,35 @@ final class VaultStore: ObservableObject {
             echec: tr("Serveur injoignable : les favoris n'ont pas été enregistrés."))
     }
 
+    // ─── Import ───
+
+    /// Dépose une fournée d'items d'un coup. Un seul rechargement à la fin : rafraîchir le
+    /// coffre après chaque ligne d'un fichier de deux cents entrées ferait deux cents
+    /// allers-retours pour rien, et l'écran clignoterait tout du long.
+    ///
+    /// Rend le nombre d'items effectivement déposés. En cas de coupure à mi-chemin, ceux
+    /// qui sont passés restent : le dire vaut mieux que laisser croire à un échec total.
+    @discardableResult
+    func importItems(_ items: [VaultItem]) async -> Int {
+        guard let api, let token, let account else { return 0 }
+        isBusy = true
+        defer { isBusy = false }
+        var deposes = 0
+        do {
+            for item in items {
+                let (key, data) = try Self.encrypt(item, with: account)
+                _ = try await api.createItem(token: token, encryptedKey: key, encryptedData: data)
+                deposes += 1
+            }
+        } catch is URLError {
+            errorMessage = tr("Serveur injoignable : l'import s'est arrêté en chemin.")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        await refresh()
+        return deposes
+    }
+
     // ─── Récupération de compte ───
 
     /// Fabrique un kit de récupération et le dépose au serveur. Rend la clé à afficher —

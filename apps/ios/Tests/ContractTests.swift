@@ -829,3 +829,127 @@ final class RecoveryTests: XCTestCase {
             "une clé de récupération fausse a été acceptée")
     }
 }
+
+// ─── Import CSV ───────────────────────────────────────────────────────────────
+
+/// Un import est irréversible à l'échelle d'un coffre : deux cents entrées mal lues se
+/// reprennent une par une. Ce qui casse silencieusement, ce sont les cas de bord du format
+/// — un mot de passe qui contient une virgule, un guillemet, un saut de ligne — et les
+/// noms de colonnes, qui diffèrent d'un gestionnaire à l'autre. Les vecteurs ci-dessous
+/// sont ceux du parseur de la web app, pour que le même fichier donne le même coffre.
+///
+/// Les littéraux emploient les délimiteurs étendus de Swift : un CSV contient des
+/// guillemets, et `"""` au fil d'une ligne refermerait le littéral au mauvais endroit.
+final class CsvImportTests: XCTestCase {
+    private func login(_ item: VaultItem) throws -> Login {
+        guard case .login(let login) = item.data else {
+            throw XCTSkip("un Login était attendu")
+        }
+        return login
+    }
+
+    func testUnFichierSimpleSeLit() throws {
+        let csv = #"""
+            name,username,password,url
+            GitHub,clara,s3cret,https://github.com
+            """#
+        let items = CsvImport.items(csv)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].name, "GitHub")
+        let compte = try login(items[0])
+        XCTAssertEqual(compte.username, "clara")
+        XCTAssertEqual(compte.password, "s3cret")
+        XCTAssertEqual(compte.uris, ["https://github.com"])
+    }
+
+    /// Une virgule dans un mot de passe est le cas qui casse un découpage naïf — et il
+    /// donnerait un mot de passe tronqué, sans que rien ne le signale.
+    func testUnChampEntreGuillemetsGardeSesVirgules() throws {
+        let csv = #"""
+            name,password
+            Forgejo,"a,b,c"
+            """#
+        XCTAssertEqual(try login(CsvImport.items(csv)[0]).password, "a,b,c")
+    }
+
+    /// Deux guillemets consécutifs valent un guillemet littéral.
+    func testUnGuillemetDoubleSeReduit() throws {
+        let csv = #"""
+            name,password
+            Forgejo,"il a dit ""bonjour"""
+            """#
+        XCTAssertEqual(try login(CsvImport.items(csv)[0]).password, #"il a dit "bonjour""#)
+    }
+
+    func testUnSautDeLigneEchappeNeCoupePasLEnregistrement() {
+        let csv = "name,password\n\"Deux\nlignes\",s3cret\n"
+        let items = CsvImport.items(csv)
+        XCTAssertEqual(items.count, 1, "le saut de ligne échappé a coupé l'enregistrement")
+        XCTAssertEqual(items[0].name, "Deux\nlignes")
+    }
+
+    /// Chaque gestionnaire nomme ses colonnes à sa façon. La table d'équivalences est ce
+    /// qui rend l'import utilisable sans retoucher le fichier à la main.
+    func testLesColonnesDesConcurrentsSontReconnues() throws {
+        let bitwarden = #"""
+            folder,favorite,type,name,notes,fields,login_uri,login_username,login_password,login_totp
+            Travail,,login,Forgejo,,,https://git.stackops.ch,clara,s3cret,GEZDGNBVGY3TQOJQ
+            """#
+        let items = CsvImport.items(bitwarden)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].name, "Forgejo")
+        XCTAssertEqual(items[0].folder, "Travail")
+        let compte = try login(items[0])
+        XCTAssertEqual(compte.username, "clara")
+        XCTAssertEqual(compte.password, "s3cret")
+        XCTAssertEqual(compte.uris, ["https://git.stackops.ch"])
+        XCTAssertEqual(compte.totp, "GEZDGNBVGY3TQOJQ")
+
+        let chrome = #"""
+            name,url,username,password
+            GitHub,https://github.com,clara,s3cret
+            """#
+        XCTAssertEqual(CsvImport.items(chrome).first?.name, "GitHub")
+
+        let onepassword = #"""
+            title,website,login,password
+            Amazon,https://amazon.fr,clara,s3cret
+            """#
+        let un = CsvImport.items(onepassword)
+        XCTAssertEqual(un.first?.name, "Amazon")
+        XCTAssertEqual(try login(un[0]).username, "clara")
+    }
+
+    /// Les exports sèment des lignes vides ; les avaler produirait des entrées fantômes.
+    func testLesLignesVidesSontIgnorees() {
+        XCTAssertEqual(CsvImport.items("name,password\n\nGitHub,s3cret\n\n\n").count, 1)
+    }
+
+    func testUnFichierSansEnregistrementNeDonneRien() {
+        XCTAssertTrue(CsvImport.items("").isEmpty)
+        XCTAssertTrue(
+            CsvImport.items("name,password").isEmpty, "l'en-tête seul n'est pas une entrée")
+    }
+
+    /// Une colonne absente ne doit pas décaler les suivantes ni faire échouer la lecture.
+    func testUneLigneTropCourteSeCompleteEnVide() throws {
+        let csv = #"""
+            name,username,password,url
+            GitHub,clara
+            """#
+        let items = CsvImport.items(csv)
+        XCTAssertEqual(items.count, 1)
+        let compte = try login(items[0])
+        XCTAssertEqual(compte.password, "")
+        XCTAssertTrue(compte.uris.isEmpty, "une adresse vide ne doit pas produire d'URI vide")
+    }
+
+    /// Sans nom, l'entrée reste identifiable dans la liste plutôt que d'y figurer en blanc.
+    func testUneEntreeSansNomEnRecoitUn() {
+        let csv = #"""
+            name,username,password
+            ,clara,s3cret
+            """#
+        XCTAssertFalse(CsvImport.items(csv).first?.name.isEmpty ?? true)
+    }
+}

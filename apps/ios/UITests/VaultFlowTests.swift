@@ -275,7 +275,16 @@ final class VaultFlowTests: XCTestCase {
         aucuneLigneFantome(app, "après mise en favori")
         shot(app, "4-favoris")
 
-        // 5. Santé du coffre
+        // 5. Import : l'écran s'ouvre et explique. Le choix du fichier appartient au
+        // sélecteur du système ; ce qui nous revient — la lecture du CSV — est éprouvé
+        // par les tests de contrat, sur des vecteurs qu'un parcours ne saurait produire.
+        ouvrirLeMenu(app, "button.import")
+        XCTAssertTrue(
+            app.buttons["button.pickCsv"].waitForExistence(timeout: 30),
+            "l'écran d'import ne s'ouvre pas")
+        app.buttons["button.closeImport"].tap()
+
+        // 6. Santé du coffre
         ouvrirLeMenu(app, "button.health")
         let resume = app.descendants(matching: .any)
             .matching(identifier: "card.healthSummary").firstMatch
