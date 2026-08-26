@@ -15,3 +15,19 @@ paths = [
   '''(^|/)Cargo\.lock$''',
   '''(^|/)package-lock\.json$''',
 ]
+# Le secret d'essai de la RFC 6238, autorisé PAR SA VALEUR et non par son
+# emplacement. `GEZDGNBVGY3TQOJQ` est le base32 de « 1234567890 » et sa forme
+# doublée celui de « 12345678901234567890 », imprimé dans la norme : sans lui,
+# les tests TOTP ne prouvent rien, puisque les codes attendus (94287082,
+# 07081804…) en dérivent.
+#
+# Autoriser la valeur plutôt que le répertoire est délibéré. Une allowlist sur
+# `apps/ios/Tests/` aurait aussi couvert un vrai secret collé là par accident —
+# exactement le cas que ce scan existe pour attraper.
+#
+# Les deux longueurs sont couvertes : la norme donne le secret sur 20 octets,
+# et les tests de durée se contentent des 10 premiers. N'avoir écrit que la
+# forme longue laissait passer deux trouvailles — vérifié, pas supposé.
+regexes = [
+  '''^GEZDGNBVGY3TQOJQ(GEZDGNBVGY3TQOJQ)?$''',
+]
