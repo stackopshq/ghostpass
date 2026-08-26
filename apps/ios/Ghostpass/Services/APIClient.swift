@@ -69,6 +69,53 @@ private struct ServerError: Decodable {
     let mfaType: String?
 }
 
+// ─── Accès d'urgence ───
+
+/// Un lien d'accès d'urgence, vu depuis l'un ou l'autre bout.
+struct EmergencyContactDTO: Decodable, Identifiable {
+    let id: String
+    let contactEmail: String
+    let role: String
+    let waitDays: Int
+    let status: String
+    let requestedAt: Int?
+    /// Renseigné seulement dans le sens « je suis le contact » : le délai est-il écoulé.
+    var available: Bool?
+}
+
+struct EmergencyListDTO: Decodable {
+    let asGrantor: [EmergencyContactDTO]
+    let asGrantee: [EmergencyContactDTO]
+}
+
+/// Coffre du donneur, tel que le serveur le remet au contact une fois l'accès ouvert.
+struct EmergencyAccessDTO: Decodable {
+    let role: String
+    let sealedUserKey: String
+    let grantorPublicKey: String
+    let grantorEmail: String
+    /// Chaîne contenant du JSON, comme au prélogin : colonne TEXT rendue telle quelle.
+    let grantorKdfParams: String
+    let items: [EncryptedItemDTO]
+}
+
+private struct PublicKeyDTO: Decodable {
+    let userId: String
+    let publicKey: String
+}
+
+private struct EmergencyInviteBody: Encodable {
+    let email: String
+    let role: String
+    let waitDays: Int
+    let sealedUserKey: String
+}
+
+private struct TakeoverBody: Encodable {
+    let masterPasswordHash: String
+    let encryptedUserKey: String
+}
+
 /// Client HTTP du serveur GhostPass. Il ne voit jamais que du chiffré : le clair
 /// n'existe que de l'autre côté de la frontière FFI.
 struct APIClient {
@@ -213,5 +260,58 @@ struct APIClient {
     /// Suppression définitive : l'item ne revient pas.
     func purgeItem(token: String, id: String) async throws {
         _ = try await request("DELETE", "api/vault/trash/\(id)", token: token)
+    }
+
+    // ─── Accès d'urgence ───
+
+    /// Clé publique de partage d'un autre utilisateur, pour lui sceller quelque chose.
+    func lookupPublicKey(token: String, email: String) async throws -> String {
+        var composants = URLComponents()
+        composants.path = "api/users/lookup"
+        composants.queryItems = [URLQueryItem(name: "email", value: email)]
+        guard let chemin = composants.string else { throw APIError.badURL }
+        return try decode(PublicKeyDTO.self, from: await request("GET", chemin, token: token))
+            .publicKey
+    }
+
+    func listEmergency(token: String) async throws -> EmergencyListDTO {
+        try decode(EmergencyListDTO.self, from: await request("GET", "api/emergency", token: token))
+    }
+
+    /// Désigne un contact. `sealedUserKey` a été scellée par le cœur vers SA clé publique :
+    /// le serveur transporte un blob qu'il ne peut pas ouvrir.
+    func inviteEmergency(
+        token: String, email: String, role: String, waitDays: Int, sealedUserKey: String
+    ) async throws {
+        let body = try JSONEncoder().encode(
+            EmergencyInviteBody(
+                email: email, role: role, waitDays: waitDays, sealedUserKey: sealedUserKey))
+        _ = try await request("POST", "api/emergency", token: token, body: body)
+    }
+
+    /// `accept` et `request` sont du ressort du contact, `approve` et `reject` du donneur.
+    func emergencyAction(token: String, id: String, action: String) async throws {
+        _ = try await request("POST", "api/emergency/\(id)/\(action)", token: token)
+    }
+
+    func removeEmergency(token: String, id: String) async throws {
+        _ = try await request("DELETE", "api/emergency/\(id)", token: token)
+    }
+
+    /// Le coffre du donneur. Refusé par le serveur tant que le délai d'attente court.
+    func emergencyAccess(token: String, id: String) async throws -> EmergencyAccessDTO {
+        try decode(
+            EmergencyAccessDTO.self,
+            from: await request("GET", "api/emergency/\(id)/access", token: token))
+    }
+
+    /// Reprise : impose au donneur un nouveau mot de passe maître, calculé par le cœur.
+    func emergencyTakeover(
+        token: String, id: String, masterPasswordHash: String, encryptedUserKey: String
+    ) async throws {
+        let body = try JSONEncoder().encode(
+            TakeoverBody(
+                masterPasswordHash: masterPasswordHash, encryptedUserKey: encryptedUserKey))
+        _ = try await request("POST", "api/emergency/\(id)/takeover", token: token, body: body)
     }
 }

@@ -747,4 +747,136 @@ final class VaultStore: ObservableObject {
         }
         return (key, data)
     }
+
+    // ─── Accès d'urgence ───
+
+    /// Les deux sens du lien : ceux à qui j'ai confié une clé, et ceux qui m'en ont confié une.
+    func lienDUrgence() async -> (donnes: [LienDUrgence], recus: [LienDUrgence]) {
+        guard let api, let token else { return ([], []) }
+        do {
+            let liste = try await api.listEmergency(token: token)
+            return (
+                liste.asGrantor.compactMap(LienDUrgence.init),
+                liste.asGrantee.compactMap(LienDUrgence.init)
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+            return ([], [])
+        }
+    }
+
+    /// Confie l'accès à un contact. Le scellement se fait ici, en local : le serveur ne reçoit
+    /// qu'un blob chiffré vers la clé publique du contact, qu'il ne peut pas ouvrir lui-même.
+    func confierLAcces(a email: String, role: RoleDUrgence, delai: Int) async -> Bool {
+        guard let api, let token, let account else { return false }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let cle = try await api.lookupPublicKey(token: token, email: email)
+            let scelle = try account.sealUserKeyFor(contactPublicKey: cle)
+            try await api.inviteEmergency(
+                token: token, email: email, role: role.rawValue, waitDays: delai,
+                sealedUserKey: scelle)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    /// `accept` et `request` appartiennent au contact, `approve` et `reject` au donneur.
+    /// Le serveur vérifie qui a le droit de quoi ; on ne fait que transmettre.
+    func agirSurLUrgence(_ id: String, action: String) async -> Bool {
+        guard let api, let token else { return false }
+        do {
+            try await api.emergencyAction(token: token, id: id, action: action)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func revoquerLUrgence(_ id: String) async -> Bool {
+        guard let api, let token else { return false }
+        do {
+            try await api.removeEmergency(token: token, id: id)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Ouvre le coffre du donneur. L'USK récupérée reste dans le cœur Rust : on ne rend que
+    /// des items déjà déchiffrés, et le coffre d'urgence lui-même n'est pas conservé.
+    func ouvrirLeCoffreDUrgence(_ id: String) async -> CoffreDUrgenceOuvert? {
+        guard let api, let token, let account else { return nil }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let acces = try await api.emergencyAccess(token: token, id: id)
+            let coffre = try account.openEmergency(
+                grantorPublicKey: acces.grantorPublicKey, sealed: acces.sealedUserKey)
+            let entrees = acces.items.compactMap { dto -> VaultEntry? in
+                guard let item = try? coffre.ouvrir(dto), !Self.isRegistry(item)
+                else { return nil }
+                return VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt)
+            }
+            return CoffreDUrgenceOuvert(
+                lien: id,
+                role: RoleDUrgence(rawValue: acces.role) ?? .view,
+                donneur: acces.grantorEmail,
+                kdfParams: acces.grantorKdfParams,
+                entrees: entrees.sorted { $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending },
+                coffre: coffre)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Reprise : impose un nouveau mot de passe maître au donneur. Le calcul est fait par le
+    /// cœur à partir de l'USK récupérée ; le serveur reçoit un hash et une USK ré-enveloppée.
+    func reprendreLeCompte(_ ouvert: CoffreDUrgenceOuvert, nouveauMotDePasse: String) async -> Bool
+    {
+        guard let api, let token else { return false }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let json = try ouvert.coffre.takeover(
+                grantorEmail: ouvert.donneur, kdfParamsJson: ouvert.kdfParams,
+                newPassword: nouveauMotDePasse)
+            let reset = try JSONDecoder().decode(RepriseDUrgence.self, from: Data(json.utf8))
+            try await api.emergencyTakeover(
+                token: token, id: ouvert.lien, masterPasswordHash: reset.masterPasswordHash,
+                encryptedUserKey: reset.encryptedUserKey)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+}
+
+/// Coffre d'un donneur, ouvert le temps d'une consultation. `coffre` reste un objet opaque du
+/// cœur : il détient l'USK, elle ne traverse jamais la frontière.
+struct CoffreDUrgenceOuvert {
+    let lien: String
+    let role: RoleDUrgence
+    let donneur: String
+    let kdfParams: String
+    let entrees: [VaultEntry]
+    let coffre: EmergencyVault
+}
+
+/// Ce que le cœur renvoie pour une reprise, en snake_case comme le reste du binding.
+private struct RepriseDUrgence: Decodable {
+    let masterPasswordHash: String
+    let encryptedUserKey: String
+
+    enum CodingKeys: String, CodingKey {
+        case masterPasswordHash = "master_password_hash"
+        case encryptedUserKey = "encrypted_user_key"
+    }
 }

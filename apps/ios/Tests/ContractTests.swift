@@ -1126,3 +1126,80 @@ final class VerrouillageTests: XCTestCase {
         XCTAssertEqual(Verrouillage.quinzeMinutes.delai, 900)
     }
 }
+
+// ─── Accès d'urgence ──────────────────────────────────────────────────────────
+
+final class AccesDUrgenceTests: XCTestCase {
+    private func dto(
+        role: String = "view", status: String = "invited", waitDays: Int = 7,
+        requestedAt: Int? = nil, available: Bool? = nil
+    ) -> EmergencyContactDTO {
+        EmergencyContactDTO(
+            id: "lien-1", contactEmail: "kevin@stackops.ch", role: role, waitDays: waitDays,
+            status: status, requestedAt: requestedAt, available: available)
+    }
+
+    func testUnLienValideSeTraduitFidelement() throws {
+        let lien = try XCTUnwrap(LienDUrgence(dto(role: "takeover", status: "requested")))
+        XCTAssertEqual(lien.contactEmail, "kevin@stackops.ch")
+        XCTAssertEqual(lien.role, .takeover)
+        XCTAssertEqual(lien.etat, .requested)
+        XCTAssertEqual(lien.waitDays, 7)
+    }
+
+    /// Un rôle ou un état que l'application ne connaît pas ne doit pas produire une ligne
+    /// muette dans l'écran : mieux vaut ne rien afficher que d'afficher n'importe quoi.
+    func testUnRoleInconnuEstEcarte() {
+        XCTAssertNil(LienDUrgence(dto(role: "administrateur")))
+    }
+
+    func testUnEtatInconnuEstEcarte() {
+        XCTAssertNil(LienDUrgence(dto(status: "en_cours_de_reflexion")))
+    }
+
+    /// Le serveur renvoie des millisecondes ; les confondre avec des secondes placerait la
+    /// demande en 1970 et l'ouverture prévue juste après.
+    func testLHorodatageEstLuEnMillisecondes() throws {
+        let quandEnMs = 1_800_000_000_000
+        let lien = try XCTUnwrap(
+            LienDUrgence(dto(status: "requested", requestedAt: quandEnMs)))
+        XCTAssertEqual(
+            try XCTUnwrap(lien.requestedAt).timeIntervalSince1970, 1_800_000_000, accuracy: 1)
+    }
+
+    func testLOuverturePrevueTombeApresLeDelai() throws {
+        let depart = 1_800_000_000_000
+        let lien = try XCTUnwrap(
+            LienDUrgence(dto(status: "requested", waitDays: 3, requestedAt: depart)))
+        let attendue = Date(timeIntervalSince1970: 1_800_000_000 + 3 * 86_400)
+        XCTAssertEqual(
+            try XCTUnwrap(lien.ouverturePrevue()).timeIntervalSince1970,
+            attendue.timeIntervalSince1970, accuracy: 1)
+    }
+
+    /// Sans demande en cours, il n'y a pas de date à annoncer — et en inventer une ferait
+    /// croire à un compte à rebours qui n'a pas commencé.
+    func testAucuneOuverturePrevueSansDemande() throws {
+        let accepte = try XCTUnwrap(LienDUrgence(dto(status: "accepted", requestedAt: nil)))
+        XCTAssertNil(accepte.ouverturePrevue())
+        let invite = try XCTUnwrap(
+            LienDUrgence(dto(status: "invited", requestedAt: 1_800_000_000_000)))
+        XCTAssertNil(invite.ouverturePrevue())
+    }
+
+    /// `available` n'existe que dans le sens « je suis le contact ». Absent, il vaut faux :
+    /// on n'ouvre pas un coffre parce qu'un champ manquait.
+    func testLaDisponibiliteAbsenteVautFaux() throws {
+        XCTAssertFalse(try XCTUnwrap(LienDUrgence(dto(available: nil))).disponible)
+        XCTAssertTrue(
+            try XCTUnwrap(LienDUrgence(dto(status: "granted", available: true))).disponible)
+    }
+
+    @MainActor
+    func testLesLibellesDesRolesSontTraduits() {
+        for role in RoleDUrgence.allCases {
+            XCTAssertFalse(role.intitule.isEmpty, "intitulé vide pour \(role.rawValue)")
+            XCTAssertFalse(role.explication.isEmpty, "explication vide pour \(role.rawValue)")
+        }
+    }
+}

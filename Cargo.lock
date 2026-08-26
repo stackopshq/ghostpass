@@ -518,10 +518,12 @@ name = "ghostpass-crypto-ffi"
 version = "0.0.0"
 dependencies = [
  "base64",
+ "crypto_box",
  "ghostpass-crypto",
  "serde_json",
  "thiserror",
  "uniffi",
+ "zeroize",
 ]
 
 [[package]]

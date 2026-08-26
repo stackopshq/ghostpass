@@ -3,7 +3,10 @@ import SwiftUI
 /// Le détail d'un élément du coffre.
 struct ItemDetailView: View {
     let entry: VaultEntry
-    var onEdit: () -> Void
+    var onEdit: () -> Void = {}
+    /// Coffre d'un tiers, ouvert par accès d'urgence : on regarde, on ne touche pas. Sans
+    /// cela, le bouton favori écrirait dans *notre* coffre pour l'identifiant d'un autre.
+    var lectureSeule = false
 
     @EnvironmentObject private var store: VaultStore
     @State private var revealed = false
@@ -20,7 +23,10 @@ struct ItemDetailView: View {
     /// L'entrée telle qu'elle est *maintenant* dans le coffre. Sans cela, l'écran garderait
     /// la copie reçue à la navigation et continuerait d'afficher l'ancien contenu après une
     /// modification — l'utilisateur croirait son enregistrement perdu.
-    private var live: VaultEntry { store.entries.first { $0.id == entry.id } ?? entry }
+    private var live: VaultEntry {
+        guard !lectureSeule else { return entry }
+        return store.entries.first { $0.id == entry.id } ?? entry
+    }
 
     var body: some View {
         GhostScreen {
@@ -57,18 +63,22 @@ struct ItemDetailView: View {
         .navigationTitle(Text(verbatim: live.item.name))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            Button {
-                Task { await store.toggleFavorite(live) }
-            } label: {
-                Image(systemName: store.isFavorite(live) ? "star.fill" : "star")
-            }
-            .foregroundStyle(Color.gpAccentText)
-            .accessibilityLabel(store.isFavorite(live) ? "Retirer des favoris" : "Mettre en favori")
-            .accessibilityIdentifier("button.favorite")
-
-            Button("Modifier", action: onEdit)
+            if !lectureSeule {
+                Button {
+                    Task { await store.toggleFavorite(live) }
+                } label: {
+                    Image(systemName: store.isFavorite(live) ? "star.fill" : "star")
+                }
                 .foregroundStyle(Color.gpAccentText)
-                .accessibilityIdentifier("button.edit")
+                .accessibilityLabel(
+                    store.isFavorite(live) ? "Retirer des favoris" : "Mettre en favori"
+                )
+                .accessibilityIdentifier("button.favorite")
+
+                Button("Modifier", action: onEdit)
+                    .foregroundStyle(Color.gpAccentText)
+                    .accessibilityIdentifier("button.edit")
+            }
         }
         .overlay(alignment: .bottom) { confirmationDeCopie }
         .animation(.snappy, value: copie)
