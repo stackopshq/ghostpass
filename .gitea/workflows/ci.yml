@@ -81,6 +81,26 @@ jobs:
         working-directory: apps/web
         run: npm run build
 
+  # Un job filtré par `if:` disparaît sans un mot du rapport : personne ne remarque que
+  # les tests iOS n'ont pas tourné. Ce job-ci tourne toujours, sur un runner Linux, et dit
+  # à voix haute ce que le garde a décidé — et, au passage, si le contexte `vars` est
+  # seulement disponible sur cette forge (il demande Gitea 1.20).
+  ios-gate:
+    name: Tests iOS — activés ?
+    runs-on: ubuntu-latest
+    steps:
+      - name: État du garde
+        run: |
+          valeur='${{ vars.MACOS_RUNNER }}'
+          echo "MACOS_RUNNER = « $valeur »"
+          if [ "$valeur" = "true" ]; then
+            echo "Le job iOS est activé et sera dispatché vers un runner étiqueté « macos »."
+          elif [ -z "$valeur" ]; then
+            echo "::warning::MACOS_RUNNER est vide : variable absente, hors de portée, ou contexte « vars » non géré par cette version de Gitea. Les tests iOS ne tourneront pas."
+          else
+            echo "::warning::MACOS_RUNNER vaut « $valeur » et non « true ». Les tests iOS ne tourneront pas."
+          fi
+
   ios:
     name: App iOS (SwiftUI + UniFFI)
     # Xcode et le simulateur n'existent que sur macOS : ce job réclame un runner de cette
