@@ -1,0 +1,105 @@
+name: Publish WASM
+
+# Publie le cœur crypto compilé (`ghostpass-crypto-wasm`) sur le registre npm de Gitea, sous
+# `@stackops/ghostpass-crypto-wasm`, pour que l'extension (et autres clients) en dépendent par
+# version plutôt qu'en `file:` cross-repo. Déclenchement manuel avec une version.
+#
+# Consommation côté client (.npmrc du dépôt qui dépend du paquet) :
+#   @stackops:registry=https://git.stackops.ch/api/packages/stackops/npm/
+#   //git.stackops.ch/api/packages/stackops/npm/:_authToken=${NODE_AUTH_TOKEN}
+#
+# Le registre npm de Gitea refuse d'écraser une version déjà publiée : incrémenter la version.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version npm à publier (ex. 0.0.1)"
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  NPM_REGISTRY: https://git.stackops.ch/api/packages/stackops/npm/
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: "v0.13.1"
+      - name: Build du paquet WASM
+        working-directory: crates/ghostpass-crypto-wasm
+        run: wasm-pack build --target web
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: https://git.stackops.ch/api/packages/stackops/npm/
+          scope: "@stackops"
+      - name: Scope + version du paquet généré
+        working-directory: crates/ghostpass-crypto-wasm/pkg
+        run: |
+          npm pkg set name="@stackops/ghostpass-crypto-wasm"
+          npm version "${{ inputs.version }}" --no-git-tag-version --allow-same-version
+          npm pkg set publishConfig.registry="${NPM_REGISTRY}"
+      - name: Préflight du jeton de publication
+        # Gitea répond 401 aussi bien pour un jeton invalide que pour un jeton valide sans le
+        # scope `write:package` : `npm publish` seul ne permet pas de distinguer les deux. Ces
+        # deux sondes le font, et n'affichent que des codes HTTP, jamais la valeur du secret.
+        run: |
+          if [[ -z "${REGISTRY_TOKEN}" ]]; then
+            echo "::error::Secret REGISTRY_TOKEN manquant (PAT avec le scope write:package)"
+            exit 1
+          fi
+          tok="$(printf '%s' "${REGISTRY_TOKEN}" | tr -d '[:space:]')"
+          echo "longueur du jeton après nettoyage : ${#tok}"
+
+          # Lecture du registre de paquets. 401 = le jeton n'a aucun scope `package`.
+          # 404 = jeton accepté, le paquet n'existe simplement pas encore (cas normal).
+          # Attention : cette sonde ne prouve que la LECTURE ; Gitea n'offre pas de sonde
+          # d'écriture non destructive, donc l'absence de `write:package` ne se voit qu'au
+          # `npm publish` qui suit.
+          pkg=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${tok}" \
+            "${NPM_REGISTRY}@stackops%2Fghostpass-crypto-wasm")
+          echo "lecture du registre npm -> ${pkg}"
+
+          if [[ "${pkg}" == "401" ]]; then
+            echo "::error::Jeton refusé par le registre de paquets : valeur erronée, jeton révoqué, ou aucun scope package."
+            exit 1
+          fi
+          echo "Préflight OK : le jeton est accepté en lecture par le registre."
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Publish
+        working-directory: crates/ghostpass-crypto-wasm/pkg
+        # Le jeton auto-injecté (GITEA_TOKEN / GITHUB_TOKEN) ne porte pas le scope
+        # `write:package` sur Gitea : `npm publish` échoue en E401. On passe donc par un PAT en
+        # secret de dépôt, comme les autres dépôts de la suite (cf. stackops/os-images-exporter,
+        # qui utilise la même paire REGISTRY_USER / REGISTRY_TOKEN).
+        run: |
+          if [[ -z "${REGISTRY_TOKEN}" ]]; then
+            echo "::error::Secret REGISTRY_TOKEN manquant (PAT avec le scope write:package)"
+            exit 1
+          fi
+          # Le secret est nettoyé de tout espace/saut de ligne avant usage. Un secret collé avec
+          # un « \n » final produit l'en-tête « Bearer <jeton>\n », que Node rejette comme illégal,
+          # et npm recrache alors l'en-tête complet dans son message d'erreur : le masquage de
+          # Gitea ne matche pas cette forme et le jeton se retrouve en clair dans le log.
+          NODE_AUTH_TOKEN="$(printf '%s' "${REGISTRY_TOKEN}" | tr -d '[:space:]')"
+          export NODE_AUTH_TOKEN
+          # --loglevel=error suffit pour diagnostiquer sans que npm réaffiche des en-têtes.
+          if ! npm publish --loglevel=error; then
+            echo "::error::npm publish refusé alors que le préflight lit le registre : il manque le scope write:package sur le PAT de REGISTRY_TOKEN."
+            exit 1
+          fi
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}

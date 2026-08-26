@@ -1,0 +1,47 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Zurich",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["dependencies", "security"],
+    "schedule": ["at any time"],
+    "prCreation": "immediate"
+  },
+  "packageRules": [
+    {
+      "description": "Crypto primitives are the most sensitive surface in the repo: flag them and let releases settle before proposing a bump.",
+      "matchManagers": ["cargo"],
+      "matchPackageNames": [
+        "argon2",
+        "chacha20poly1305",
+        "crypto_box",
+        "x25519-dalek",
+        "hkdf",
+        "zeroize",
+        "getrandom"
+      ],
+      "labels": ["dependencies", "crypto"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Group patch-level npm devDependencies: low risk, high noise otherwise.",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "npm devDependencies (patch)"
+    },
+    {
+      "description": "Let major releases settle before opening the PR.",
+      "matchUpdateTypes": ["major"],
+      "minimumReleaseAge": "14 days"
+    }
+  ]
+}
