@@ -83,9 +83,18 @@ jobs:
 
   ios:
     name: App iOS (SwiftUI + UniFFI)
-    # Xcode et le simulateur n'existent que sur macOS. Attention : sur un dépôt privé,
-    # les minutes macOS comptent dix fois — d'où un job qui ne tourne pas pour rien.
-    runs-on: macos-latest
+    # Xcode et le simulateur n'existent que sur macOS, et la forge n'a pas de runner de
+    # cette famille. Le job attend le sien : sans étiquette correspondante, Gitea le
+    # laisserait en file d'attente et la pull request resterait sans verdict — d'où la
+    # condition ci-dessous, qui le met en sommeil plutôt qu'en attente.
+    #
+    # Pour l'activer : brancher un runner étiqueté `macos` (Xcode, xcodegen, rustup,
+    # Node), puis définir la variable de dépôt `MACOS_RUNNER` à `true` dans
+    # Settings > Actions > Variables. Rien d'autre à changer ici.
+    #
+    # D'ici là, les tests iOS se lancent à la main : ./tools/ios/run-ios-tests.sh
+    if: vars.MACOS_RUNNER == 'true'
+    runs-on: [self-hosted, macos]
     # Le cœur crypto et son binding doivent déjà être verts : sans eux, l'app n'a rien
     # à lier, et un échec ici ne dirait pas où le problème se trouve.
     needs: crypto
