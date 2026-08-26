@@ -83,34 +83,34 @@ jobs:
 
   ios:
     name: App iOS (SwiftUI + UniFFI)
-    # Xcode et le simulateur n'existent que sur macOS, et la forge n'a pas de runner de
-    # cette famille. Le job attend le sien : sans étiquette correspondante, Gitea le
-    # laisserait en file d'attente et la pull request resterait sans verdict — d'où la
-    # condition ci-dessous, qui le met en sommeil plutôt qu'en attente.
+    # Xcode et le simulateur n'existent que sur macOS : ce job réclame un runner de cette
+    # famille, étiqueté `macos` (voir tools/ci/README.md pour en brancher un).
     #
-    # Pour l'activer : brancher un runner étiqueté `macos` (Xcode, xcodegen, rustup,
-    # Node), puis définir la variable de dépôt `MACOS_RUNNER` à `true` dans
-    # Settings > Actions > Variables. Rien d'autre à changer ici.
-    #
-    # D'ici là, les tests iOS se lancent à la main : ./tools/ios/run-ios-tests.sh
+    # La condition n'est pas un ornement. Un runner self-hosted est une machine réelle :
+    # éteinte, en déplacement, ou simplement occupée, elle laisserait le job en file
+    # d'attente et la pull request sans verdict — Gitea n'échoue pas, il attend. La
+    # variable de dépôt `MACOS_RUNNER` (Settings > Actions > Variables) sert d'interrupteur :
+    # à `true` le job tourne, sinon il est ignoré et les tests iOS se lancent à la main.
     if: vars.MACOS_RUNNER == 'true'
-    runs-on: [self-hosted, macos]
+    runs-on: macos
     # Le cœur crypto et son binding doivent déjà être verts : sans eux, l'app n'a rien
     # à lier, et un échec ici ne dirait pas où le problème se trouve.
     needs: crypto
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: apps/server/package-lock.json
-      - name: XcodeGen
-        run: brew install xcodegen
+      # Pas d'action d'installation ici : sur une machine self-hosted, Xcode, rustup,
+      # xcodegen et Node sont ceux du poste. On vérifie qu'ils répondent plutôt que de
+      # les réinstaller à chaque exécution — et l'absence de l'un doit se lire d'un coup
+      # d'œil, pas se deviner trente lignes plus bas.
+      - name: Prérequis du poste
+        run: |
+          set -e
+          for outil in xcodebuild xcrun xcodegen cargo node npm; do
+            command -v "$outil" >/dev/null || { echo "::error::$outil introuvable sur ce runner"; exit 1; }
+          done
+          xcodebuild -version | head -1
+      - name: Cibles Rust pour iOS
+        run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
       - name: Dépendances du serveur de test
         working-directory: apps/server
         run: npm ci

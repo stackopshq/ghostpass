@@ -37,13 +37,12 @@ du projet vit dans `project.yml`, qui se relit et se fusionne — contrairement 
 ./tools/ios/run-ios-tests.sh --unit-only  # contrat seulement, quelques secondes
 ```
 
-**Ces tests ne tournent pas encore en intégration continue** : la forge n'a pas de runner
-macOS, et Xcode n'existe nulle part ailleurs. Le job existe dans `.gitea/workflows/ci.yml`,
-mis en sommeil par `if: vars.MACOS_RUNNER == 'true'` — un job sans runner correspondant
-resterait en file d'attente et laisserait la pull request sans verdict. Pour le réveiller :
-brancher un runner étiqueté `macos` (Xcode, xcodegen, rustup, Node) et définir la variable
-de dépôt `MACOS_RUNNER`. **D'ici là, lancer le script à la main avant toute pull request
-touchant à l'application.**
+**En intégration continue, ces tests dépendent d'un runner macOS** : Xcode et le
+simulateur n'existent pas ailleurs. Le job vit dans `.gitea/workflows/ci.yml` et attend un
+runner étiqueté `macos` — `tools/ci/README.md` explique comment en brancher un, et ce que
+cela engage. Il est piloté par la variable de dépôt `MACOS_RUNNER` : tant qu'elle n'est pas
+à `true`, le job est ignoré et **les tests se lancent à la main avant toute pull request
+touchant à l'application**.
 
 Le script se suffit à lui-même : il construit l'XCFramework, crée un **simulateur
 éphémère** (le trousseau d'un simulateur survit à la désinstallation — sans cela un run
