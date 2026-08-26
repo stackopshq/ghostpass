@@ -126,11 +126,17 @@ aussi côté remplissage. Sans lui, l'extension demandera le mot de passe maîtr
 
 ## Points de vigilance
 
-- **L'icône reprend la marque du produit**, pas celle de la suite : le cadenas de
-  `logoMark()` (`apps/web/src/App.svelte`) sur le dégradé `--accent` → `--accent-2` du
-  thème clair, tel que l'affiche la web app. `assets/logo/ghostpass.svg` porte un nom
-  trompeur — c'est le fantôme de **ghost-suite**, ajouté par le commit
-  « feat(brand): add ghost-suite logo », et non la marque de GhostPass.
+- **L'icône suit la charte ghost-suite**, comme ghostmail, ghostcal ou ghostlink : une
+  silhouette de fantôme commune à toute la suite, que distinguent seulement trois teintes
+  et un glyphe intérieur — ici une clé. C'est la variante **remplie**
+  (`assets/logo/ghostpass-icon.svg`) et non le logo au trait : ce dernier fait 4 % de la
+  hauteur en épaisseur et disparaît à 16 px, comme l'explique `ghostlink.svg`.
+  Les logos de la suite sont **générés** par `tools/brand/ghost_suite.py` (« ne pas éditer
+  à la main ») ; ce fichier en reprend fidèlement la sortie, faute d'accès au générateur.
+  À régénérer dès qu'il sera disponible — **les trois teintes restent à confirmer**.
+- `assets/logo/ghostpass.svg` porte un nom trompeur : c'est un fantôme au trait ajouté par
+  le commit « feat(brand): add ghost-suite logo », hors charte actuelle. Ne pas s'en servir
+  comme marque du produit.
 
 - L'item nommé `"\0gp:folders"` est un **registre interne** partagé avec la web app.
   Il est filtré de la liste ; l'afficher serait une régression visible.
