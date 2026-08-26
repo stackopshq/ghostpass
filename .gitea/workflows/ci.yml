@@ -97,12 +97,15 @@ jobs:
         run: |
           valeur='${{ vars.MACOS_RUNNER }}'
           echo "MACOS_RUNNER = « $valeur »"
-          if [ "$valeur" = "true" ]; then
-            echo "Le job iOS est activé et sera dispatché vers un runner étiqueté « macos »."
+          if [ "$valeur" = "false" ]; then
+            echo "::warning::MACOS_RUNNER vaut « false » : les tests iOS sont volontairement écartés."
           elif [ -z "$valeur" ]; then
-            echo "::warning::MACOS_RUNNER est vide : variable absente, hors de portée, ou contexte « vars » non géré par cette version de Gitea. Les tests iOS ne tourneront pas."
+            echo "MACOS_RUNNER n'est pas définie pour ce dépôt — le job iOS tourne quand même."
+            echo "Une variable définie au niveau *utilisateur* ne s'applique pas à un dépôt"
+            echo "d'organisation : pour la voir ici, il faut la poser sur le dépôt ou sur"
+            echo "l'organisation (Paramètres du dépôt > Actions > Variables)."
           else
-            echo "::warning::MACOS_RUNNER vaut « $valeur » et non « true ». Les tests iOS ne tourneront pas."
+            echo "Le job iOS est activé et sera dispatché vers un runner étiqueté « macos »."
           fi
 
   ios:
@@ -110,12 +113,20 @@ jobs:
     # Xcode et le simulateur n'existent que sur macOS : ce job réclame un runner de cette
     # famille, étiqueté `macos` (voir tools/ci/README.md pour en brancher un).
     #
-    # La condition n'est pas un ornement. Un runner self-hosted est une machine réelle :
-    # éteinte, en déplacement, ou simplement occupée, elle laisserait le job en file
-    # d'attente et la pull request sans verdict — Gitea n'échoue pas, il attend. La
-    # variable de dépôt `MACOS_RUNNER` (Settings > Actions > Variables) sert d'interrupteur :
-    # à `true` le job tourne, sinon il est ignoré et les tests iOS se lancent à la main.
-    if: vars.MACOS_RUNNER == 'true'
+    # L'interrupteur est *à l'arrêt explicite*, et c'est le fruit d'une leçon. Un runner
+    # self-hosted est une machine réelle : éteinte, elle laisse le job en file d'attente et
+    # la pull request sans verdict — Gitea n'échoue pas, il attend. On avait donc écrit
+    # `== 'true'`, pour ne rien lancer par défaut.
+    #
+    # Sauf qu'une variable qui ne se résout pas — posée au niveau utilisateur alors que le
+    # dépôt appartient à une organisation, par exemple — rend une chaîne vide, et le job
+    # disparaît sans un mot : on croit avoir une CI iOS, on n'en a pas. Une file d'attente
+    # se voit ; une absence, non. Entre les deux, on préfère celle qui se voit.
+    #
+    # `MACOS_RUNNER` (Paramètres du **dépôt** ou de l'**organisation** > Actions >
+    # Variables) reste donc l'interrupteur, mais il ne sert qu'à *couper* : à `false` le
+    # job est écarté, dans tous les autres cas il tourne.
+    if: vars.MACOS_RUNNER != 'false'
     runs-on: macos
     # Le cœur crypto et son binding doivent déjà être verts : sans eux, l'app n'a rien
     # à lier, et un échec ici ne dirait pas où le problème se trouve.

@@ -50,10 +50,23 @@ cd ~/.gitea-runner && gitea-runner daemon   # au premier plan : on voit les tâc
                                             # arriver, Ctrl-C pour rendre la machine
 ```
 
-Et l'interrupteur suit le même rythme. `MACOS_RUNNER` (**Settings > Actions > Variables**)
-reste à `false` par défaut ; on le passe à `true` le temps de faire tourner la vérification.
-Sinon, chaque pull request ouverte pendant que le portable est fermé attend un runner qui
-ne viendra pas : Gitea n'échoue pas, il attend, et la pull request reste sans verdict.
+Et l'interrupteur suit le même rythme — mais il ne sert qu'à *couper*. `MACOS_RUNNER` à
+`false` écarte le job iOS ; dans tous les autres cas, y compris si la variable n'existe
+pas, il tourne. On le passe donc à `false` quand le portable reste fermé un moment, pour
+qu'une pull request n'attende pas un runner qui ne viendra pas : Gitea n'échoue pas, il
+attend, et la pull request resterait sans verdict.
+
+Le sens a été inversé après coup, et la raison mérite d'être dite. L'interrupteur exigeait
+d'abord `MACOS_RUNNER == 'true'`. Une variable qui ne se résout pas rend alors une chaîne
+vide, le job disparaît du rapport sans un mot, et on croit avoir une CI iOS pendant des
+heures sans en avoir. Une file d'attente se remarque ; une absence, non.
+
+**La portée compte, et c'est exactement ce qui nous est arrivé.** Une variable posée dans
+*Paramètres utilisateur > Actions > Variables* ne s'applique qu'aux dépôts de cet
+utilisateur. `ghostpass` appartient à l'organisation `stackops` : il faut la poser sur le
+dépôt (**Paramètres du dépôt > Actions > Variables**) ou sur l'organisation. Le job
+`Tests iOS — activés ?` affiche à chaque exécution la valeur qu'il voit, précisément pour
+qu'on n'ait plus à le deviner.
 
 Un point à ne pas perdre de vue : un runner self-hosted **exécute le code des pull requests
 sur la machine qui l'héberge**. Sur un dépôt privé entre gens de confiance, c'est le
@@ -69,7 +82,7 @@ Une fois le Mac mini en place, c'est l'inverse : il est fait pour attendre du tr
 brew services start gitea-runner   # démarre à la session et se relance tout seul
 ```
 
-`MACOS_RUNNER` peut alors rester à `true` en permanence.
+`MACOS_RUNNER` n'a alors plus lieu d'exister : sans elle, le job tourne.
 
 Le workflow n'a **rien à changer** au passage de l'un à l'autre : les deux machines
 portent la même étiquette `macos`, seul le nom diffère. Il suffit d'enregistrer le mini,
