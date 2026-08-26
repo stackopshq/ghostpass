@@ -2,6 +2,18 @@ import SwiftUI
 
 @main
 struct GhostpassApp: App {
+    init() {
+        // Les barres de navigation gardent leurs teintes système, qui jurent avec la nuit
+        // de la suite : on les aligne une fois pour toutes plutôt qu'écran par écran.
+        let barre = UINavigationBarAppearance()
+        barre.configureWithTransparentBackground()
+        barre.titleTextAttributes = [.foregroundColor: UIColor(Color.gpInk)]
+        barre.largeTitleTextAttributes = [.foregroundColor: UIColor(Color.gpInk)]
+        UINavigationBar.appearance().standardAppearance = barre
+        UINavigationBar.appearance().scrollEdgeAppearance = barre
+        UINavigationBar.appearance().compactAppearance = barre
+    }
+
     @StateObject private var store = VaultStore()
     @Environment(\.scenePhase) private var scenePhase
 

@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// Déverrouillage : la carte de verre posée sur la nuit, comme l'écran d'entrée des
+/// autres produits de la suite. Deux états — une session enregistrée qu'on rouvre d'un
+/// mot de passe, ou une connexion complète à décliner.
 struct UnlockView: View {
     @EnvironmentObject private var store: VaultStore
 
@@ -12,89 +15,153 @@ struct UnlockView: View {
     @State private var useSavedSession = false
 
     var body: some View {
-        NavigationStack {
-            Form {
-                if useSavedSession {
-                    Section("Coffre") {
-                        LabeledContent("Compte", value: store.savedEmail)
-                        SecureField("Mot de passe maître", text: $password)
-                            .textContentType(.password)
-                            .accessibilityIdentifier("field.master")
-                    }
-                } else {
-                    Section("Serveur") {
-                        TextField("https://ghostpass.stackops.ch", text: $server)
-                            .accessibilityIdentifier("field.server")
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .keyboardType(.URL)
-                    }
-                    Section("Compte") {
-                        TextField("Adresse e-mail", text: $email)
-                            .accessibilityIdentifier("field.email")
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .keyboardType(.emailAddress)
-                        SecureField("Mot de passe maître", text: $password)
-                            .textContentType(.password)
-                            .accessibilityIdentifier("field.master")
-                        if needsTotp {
-                            TextField("Code à 6 chiffres", text: $totpCode)
-                                .keyboardType(.numberPad)
-                        }
-                    }
+        ZStack {
+            GhostBackground()
+
+            ScrollView {
+                VStack(spacing: 24) {
+                    enseigne
+                    carte
                 }
-
-                if let message = store.errorMessage {
-                    Section {
-                        Text(message).foregroundStyle(.red)
-                    }
+                .frame(maxWidth: 420)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 40)
+                .frame(maxWidth: .infinity)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        }
+        .onAppear {
+            if store.hasSavedSession {
+                useSavedSession = true
+                // Une session enregistrée et la biométrie configurée : on la propose
+                // d'emblée, c'est le geste attendu à l'ouverture de l'app.
+                if store.canUnlockWithBiometrics {
+                    Task { await store.unlockWithBiometrics() }
                 }
+            } else {
+                server = store.savedServer
+                email = store.savedEmail
+            }
+        }
+    }
 
-                Section {
-                    Button(action: submit) {
-                        if store.isBusy {
-                            ProgressView()
-                        } else {
-                            Text(useSavedSession ? "Déverrouiller" : "Se connecter")
-                        }
-                    }
-                    .disabled(store.isBusy || password.isEmpty)
-                    .accessibilityIdentifier("button.submit")
+    private var enseigne: some View {
+        VStack(spacing: 10) {
+            Image("LogoMark")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 64, height: 64)
+            Text("GhostPass")
+                .font(.system(.title, design: .rounded, weight: .bold))
+                .foregroundStyle(Color.gpInk)
+            Text(useSavedSession ? "Coffre enregistré sur cet appareil" : "Coffre chiffré de bout en bout")
+                .font(.footnote)
+                .foregroundStyle(Color.gpMuted)
+        }
+    }
 
-                    if useSavedSession && store.canUnlockWithBiometrics {
-                        Button("Déverrouiller avec \(store.biometryLabel)") {
-                            Task { await store.unlockWithBiometrics() }
-                        }
-                        .disabled(store.isBusy)
-                        .accessibilityIdentifier("button.biometric")
-                    }
-
-                    if store.hasSavedSession {
-                        Button(useSavedSession ? "Utiliser un autre compte" : "Coffre enregistré") {
-                            useSavedSession.toggle()
-                            password = ""
-                        }
-                        .font(.footnote)
-                        .accessibilityIdentifier("button.switchAccount")
+    private var carte: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if useSavedSession {
+                champ("Compte") {
+                    Text(store.savedEmail)
+                        .foregroundStyle(Color.gpMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .ghostField()
+                }
+                champ("Mot de passe maître") {
+                    SecureField("", text: $password, prompt: invite("Votre mot de passe"))
+                        .ghostField()
+                        .accessibilityIdentifier("field.master")
+                }
+            } else {
+                champ("Serveur") {
+                    TextField("", text: $server, prompt: invite("https://ghostpass.stackops.ch"))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                        .ghostField()
+                        .accessibilityIdentifier("field.server")
+                }
+                champ("Adresse e-mail") {
+                    TextField("", text: $email, prompt: invite("vous@exemple.ch"))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.emailAddress)
+                        .ghostField()
+                        .accessibilityIdentifier("field.email")
+                }
+                champ("Mot de passe maître") {
+                    SecureField("", text: $password, prompt: invite("Votre mot de passe"))
+                        .ghostField()
+                        .accessibilityIdentifier("field.master")
+                }
+                if needsTotp {
+                    champ("Code à six chiffres") {
+                        TextField("", text: $totpCode, prompt: invite("123456"))
+                            .keyboardType(.numberPad)
+                            .ghostField()
+                            .accessibilityIdentifier("field.totp")
                     }
                 }
             }
-            .navigationTitle("GhostPass")
-            .onAppear {
-                if store.hasSavedSession {
-                    useSavedSession = true
-                    // Une session enregistrée + biométrie configurée : on la propose
-                    // d'emblée, c'est le geste attendu à l'ouverture de l'app.
-                    if store.canUnlockWithBiometrics {
+
+            if let message = store.errorMessage {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(Color.gpDanger)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(spacing: 10) {
+                Button(action: submit) {
+                    if store.isBusy {
+                        ProgressView().tint(Color.gpOnAccent)
+                    } else {
+                        Text(useSavedSession ? "Déverrouiller" : "Se connecter")
+                    }
+                }
+                .buttonStyle(PrimaryButtonStyle(enabled: !store.isBusy && !password.isEmpty))
+                .disabled(store.isBusy || password.isEmpty)
+                .accessibilityIdentifier("button.submit")
+
+                if useSavedSession && store.canUnlockWithBiometrics {
+                    Button("Déverrouiller avec \(store.biometryLabel)") {
                         Task { await store.unlockWithBiometrics() }
                     }
-                } else {
-                    server = store.savedServer
-                    email = store.savedEmail
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(store.isBusy)
+                    .accessibilityIdentifier("button.biometric")
+                }
+
+                if store.hasSavedSession {
+                    Button(useSavedSession ? "Utiliser un autre compte" : "Revenir au coffre enregistré") {
+                        useSavedSession.toggle()
+                        password = ""
+                        store.errorMessage = nil
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(Color.gpAccentText)
+                    .padding(.top, 2)
+                    .accessibilityIdentifier("button.switchAccount")
                 }
             }
         }
+        .glassCard()
+    }
+
+    private func champ<Contenu: View>(
+        _ intitule: String, @ViewBuilder _ contenu: () -> Contenu
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(intitule).sectionLabel()
+            contenu()
+        }
+    }
+
+    /// Un texte d'invite lisible : le gris par défaut de SwiftUI disparaît sur nos surfaces.
+    private func invite(_ texte: String) -> Text {
+        Text(texte).foregroundColor(Color.gpMuted.opacity(0.7))
     }
 
     private func submit() {

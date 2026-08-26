@@ -58,6 +58,7 @@ targets:
       - path: GhostpassAutoFill
       - path: Ghostpass/Model
       - path: Ghostpass/Services
+      - path: Ghostpass/Theme
       - path: Generated
     dependencies:
       - framework: GhostpassCrypto.xcframework

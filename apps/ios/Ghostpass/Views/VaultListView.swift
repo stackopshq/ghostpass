@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Le coffre : la liste des identifiants, posée sur la nuit de la suite.
 struct VaultListView: View {
     @EnvironmentObject private var store: VaultStore
     @State private var search = ""
@@ -18,24 +19,41 @@ struct VaultListView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if store.isOffline {
-                    Label(
-                        "Hors ligne — coffre affiché depuis cet appareil",
-                        systemImage: "wifi.slash"
-                    )
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("banner.offline")
-                }
-                ForEach(visible) { entry in
-                    NavigationLink(value: entry) {
-                        VaultRow(entry: entry)
+            ZStack {
+                GhostBackground()
+
+                List {
+                    if store.isOffline {
+                        bandeauHorsLigne
+                            .listRowInsets(.init(top: 0, leading: 16, bottom: 8, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
-                    .swipeActions {
-                        Button("Supprimer", role: .destructive) {
-                            Task { await store.delete(entry) }
+
+                    ForEach(visible) { entry in
+                        // Un lien en bonne et due forme : masquer le NavigationLink sous
+                        // une opacité nulle le rendrait inatteignable, au clavier comme
+                        // au doigt. Le chevron du système fait donc l'affaire.
+                        NavigationLink(value: entry) {
+                            VaultRow(entry: entry)
                         }
+                        .listRowInsets(.init(top: 4, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .swipeActions {
+                            Button("Supprimer", role: .destructive) {
+                                Task { await store.delete(entry) }
+                            }
+                        }
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .overlay {
+                    if store.entries.isEmpty {
+                        coffreVide
+                    } else if visible.isEmpty {
+                        aucunResultat
                     }
                 }
             }
@@ -48,18 +66,13 @@ struct VaultListView: View {
                 }
             }
             .searchable(text: $search, prompt: "Rechercher")
-            .overlay {
-                if store.entries.isEmpty {
-                    ContentUnavailableView(
-                        "Coffre vide", systemImage: "lock",
-                        description: Text("Ajoutez un identifiant avec le bouton +."))
-                }
-            }
             .refreshable { await store.refresh() }
             .navigationTitle("Coffre")
+            .toolbarBackground(Color.gpBase.opacity(0.9), for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Verrouiller") { store.lock() }
+                        .foregroundStyle(Color.gpAccentText)
                         .accessibilityIdentifier("button.lock")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -71,10 +84,8 @@ struct VaultListView: View {
                                 }
                                 .accessibilityIdentifier("button.biometricOff")
                             } else {
-                                Button("Activer \(store.biometryLabel)") {
-                                    sheet = .biometrics
-                                }
-                                .accessibilityIdentifier("button.biometricOn")
+                                Button("Activer \(store.biometryLabel)") { sheet = .biometrics }
+                                    .accessibilityIdentifier("button.biometricOn")
                             }
                         }
                         Button("Corbeille", systemImage: "trash") { sheet = .trash }
@@ -85,6 +96,7 @@ struct VaultListView: View {
                         .accessibilityIdentifier("button.signOut")
                     } label: {
                         Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(Color.gpAccentText)
                     }
                     .accessibilityIdentifier("button.settings")
                 }
@@ -93,6 +105,7 @@ struct VaultListView: View {
                         sheet = .newItem
                     } label: {
                         Image(systemName: "plus")
+                            .foregroundStyle(Color.gpAccentText)
                     }
                     .accessibilityIdentifier("button.add")
                 }
@@ -128,6 +141,32 @@ struct VaultListView: View {
                             + "appareil, relisible par \(store.biometryLabel) seul.")
                 })
         }
+        .tint(Color.gpAccentText)
+    }
+
+    private var bandeauHorsLigne: some View {
+        Label("Hors ligne — coffre affiché depuis cet appareil", systemImage: "wifi.slash")
+            .font(.footnote)
+            .foregroundStyle(Color.gpMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.gpSurface2, in: RoundedRectangle(cornerRadius: GP.radius))
+            .accessibilityIdentifier("banner.offline")
+    }
+
+    private var coffreVide: some View {
+        ContentUnavailableView {
+            Label("Coffre vide", systemImage: "lock")
+        } description: {
+            Text("Ajoutez un identifiant avec le bouton +.")
+        }
+        .foregroundStyle(Color.gpMuted)
+    }
+
+    private var aucunResultat: some View {
+        ContentUnavailableView.search(text: search)
+            .foregroundStyle(Color.gpMuted)
     }
 }
 
@@ -161,21 +200,42 @@ enum EditTarget: Identifiable {
     }
 }
 
+/// Une ligne du coffre : une pastille de type, le nom, ce qui aide à le reconnaître.
 private struct VaultRow: View {
     let entry: VaultEntry
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .frame(width: 28)
-                .foregroundStyle(.secondary)
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.gpAccent.opacity(0.16))
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.gpAccentText)
+            }
+            .frame(width: 38, height: 38)
+
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.item.name).font(.body)
+                Text(entry.item.name)
+                    .font(.system(.body, weight: .medium))
+                    .foregroundStyle(Color.gpInk)
+                    .lineLimit(1)
                 if let subtitle, !subtitle.isEmpty {
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.gpMuted)
+                        .lineLimit(1)
                 }
             }
+
+            Spacer(minLength: 8)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Color.gpSurface.opacity(0.7), in: RoundedRectangle(cornerRadius: GP.radius))
+        .overlay(
+            RoundedRectangle(cornerRadius: GP.radius)
+                .strokeBorder(Color.gpBorder, lineWidth: 1))
     }
 
     private var icon: String {

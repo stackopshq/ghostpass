@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Produit l'icône de l'application iOS à partir du logo de la suite.
+# Produit les images de marque de l'application iOS à partir du logo de la suite :
+# l'icône de l'application, et la marque affichée dans l'interface.
 #
 # La source est `assets/logo/favicon.svg` : la variante **remplie** du logo, celle que
 # ghostboard emploie comme icône. Le logo au trait ne convient pas — son trait fait 4 %
@@ -18,7 +19,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE="$ROOT/assets/logo/favicon.svg"
-CIBLE="$ROOT/apps/ios/Ghostpass/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
+ASSETS="$ROOT/apps/ios/Ghostpass/Assets.xcassets"
+CIBLE="$ASSETS/AppIcon.appiconset/AppIcon-1024.png"
+MARQUE="$ASSETS/LogoMark.imageset"
 MARGE=0.10
 
 command -v rsvg-convert >/dev/null || { echo "rsvg-convert manquant : brew install librsvg" >&2; exit 1; }
@@ -49,3 +52,22 @@ PY
 
 rsvg-convert -w 1024 -h 1024 -b white "$TEMPO/icone.svg" -o "$CIBLE"
 echo "  icône écrite : ${CIBLE#$ROOT/}"
+
+# La marque affichée dans l'interface : même silhouette, mais sur fond transparent — elle
+# se pose sur la nuit de l'application, pas sur un carré blanc.
+mkdir -p "$MARQUE"
+for facteur in 1 2 3; do
+  rsvg-convert -w $((64 * facteur)) -h $((64 * facteur)) "$TEMPO/icone.svg" \
+    -o "$MARQUE/LogoMark@${facteur}x.png"
+done
+cat > "$MARQUE/Contents.json" <<'JSON'
+{
+  "images" : [
+    { "filename" : "LogoMark@1x.png", "idiom" : "universal", "scale" : "1x" },
+    { "filename" : "LogoMark@2x.png", "idiom" : "universal", "scale" : "2x" },
+    { "filename" : "LogoMark@3x.png", "idiom" : "universal", "scale" : "3x" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}
+JSON
+echo "  marque écrite : ${MARQUE#$ROOT/}"

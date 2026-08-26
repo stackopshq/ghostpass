@@ -17,89 +17,60 @@ struct ItemEditView: View {
     @State private var password = ""
     @State private var uri = ""
     @State private var totp = ""
-    @State private var generating = false
     @State private var noteContent = ""
     @State private var cardholder = ""
     @State private var cardNumber = ""
     @State private var expMonth = ""
     @State private var expYear = ""
     @State private var cardCode = ""
+    @State private var generating = false
 
     enum Kind: String, CaseIterable, Identifiable {
         case login = "Identifiant"
         case note = "Note"
         case card = "Carte"
         var id: String { rawValue }
+
+        var icone: String {
+            switch self {
+            case .login: return "person.badge.key"
+            case .note: return "note.text"
+            case .card: return "creditcard"
+            }
+        }
     }
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    TextField("Nom", text: $name)
+            GhostScreen {
+                GhostSection(titre: "Nom") {
+                    TextField("", text: $name, prompt: invite("GitHub, Amazon…"))
+                        .foregroundStyle(Color.gpInk)
+                        .padding(14)
                         .accessibilityIdentifier("field.name")
-                    if isNew {
-                        Picker("Type", selection: $kind) {
-                            ForEach(Kind.allCases) { Text($0.rawValue).tag($0) }
-                        }
-                    }
+                }
+
+                if isNew {
+                    selecteurDeType
                 }
 
                 switch kind {
-                case .login:
-                    Section("Identifiants") {
-                        TextField("Nom d'utilisateur", text: $username)
-                            .accessibilityIdentifier("field.username")
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        HStack {
-                            SecureField("Mot de passe", text: $password)
-                                .accessibilityIdentifier("field.password")
-                            Button {
-                                generating = true
-                            } label: {
-                                Image(systemName: "dice")
-                            }
-                            .buttonStyle(.borderless)
-                            .accessibilityIdentifier("button.generate")
-                        }
-                        TextField("Adresse du site", text: $uri)
-                            .accessibilityIdentifier("field.uri")
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .keyboardType(.URL)
-                    }
-                    Section {
-                        TextField("Clé ou URI otpauth://", text: $totp)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .accessibilityIdentifier("field.totp")
-                    } header: {
-                        Text("Code à usage unique")
-                    } footer: {
-                        Text(
-                            "La clé reste chiffrée dans l'item ; les codes sont calculés "
-                                + "sur l'appareil.")
-                    }
-                case .note:
-                    Section("Contenu") {
-                        TextEditor(text: $noteContent).frame(minHeight: 140)
-                    }
-                case .card:
-                    Section("Carte") {
-                        TextField("Titulaire", text: $cardholder)
-                        TextField("Numéro", text: $cardNumber).keyboardType(.numberPad)
-                        HStack {
-                            TextField("MM", text: $expMonth).keyboardType(.numberPad)
-                            TextField("AAAA", text: $expYear).keyboardType(.numberPad)
-                        }
-                        SecureField("Cryptogramme", text: $cardCode)
-                    }
+                case .login: champsIdentifiant
+                case .note: champsNote
+                case .card: champsCarte
                 }
 
-                Section("Classement") {
-                    TextField("Dossier (ex. Travail/Serveurs)", text: $folder)
-                    TextField("Notes", text: $notes, axis: .vertical).lineLimit(2...6)
+                GhostSection(titre: "Classement") {
+                    TextField("", text: $folder, prompt: invite("Dossier — Travail/Serveurs"))
+                        .foregroundStyle(Color.gpInk)
+                        .padding(14)
+                        .accessibilityIdentifier("field.folder")
+                    GhostDivider()
+                    TextField("", text: $notes, prompt: invite("Notes"), axis: .vertical)
+                        .lineLimit(2...6)
+                        .foregroundStyle(Color.gpInk)
+                        .padding(14)
+                        .accessibilityIdentifier("field.notes")
                 }
             }
             .navigationTitle(isNew ? "Nouvel élément" : "Modifier")
@@ -107,6 +78,7 @@ struct ItemEditView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler") { dismiss() }
+                        .foregroundStyle(Color.gpMuted)
                         .accessibilityIdentifier("button.cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -116,6 +88,8 @@ struct ItemEditView: View {
                             dismiss()
                         }
                     }
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.gpAccentText)
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                     .accessibilityIdentifier("button.save")
                 }
@@ -125,6 +99,115 @@ struct ItemEditView: View {
                 PasswordGeneratorView { password = $0 }
             }
         }
+        .tint(Color.gpAccentText)
+    }
+
+    /// Le type ne se choisit qu'à la création : le changer ensuite reviendrait à remplacer
+    /// l'élément, pas à le modifier.
+    private var selecteurDeType: some View {
+        HStack(spacing: 10) {
+            ForEach(Kind.allCases) { cas in
+                Button {
+                    kind = cas
+                } label: {
+                    VStack(spacing: 6) {
+                        Image(systemName: cas.icone).font(.system(size: 17, weight: .medium))
+                        Text(cas.rawValue).font(.caption.weight(.medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        kind == cas ? Color.gpAccent.opacity(0.18) : Color.gpSurface.opacity(0.7),
+                        in: RoundedRectangle(cornerRadius: GP.radius)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: GP.radius)
+                            .strokeBorder(
+                                kind == cas ? Color.gpAccent : Color.gpBorder,
+                                lineWidth: kind == cas ? 1.5 : 1))
+                    .foregroundStyle(kind == cas ? Color.gpAccentText : Color.gpMuted)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var champsIdentifiant: some View {
+        Group {
+            GhostSection(titre: "Identifiants") {
+                TextField("", text: $username, prompt: invite("Nom d'utilisateur"))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .foregroundStyle(Color.gpInk)
+                    .padding(14)
+                    .accessibilityIdentifier("field.username")
+                GhostDivider()
+                HStack(spacing: 8) {
+                    SecureField("", text: $password, prompt: invite("Mot de passe"))
+                        .foregroundStyle(Color.gpInk)
+                        .accessibilityIdentifier("field.password")
+                    GhostIconButton(systemImage: "dice") { generating = true }
+                        .accessibilityIdentifier("button.generate")
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                GhostDivider()
+                TextField("", text: $uri, prompt: invite("Adresse du site"))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                    .foregroundStyle(Color.gpInk)
+                    .padding(14)
+                    .accessibilityIdentifier("field.uri")
+            }
+
+            GhostSection(
+                titre: "Code à usage unique",
+                note: "La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil."
+            ) {
+                TextField("", text: $totp, prompt: invite("Clé ou URI otpauth://"))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .foregroundStyle(Color.gpInk)
+                    .padding(14)
+                    .accessibilityIdentifier("field.totp")
+            }
+        }
+    }
+
+    private var champsNote: some View {
+        GhostSection(titre: "Contenu") {
+            TextField("", text: $noteContent, prompt: invite("Votre note"), axis: .vertical)
+                .lineLimit(6...14)
+                .foregroundStyle(Color.gpInk)
+                .padding(14)
+                .accessibilityIdentifier("field.note")
+        }
+    }
+
+    private var champsCarte: some View {
+        GhostSection(titre: "Carte") {
+            TextField("", text: $cardholder, prompt: invite("Titulaire"))
+                .foregroundStyle(Color.gpInk)
+                .padding(14)
+            GhostDivider()
+            TextField("", text: $cardNumber, prompt: invite("Numéro"))
+                .keyboardType(.numberPad)
+                .foregroundStyle(Color.gpInk)
+                .padding(14)
+            GhostDivider()
+            HStack(spacing: 12) {
+                TextField("", text: $expMonth, prompt: invite("MM")).keyboardType(.numberPad)
+                TextField("", text: $expYear, prompt: invite("AAAA")).keyboardType(.numberPad)
+                SecureField("", text: $cardCode, prompt: invite("Cryptogramme"))
+            }
+            .foregroundStyle(Color.gpInk)
+            .padding(14)
+        }
+    }
+
+    private func invite(_ texte: String) -> Text {
+        Text(texte).foregroundColor(Color.gpMuted.opacity(0.7))
     }
 
     private var isNew: Bool {

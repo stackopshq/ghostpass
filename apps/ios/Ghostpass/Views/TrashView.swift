@@ -16,35 +16,42 @@ struct TrashView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(entries) { entry in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.item.name)
-                        if let login = entry.login, !login.username.isEmpty {
-                            Text(login.username).font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .swipeActions(edge: .leading) {
-                        Button("Restaurer") {
-                            Task {
-                                await store.restore(entry)
-                                await recharger()
+            ZStack {
+                GhostBackground()
+
+                List {
+                    ForEach(entries) { entry in
+                        ligne(entry)
+                            .listRowInsets(.init(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .swipeActions(edge: .leading) {
+                                Button("Restaurer") {
+                                    Task {
+                                        await store.restore(entry)
+                                        await recharger()
+                                    }
+                                }
+                                .tint(Color.gpAccent)
                             }
-                        }
-                        .tint(.blue)
-                    }
-                    .swipeActions {
-                        Button("Supprimer", role: .destructive) { aPurger = entry }
+                            .swipeActions {
+                                Button("Supprimer", role: .destructive) { aPurger = entry }
+                            }
                     }
                 }
-            }
-            .overlay {
-                if chargement {
-                    ProgressView()
-                } else if entries.isEmpty {
-                    ContentUnavailableView(
-                        "Corbeille vide", systemImage: "trash",
-                        description: Text("Les éléments supprimés atterrissent ici."))
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .overlay {
+                    if chargement {
+                        ProgressView().tint(Color.gpAccentText)
+                    } else if entries.isEmpty {
+                        ContentUnavailableView {
+                            Label("Corbeille vide", systemImage: "trash")
+                        } description: {
+                            Text("Les éléments supprimés atterrissent ici.")
+                        }
+                        .foregroundStyle(Color.gpMuted)
+                    }
                 }
             }
             .navigationTitle("Corbeille")
@@ -52,6 +59,7 @@ struct TrashView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fermer") { dismiss() }
+                        .foregroundStyle(Color.gpAccentText)
                         .accessibilityIdentifier("button.closeTrash")
                 }
             }
@@ -76,6 +84,32 @@ struct TrashView: View {
                 })
             .task { await recharger() }
         }
+        .tint(Color.gpAccentText)
+    }
+
+    private func ligne(_ entry: VaultEntry) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: "trash")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.gpMuted)
+                .frame(width: 34, height: 34)
+                .background(Color.gpSurface2, in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.item.name)
+                    .font(.system(.body, weight: .medium))
+                    .foregroundStyle(Color.gpInk)
+                if let login = entry.login, !login.username.isEmpty {
+                    Text(login.username).font(.caption).foregroundStyle(Color.gpMuted)
+                }
+            }
+            Spacer(minLength: 8)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Color.gpSurface.opacity(0.7), in: RoundedRectangle(cornerRadius: GP.radius))
+        .overlay(
+            RoundedRectangle(cornerRadius: GP.radius)
+                .strokeBorder(Color.gpBorder, lineWidth: 1))
     }
 
     private func recharger() async {

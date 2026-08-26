@@ -11,25 +11,53 @@ struct BiometricSetupView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    SecureField("Mot de passe maître", text: $password)
-                        .textContentType(.password)
-                        .accessibilityIdentifier("field.masterConfirm")
-                } footer: {
+            GhostScreen {
+                VStack(spacing: 14) {
+                    Image(systemName: "faceid")
+                        .font(.system(size: 40, weight: .light))
+                        .foregroundStyle(Color.gpAccentText)
+                    Text("Déverrouiller avec \(store.biometryLabel)")
+                        .font(.system(.title3, weight: .semibold))
+                        .foregroundStyle(Color.gpInk)
+                        .multilineTextAlignment(.center)
                     Text(
                         "Votre mot de passe maître sera conservé dans le trousseau de cet "
-                            + "appareil, relisible par \(store.biometryLabel) seul. "
-                            + "Ajouter un visage ou une empreinte annule cet accès.")
+                            + "appareil, relisible par \(store.biometryLabel) seul. Ajouter un "
+                            + "visage ou une empreinte annule cet accès."
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(Color.gpMuted)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 12)
+
+                GhostSection(titre: "Mot de passe maître") {
+                    SecureField("", text: $password, prompt: invite("Pour confirmer que c'est bien vous"))
+                        .foregroundStyle(Color.gpInk)
+                        .padding(14)
+                        .accessibilityIdentifier("field.masterConfirm")
                 }
 
                 if let message = store.errorMessage {
-                    Section {
-                        Text(message).foregroundStyle(.red)
-                    }
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(Color.gpDanger)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Button("Activer") {
+                    // On ne referme que si le mot de passe a réellement ouvert le
+                    // coffre : sinon l'erreur reste sous les yeux, ici même.
+                    if store.enableBiometrics(password: password) { dismiss() }
+                    password = ""
+                }
+                .buttonStyle(PrimaryButtonStyle(enabled: !password.isEmpty))
+                .disabled(password.isEmpty)
+                .accessibilityIdentifier("button.confirmBiometric")
             }
-            .navigationTitle("Activer \(store.biometryLabel)")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -37,18 +65,14 @@ struct BiometricSetupView: View {
                         store.errorMessage = nil
                         dismiss()
                     }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Activer") {
-                        // On ne referme que si le mot de passe a réellement ouvert le
-                        // coffre : sinon l'erreur reste sous les yeux, ici même.
-                        if store.enableBiometrics(password: password) { dismiss() }
-                        password = ""
-                    }
-                    .disabled(password.isEmpty)
-                    .accessibilityIdentifier("button.confirmBiometric")
+                    .foregroundStyle(Color.gpMuted)
                 }
             }
         }
+        .tint(Color.gpAccentText)
+    }
+
+    private func invite(_ texte: String) -> Text {
+        Text(texte).foregroundColor(Color.gpMuted.opacity(0.7))
     }
 }

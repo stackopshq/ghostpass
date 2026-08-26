@@ -90,7 +90,8 @@ passe faux, et le fait qu'aucune session n'autorise l'activation.
 | `GhostpassAutoFill/` | L'extension de remplissage : écran, état, point d'entrée |
 | `Ghostpass/Assets.xcassets` | Icône : la marque de GhostPass, cadenas et dégradé d'accent |
 | `Ghostpass/Services/VaultStore.swift` | État de l'app, passage de frontière chiffré/clair |
-| `Ghostpass/Views/` | SwiftUI : déverrouillage, liste, détail, édition |
+| `Ghostpass/Theme/` | Le système visuel de la suite : palette, surfaces, composants |
+| `Ghostpass/Views/` | SwiftUI : déverrouillage, liste, détail, édition, corbeille, générateur |
 
 ## Hors ligne
 
@@ -136,6 +137,21 @@ aussi côté remplissage. Sans lui, l'extension demandera le mot de passe maîtr
 - **Modifications hors ligne** : lecture oui, écriture non — pas de file de synchronisation.
 - **Santé du coffre** (mots de passe faibles, réutilisés, compromis) : le web a `breach.ts`, pas l'iOS.
 - **Localisation** : l'interface est en français, sans catalogue de traductions.
+
+## Apparence
+
+L'interface reprend le système visuel de la suite, transposé de
+`ghostcal/frontend/src/app/globals.css` : nuit profonde, surfaces de verre fumé, halo
+diffusé depuis le haut, intitulés en petites capitales espacées. Les produits partagent
+cette structure et ne se distinguent que par leur accent, qui est **la teinte de leur
+logo** — ici le violet `#7B4DFF`, avec sa variante claire `#B79CFF` pour ce qui doit
+rester lisible sur fond sombre.
+
+Tout vit dans `Ghostpass/Theme/Theme.swift` : couleurs, mesures, et les quelques
+composants qui font le vocabulaire commun (`GhostScreen`, `GhostSection`, `GhostRow`,
+`GlassCard`, les styles de boutons et de champs). Les deux palettes existent, comme sur
+le web ; on suit le réglage du système plutôt que d'imposer l'une des deux — mais le
+sombre est la teinte d'origine, et c'est là que l'ensemble prend son sens.
 
 ## Points de vigilance
 
