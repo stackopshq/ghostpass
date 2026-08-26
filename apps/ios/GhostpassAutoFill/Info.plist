@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Identité du bundle. `GENERATE_INFOPLIST_FILE` est désactivé pour cette cible — le
+	     dictionnaire `NSExtension` ne se décrit pas en réglages de compilation — donc ces
+	     clés doivent figurer ici : sans `CFBundleIdentifier`, l'extension sort sans
+	     identité et iOS refuse d'installer l'application entière. -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundleDisplayName</key>
+	<string>GhostPass</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID déverrouille votre coffre pour remplir vos identifiants.</string>
+
+	<!-- Un fournisseur d'identifiants : c'est ce point d'extension qui fait apparaître
+	     GhostPass dans Réglages > Apps > Mots de passe > Remplissage automatique. -->
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.authentication-services-credential-provider-ui</string>
+		<key>NSExtensionPrincipalClass</key>
+		<string>$(PRODUCT_MODULE_NAME).CredentialProviderViewController</string>
+		<key>NSExtensionAttributes</key>
+		<dict>
+			<!-- L'extension fournit des mots de passe, pas des passkeys : l'annoncer évite
+			     qu'iOS la propose là où elle n'aurait rien à offrir. -->
+			<key>ASCredentialProviderExtensionCapabilities</key>
+			<dict>
+				<key>ProvidesPasswords</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

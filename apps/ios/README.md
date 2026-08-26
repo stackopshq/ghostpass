@@ -46,7 +46,7 @@ amorce un compte de test, puis nettoie tout. En cas d'échec, les rapports reste
 | Cible | Ce qu'elle couvre |
 |---|---|
 | `Tests/` | **Contrat** : décodage des réponses du serveur, aller-retour d'un `VaultItem` à travers le vrai binding Rust, filtrage du registre `gp:folders`, refus d'activer la biométrie sur un mot de passe faux. Ni réseau ni interface, moins d'une seconde. |
-| `UITests/` | **Parcours réel** : connexion, liste, création, modification, suppression, verrouillage, réouverture au seul mot de passe maître — et l'absence de ligne fantôme à chaque étape. |
+| `UITests/` | **Parcours réel** : connexion, liste, création, modification, suppression, verrouillage, réouverture au seul mot de passe maître — et l'absence de ligne fantôme à chaque étape. Puis, serveur éteint, la réouverture hors ligne ; enfin un remplissage dans Safari, de la page de connexion au formulaire rempli. |
 
 Les deux régressions qui rendaient l'application inutilisable (paramètres KDF pris pour un
 objet JSON, horodatages pris pour des chaînes) sont des divergences de contrat : elles sont
@@ -71,6 +71,10 @@ passe faux, et le fait qu'aucune session n'autorise l'activation.
 | `Ghostpass/Services/PasswordGenerator.swift` | Générateur, transposition de `apps/web/src/lib/generator.ts` |
 | `Ghostpass/Services/Totp.swift` | Codes TOTP (RFC 6238), transposition de `apps/web/src/lib/totp.ts` |
 | `Ghostpass/Services/Clipboard.swift` | Copie de secrets, toujours avec expiration |
+| `Ghostpass/Services/SharedStore.swift` | Ce que l'app dépose pour l'extension : session et blobs |
+| `Ghostpass/Services/SiteMatching.swift` | Rapprochement site ↔ adresses d'un item |
+| `Ghostpass/Services/CredentialIdentities.swift` | Inscription des identifiants auprès d'iOS |
+| `GhostpassAutoFill/` | L'extension de remplissage : écran, état, point d'entrée |
 | `Ghostpass/Assets.xcassets` | Icône, dérivée de `assets/logo/ghostpass.svg` |
 | `Ghostpass/Services/VaultStore.swift` | État de l'app, passage de frontière chiffré/clair |
 | `Ghostpass/Views/` | SwiftUI : déverrouillage, liste, détail, édition |
@@ -86,9 +90,31 @@ En revanche **écrire suppose le serveur** : il n'y a pas de file d'attente hors
 Une création ou une suppression sans réseau est refusée avec un message explicite, plutôt
 que d'être acceptée en apparence puis perdue.
 
+## Remplissage automatique
+
+L'extension `GhostpassAutoFill` fournit les identifiants aux autres applications et à
+Safari. C'est un **processus séparé**, lancé par iOS au moment où un champ réclame un
+identifiant : elle ne voit de GhostPass que ce qui a été déposé dans le groupe
+d'applications `group.ch.stackops.ghostpass` — le coffre chiffré et les blobs
+d'ouverture. Elle ne parle jamais au serveur : un remplissage doit aboutir en quelques
+secondes, réseau ou pas.
+
+Elle réclame le mot de passe maître (ou Face ID), déchiffre la copie locale, et présente
+d'abord les identifiants du site en cours. Le rapprochement entre le site et les adresses
+d'un item vit dans `SiteMatching`, partagé avec l'application : une seule règle, pour que
+les suggestions ne dépendent pas de l'endroit d'où l'on regarde.
+
+Pour l'activer sur un appareil : Réglages > Apps > Mots de passe > Remplissage
+automatique > GhostPass.
+
+**Sur appareil réel**, deux points restent à régler et n'ont pas pu être vérifiés ici :
+le groupe d'applications et l'entitlement AutoFill demandent une équipe de développement
+(`DEVELOPMENT_TEAM`), et le trousseau n'est **pas** partagé entre l'application et son
+extension — il faudra un `keychain-access-groups` commun pour que Face ID fonctionne
+aussi côté remplissage. Sans lui, l'extension demandera le mot de passe maître.
+
 ## Ce qui n'y est pas encore
 
-- **Extension AutoFill** : cible séparée, à ajouter une fois l'app validée sur appareil.
 - **Passkey (WebAuthn PRF)** : le binding l'expose (`Account.withPasskey`), l'app ne
   l'utilise pas encore. À ne pas confondre avec Face ID ci-dessous : la passkey déverrouille
   *sans* mot de passe maître, Face ID ne fait qu'en autoriser la relecture.

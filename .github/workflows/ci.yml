@@ -104,7 +104,8 @@ jobs:
         working-directory: apps/server
         run: npm ci
       # Construit l'XCFramework et les bindings, monte un serveur GhostPass local, amorce
-      # un coffre de test (registre gp:folders compris), puis déroule les deux suites.
+      # un coffre de test (registre gp:folders compris), déroule les suites, coupe le
+      # serveur pour éprouver le hors-ligne, puis remplit un formulaire dans Safari.
       - name: Tests iOS
         run: ./tools/ios/run-ios-tests.sh
       # Un échec ne laisse qu'un nom de test : les rapports portent les captures d'écran

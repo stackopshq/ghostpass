@@ -60,6 +60,13 @@ fn main() {
         r#"{"kind":"Login","data":{"username":"clara","password":"hunter2","uris":["https://github.com"],"totp":null,"password_history":[]}}"#,
     );
 
+    // Un identifiant pointant sur la page de test locale : c'est lui qui doit remonter
+    // en tête quand le remplissage est demandé depuis cette page.
+    let local = vault_item(
+        "Site local",
+        r#"{"kind":"Login","data":{"username":"clara","password":"local-s3cret","uris":["http://127.0.0.1:8099"],"totp":null,"password_history":[]}}"#,
+    );
+
     let out = serde_json::json!({
         "registration": {
             "email": email,
@@ -70,7 +77,7 @@ fn main() {
             "encryptedPrivateKey": blob["encrypted_private_key"],
             "publicKey": account.public_key(),
         },
-        "items": [encrypted(&account, folders), encrypted(&account, demo)],
+        "items": [encrypted(&account, folders), encrypted(&account, demo), encrypted(&account, local)],
     });
     println!("{out}");
 }

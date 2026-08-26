@@ -93,12 +93,10 @@ enum Keychain {
     }
 
     enum Key {
-        static let serverURL = "serverURL"
-        static let email = "email"
+        /// Le jeton ouvre le compte côté serveur : c'est le seul élément de session qui
+        /// mérite le trousseau. Les blobs chiffrés, eux, vivent dans `SharedStore` — le
+        /// serveur les détient déjà, et l'extension de remplissage doit pouvoir les lire.
         static let token = "sessionToken"
-        static let kdfParams = "kdfParams"
-        static let encryptedUserKey = "encryptedUserKey"
-        static let encryptedPrivateKey = "encryptedPrivateKey"
         /// Mot de passe maître, protégé par la biométrie. Présent seulement si
         /// l'utilisateur a explicitement activé le déverrouillage biométrique.
         static let masterPassword = "masterPassword"

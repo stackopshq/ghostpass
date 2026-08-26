@@ -36,11 +36,13 @@ RESULTS="$ROOT/apps/ios/TestResults"
 DERIVED="$ROOT/apps/ios/.build"
 SERVER_PID=""
 BIO_PID=""
+PAGE_PID=""
 DEVICE=""
 
 cleanup() {
   local code=$?
   [[ -n "$BIO_PID" ]] && kill "$BIO_PID" 2>/dev/null || true
+  [[ -n "$PAGE_PID" ]] && kill "$PAGE_PID" 2>/dev/null || true
   [[ -n "$SERVER_PID" ]] && kill "$SERVER_PID" 2>/dev/null || true
   # `npm start` lance tsx dans un processus fils : tuer le sous-shell le laisserait
   # orphelin, à écouter le port, et le run suivant se heurterait à son compte déjà créé.
@@ -231,5 +233,23 @@ if ! run_tests GhostpassUITests/VaultFlowTests/test03HorsLigne; then
   tail -20 "$WORK/server.log" >&2 || true
   exit 1
 fi
+
+# ── Remplissage automatique ───────────────────────────────────────────────────
+# L'extension n'est joignable que depuis un vrai champ de saisie : on sert une page de
+# connexion, on l'active auprès du système, et Safari fait le reste. Le coffre déposé par
+# le parcours précédent contient un identifiant pour cette page.
+say "Remplissage automatique dans Safari"
+(cd "$ROOT/tools/ios/testpage" && python3 -m http.server 8099 --bind 127.0.0.1 >/dev/null 2>&1) &
+PAGE_PID=$!
+
+if xcrun simctl spawn "$DEVICE" pluginkit -e use -i ch.stackops.ghostpass.autofill 2>/dev/null; then
+  if ! run_tests GhostpassUITests/AutoFillSafariTests/test04Remplissage; then
+    kill "$PAGE_PID" 2>/dev/null || true
+    exit 1
+  fi
+else
+  say "Extension non activable sur ce simulateur : remplissage non vérifié"
+fi
+kill "$PAGE_PID" 2>/dev/null || true
 
 say "Tous les tests iOS sont passés"

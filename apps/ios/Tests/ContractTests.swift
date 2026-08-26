@@ -152,13 +152,11 @@ final class ContractTests: XCTestCase {
     /// hérite de l'état laissé par le précédent.
     private func viderLeTrousseau() {
         for clef in [
-            Keychain.Key.serverURL, Keychain.Key.email, Keychain.Key.token,
-            Keychain.Key.kdfParams, Keychain.Key.encryptedUserKey,
-            Keychain.Key.encryptedPrivateKey, Keychain.Key.masterPassword,
-            Keychain.Key.biometricsEnabled,
+            Keychain.Key.token, Keychain.Key.masterPassword, Keychain.Key.biometricsEnabled,
         ] {
             Keychain.remove(clef)
         }
+        SharedStore.clear()
     }
 
     // ─── Déverrouillage biométrique ───
@@ -177,12 +175,14 @@ final class ContractTests: XCTestCase {
         let champs = try XCTUnwrap(blob as? [String: Any])
 
         // Une session telle que l'app en dépose une après une connexion réussie.
-        Keychain.set(mail, for: Keychain.Key.email)
-        Keychain.set(
-            String(decoding: try JSONSerialization.data(withJSONObject: champs["kdf_params"]!), as: UTF8.self),
-            for: Keychain.Key.kdfParams)
-        Keychain.set(try XCTUnwrap(champs["encrypted_user_key"] as? String), for: Keychain.Key.encryptedUserKey)
-        Keychain.set(try XCTUnwrap(champs["encrypted_private_key"] as? String), for: Keychain.Key.encryptedPrivateKey)
+        SharedStore.save(
+            SharedStore.Session(
+                serverURL: "http://127.0.0.1:3111", email: mail,
+                kdfParams: String(
+                    decoding: try JSONSerialization.data(withJSONObject: champs["kdf_params"]!),
+                    as: UTF8.self),
+                encryptedUserKey: try XCTUnwrap(champs["encrypted_user_key"] as? String),
+                encryptedPrivateKey: try XCTUnwrap(champs["encrypted_private_key"] as? String)))
         let store = VaultStore()
         XCTAssertFalse(store.enableBiometrics(password: "ce n'est pas le bon"))
         XCTAssertFalse(store.isBiometricEnabled, "un mot de passe faux ne doit rien activer")
@@ -197,6 +197,33 @@ final class ContractTests: XCTestCase {
         let store = VaultStore()
         XCTAssertFalse(store.enableBiometrics(password: "peu importe"))
         XCTAssertFalse(store.isBiometricEnabled)
+    }
+}
+
+/// Le conteneur partagé entre l'application et l'extension de remplissage.
+final class SharedStoreTests: XCTestCase {
+    override func setUp() { SharedStore.clear() }
+    override func tearDown() { SharedStore.clear() }
+
+    /// Sans groupe d'applications, l'extension ne voit ni le coffre ni la session : elle
+    /// s'ouvre sur un écran vide, et rien dans l'application ne le laisse deviner. Ce test
+    /// tient la configuration — entitlements des deux cibles comprises.
+    func testLeGroupeDApplicationsEstAccessible() {
+        XCTAssertTrue(
+            SharedStore.isShared,
+            "groupe \(SharedStore.appGroup) inaccessible : vérifiez les fichiers .entitlements")
+    }
+
+    func testLaSessionSeRelitEtSEfface() throws {
+        XCTAssertNil(SharedStore.load())
+        let session = SharedStore.Session(
+            serverURL: "http://127.0.0.1:3111", email: "clara@ghostpass.test",
+            kdfParams: #"{"mem_cost_kib":65536,"time_cost":3,"parallelism":4}"#,
+            encryptedUserKey: "2.uuu.uuu", encryptedPrivateKey: "2.ppp.ppp")
+        SharedStore.save(session)
+        XCTAssertEqual(try XCTUnwrap(SharedStore.load()), session)
+        SharedStore.clear()
+        XCTAssertNil(SharedStore.load())
     }
 }
 
@@ -343,5 +370,126 @@ final class GeneratorAndTotpTests: XCTestCase {
         XCTAssertEqual(config.period, 30)
         XCTAssertEqual(config.digits, 6)
         XCTAssertNotNil(Totp.code(for: config))
+    }
+}
+
+/// Rapprochement entre le site où l'on se trouve et les adresses d'un item. C'est cette
+/// règle qui décide de ce que le remplissage propose : trop stricte, elle ne propose
+/// rien ; trop lâche, elle offre les identifiants d'un site à un autre.
+final class SiteMatchingTests: XCTestCase {
+
+    func testUneUrlEstRamenéeASonHote() {
+        XCTAssertEqual(SiteMatching.host(of: "https://github.com/login?next=/x"), "github.com")
+        XCTAssertEqual(SiteMatching.host(of: "HTTPS://WWW.GitHub.COM/"), "github.com")
+        XCTAssertEqual(SiteMatching.host(of: "git.stackops.ch"), "git.stackops.ch")
+        XCTAssertEqual(SiteMatching.host(of: "http://127.0.0.1:3111/api"), "127.0.0.1")
+        XCTAssertEqual(SiteMatching.host(of: "  https://Example.com  "), "example.com")
+        XCTAssertEqual(SiteMatching.host(of: ""), "")
+    }
+
+    /// Les sites déplacent leur formulaire d'authentification sur un sous-domaine sans
+    /// prévenir : un identifiant enregistré pour `example.com` doit valoir sur
+    /// `login.example.com`.
+    func testUnSousDomaineCorrespondAuDomaine() {
+        XCTAssertTrue(SiteMatching.sameSite("login.example.com", "example.com"))
+        XCTAssertTrue(SiteMatching.sameSite("example.com", "login.example.com"))
+        XCTAssertTrue(SiteMatching.sameSite("example.com", "example.com"))
+    }
+
+    /// Le point de séparation compte : sans lui, `notexample.com` passerait pour un
+    /// sous-domaine d'`example.com` et le coffre livrerait ses identifiants à un voisin.
+    func testUnDomaineVoisinNeCorrespondPas() {
+        XCTAssertFalse(SiteMatching.sameSite("notexample.com", "example.com"))
+        XCTAssertFalse(SiteMatching.sameSite("example.com.attaquant.net", "example.com"))
+        XCTAssertFalse(SiteMatching.sameSite("example.org", "example.com"))
+        XCTAssertFalse(SiteMatching.sameSite("", "example.com"))
+    }
+
+    private func identifiant(_ adresses: [String]) -> VaultItem {
+        VaultItem(
+            name: "x", notes: nil, folder: nil,
+            data: .login(Login(username: "clara", password: "s", uris: adresses)))
+    }
+
+    func testUnItemEstProposeSurSonSite() {
+        let item = identifiant(["https://github.com/login"])
+        XCTAssertTrue(SiteMatching.matches(item, domains: ["github.com"]))
+        XCTAssertTrue(SiteMatching.matches(item, domains: ["https://gist.github.com"]))
+        XCTAssertFalse(SiteMatching.matches(item, domains: ["gitlab.com"]))
+        XCTAssertFalse(SiteMatching.matches(item, domains: []))
+    }
+
+    /// Une note ou une carte n'a rien à remplir dans un champ d'identifiant.
+    func testSeulsLesIdentifiantsSontProposes() {
+        let note = VaultItem(
+            name: "n", notes: nil, folder: nil, data: .secureNote(SecureNote(content: "x")))
+        XCTAssertFalse(SiteMatching.matches(note, domains: ["github.com"]))
+    }
+
+    /// Un identifiant sans adresse ne peut être rattaché à aucun site — il reste
+    /// accessible dans la liste complète, mais n'est pas suggéré.
+    func testUnItemSansAdresseNEstPasSuggere() {
+        XCTAssertFalse(SiteMatching.matches(identifiant([]), domains: ["github.com"]))
+    }
+}
+
+/// Ce que fait l'extension de remplissage quand un site réclame un identifiant : relire
+/// la copie locale, la déchiffrer avec le mot de passe maître, et ne proposer que ce qui
+/// vaut pour ce site. L'extension vit dans un autre processus ; ce test exerce ici le
+/// chemin qu'elle emprunte, avec le même code.
+final class AutoFillLogicTests: XCTestCase {
+    override func setUp() { VaultCache.clear() }
+    override func tearDown() { VaultCache.clear() }
+
+    private func identifiant(_ nom: String, _ adresse: String) -> VaultItem {
+        VaultItem(
+            name: nom, notes: nil, folder: nil,
+            data: .login(Login(username: "clara", password: "s3cret-\(nom)", uris: [adresse])))
+    }
+
+    func testLeRemplissageNeProposeQueLesIdentifiantsDuSite() throws {
+        let account = try register(
+            password: "correct horse battery staple", email: "clara@ghostpass.test"
+        ).account()
+
+        // Un coffre comme l'application en dépose un : deux sites et le registre interne.
+        let coffre = [
+            identifiant("GitHub", "https://github.com/login"),
+            identifiant("Forgejo", "https://git.stackops.ch"),
+            VaultItem(
+                name: VaultConstants.foldersItemName, notes: nil, folder: nil,
+                data: .secureNote(SecureNote(content: "[]"))),
+        ]
+        let dtos = try coffre.enumerated().map { index, item -> EncryptedItemDTO in
+            let (key, data) = try VaultStore.encrypt(item, with: account)
+            return EncryptedItemDTO(
+                id: "item-\(index)", encryptedKey: key, encryptedData: data,
+                updatedAt: nil, deletedAt: nil)
+        }
+        VaultCache.save(dtos)
+
+        // Le chemin de l'extension : cache → déchiffrement → filtrage.
+        let items = try XCTUnwrap(VaultCache.load()).compactMap {
+            try? VaultStore.decrypt($0, with: account)
+        }
+        let visibles = items.filter { !VaultStore.isRegistry($0) }
+        XCTAssertEqual(visibles.count, 2, "le registre interne n'a rien à faire ici non plus")
+
+        let surGitHub = visibles.filter {
+            SiteMatching.matches($0, domains: ["https://gist.github.com/clara"])
+        }
+        XCTAssertEqual(surGitHub.map(\.name), ["GitHub"], "un sous-domaine doit correspondre")
+
+        let surLaForge = visibles.filter { SiteMatching.matches($0, domains: ["git.stackops.ch"]) }
+        XCTAssertEqual(surLaForge.map(\.name), ["Forgejo"])
+
+        // Le mot de passe fourni est bien celui de l'item retenu.
+        guard case .login(let login) = try XCTUnwrap(surGitHub.first).data else {
+            return XCTFail("un identifiant était attendu")
+        }
+        XCTAssertEqual(login.password, "s3cret-GitHub")
+
+        // Sur un site inconnu, rien n'est suggéré — la liste complète reste accessible.
+        XCTAssertTrue(visibles.filter { SiteMatching.matches($0, domains: ["exemple.test"]) }.isEmpty)
     }
 }

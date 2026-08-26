@@ -11,12 +11,10 @@ import Foundation
 enum VaultCache {
     private static let fileName = "vault-cache.json"
 
+    /// Dans le conteneur partagé : l'extension de remplissage lit le même coffre, sans
+    /// avoir à le retélécharger ni à ouvrir de session à elle.
     private static var url: URL? {
-        guard
-            let directory = FileManager.default.urls(
-                for: .applicationSupportDirectory, in: .userDomainMask
-            ).first
-        else { return nil }
+        guard let directory = SharedStore.container else { return nil }
         try? FileManager.default.createDirectory(
             at: directory, withIntermediateDirectories: true)
         return directory.appendingPathComponent(fileName)

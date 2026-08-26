@@ -29,9 +29,12 @@ targets:
       # Bibliothèque statique : liée, jamais embarquée (embed: false).
       - framework: GhostpassCrypto.xcframework
         embed: false
+      # L'extension voyage dans l'application : c'est ainsi qu'iOS la découvre.
+      - target: GhostpassAutoFill
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass
+        CODE_SIGN_ENTITLEMENTS: Ghostpass/Ghostpass.entitlements
         GENERATE_INFOPLIST_FILE: YES
         # Icône dérivée du logo du produit (assets/logo/ghostpass.svg).
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -41,6 +44,30 @@ targets:
         # Sans cette clé, iOS tue l'app à la première demande biométrique.
         INFOPLIST_KEY_NSFaceIDUsageDescription: >-
           Face ID déverrouille votre coffre sans ressaisir le mot de passe maître.
+        OTHER_LDFLAGS: -lc++
+
+  # Remplissage automatique : une cible à part, lancée par iOS dans son propre processus.
+  # Elle partage les sources du modèle et des services — le même code déchiffre le coffre
+  # des deux côtés, plutôt qu'une seconde implémentation qui divergerait.
+  GhostpassAutoFill:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: GhostpassAutoFill
+      - path: Ghostpass/Model
+      - path: Ghostpass/Services
+      - path: Generated
+    dependencies:
+      - framework: GhostpassCrypto.xcframework
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass.autofill
+        INFOPLIST_FILE: GhostpassAutoFill/Info.plist
+        CODE_SIGN_ENTITLEMENTS: GhostpassAutoFill/GhostpassAutoFill.entitlements
+        INFOPLIST_KEY_CFBundleDisplayName: GhostPass
+        INFOPLIST_KEY_NSFaceIDUsageDescription: >-
+          Face ID déverrouille votre coffre pour remplir vos identifiants.
         OTHER_LDFLAGS: -lc++
 
   # Tests de contrat : la couture JSON serveur ↔ cœur Rust ↔ types Swift.

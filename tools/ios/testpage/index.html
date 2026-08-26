@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Connexion — page de test</title>
+</head>
+<!--
+  Page de connexion minimale, servie en local pendant les tests iOS.
+
+  Les attributs `autocomplete` ne sont pas décoratifs : c'est à eux qu'iOS reconnaît un
+  formulaire d'authentification, et donc ce qui décide s'il propose le remplissage.
+  Sans eux, le clavier n'affiche rien et le test n'a plus rien à exercer.
+-->
+<body style="font:16px -apple-system;padding:24px">
+  <h1>Connexion</h1>
+  <form>
+    <input id="u" name="username" type="text" autocomplete="username" placeholder="Identifiant"
+           style="display:block;width:90%;padding:12px;margin:8px 0;font-size:16px">
+    <input id="p" name="password" type="password" autocomplete="current-password" placeholder="Mot de passe"
+           style="display:block;width:90%;padding:12px;margin:8px 0;font-size:16px">
+    <button type="button" style="padding:12px">Entrer</button>
+  </form>
+</body>
+</html>

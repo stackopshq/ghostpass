@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Le conteneur que l'application et l'extension se partagent : coffre chiffré et
+	     blobs d'ouverture. Sans lui, l'extension ne verrait rien. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.ch.stackops.ghostpass</string>
+	</array>
+	<!-- Permet d'inscrire les identifiants auprès d'iOS, pour qu'il propose GhostPass
+	     au-dessus du clavier plutôt qu'au fond d'un menu. -->
+	<key>com.apple.developer.authentication-services.autofill-credential-provider</key>
+	<true/>
+</dict>
+</plist>

@@ -24,12 +24,10 @@ final class VaultStore: ObservableObject {
     /// au-delà : `enableBiometrics` et `declineBiometrics` l'effacent tous les deux.
     private var pendingPassword: String?
 
-    var hasSavedSession: Bool {
-        Keychain.get(Keychain.Key.token) != nil && Keychain.get(Keychain.Key.email) != nil
-    }
+    var hasSavedSession: Bool { SharedStore.load() != nil }
 
-    var savedEmail: String { Keychain.get(Keychain.Key.email) ?? "" }
-    var savedServer: String { Keychain.get(Keychain.Key.serverURL) ?? "" }
+    var savedEmail: String { SharedStore.load()?.email ?? "" }
+    var savedServer: String { SharedStore.load()?.serverURL ?? "" }
 
     // ─── Session ───
 
@@ -64,12 +62,15 @@ final class VaultStore: ObservableObject {
             isUnlocked = true
             errorMessage = nil
 
-            Keychain.set(server, for: Keychain.Key.serverURL)
-            Keychain.set(email, for: Keychain.Key.email)
+            // Le jeton ouvre le compte côté serveur : il reste au trousseau. Les blobs,
+            // eux, vont dans le conteneur partagé — l'extension de remplissage en a besoin
+            // et le serveur les détient déjà.
             Keychain.set(session.token, for: Keychain.Key.token)
-            Keychain.set(session.kdfParams, for: Keychain.Key.kdfParams)
-            Keychain.set(session.encryptedUserKey, for: Keychain.Key.encryptedUserKey)
-            Keychain.set(session.encryptedPrivateKey, for: Keychain.Key.encryptedPrivateKey)
+            SharedStore.save(
+                SharedStore.Session(
+                    serverURL: server, email: email, kdfParams: session.kdfParams,
+                    encryptedUserKey: session.encryptedUserKey,
+                    encryptedPrivateKey: session.encryptedPrivateKey))
 
             proposeBiometricsIfPossible(password)
             await refresh()
@@ -82,13 +83,7 @@ final class VaultStore: ObservableObject {
     /// mot de passe manque. C'est ce chemin qu'emprunte l'extension AutoFill, qui doit
     /// pouvoir déverrouiller sans dépendre de la disponibilité du serveur.
     func unlockOffline(password: String) async {
-        guard let email = Keychain.get(Keychain.Key.email),
-            let kdf = Keychain.get(Keychain.Key.kdfParams),
-            let euk = Keychain.get(Keychain.Key.encryptedUserKey),
-            let epk = Keychain.get(Keychain.Key.encryptedPrivateKey),
-            let server = Keychain.get(Keychain.Key.serverURL),
-            let url = URL(string: server)
-        else {
+        guard let session = SharedStore.load(), let url = URL(string: session.serverURL) else {
             errorMessage = "Aucune session enregistrée sur cet appareil."
             return
         }
@@ -96,8 +91,9 @@ final class VaultStore: ObservableObject {
         defer { isBusy = false }
         do {
             account = try Account.unlock(
-                password: password, email: email, kdfParamsJson: kdf,
-                encryptedUserKey: euk, encryptedPrivateKey: epk)
+                password: password, email: session.email, kdfParamsJson: session.kdfParams,
+                encryptedUserKey: session.encryptedUserKey,
+                encryptedPrivateKey: session.encryptedPrivateKey)
             token = Keychain.get(Keychain.Key.token)
             api = APIClient(baseURL: url)
             isUnlocked = true
@@ -129,12 +125,12 @@ final class VaultStore: ObservableObject {
         api = nil
         VaultCache.clear()
         for key in [
-            Keychain.Key.token, Keychain.Key.kdfParams, Keychain.Key.encryptedUserKey,
-            Keychain.Key.encryptedPrivateKey, Keychain.Key.masterPassword,
-            Keychain.Key.biometricsEnabled,
+            Keychain.Key.token, Keychain.Key.masterPassword, Keychain.Key.biometricsEnabled,
         ] {
             Keychain.remove(key)
         }
+        SharedStore.clear()
+        await CredentialIdentities.clear()
     }
 
     // ─── Biométrie ───
@@ -157,9 +153,6 @@ final class VaultStore: ObservableObject {
     /// Déverrouille sans saisie : la biométrie autorise la relecture du mot de passe
     /// maître, et c'est toujours lui qui ouvre le coffre côté Rust.
     func unlockWithBiometrics() async {
-        NSLog("GP-BIO tentative flag=%@ dispo=%@",
-              Keychain.get(Keychain.Key.biometricsEnabled) ?? "(absent)",
-              Biometrics.isAvailable ? "oui" : "non")
         guard Keychain.get(Keychain.Key.biometricsEnabled) == "1" else { return }
         isBusy = true
         let prompt = "Déverrouiller votre coffre GhostPass"
@@ -200,18 +193,15 @@ final class VaultStore: ObservableObject {
     /// coffre avec — on ne dépose au trousseau qu'un secret dont on sait qu'il ouvre.
     @discardableResult
     func enableBiometrics(password: String) -> Bool {
-        guard let email = Keychain.get(Keychain.Key.email),
-            let kdf = Keychain.get(Keychain.Key.kdfParams),
-            let euk = Keychain.get(Keychain.Key.encryptedUserKey),
-            let epk = Keychain.get(Keychain.Key.encryptedPrivateKey)
-        else {
+        guard let session = SharedStore.load() else {
             errorMessage = "Aucune session enregistrée sur cet appareil."
             return false
         }
         do {
             _ = try Account.unlock(
-                password: password, email: email, kdfParamsJson: kdf,
-                encryptedUserKey: euk, encryptedPrivateKey: epk)
+                password: password, email: session.email, kdfParamsJson: session.kdfParams,
+                encryptedUserKey: session.encryptedUserKey,
+                encryptedPrivateKey: session.encryptedPrivateKey)
         } catch {
             errorMessage = "Mot de passe maître incorrect."
             return false
@@ -222,7 +212,6 @@ final class VaultStore: ObservableObject {
     @discardableResult
     private func store(_ password: String) -> Bool {
         let status = Keychain.setBiometric(password, for: Keychain.Key.masterPassword)
-        NSLog("GP-BIO store status=%d", status)
         guard status == errSecSuccess else {
             errorMessage = "\(Biometrics.label) n'a pas pu être activé (code \(status))."
             return false
@@ -264,6 +253,7 @@ final class VaultStore: ObservableObject {
             entries = Self.entries(from: dtos, with: account)
             isOffline = false
             errorMessage = nil
+            await CredentialIdentities.sync(entries)
         } catch {
             // Avec une copie locale sous la main, l'absence de réseau se signale sans
             // rien interrompre. Sans elle, il n'y a rien à montrer : c'est une erreur.
