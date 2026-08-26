@@ -39,8 +39,8 @@ du projet vit dans `project.yml`, qui se relit et se fusionne — contrairement 
 
 **En intégration continue, ces tests dépendent d'un runner macOS** : Xcode et le
 simulateur n'existent pas ailleurs. Le job vit dans `.gitea/workflows/ci.yml` et attend un
-runner étiqueté `macos` — `tools/ci/README.md` explique comment en brancher un, et ce que
-cela engage. Il est piloté par la variable de dépôt `MACOS_RUNNER` : tant qu'elle n'est pas
+runner étiqueté `macos` — `tools/ci/README.md` explique comment en brancher un, ce que cela
+engage, et ce qui distingue un poste prêté en dépannage d'une machine dédiée. Il est piloté par la variable de dépôt `MACOS_RUNNER` : tant qu'elle n'est pas
 à `true`, le job est ignoré et **les tests se lancent à la main avant toute pull request
 touchant à l'application**.
 
