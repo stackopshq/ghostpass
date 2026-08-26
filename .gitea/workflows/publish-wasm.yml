@@ -49,6 +49,36 @@ jobs:
           npm pkg set name="@stackops/ghostpass-crypto-wasm"
           npm version "${{ inputs.version }}" --no-git-tag-version --allow-same-version
           npm pkg set publishConfig.registry="${NPM_REGISTRY}"
+      - name: Préflight du jeton de publication
+        # Gitea répond 401 aussi bien pour un jeton invalide que pour un jeton valide sans le
+        # scope `write:package` : `npm publish` seul ne permet pas de distinguer les deux. Ces
+        # deux sondes le font, et n'affichent que des codes HTTP, jamais la valeur du secret.
+        run: |
+          if [[ -z "${REGISTRY_TOKEN}" ]]; then
+            echo "::error::Secret REGISTRY_TOKEN manquant (PAT avec le scope write:package)"
+            exit 1
+          fi
+          tok="$(printf '%s' "${REGISTRY_TOKEN}" | tr -d '[:space:]')"
+          echo "longueur du jeton après nettoyage : ${#tok}"
+
+          # Lecture du registre de paquets. 401 = le jeton n'a aucun scope `package`.
+          # 404 = jeton accepté, le paquet n'existe simplement pas encore (cas normal).
+          # Attention : cette sonde ne prouve que la LECTURE ; Gitea n'offre pas de sonde
+          # d'écriture non destructive, donc l'absence de `write:package` ne se voit qu'au
+          # `npm publish` qui suit.
+          pkg=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${tok}" \
+            "${NPM_REGISTRY}@stackops%2Fghostpass-crypto-wasm")
+          echo "lecture du registre npm -> ${pkg}"
+
+          if [[ "${pkg}" == "401" ]]; then
+            echo "::error::Jeton refusé par le registre de paquets : valeur erronée, jeton révoqué, ou aucun scope package."
+            exit 1
+          fi
+          echo "Préflight OK : le jeton est accepté en lecture par le registre."
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+
       - name: Publish
         working-directory: crates/ghostpass-crypto-wasm/pkg
         # Le jeton auto-injecté (GITEA_TOKEN / GITHUB_TOKEN) ne porte pas le scope
@@ -67,6 +97,9 @@ jobs:
           NODE_AUTH_TOKEN="$(printf '%s' "${REGISTRY_TOKEN}" | tr -d '[:space:]')"
           export NODE_AUTH_TOKEN
           # --loglevel=error suffit pour diagnostiquer sans que npm réaffiche des en-têtes.
-          npm publish --loglevel=error
+          if ! npm publish --loglevel=error; then
+            echo "::error::npm publish refusé alors que le préflight lit le registre : il manque le scope write:package sur le PAT de REGISTRY_TOKEN."
+            exit 1
+          fi
         env:
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
