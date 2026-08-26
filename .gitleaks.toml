@@ -15,3 +15,12 @@ paths = [
   '''(^|/)Cargo\.lock$''',
   '''(^|/)package-lock\.json$''',
 ]
+
+# Vecteur de test de la RFC 6238 (base32 de « 12345678901234567890 », doublé pour atteindre
+# 160 bits) : il est publié dans la norme et sert à vérifier que notre TOTP calcule les codes
+# attendus. `generic-api-key` le prend pour une clé à cause de son entropie. On autorise la
+# valeur elle-même, et non le fichier entier : un vrai secret collé dans les tests iOS doit
+# continuer à faire échouer le scan.
+regexes = [
+  '''GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ''',
+]
