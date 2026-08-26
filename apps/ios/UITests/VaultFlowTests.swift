@@ -156,6 +156,55 @@ final class VaultFlowTests: XCTestCase {
             evaluatedWith: app.staticTexts["Forgejo prod"])
         waitForExpectations(timeout: 60)
 
+        // 5b. L'item supprimé est à la corbeille, d'où il revient
+        app.buttons["button.settings"].tap()
+        app.buttons["button.trash"].firstMatch.tap()
+        let dansLaCorbeille = app.staticTexts["Forgejo prod"]
+        XCTAssertTrue(
+            dansLaCorbeille.waitForExistence(timeout: 30),
+            "l'item supprimé n'est pas dans la corbeille")
+        shot(app, "5-corbeille")
+        // Balayage vers la droite : restaurer.
+        dansLaCorbeille.swipeRight()
+        XCTAssertTrue(app.buttons["Restaurer"].waitForExistence(timeout: 20))
+        app.buttons["Restaurer"].tap()
+        // On vérifie que la corbeille se vide, et non que le nom disparaît : l'item
+        // restauré réapparaît dans le coffre, sous la feuille, où il reste visible de
+        // l'arbre d'accessibilité.
+        XCTAssertTrue(
+            app.staticTexts["Corbeille vide"].waitForExistence(timeout: 30),
+            "l'item restauré n'a pas quitté la corbeille")
+        app.buttons["button.closeTrash"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["Forgejo prod"].waitForExistence(timeout: 30),
+            "l'item restauré n'est pas revenu dans le coffre")
+
+        // 5c. Cette fois pour de bon : suppression, puis purge confirmée
+        app.buttons["Forgejo prod, clara"].swipeLeft()
+        XCTAssertTrue(app.buttons["Supprimer"].waitForExistence(timeout: 20))
+        app.buttons["Supprimer"].tap()
+        expectation(
+            for: NSPredicate(format: "exists == false"),
+            evaluatedWith: app.staticTexts["Forgejo prod"])
+        waitForExpectations(timeout: 30)
+
+        app.buttons["button.settings"].tap()
+        app.buttons["button.trash"].firstMatch.tap()
+        let aPurger = app.staticTexts["Forgejo prod"]
+        XCTAssertTrue(aPurger.waitForExistence(timeout: 30))
+        aPurger.swipeLeft()
+        XCTAssertTrue(app.buttons["Supprimer"].waitForExistence(timeout: 20))
+        app.buttons["Supprimer"].tap()
+        // Une suppression définitive se confirme : sans cette étape, rien ne part.
+        XCTAssertTrue(
+            app.buttons["button.confirmPurge"].firstMatch.waitForExistence(timeout: 20),
+            "la suppression définitive ne demande pas confirmation")
+        app.buttons["button.confirmPurge"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["Corbeille vide"].waitForExistence(timeout: 30),
+            "l'item purgé est encore là")
+        app.buttons["button.closeTrash"].firstMatch.tap()
+
         // 6. Verrouiller relâche vraiment les clés
         app.buttons["button.lock"].tap()
         XCTAssertTrue(app.buttons["button.submit"].waitForExistence(timeout: 30))

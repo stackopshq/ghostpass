@@ -311,6 +311,47 @@ final class VaultStore: ObservableObject {
         }
     }
 
+    // ─── Corbeille ───
+
+    /// Les items supprimés, déchiffrés à la demande. Ils ne sont pas conservés dans
+    /// `entries` : la corbeille se consulte, elle n'encombre pas le coffre.
+    func loadTrash() async -> [VaultEntry] {
+        guard let api, let token, let account else { return [] }
+        do {
+            let dtos = try await api.listTrash(token: token)
+            errorMessage = nil
+            return Self.entries(from: dtos, with: account)
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
+        }
+    }
+
+    func restore(_ entry: VaultEntry) async {
+        guard let api, let token else { return }
+        do {
+            try await api.restoreItem(token: token, id: entry.id)
+            await refresh()
+        } catch is URLError {
+            errorMessage = "Serveur injoignable : l'item n'a pas été restauré."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Suppression définitive. Rien ne la rattrape : l'appelant doit avoir demandé
+    /// confirmation avant d'arriver ici.
+    func purge(_ entry: VaultEntry) async {
+        guard let api, let token else { return }
+        do {
+            try await api.purgeItem(token: token, id: entry.id)
+        } catch is URLError {
+            errorMessage = "Serveur injoignable : l'item n'a pas été supprimé."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // ─── Passage de frontière ───
     //
     // `static` et non `private` : c'est la couture où le JSON du serveur rencontre celui

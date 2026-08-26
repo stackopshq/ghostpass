@@ -21,7 +21,12 @@ Le jeton d'enregistrement s'obtient dans la forge : **Settings > Actions > Runne
 Create new runner**, au niveau du dépôt ou de l'organisation pour le partager entre les
 projets de la suite.
 
+`register` écrit un fichier `.runner` — son identité auprès de la forge — **dans le
+répertoire courant**, et `daemon` le cherche au même endroit. D'où un dossier à soi,
+plutôt qu'un fichier égaré dans le dépôt ou au fond du dossier personnel :
+
 ```sh
+mkdir -p ~/.gitea-runner && cd ~/.gitea-runner
 gitea-runner register --no-interactive \
   --instance https://git.stackops.ch \
   --token <JETON> \
@@ -41,7 +46,8 @@ moitié du temps. On le lance quand on veut qu'une pull request soit vérifiée,
 ensuite :
 
 ```sh
-gitea-runner daemon          # au premier plan : on voit les tâches arriver, Ctrl-C pour rendre la machine
+cd ~/.gitea-runner && gitea-runner daemon   # au premier plan : on voit les tâches
+                                            # arriver, Ctrl-C pour rendre la machine
 ```
 
 Et l'interrupteur suit le même rythme. `MACOS_RUNNER` (**Settings > Actions > Variables**)
@@ -77,7 +83,7 @@ forge croira joignable :
 ```sh
 brew services stop gitea-runner 2>/dev/null || true
 gitea-runner --config /opt/homebrew/etc/gitea-runner/config.yaml daemon --once 2>/dev/null || true
-rm -f .runner                      # le fichier d'enregistrement, dans le dossier d'où il a été lancé
+rm -rf ~/.gitea-runner             # son identité auprès de la forge
 ```
 
 Puis le supprimer côté forge : **Settings > Actions > Runners**, bouton de suppression en

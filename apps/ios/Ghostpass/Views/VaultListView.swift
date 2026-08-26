@@ -77,6 +77,8 @@ struct VaultListView: View {
                                 .accessibilityIdentifier("button.biometricOn")
                             }
                         }
+                        Button("Corbeille", systemImage: "trash") { sheet = .trash }
+                            .accessibilityIdentifier("button.trash")
                         Button("Se déconnecter", role: .destructive) {
                             Task { await store.signOut() }
                         }
@@ -103,6 +105,8 @@ struct VaultListView: View {
                     ItemEditView(target: .existing(entry)).environmentObject(store)
                 case .biometrics:
                     BiometricSetupView().environmentObject(store)
+                case .trash:
+                    TrashView().environmentObject(store)
                 }
             }
             .alert(
@@ -132,12 +136,14 @@ enum VaultSheet: Identifiable {
     case newItem
     case editItem(VaultEntry)
     case biometrics
+    case trash
 
     var id: String {
         switch self {
         case .newItem: return "new"
         case .editItem(let entry): return entry.id
         case .biometrics: return "biometrics"
+        case .trash: return "trash"
         }
     }
 }

@@ -152,4 +152,20 @@ struct APIClient {
     func deleteItem(token: String, id: String) async throws {
         _ = try await request("DELETE", "api/vault/items/\(id)", token: token)
     }
+
+    // ─── Corbeille ───
+
+    func listTrash(token: String) async throws -> [EncryptedItemDTO] {
+        try decode(ItemsEnvelope.self, from: await request("GET", "api/vault/trash", token: token))
+            .items
+    }
+
+    func restoreItem(token: String, id: String) async throws {
+        _ = try await request("POST", "api/vault/trash/\(id)/restore", token: token)
+    }
+
+    /// Suppression définitive : l'item ne revient pas.
+    func purgeItem(token: String, id: String) async throws {
+        _ = try await request("DELETE", "api/vault/trash/\(id)", token: token)
+    }
 }
