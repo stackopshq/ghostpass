@@ -1,8 +1,12 @@
 name: CI
 
 on:
+  # Les branches de travail aussi, et pas seulement `main` : pour un événement `push`, la
+  # forge exécute le workflow *du commit poussé*. Un job ajouté sur une branche s'y exerce
+  # donc tout de suite, sans dépendre de la façon dont elle résout les workflows d'une
+  # pull request — depuis la source ou depuis la cible, selon les versions.
   push:
-    branches: [main]
+    branches: [main, "feat/**", "fix/**"]
   pull_request:
 
 # Principe du moindre privilège : lecture seule par défaut. Conservé pour Gitea Actions ; si
