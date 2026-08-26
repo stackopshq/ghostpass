@@ -37,15 +37,33 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+      # Renovate met à jour Cargo.lock en appelant `cargo update` : sans toolchain Rust dans
+      # l'image du runner, chaque dépendance cargo part en `spawn cargo ENOENT` et fait échouer
+      # le job (22 rejets non gérés au premier essai).
+      - uses: dtolnay/rust-toolchain@stable
       - name: Renovate
         run: |
           if [[ -z "${RENOVATE_TOKEN}" ]]; then
             echo "::error::Secret RENOVATE_TOKEN manquant (PAT Gitea autorisé à ouvrir des PR)"
             exit 1
           fi
+          if [[ -z "${GITHUB_COM_TOKEN}" ]]; then
+            echo "::warning::GH_COM_TOKEN absent : les dépendances hébergées sur github.com" \
+                 "(actions, node, python) seront limitées par le rate-limit anonyme et leurs" \
+                 "mises à jour ne seront pas détectées."
+          fi
+          # Un dry-run manuel doit montrer ce qui serait proposé même hors de la fenêtre
+          # hebdomadaire de renovate.json, sinon il ne renvoie rien 6 jours sur 7.
+          if [[ -n "${RENOVATE_DRY_RUN}" ]]; then
+            export RENOVATE_FORCE='{"schedule":null}'
+            echo "Dry-run : fenêtre de planification ignorée."
+          fi
           npx --yes renovate@44.45.0
         env:
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          # Lookups et changelogs des dépendances github.com. Sans ce jeton, Renovate tape
+          # l'API en anonyme et se fait limiter : 41 des 83 dépendances du dépôt sont concernées.
+          GITHUB_COM_TOKEN: ${{ secrets.GH_COM_TOKEN }}
           RENOVATE_PLATFORM: gitea
           RENOVATE_ENDPOINT: https://git.stackops.ch/api/v1
           RENOVATE_REPOSITORIES: stackops/ghostpass
