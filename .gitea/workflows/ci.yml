@@ -143,7 +143,10 @@ jobs:
           for outil in xcodebuild xcrun xcodegen cargo node npm; do
             command -v "$outil" >/dev/null || { echo "::error::$outil introuvable sur ce runner"; exit 1; }
           done
-          xcodebuild -version | head -1
+          # `| head -1` ferait sortir xcodebuild en 141 (SIGPIPE) dès qu'il écrit la
+          # deuxième ligne : le shell des steps tourne en `-e -o pipefail`, et l'étape
+          # échouerait *après* avoir réussi. `sed -n 1p` lit tout le flux, lui.
+          xcodebuild -version | sed -n 1p
       - name: Cibles Rust pour iOS
         run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
       - name: Dépendances du serveur de test
