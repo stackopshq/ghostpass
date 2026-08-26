@@ -44,16 +44,16 @@
     },
     "%@ n'a pas pu être activé (code %d).": {
       "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@ n'a pas pu être activé (code %2$d)."
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ could not be enabled (code %d)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ n'a pas pu être activé (code %2$d)."
           }
         }
       }
@@ -204,6 +204,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Addresses"
+          }
+        }
+      }
+    },
+    "Afficher les logos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show logos"
           }
         }
       }
@@ -788,6 +798,26 @@
         }
       }
     },
+    "Exporter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export"
+          }
+        }
+      }
+    },
+    "Exporter le coffre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export the vault"
+          }
+        }
+      }
+    },
     "Faible": {
       "localizations": {
         "en": {
@@ -824,6 +854,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "File"
+          }
+        }
+      }
+    },
+    "Fichier enregistré.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File saved."
           }
         }
       }
@@ -894,6 +934,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Eight characters minimum."
+          }
+        }
+      }
+    },
+    "Icônes des sites": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site icons"
           }
         }
       }
@@ -988,12 +1038,32 @@
         }
       }
     },
+    "Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun tiers n'est sollicité.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The vault is end-to-end encrypted: the server does not know its contents. Asking for an icon, however, names a domain to it. No third party is involved."
+          }
+        }
+      }
+    },
     "Le coffre local ne contient rien.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "The local vault is empty."
+          }
+        }
+      }
+    },
+    "Le fichier contiendra vos %lld entrées, mots de passe compris, en clair. Il se relit dans n'importe quel gestionnaire — et par n'importe qui.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file will hold your %lld entries, passwords included, in the clear. Any manager can read it — and so can anyone."
           }
         }
       }
@@ -1094,6 +1164,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uppercase"
+          }
+        }
+      }
+    },
+    "Mettez-le à l'abri, puis effacez-le : tant qu'il existe, vos mots de passe sont lisibles par qui met la main dessus.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Put it somewhere safe, then delete it: as long as it exists, your passwords are readable by whoever gets hold of it."
           }
         }
       }
@@ -1384,6 +1464,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "To confirm it is really you"
+          }
+        }
+      }
+    },
+    "Préparer le fichier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prepare the file"
           }
         }
       }

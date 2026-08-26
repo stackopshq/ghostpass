@@ -284,7 +284,17 @@ final class VaultFlowTests: XCTestCase {
             "l'écran d'import ne s'ouvre pas")
         app.buttons["button.closeImport"].tap()
 
-        // 6. Santé du coffre
+        // 6. Export : l'écran demande le mot de passe maître avant de fabriquer un
+        // fichier qui contiendra tout en clair. Le choix de la destination appartient au
+        // système ; ce qui nous revient — le format — est éprouvé par les contrats.
+        ouvrirLeMenu(app, "button.export")
+        let preparer = app.buttons["button.prepareExport"]
+        XCTAssertTrue(preparer.waitForExistence(timeout: 30), "l'écran d'export ne s'ouvre pas")
+        XCTAssertFalse(
+            preparer.isEnabled, "l'export part sans mot de passe maître")
+        app.buttons["button.closeExport"].tap()
+
+        // 7. Santé du coffre
         ouvrirLeMenu(app, "button.health")
         let resume = app.descendants(matching: .any)
             .matching(identifier: "card.healthSummary").firstMatch

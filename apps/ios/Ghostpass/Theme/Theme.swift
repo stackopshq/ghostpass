@@ -36,6 +36,12 @@ extension Color {
     static let gpDanger = adaptative(sombre: 0xFB7185, clair: 0xD11F45)
     static let gpSuccess = adaptative(sombre: 0x4ADE80, clair: 0x15803D)
 
+    /// Une teinte fixe, en hexadécimal. Sert aux couleurs qui ne dépendent pas du thème :
+    /// les pastilles d'initiale, dont la palette est partagée avec la web app.
+    init(rgb: Int) {
+        self.init(UIColor(rgb: rgb, alpha: 1))
+    }
+
     private static func adaptative(sombre: Int, clair: Int) -> Color {
         Color(
             UIColor { traits in

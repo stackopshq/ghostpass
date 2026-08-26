@@ -454,6 +454,32 @@ final class VaultStore: ObservableObject {
             echec: tr("Serveur injoignable : les favoris n'ont pas été enregistrés."))
     }
 
+    // ─── Export ───
+
+    /// Le mot de passe maître est-il celui du coffre ? La question se pose avant de
+    /// fabriquer un fichier qui contiendra tout en clair : un téléphone déverrouillé posé
+    /// sur une table ne doit pas suffire à le vider.
+    ///
+    /// La vérification passe par le cœur : c'est une dérivation Argon2id sur les blobs
+    /// enregistrés, pas une comparaison de chaînes.
+    func verifyMasterPassword(_ password: String) -> Bool {
+        guard let session = SharedStore.load() else {
+            errorMessage = tr("Aucune session enregistrée sur cet appareil.")
+            return false
+        }
+        do {
+            _ = try Account.unlock(
+                password: password, email: session.email, kdfParamsJson: session.kdfParams,
+                encryptedUserKey: session.encryptedUserKey,
+                encryptedPrivateKey: session.encryptedPrivateKey)
+            errorMessage = nil
+            return true
+        } catch {
+            errorMessage = tr("Mot de passe maître incorrect.")
+            return false
+        }
+    }
+
     // ─── Import ───
 
     /// Dépose une fournée d'items d'un coup. Un seul rechargement à la fin : rafraîchir le

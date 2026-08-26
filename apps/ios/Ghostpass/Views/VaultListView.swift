@@ -127,6 +127,10 @@ struct VaultListView: View {
                             sheet = .importCSV
                         }
                         .accessibilityIdentifier("button.import")
+                        Button("Exporter le coffre", systemImage: "square.and.arrow.up") {
+                            sheet = .exportCSV
+                        }
+                        .accessibilityIdentifier("button.export")
                         Button("Corbeille", systemImage: "trash") { sheet = .trash }
                             .accessibilityIdentifier("button.trash")
                         Button("Réglages", systemImage: "gearshape") { sheet = .settings }
@@ -173,6 +177,8 @@ struct VaultListView: View {
                     RecoveryKeyView().environmentObject(store)
                 case .importCSV:
                     ImportView().environmentObject(store)
+                case .exportCSV:
+                    ExportView().environmentObject(store)
                 }
             }
             // Une seule alerte, et rien d'autre par-dessus : deux modificateurs `.alert`
@@ -352,6 +358,7 @@ enum VaultSheet: Identifiable {
     case health
     case recoveryKey
     case importCSV
+    case exportCSV
 
     var id: String {
         switch self {
@@ -365,6 +372,7 @@ enum VaultSheet: Identifiable {
         case .health: return "health"
         case .recoveryKey: return "recoveryKey"
         case .importCSV: return "import"
+        case .exportCSV: return "export"
         }
     }
 }
@@ -389,14 +397,20 @@ private struct VaultRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.gpAccent.opacity(0.16))
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color.gpAccentText)
+            // Un identifiant se reconnaît à son logo bien avant son nom ; une note ou une
+            // carte n'en a pas, et garde son pictogramme.
+            if case .login(let login) = entry.item.data {
+                SiteIcon(nom: entry.item.name, adresse: login.uris.first)
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.gpAccent.opacity(0.16))
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(Color.gpAccentText)
+                }
+                .frame(width: 38, height: 38)
             }
-            .frame(width: 38, height: 38)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: entry.item.name)

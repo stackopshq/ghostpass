@@ -953,3 +953,124 @@ final class CsvImportTests: XCTestCase {
         XCTAssertFalse(CsvImport.items(csv).first?.name.isEmpty ?? true)
     }
 }
+
+// ─── Export CSV ───────────────────────────────────────────────────────────────
+
+/// Un coffre doit pouvoir sortir aussi librement qu'il est entré. Le test qui compte est
+/// l'aller-retour : ce que l'export écrit, l'import doit le relire à l'identique. Sans
+/// cela, on découvrirait le problème le jour où l'on quitte l'application — c'est-à-dire
+/// trop tard pour s'en plaindre.
+final class CsvExportTests: XCTestCase {
+    private func entree(
+        _ nom: String, _ utilisateur: String, _ motDePasse: String,
+        adresse: String = "", dossier: String? = nil, totp: String? = nil
+    ) -> VaultEntry {
+        VaultEntry(
+            id: nom,
+            item: VaultItem(
+                name: nom, notes: nil, folder: dossier,
+                data: .login(
+                    Login(
+                        username: utilisateur, password: motDePasse,
+                        uris: adresse.isEmpty ? [] : [adresse], totp: totp))),
+            updatedAt: nil)
+    }
+
+    func testLEnteteEstCelleDeLaWebApp() {
+        XCTAssertEqual(CsvExport.entete, "name,folder,url,username,password,totp")
+    }
+
+    /// L'aller-retour complet, avec les caractères qui cassent un format mal échappé.
+    func testCeQuiSortSeRelitALIdentique() throws {
+        let coffre = [
+            entree("GitHub", "clara", "s3cret", adresse: "https://github.com", dossier: "Travail"),
+            entree("Virgule", "clara", "a,b,c"),
+            entree("Guillemet", "clara", #"il a dit "bonjour""#),
+            entree("Décathlon", "clara@exemple.ch", "p@ss", adresse: "https://decathlon.fr"),
+            entree("AvecCode", "clara", "s3cret", totp: "GEZDGNBVGY3TQOJQ"),
+        ]
+
+        let relus = CsvImport.items(CsvExport.texte(coffre))
+        XCTAssertEqual(relus.count, coffre.count, "l'aller-retour a perdu ou inventé des entrées")
+
+        for (origine, relu) in zip(coffre, relus) {
+            XCTAssertEqual(relu.name, origine.item.name)
+            XCTAssertEqual(relu.folder, origine.item.folder)
+            guard case .login(let apres) = relu.data, let avant = origine.login else {
+                return XCTFail("un Login était attendu")
+            }
+            XCTAssertEqual(apres.username, avant.username)
+            XCTAssertEqual(
+                apres.password, avant.password,
+                "« \(origine.item.name) » : le mot de passe n'a pas survécu à l'aller-retour")
+            XCTAssertEqual(apres.uris, avant.uris)
+            XCTAssertEqual(apres.totp, avant.totp)
+        }
+    }
+
+    /// Un saut de ligne dans un champ ne doit pas couper l'enregistrement à la relecture.
+    func testUnSautDeLigneSurvitALAllerRetour() throws {
+        let coffre = [entree("Deux\nlignes", "clara", "s3cret")]
+        let relus = CsvImport.items(CsvExport.texte(coffre))
+        XCTAssertEqual(relus.count, 1)
+        XCTAssertEqual(relus[0].name, "Deux\nlignes")
+    }
+
+    /// Une note et une carte n'ont pas d'identifiants : leurs colonnes restent vides plutôt
+    /// que de décaler la ligne.
+    func testUnElementSansIdentifiantsNeCassePasLaLigne() {
+        let note = VaultEntry(
+            id: "n",
+            item: VaultItem(
+                name: "Note", notes: nil, folder: nil,
+                data: .secureNote(SecureNote(content: "x"))),
+            updatedAt: nil)
+        let lignes = CsvExport.texte([note]).components(separatedBy: "\n")
+        XCTAssertEqual(lignes.count, 2)
+        XCTAssertEqual(lignes[1], #""Note","","","","","""#)
+    }
+
+    func testLeNomDeFichierPorteLaDate() {
+        let date = Date(timeIntervalSince1970: 1_787_000_000)
+        XCTAssertTrue(
+            CsvExport.nomDeFichier(date).hasSuffix(".csv"),
+            "le nom de fichier doit garder son extension")
+        XCTAssertTrue(CsvExport.nomDeFichier(date).contains("2026-"))
+    }
+}
+
+// ─── Icônes des sites ─────────────────────────────────────────────────────────
+
+/// Les icônes viennent du proxy du serveur de l'utilisateur, jamais d'un tiers : c'est ce
+/// qui empêche Google — ou n'importe qui d'autre — d'apprendre quels sites contient le
+/// coffre. Ces tests vérifient que l'adresse construite reste bien celle de ce serveur.
+final class FaviconTests: XCTestCase {
+    private let serveur = "https://ghostpass.stackops.ch"
+
+    func testLAdresseViseLeProxyDuServeur() throws {
+        let url = try XCTUnwrap(Favicon.url(pour: "https://www.decathlon.fr/rayon", serveur: serveur))
+        XCTAssertEqual(url.host, "ghostpass.stackops.ch", "l'icône ne doit venir que de notre serveur")
+        XCTAssertEqual(url.path, "/api/icons")
+        let composants = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        XCTAssertEqual(
+            composants.queryItems?.first(where: { $0.name == "domain" })?.value, "decathlon.fr",
+            "le sous-domaine « www. » et le chemin doivent être écartés")
+    }
+
+    /// Sans domaine exploitable, pas de requête du tout : une pastille d'initiale suffit.
+    func testUneAdresseInexploitableNeDonneAucuneUrl() {
+        XCTAssertNil(Favicon.url(pour: "", serveur: serveur))
+        XCTAssertNil(Favicon.url(pour: "localhost", serveur: serveur))
+        XCTAssertNil(Favicon.url(pour: "http://192.168.1.10:8080", serveur: serveur), "une IP n'est pas un domaine")
+        XCTAssertNil(Favicon.url(pour: "https://decathlon.fr", serveur: ""))
+    }
+
+    /// La couleur de repli est déterministe et partagée avec la web app : le même élément
+    /// doit garder la même pastille d'un écran à l'autre, et d'un lancement au suivant.
+    func testLaCouleurDeReplyEstStable() {
+        XCTAssertEqual(Favicon.couleur(pour: "GitHub"), Favicon.couleur(pour: "GitHub"))
+        XCTAssertEqual(Favicon.initiale("décathlon"), "D")
+        XCTAssertEqual(Favicon.initiale("  forgejo"), "F")
+        XCTAssertEqual(Favicon.initiale(""), "?")
+    }
+}

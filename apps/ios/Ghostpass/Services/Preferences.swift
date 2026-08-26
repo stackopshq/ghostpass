@@ -23,17 +23,28 @@ final class Preferences: ObservableObject {
         didSet { defaults?.set(langue.rawValue, forKey: Clefs.langue) }
     }
 
+    /// Afficher l'icône des sites. Le coffre est chiffré de bout en bout : le serveur n'en
+    /// connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine — le
+    /// choix revient donc à l'utilisateur, et il est réversible.
+    @Published var afficheLesIcones: Bool {
+        didSet { defaults?.set(afficheLesIcones, forKey: Clefs.icones) }
+    }
+
     private let defaults = UserDefaults(suiteName: SharedStore.appGroup)
 
     private enum Clefs {
         static let apparence = "gp.apparence"
         static let langue = "gp.langue"
+        static let icones = "gp.icones"
     }
 
     private init() {
         let lus = UserDefaults(suiteName: SharedStore.appGroup)
         apparence = Apparence(rawValue: lus?.string(forKey: Clefs.apparence) ?? "") ?? .systeme
         langue = Langue(rawValue: lus?.string(forKey: Clefs.langue) ?? "") ?? .systeme
+        // Allumé par défaut, comme sur le web : une liste de pastilles grises se reconnaît
+        // moins vite qu'une liste de logos, et le proxy est celui du serveur de l'utilisateur.
+        afficheLesIcones = lus?.object(forKey: Clefs.icones) as? Bool ?? true
     }
 
     /// `nil` laisse SwiftUI suivre le réglage du système.

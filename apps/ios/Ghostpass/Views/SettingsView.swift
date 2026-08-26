@@ -25,6 +25,19 @@ struct SettingsView: View {
                 }
 
                 GhostSection(
+                    titre: "Icônes des sites",
+                    note: "Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun tiers n'est sollicité."
+                ) {
+                    Toggle(isOn: $prefs.afficheLesIcones) {
+                        Text("Afficher les logos").foregroundStyle(Color.gpInk)
+                    }
+                    .tint(Color.gpAccent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .accessibilityIdentifier("toggle.icons")
+                }
+
+                GhostSection(
                     titre: "Langue",
                     note: "Le changement s'applique aussitôt, sans redémarrer l'application."
                 ) {
