@@ -60,6 +60,12 @@ Les deux régressions qui rendaient l'application inutilisable (paramètres KDF 
 objet JSON, horodatages pris pour des chaînes) sont des divergences de contrat : elles sont
 tenues par `Tests/`, qui les rattraperait en une seconde et sans simulateur.
 
+Elles le sont **aussi côté serveur**, par `apps/server/test/api-shape.test.ts`, qui vérifie
+la forme des réponses — types, pas valeurs. C'est l'autre bout de la même couture, et le
+seul qui tourne en intégration continue : ces tests-là n'ont besoin ni de Xcode ni de
+simulateur. Un changement de serveur qui casserait le contrat serait donc arrêté avant
+d'atteindre l'application, même sans runner macOS.
+
 **Limite connue** : le déverrouillage biométrique de bout en bout n'est pas exerçable de
 façon fiable dans le simulateur — l'inscription simulée (`BiometricKit.enrollmentChanged`)
 ne survit pas toujours au recyclage que fait `xcodebuild`. Quand l'application ne voit pas
