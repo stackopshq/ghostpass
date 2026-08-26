@@ -18,6 +18,10 @@ uniffi = { version = "0.29", features = ["cli"] }
 serde_json = "1.0.150"
 base64 = "0.22.1"
 thiserror = "2.0.18"
+# Mêmes versions que le cœur et que le binding WASM : `PublicKey` traverse la frontière
+# entre les crates, deux versions de crypto_box donneraient deux types incompatibles.
+crypto_box = "0.9.1"
+zeroize = "1.9"
 
 [[bin]]
 name = "uniffi-bindgen"

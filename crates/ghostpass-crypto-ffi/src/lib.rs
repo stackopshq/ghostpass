@@ -6,14 +6,16 @@
 //! traverse la frontière FFI, donc rien de sensible ne peut atterrir dans un log Swift,
 //! un crash report ou une capture d'écran de débogueur.
 //!
-//! Périmètre : cycle de vie du compte, coffre personnel et passkey — ce dont l'application
-//! v1 a besoin. Le partage d'organisation et l'accès d'urgence existent dans le cœur et
-//! dans le binding WASM ; ils seront ajoutés ici quand l'application les exposera, pas avant.
+//! Périmètre : cycle de vie du compte, coffre personnel, passkey, coffres partagés et accès
+//! d'urgence. Les deux derniers sont transposés du binding WASM sans en changer les noms ni
+//! les échanges, pour qu'un coffre partagé écrit depuis le web s'ouvre depuis l'iPhone.
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use ghostpass_crypto::{keys, vault, EncString, EncryptedItem, KdfParams, VaultItem};
+use crypto_box::PublicKey;
+use ghostpass_crypto::{keys, org, sharing, vault, EncString, EncryptedItem, KdfParams, VaultItem};
 use std::sync::Arc;
+use zeroize::Zeroizing;
 
 uniffi::setup_scaffolding!();
 
@@ -37,6 +39,11 @@ fn decode_key_32(b64: &str) -> Result<[u8; 32], GhostpassError> {
     bytes.try_into().map_err(|_| GhostpassError::Crypto {
         message: "clé de 32 octets invalide".to_string(),
     })
+}
+
+/// Décode une clé publique de partage (X25519, 32 octets) depuis sa représentation base64.
+fn decode_public_key(b64: &str) -> Result<PublicKey, GhostpassError> {
+    Ok(PublicKey::from(decode_key_32(b64)?))
 }
 
 /// Paramètres KDF par défaut (JSON), à stocker avec le compte côté serveur.
@@ -215,5 +222,181 @@ impl Account {
         let prf = decode_key_32(&prf_secret_b64)?;
         let wrapped = keys::wrap_user_key_for_passkey(&self.keys.user_key, &prf).map_err(err)?;
         Ok(wrapped.to_string())
+    }
+}
+
+// ─── Partage / organisations ───────────────────────────────────────────────
+
+/// Contexte d'une organisation : détient l'Org Key en mémoire Rust, jamais exposée à Swift.
+#[derive(uniffi::Object)]
+pub struct Org {
+    org_key: Zeroizing<[u8; 32]>,
+}
+
+#[uniffi::export]
+impl Org {
+    /// Chiffre un item (JSON `VaultItem`) sous l'Org Key. Renvoie un JSON `EncryptedItem`.
+    pub fn encrypt_item(&self, item_json: String) -> Result<String, GhostpassError> {
+        let item: VaultItem = serde_json::from_str(&item_json).map_err(err)?;
+        let enc = vault::encrypt_item(&self.org_key, &item).map_err(err)?;
+        serde_json::to_string(&enc).map_err(err)
+    }
+
+    /// Déchiffre un JSON `EncryptedItem` sous l'Org Key. Renvoie le JSON `VaultItem`.
+    pub fn decrypt_item(&self, encrypted_item_json: String) -> Result<String, GhostpassError> {
+        let enc: EncryptedItem = serde_json::from_str(&encrypted_item_json).map_err(err)?;
+        let item = vault::decrypt_item(&self.org_key, &enc).map_err(err)?;
+        serde_json::to_string(&item).map_err(err)
+    }
+
+    /// Ré-enveloppe un item d'une ancienne Org Key vers celle-ci (rotation / révocation),
+    /// **sans** déchiffrer le contenu.
+    pub fn rewrap_item(
+        &self,
+        old_org: Arc<Org>,
+        encrypted_item_json: String,
+    ) -> Result<String, GhostpassError> {
+        let enc: EncryptedItem = serde_json::from_str(&encrypted_item_json).map_err(err)?;
+        let rewrapped =
+            vault::rewrap_item_key(&old_org.org_key, &self.org_key, &enc).map_err(err)?;
+        serde_json::to_string(&rewrapped).map_err(err)
+    }
+}
+
+/// Résultat de la création d'une org : le contexte `Org` et l'Org Key scellée pour le créateur,
+/// à stocker côté serveur comme entrée du membre-admin.
+///
+/// Le binding WASM protège son accesseur par un « ne peut être appelé qu'une fois », parce que
+/// son `Org` n'est pas clonable. Ici l'objet est derrière un `Arc` : le partager ne duplique pas
+/// la clé, qui ne quitte de toute façon jamais le Rust. Le verrou n'aurait rien protégé.
+#[derive(uniffi::Object)]
+pub struct OrgCreation {
+    org: Arc<Org>,
+    sealed_for_self: String,
+}
+
+#[uniffi::export]
+impl OrgCreation {
+    /// Org Key scellée pour le créateur (base64), à transmettre au serveur.
+    pub fn sealed_for_self(&self) -> String {
+        self.sealed_for_self.clone()
+    }
+
+    /// Contexte `Org` correspondant.
+    pub fn org(&self) -> Arc<Org> {
+        Arc::clone(&self.org)
+    }
+}
+
+/// Coffre d'un donneur ouvert par son contact de confiance, le temps d'un accès d'urgence.
+#[derive(uniffi::Object)]
+pub struct EmergencyVault {
+    user_key: Zeroizing<[u8; 32]>,
+}
+
+#[uniffi::export]
+impl EmergencyVault {
+    /// Lecture : déchiffre un item du coffre du donneur avec son USK récupéré.
+    pub fn decrypt_item(&self, encrypted_item_json: String) -> Result<String, GhostpassError> {
+        let enc: EncryptedItem = serde_json::from_str(&encrypted_item_json).map_err(err)?;
+        let item = vault::decrypt_item(&self.user_key, &enc).map_err(err)?;
+        serde_json::to_string(&item).map_err(err)
+    }
+
+    /// Reprise : prépare la réinitialisation du mot de passe maître du donneur à partir de son
+    /// USK récupéré. Renvoie un JSON `{ master_password_hash, encrypted_user_key }`.
+    pub fn takeover(
+        &self,
+        grantor_email: String,
+        kdf_params_json: String,
+        new_password: String,
+    ) -> Result<String, GhostpassError> {
+        let params: KdfParams = serde_json::from_str(&kdf_params_json).map_err(err)?;
+        params.ensure_strong().map_err(err)?;
+        let reset = keys::takeover_reset(
+            &self.user_key,
+            &grantor_email,
+            new_password.as_bytes(),
+            params,
+        )
+        .map_err(err)?;
+        serde_json::to_string(&reset).map_err(err)
+    }
+}
+
+#[uniffi::export]
+impl Account {
+    /// Crée une organisation : génère une Org Key et la scelle, de façon authentifiée, pour soi.
+    pub fn create_org(&self) -> Result<Arc<OrgCreation>, GhostpassError> {
+        let org_key = org::generate_org_key();
+        let sealed = sharing::box_seal(&self.keys.secret_key, &self.keys.public_key, &org_key)
+            .map_err(err)?;
+        Ok(Arc::new(OrgCreation {
+            org: Arc::new(Org {
+                org_key: Zeroizing::new(org_key),
+            }),
+            sealed_for_self: STANDARD.encode(sealed),
+        }))
+    }
+
+    /// Ouvre une Org Key reçue d'un admin, **en vérifiant qu'elle provient de sa clé publique**.
+    /// Sans cette vérification, un serveur actif pourrait substituer une Org Key de son choix.
+    pub fn open_org(
+        &self,
+        admin_public_key: String,
+        sealed: String,
+    ) -> Result<Arc<Org>, GhostpassError> {
+        let admin_public = decode_public_key(&admin_public_key)?;
+        let sealed_bytes = STANDARD.decode(sealed).map_err(err)?;
+        let org_key =
+            org::open_org_key(&self.keys.secret_key, &admin_public, &sealed_bytes).map_err(err)?;
+        Ok(Arc::new(Org {
+            org_key: Zeroizing::new(org_key),
+        }))
+    }
+
+    /// Scelle l'Org Key pour un membre, en tant qu'admin émetteur. Renvoie le blob base64.
+    pub fn seal_org_key_for_member(
+        &self,
+        org: Arc<Org>,
+        member_public_key: String,
+    ) -> Result<String, GhostpassError> {
+        let member_public = decode_public_key(&member_public_key)?;
+        let sealed =
+            org::seal_org_key_for_member(&self.keys.secret_key, &member_public, &org.org_key)
+                .map_err(err)?;
+        Ok(STANDARD.encode(sealed))
+    }
+
+    /// Scelle l'USK du compte pour un contact de confiance (accès d'urgence), de façon
+    /// authentifiée. Le blob part au serveur et n'est ouvrable qu'avec la clé privée du contact.
+    pub fn seal_user_key_for(&self, contact_public_key: String) -> Result<String, GhostpassError> {
+        let contact_public = decode_public_key(&contact_public_key)?;
+        let sealed = sharing::box_seal(
+            &self.keys.secret_key,
+            &contact_public,
+            self.keys.user_key.as_slice(),
+        )
+        .map_err(err)?;
+        Ok(STANDARD.encode(sealed))
+    }
+
+    /// (Contact) Ouvre un accès d'urgence reçu d'un donneur : récupère son USK en mémoire Rust,
+    /// en vérifiant que le blob provient bien de la clé publique du donneur.
+    pub fn open_emergency(
+        &self,
+        grantor_public_key: String,
+        sealed: String,
+    ) -> Result<Arc<EmergencyVault>, GhostpassError> {
+        let grantor_public = decode_public_key(&grantor_public_key)?;
+        let sealed_bytes = STANDARD.decode(sealed).map_err(err)?;
+        let opened = sharing::box_open(&self.keys.secret_key, &grantor_public, &sealed_bytes)
+            .map_err(err)?;
+        let arr: [u8; 32] = opened.try_into().map_err(|_| GhostpassError::Crypto {
+            message: "USK d'urgence invalide".to_string(),
+        })?;
+        Ok(Arc::new(EmergencyVault {
+            user_key: Zeroizing::new(arr),
+        }))
     }
 }
