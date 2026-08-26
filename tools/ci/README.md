@@ -81,6 +81,28 @@ cd ~/.gitea-runner && gitea-runner daemon   # au premier plan : on voit les tâc
                                             # arriver, Ctrl-C pour rendre la machine
 ```
 
+**Le job hérite du `PATH` du daemon, pas de celui du shell interactif.** `rustup`
+s'installe dans `~/.cargo/bin` et s'ajoute au `PATH` depuis `~/.zprofile` : un daemon
+lancé par `nohup`, `launchd` ou tout ce qui ne charge pas le profil ne verra donc pas
+`cargo`, et le job s'arrêtera net sur « cargo introuvable sur ce runner » — après avoir
+trouvé `xcodebuild` et `xcodegen`, qui vivent dans `/opt/homebrew/bin`. En arrière-plan,
+on le lui donne explicitement :
+
+```sh
+cd ~/.gitea-runner && PATH="$HOME/.cargo/bin:$PATH" nohup gitea-runner daemon \
+  >> ~/.gitea-runner/logs/daemon.log 2>&1 &
+```
+
+**Pour voir ce qu'un job a fait**, activer la conservation des logs dans
+`~/.gitea-runner/config.yaml` — le journal du daemon ne contient que « tâche reçue », et
+sans ça un échec ne laisse qu'un silence de deux minutes :
+
+```yaml
+log:
+  job:
+    dir: "/Users/<toi>/.gitea-runner/logs/jobs"
+```
+
 Et l'interrupteur suit le même rythme — mais il ne sert qu'à *couper*. `MACOS_RUNNER` à
 `false` écarte le job iOS ; dans tous les autres cas, y compris si la variable n'existe
 pas, il tourne. On le passe donc à `false` quand le portable reste fermé un moment, pour
