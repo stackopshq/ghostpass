@@ -131,9 +131,11 @@ aussi côté remplissage. Sans lui, l'extension demandera le mot de passe maîtr
   et un glyphe intérieur — ici une clé. C'est la variante **remplie**
   (`assets/logo/ghostpass-icon.svg`) et non le logo au trait : ce dernier fait 4 % de la
   hauteur en épaisseur et disparaît à 16 px, comme l'explique `ghostlink.svg`.
-  Les logos de la suite sont **générés** par `tools/brand/ghost_suite.py` (« ne pas éditer
-  à la main ») ; ce fichier en reprend fidèlement la sortie, faute d'accès au générateur.
-  À régénérer dès qu'il sera disponible — **les trois teintes restent à confirmer**.
+  Les teintes sont celles du logo d'origine (`#6EA7F7` → `#5394F5` → `#2E5CC5`), et le
+  cadrage est recentré sur le tracé : aligné en haut comme chez ghostlink, le fantôme
+  frôlerait le bord supérieur — 9 px au-dessus contre 52 en dessous. Les logos de la suite
+  sont **générés** par `tools/brand/ghost_suite.py` (« ne pas éditer à la main ») ; ce
+  fichier en reprend la sortie, faute d'accès au générateur.
 - `assets/logo/ghostpass.svg` porte un nom trompeur : c'est un fantôme au trait ajouté par
   le commit « feat(brand): add ghost-suite logo », hors charte actuelle. Ne pas s'en servir
   comme marque du produit.

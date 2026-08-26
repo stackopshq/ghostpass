@@ -1,14 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-63.5 0 548 548" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-94.4 -51.9 608.8 608.8" fill="none">
   <!-- Déclinaison GhostPass de la charte ghost-suite, variante icône : la silhouette
        remplie, sans les tirets détachés, comme ghostlink.svg. Le trait du logo fait 4 %
        de la hauteur et disparaît à 16 px ; la silhouette, elle, tient.
        Silhouette reprise telle quelle ; seuls le glyphe (une clé) et les trois teintes
-       distinguent ghostpass. À régénérer par tools/brand/ghost_suite.py. -->
+       distinguent ghostpass. Le cadrage, lui, est recentré sur le tracé : aligné en haut
+       comme chez ghostlink, le fantôme frôlerait le bord supérieur.
+       À régénérer par tools/brand/ghost_suite.py. -->
   <defs>
     <linearGradient id="g" x1="421" y1="0" x2="0" y2="548" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#9CC3FF"/>
-      <stop offset="0.5" stop-color="#2E7DFF"/>
-      <stop offset="1" stop-color="#143F8F"/>
+      <stop offset="0" stop-color="#6EA7F7"/>
+      <stop offset="0.5" stop-color="#5394F5"/>
+      <stop offset="1" stop-color="#2E5CC5"/>
     </linearGradient>
   </defs>
   <path fill="url(#g)" fill-rule="evenodd" clip-rule="evenodd"
