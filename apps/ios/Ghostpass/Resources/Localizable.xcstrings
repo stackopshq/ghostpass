@@ -278,6 +278,36 @@
         }
       }
     },
+    "Après 1 minute": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 1 minute"
+          }
+        }
+      }
+    },
+    "Après 15 minutes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 15 minutes"
+          }
+        }
+      }
+    },
+    "Après 5 minutes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 5 minutes"
+          }
+        }
+      }
+    },
     "Aucun dossier": {
       "localizations": {
         "en": {
@@ -968,6 +998,16 @@
         }
       }
     },
+    "Immédiatement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immediately"
+          }
+        }
+      }
+    },
     "Importer": {
       "localizations": {
         "en": {
@@ -1434,6 +1474,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open GhostPass once to enable autofill."
+          }
+        }
+      }
+    },
+    "Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d'applications.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "During this delay the vault stays open in memory — never on disk — and its contents are hidden in the app switcher."
           }
         }
       }
@@ -1944,6 +1994,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Use another account"
+          }
+        }
+      }
+    },
+    "Verrouillage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locking"
           }
         }
       }

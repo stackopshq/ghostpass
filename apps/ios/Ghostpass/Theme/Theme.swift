@@ -296,3 +296,28 @@ struct GhostIconButton: View {
         .foregroundStyle(Color.gpAccentText)
     }
 }
+
+/// Ce que voit le sélecteur d'applications à la place du coffre : l'enseigne, rien d'autre.
+///
+/// iOS photographie l'écran quand l'application le quitte et garde cette vignette sur
+/// disque. Un coffre déverrouillé s'y retrouverait en clair — noms de sites, identifiants —
+/// visible d'un simple glissement, et lisible par qui inspecte le système de fichiers.
+struct VoileDeConfidentialite: View {
+    var body: some View {
+        ZStack {
+            GhostBackground()
+            VStack(spacing: 12) {
+                Image("LogoMark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 56, height: 56)
+                Text("GhostPass")
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Color.gpMuted)
+            }
+        }
+        .ignoresSafeArea()
+        .transition(.opacity)
+        .accessibilityIdentifier("view.privacyVeil")
+    }
+}

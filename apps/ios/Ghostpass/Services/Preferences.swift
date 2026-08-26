@@ -30,12 +30,18 @@ final class Preferences: ObservableObject {
         didSet { defaults?.set(afficheLesIcones, forKey: Clefs.icones) }
     }
 
+    /// Au bout de combien de temps hors de l'écran le coffre se referme.
+    @Published var verrouillage: Verrouillage {
+        didSet { defaults?.set(verrouillage.rawValue, forKey: Clefs.verrouillage) }
+    }
+
     private let defaults = UserDefaults(suiteName: SharedStore.appGroup)
 
     private enum Clefs {
         static let apparence = "gp.apparence"
         static let langue = "gp.langue"
         static let icones = "gp.icones"
+        static let verrouillage = "gp.verrouillage"
     }
 
     private init() {
@@ -45,6 +51,10 @@ final class Preferences: ObservableObject {
         // Allumé par défaut, comme sur le web : une liste de pastilles grises se reconnaît
         // moins vite qu'une liste de logos, et le proxy est celui du serveur de l'utilisateur.
         afficheLesIcones = lus?.object(forKey: Clefs.icones) as? Bool ?? true
+        // Immédiat par défaut : c'est le comportement qu'avait l'application, et le plus
+        // sûr des quatre. Le relâcher est un choix, pas un réglage qu'on subit.
+        verrouillage =
+            Verrouillage(rawValue: lus?.string(forKey: Clefs.verrouillage) ?? "") ?? .immediat
     }
 
     /// `nil` laisse SwiftUI suivre le réglage du système.
@@ -76,6 +86,43 @@ func tr(_ valeur: String.LocalizationValue) -> String {
     String(
         localized: valeur, bundle: Preferences.shared.bundle,
         locale: Preferences.shared.locale ?? .autoupdatingCurrent)
+}
+
+/// Combien de temps le coffre reste ouvert une fois l'application quittée.
+///
+/// Immédiat protège le mieux : rien ne survit à un passage dans une autre application.
+/// C'est aussi le plus pénible quand on fait des allers-retours vers Safari pour coller un
+/// mot de passe — d'où les délais, qui laissent revenir sans redemander.
+///
+/// Pendant ce délai, les clés restent en mémoire. Elles ne touchent jamais le disque, et
+/// l'écran est masqué dans le sélecteur d'applications ; mais le coffre est ouvert, et
+/// c'est bien ce qu'on a demandé.
+enum Verrouillage: String, CaseIterable, Identifiable {
+    case immediat
+    case uneMinute
+    case cinqMinutes
+    case quinzeMinutes
+
+    var id: String { rawValue }
+
+    /// `nil` : on referme sans attendre.
+    var delai: TimeInterval? {
+        switch self {
+        case .immediat: return nil
+        case .uneMinute: return 60
+        case .cinqMinutes: return 300
+        case .quinzeMinutes: return 900
+        }
+    }
+
+    var libelle: LocalizedStringKey {
+        switch self {
+        case .immediat: return "Immédiatement"
+        case .uneMinute: return "Après 1 minute"
+        case .cinqMinutes: return "Après 5 minutes"
+        case .quinzeMinutes: return "Après 15 minutes"
+        }
+    }
 }
 
 /// Système, clair, sombre — les trois états qu'offre iOS lui-même.

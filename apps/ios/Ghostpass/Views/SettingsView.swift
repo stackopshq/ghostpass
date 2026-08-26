@@ -25,6 +25,34 @@ struct SettingsView: View {
                 }
 
                 GhostSection(
+                    titre: "Verrouillage",
+                    note: "Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d'applications."
+                ) {
+                    ForEach(Array(Verrouillage.allCases.enumerated()), id: \.element.id) {
+                        index, cas in
+                        if index > 0 { GhostDivider() }
+                        Button {
+                            prefs.verrouillage = cas
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text(cas.libelle).foregroundStyle(Color.gpInk)
+                                Spacer(minLength: 8)
+                                if prefs.verrouillage == cas {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Color.gpAccentText)
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 13)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("row.lock.\(cas.rawValue)")
+                    }
+                }
+
+                GhostSection(
                     titre: "Icônes des sites",
                     note: "Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun tiers n'est sollicité."
                 ) {

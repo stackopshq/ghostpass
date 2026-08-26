@@ -1074,3 +1074,55 @@ final class FaviconTests: XCTestCase {
         XCTAssertEqual(Favicon.initiale(""), "?")
     }
 }
+
+// ─── Verrouillage différé ─────────────────────────────────────────────────────
+
+/// La décision de refermer le coffre au retour dans l'application. Elle se prend sur des
+/// dates, et une erreur de sens laisserait un coffre ouvert qu'on croit fermé — c'est
+/// exactement le genre de défaut qu'aucun essai à la main ne révèle, puisqu'il faudrait
+/// attendre un quart d'heure pour le voir.
+final class VerrouillageTests: XCTestCase {
+    private let sortie = Date(timeIntervalSince1970: 1_787_000_000)
+
+    /// Sans délai, on referme quoi qu'il arrive : c'est le réglage par défaut.
+    func testSansDelaiOnRefermeToujours() {
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(sortie: sortie, delai: nil, maintenant: sortie))
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: nil, maintenant: sortie.addingTimeInterval(0.1)))
+    }
+
+    func testAvantLeDelaiLeCoffreResteOuvert() {
+        XCTAssertFalse(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: 300, maintenant: sortie.addingTimeInterval(299)))
+    }
+
+    /// Au délai pile, on referme. Un « strictement supérieur » laisserait passer le cas
+    /// limite, et le cas limite est celui qu'on teste.
+    func testAuDelaiPileOnReferme() {
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: 300, maintenant: sortie.addingTimeInterval(300)))
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: 300, maintenant: sortie.addingTimeInterval(301)))
+    }
+
+    /// Une horloge qui recule — fuseau, correction NTP — donnerait un écart négatif. Sans
+    /// ce garde-fou, le coffre resterait ouvert indéfiniment.
+    func testUneHorlogeQuiReculeRefermeLeCoffre() {
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: 900, maintenant: sortie.addingTimeInterval(-3600)))
+    }
+
+    /// Les délais proposés sont ceux qu'annoncent les libellés.
+    func testLesDelaisCorrespondentAuxLibelles() {
+        XCTAssertNil(Verrouillage.immediat.delai)
+        XCTAssertEqual(Verrouillage.uneMinute.delai, 60)
+        XCTAssertEqual(Verrouillage.cinqMinutes.delai, 300)
+        XCTAssertEqual(Verrouillage.quinzeMinutes.delai, 900)
+    }
+}

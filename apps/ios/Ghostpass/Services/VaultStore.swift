@@ -117,6 +117,42 @@ final class VaultStore: ObservableObject {
         }
     }
 
+    // ─── Verrouillage différé ───
+
+    /// L'instant où l'application a quitté l'écran, si elle est encore ouverte.
+    private var sortieDeLEcran: Date?
+
+    /// L'application passe en arrière-plan. Sans délai, on referme tout de suite ; avec,
+    /// on note l'heure et on décidera au retour.
+    func noterLaSortieDeLEcran(delai: TimeInterval?) {
+        guard delai != nil else {
+            sortieDeLEcran = nil
+            lock()
+            return
+        }
+        sortieDeLEcran = Date()
+    }
+
+    /// L'application revient. On referme si le délai est écoulé.
+    func verrouillerSiLeDelaiEstEcoule(delai: TimeInterval?, maintenant: Date = Date()) {
+        defer { sortieDeLEcran = nil }
+        guard let sortie = sortieDeLEcran else { return }
+        if Self.doitVerrouiller(sortie: sortie, delai: delai, maintenant: maintenant) { lock() }
+    }
+
+    /// La décision, isolée du reste pour être vérifiable sans monter d'application.
+    ///
+    /// Une horloge qui recule — changement de fuseau, correction NTP — donnerait un écart
+    /// négatif et laisserait le coffre ouvert indéfiniment. On referme dans ce cas : entre
+    /// se tromper vers l'ouvert et se tromper vers le fermé, le choix est fait d'avance.
+    nonisolated static func doitVerrouiller(
+        sortie: Date, delai: TimeInterval?, maintenant: Date
+    ) -> Bool {
+        guard let delai else { return true }
+        let ecoule = maintenant.timeIntervalSince(sortie)
+        return ecoule < 0 || ecoule >= delai
+    }
+
     /// Relâche les clés. Les blobs chiffrés restent, pour permettre une réouverture.
     func lock() {
         account = nil

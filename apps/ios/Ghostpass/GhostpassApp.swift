@@ -27,6 +27,14 @@ struct GhostpassApp: App {
                     UnlockView()
                 }
             }
+            // Le sélecteur d'applications photographie l'écran à la sortie. Si le coffre
+            // reste ouvert derrière, son contenu se retrouverait dans cette vignette, et
+            // dans les captures que le système garde sur disque.
+            .overlay {
+                if scenePhase != .active && store.isUnlocked {
+                    VoileDeConfidentialite()
+                }
+            }
             .environmentObject(store)
             .environmentObject(prefs)
             // Les deux réglages s'appliquent à la racine : tout ce qui est présenté
@@ -36,9 +44,14 @@ struct GhostpassApp: App {
             .environment(\.locale, prefs.locale ?? Locale.autoupdatingCurrent)
         }
         .onChange(of: scenePhase) { _, phase in
-            // Passer en arrière-plan relâche les clés. Un coffre qui reste ouvert
-            // pendant que le téléphone circule n'est plus un coffre.
-            if phase == .background { store.lock() }
+            // Un coffre qui reste ouvert pendant que le téléphone circule n'est plus un
+            // coffre — mais refermer à chaque aller-retour vers Safari fait renoncer à
+            // s'en servir. Le délai est donc réglable, et vaut zéro par défaut.
+            switch phase {
+            case .background: store.noterLaSortieDeLEcran(delai: prefs.verrouillage.delai)
+            case .active: store.verrouillerSiLeDelaiEstEcoule(delai: prefs.verrouillage.delai)
+            default: break
+            }
         }
     }
 }
