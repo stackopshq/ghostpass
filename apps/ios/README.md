@@ -126,24 +126,17 @@ aussi côté remplissage. Sans lui, l'extension demandera le mot de passe maîtr
 
 ## Points de vigilance
 
-- **L'icône suit la charte ghost-suite**, comme ghostmail, ghostcal ou ghostlink : une
-  silhouette de fantôme commune à toute la suite, que distinguent seulement trois teintes
-  et un glyphe intérieur — ici une clé. C'est la variante **remplie**
-  (`assets/logo/ghostpass-icon.svg`) et non le logo au trait : ce dernier fait 4 % de la
-  hauteur en épaisseur et disparaît à 16 px, comme l'explique `ghostlink.svg`.
-  Les teintes sont celles du logo d'origine (`#6EA7F7` → `#5394F5` → `#2E5CC5`), et le
-  cadrage est recentré sur le tracé : aligné en haut comme chez ghostlink, le fantôme
-  frôlerait le bord supérieur — 9 px au-dessus contre 52 en dessous. Les logos de la suite
-  sont **générés** par `tools/brand/ghost_suite.py` (« ne pas éditer à la main ») ; ce
-  fichier en reprend la sortie, faute d'accès au générateur.
-- `assets/logo/ghostpass.svg` porte un nom trompeur : c'est un fantôme au trait ajouté par
-  le commit « feat(brand): add ghost-suite logo », hors charte actuelle. Ne pas s'en servir
-  comme marque du produit.
-
-- L'item nommé `"\0gp:folders"` est un **registre interne** partagé avec la web app.
-  Il est filtré de la liste ; l'afficher serait une régression visible.
-- Passer l'app en arrière-plan **relâche les clés** (`VaultStore.lock()`). C'est
-  volontaire : un coffre ouvert dans un téléphone qui circule n'est plus un coffre.
+- **L'icône vient du logo officiel**, `assets/logo/favicon.svg` — la variante *remplie*
+  du logo de la suite, celle qu'emploie ghostboard. Le logo au trait
+  (`assets/logo/ghostpass.svg`) ne convient pas : son trait fait 4 % de la hauteur et
+  disparaît aux petites tailles, comme l'explique le fichier lui-même.
+  `tools/ios/make-app-icon.sh` la régénère. Il n'écarte de la source que sur deux points,
+  documentés dans le script : le cadrage est recentré sur le tracé — aligné en haut, le
+  fantôme n'a que 9 px de marge au-dessus contre 52 en dessous et frôlerait le bord sous
+  le masque arrondi — et le fond est aplati en blanc, une icône d'application ne pouvant
+  pas être transparente.
+  Les logos sont **générés** par `tools/brand/ghost_suite.py` et portent la mention « ne
+  pas éditer à la main » : ne pas les retoucher ici.
 - **Face ID ne remplace pas le mot de passe maître.** Activé sur proposition explicite, il
   dépose le mot de passe maître dans le trousseau sous `.biometryCurrentSet` +
   `WhenPasscodeSetThisDeviceOnly` : rien ne sort par sauvegarde, et **enrôler un nouveau
