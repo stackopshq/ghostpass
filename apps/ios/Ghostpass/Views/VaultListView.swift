@@ -9,6 +9,12 @@ struct VaultListView: View {
     @State private var sheet: VaultSheet?
     /// Dossier affiché ; `nil` pour tout le coffre.
     @State private var folder: String?
+    /// Le chemin de navigation, tenu à la main : c'est ce qui permet à l'écran de santé
+    /// d'envoyer directement sur l'élément qu'il signale.
+    @State private var chemin: [VaultEntry] = []
+    /// L'élément qu'une feuille demande d'ouvrir. On attend qu'elle soit refermée pour
+    /// pousser l'écran : présenter et empiler en même temps, et l'un des deux se perd.
+    @State private var aOuvrir: VaultEntry?
 
     private var visible: [VaultEntry] {
         store.entries.filter { entry in
@@ -25,7 +31,7 @@ struct VaultListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $chemin) {
             ZStack {
                 GhostBackground()
 
@@ -42,21 +48,30 @@ struct VaultListView: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
 
-                    ForEach(visible) { entry in
-                        // Un lien en bonne et due forme : masquer le NavigationLink sous
-                        // une opacité nulle le rendrait inatteignable, au clavier comme
-                        // au doigt. Le chevron du système fait donc l'affaire.
-                        NavigationLink(value: entry) {
-                            VaultRow(entry: entry)
+                    // Les favoris en tête, et seulement quand on regarde le coffre
+                    // entier : sous un filtre ou une recherche, les répéter reviendrait à
+                    // montrer deux fois les mêmes lignes.
+                    if !favoris.isEmpty {
+                        Section {
+                            ForEach(favoris) { entry in
+                                ligne(entry)
+                            }
+                        } header: {
+                            // L'intitulé s'affiche en capitales : c'est l'identifiant, et
+                            // non le libellé, qui permet de le retrouver dans les tests.
+                            Text("Favoris").sectionLabel().padding(.leading, 2)
+                                .accessibilityIdentifier("header.favorites")
                         }
                         .listRowInsets(.init(top: 4, leading: 16, bottom: 4, trailing: 16))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
-                        .swipeActions {
-                            Button("Supprimer", role: .destructive) {
-                                Task { await store.delete(entry) }
-                            }
-                        }
+                    }
+
+                    ForEach(visible) { entry in
+                        ligne(entry)
+                            .listRowInsets(.init(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
                 }
                 .listStyle(.plain)
@@ -100,6 +115,10 @@ struct VaultListView: View {
                                     .accessibilityIdentifier("button.biometricOn")
                             }
                         }
+                        Button("Santé du coffre", systemImage: "checkmark.shield") {
+                            sheet = .health
+                        }
+                        .accessibilityIdentifier("button.health")
                         Button("Corbeille", systemImage: "trash") { sheet = .trash }
                             .accessibilityIdentifier("button.trash")
                         Button("Réglages", systemImage: "gearshape") { sheet = .settings }
@@ -124,7 +143,7 @@ struct VaultListView: View {
                     .accessibilityIdentifier("button.add")
                 }
             }
-            .sheet(item: $sheet) { destination in
+            .sheet(item: $sheet, onDismiss: ouvrirLElementDemande) { destination in
                 switch destination {
                 case .newItem:
                     ItemEditView(target: .new).environmentObject(store)
@@ -140,6 +159,8 @@ struct VaultListView: View {
                     SettingsView().environmentObject(Preferences.shared)
                 case .biometricOffer:
                     BiometricOfferView().environmentObject(store)
+                case .health:
+                    HealthView { aOuvrir = $0 }.environmentObject(store)
                 }
             }
             // Une seule alerte, et rien d'autre par-dessus : deux modificateurs `.alert`
@@ -168,6 +189,38 @@ struct VaultListView: View {
             set: { presente in
                 if !presente { store.errorMessage = nil }
             })
+    }
+
+    /// Les favoris, tant qu'aucun filtre ne restreint déjà la liste.
+    private var favoris: [VaultEntry] {
+        guard folder == nil, search.isEmpty else { return [] }
+        return store.favoriteEntries
+    }
+
+    /// Une ligne du coffre. Un lien en bonne et due forme : masquer le `NavigationLink`
+    /// sous une opacité nulle le rendrait inatteignable, au clavier comme au doigt. Le
+    /// chevron du système fait donc l'affaire.
+    private func ligne(_ entry: VaultEntry) -> some View {
+        NavigationLink(value: entry) {
+            VaultRow(entry: entry, favori: store.isFavorite(entry))
+        }
+        .swipeActions(edge: .leading) {
+            Button(store.isFavorite(entry) ? "Retirer des favoris" : "Mettre en favori") {
+                Task { await store.toggleFavorite(entry) }
+            }
+            .tint(Color.gpAccent)
+        }
+        .swipeActions {
+            Button("Supprimer", role: .destructive) {
+                Task { await store.delete(entry) }
+            }
+        }
+    }
+
+    private func ouvrirLElementDemande() {
+        guard let entry = aOuvrir else { return }
+        aOuvrir = nil
+        chemin = [entry]
     }
 
     /// N'ouvre la feuille que si rien d'autre n'est déjà présenté : deux feuilles qui se
@@ -252,6 +305,7 @@ enum VaultSheet: Identifiable {
     case folders
     case settings
     case biometricOffer
+    case health
 
     var id: String {
         switch self {
@@ -262,6 +316,7 @@ enum VaultSheet: Identifiable {
         case .folders: return "folders"
         case .settings: return "settings"
         case .biometricOffer: return "biometricOffer"
+        case .health: return "health"
         }
     }
 }
@@ -282,6 +337,7 @@ enum EditTarget: Identifiable {
 /// Une ligne du coffre : une pastille de type, le nom, ce qui aide à le reconnaître.
 private struct VaultRow: View {
     let entry: VaultEntry
+    var favori = false
 
     var body: some View {
         HStack(spacing: 14) {
@@ -308,6 +364,13 @@ private struct VaultRow: View {
             }
 
             Spacer(minLength: 8)
+
+            if favori {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.gpAccentText)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)

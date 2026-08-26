@@ -602,3 +602,91 @@ final class TraductionTests: XCTestCase {
         XCTAssertEqual(Langue.anglais.locale?.identifier, "en")
     }
 }
+
+// ─── Santé du coffre ──────────────────────────────────────────────────────────
+
+/// Le barème est celui de la web app. Ce qui casserait sans bruit, c'est une divergence :
+/// un mot de passe jugé faible dans le navigateur et bon sur le téléphone ferait douter
+/// des deux. Ces vecteurs sont donc ceux du barème web, recopiés.
+final class PasswordHealthTests: XCTestCase {
+    private func niveau(_ mot: String) -> Int { PasswordHealth.force(mot).niveau }
+
+    func testLeBaremeSuitCeluiDeLaWebApp() {
+        // Rien : niveau plancher.
+        XCTAssertEqual(niveau(""), 0)
+        // 7 caractères, deux classes : score 1 → niveau 1.
+        XCTAssertEqual(niveau("abc123"), 1)
+        // 8 caractères, deux classes : score 2 → niveau 2.
+        XCTAssertEqual(niveau("abcd1234"), 2)
+        // 14 caractères, trois classes : score 4 → niveau 3. C'est la longueur de 20
+        // qui manque pour atteindre le dernier cran, et non la variété.
+        XCTAssertEqual(niveau("Abcdefgh123456"), 3)
+        // 20 caractères, quatre classes : score 5 → niveau 4.
+        XCTAssertEqual(niveau("Abcdefgh1234567890!!"), 4)
+    }
+
+    /// Un mot de passe long mais d'une seule sorte de caractères reste faible : c'est
+    /// exactement le cas que la longueur seule laisserait passer.
+    func testUneSeuleSorteDeCaracteresNeSuffitPas() {
+        XCTAssertLessThanOrEqual(niveau("aaaaaaaa"), 1)
+        XCTAssertLessThanOrEqual(niveau("motdepasse"), 1)
+    }
+
+    func testLesMotsDePasseReutilisesSontReperes() {
+        let entries = [
+            entree("A", motDePasse: "correct horse battery staple"),
+            entree("B", motDePasse: "correct horse battery staple"),
+            entree("C", motDePasse: "Zx9!kQ2m#Lp4vT7w"),
+        ]
+        let bilan = PasswordHealth.bilan(entries)
+        XCTAssertEqual(Set(bilan.reutilises.map(\.item.name)), ["A", "B"])
+        XCTAssertTrue(bilan.faibles.isEmpty, "aucun de ces mots de passe n'est faible")
+    }
+
+    /// Une note et une carte n'ont pas de mot de passe : les compter comme faibles
+    /// remplirait l'écran de santé d'alertes sans objet.
+    func testSeulsLesIdentifiantsSontJuges() {
+        let note = VaultEntry(
+            id: "n", item: VaultItem(name: "Note", notes: nil, folder: nil,
+                                     data: .secureNote(SecureNote(content: "x"))),
+            updatedAt: nil)
+        let bilan = PasswordHealth.bilan([note, entree("Faible", motDePasse: "abc")])
+        XCTAssertEqual(bilan.faibles.map(\.item.name), ["Faible"])
+        XCTAssertEqual(bilan.sansCode.map(\.item.name), ["Faible"])
+    }
+
+    private func entree(_ nom: String, motDePasse: String) -> VaultEntry {
+        VaultEntry(
+            id: nom,
+            item: VaultItem(
+                name: nom, notes: nil, folder: nil,
+                data: .login(Login(username: "clara", password: motDePasse))),
+            updatedAt: nil)
+    }
+}
+
+// ─── Registres ────────────────────────────────────────────────────────────────
+
+/// Le coffre range ses métadonnées dans des items comme les autres, sous un nom masqué.
+/// Le jour où un autre client de la suite en ajoute un, il ne doit pas apparaître dans la
+/// liste : c'est le préfixe, et non le nom exact, qui décide.
+final class RegistryTests: XCTestCase {
+    private func item(_ nom: String) -> VaultItem {
+        VaultItem(name: nom, notes: nil, folder: nil, data: .secureNote(SecureNote(content: "[]")))
+    }
+
+    func testTousLesRegistresSontMasques() {
+        XCTAssertTrue(VaultStore.isRegistry(item(VaultConstants.foldersItemName)))
+        XCTAssertTrue(VaultStore.isRegistry(item(VaultConstants.favoritesItemName)))
+        // Un registre qu'aucune version actuelle ne connaît.
+        XCTAssertTrue(VaultStore.isRegistry(item(VaultConstants.registryPrefix + "avenir")))
+    }
+
+    /// Un nom choisi par l'utilisateur ne peut pas passer pour un registre : le préfixe
+    /// commence par un octet NUL, qu'aucun clavier ne produit.
+    func testUnNomOrdinaireNEstPasUnRegistre() {
+        XCTAssertFalse(VaultStore.isRegistry(item("gp:folders")))
+        XCTAssertFalse(VaultStore.isRegistry(item("Favoris")))
+        XCTAssertFalse(VaultStore.isRegistry(item("")))
+    }
+}

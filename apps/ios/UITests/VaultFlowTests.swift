@@ -105,16 +105,29 @@ final class VaultFlowTests: XCTestCase {
         XCTFail("la proposition d'activer la biométrie ne se referme pas")
     }
 
+    /// Les registres internes — dossiers, favoris — voyagent dans la liste comme les
+    /// autres éléments. Aucun ne doit s'y montrer, et pas seulement celui des dossiers :
+    /// c'est le préfixe qui les masque, il faut donc l'éprouver sur plusieurs.
     private func aucuneLigneFantome(_ app: XCUIApplication, _ contexte: String) {
-        let fantome = app.staticTexts.containing(
-            NSPredicate(format: "label CONTAINS[c] %@", "gp:folders"))
-        XCTAssertEqual(fantome.count, 0, "ligne fantôme gp:folders visible (\(contexte))")
+        for nom in ["gp:folders", "gp:favorites", "gp:"] {
+            let fantome = app.staticTexts.containing(
+                NSPredicate(format: "label CONTAINS[c] %@", nom))
+            XCTAssertEqual(fantome.count, 0, "ligne fantôme « \(nom) » visible (\(contexte))")
+        }
     }
 
     private func ouvrirReglages(_ app: XCUIApplication) {
+        ouvrirLeMenu(app, "button.preferences")
+        XCTAssertTrue(
+            app.buttons["button.doneSettings"].waitForExistence(timeout: 20),
+            "l'écran des réglages ne s'est pas ouvert")
+    }
+
+    /// Ouvre le menu du coffre et frappe une de ses entrées.
+    private func ouvrirLeMenu(_ app: XCUIApplication, _ identifiant: String) {
         let menu = app.buttons["button.settings"]
         XCTAssertTrue(menu.waitForExistence(timeout: 30), "le menu du coffre est absent")
-        let entree = app.buttons["button.preferences"]
+        let entree = app.buttons[identifiant]
         // Un tap sur une barre de navigation encore en cours de mise en page ne porte
         // pas : XCUITest calcule un point de frappe {-1, -1} et le menu ne s'ouvre
         // jamais. On réessaie plutôt que d'en conclure que l'entrée n'existe pas.
@@ -126,11 +139,8 @@ final class VaultFlowTests: XCTestCase {
                 break
             }
         }
-        XCTAssertTrue(ouvert, "« Réglages » absent du menu")
+        XCTAssertTrue(ouvert, "« \(identifiant) » absent du menu")
         entree.tap()
-        XCTAssertTrue(
-            app.buttons["button.doneSettings"].waitForExistence(timeout: 20),
-            "l'écran des réglages ne s'est pas ouvert")
     }
 
     /// La luminance moyenne d'une capture, entre 0 et 1.
@@ -205,8 +215,34 @@ final class VaultFlowTests: XCTestCase {
             app.staticTexts["Forgejo"].waitForExistence(timeout: 60),
             "l'item créé n'apparaît pas dans la liste")
 
-        // 4. Modification
-        app.buttons["Forgejo, clara"].tap()
+        // 4. Favori : l'étoile du détail, puis la section en tête de liste
+        app.buttons["Forgejo, clara"].firstMatch.tap()
+        let etoile = app.buttons["button.favorite"]
+        XCTAssertTrue(etoile.waitForExistence(timeout: 30), "l'étoile des favoris est absente")
+        taper(etoile)
+        if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
+        let sectionFavoris = app.descendants(matching: .any)
+            .matching(identifier: "header.favorites").firstMatch
+        XCTAssertTrue(
+            sectionFavoris.waitForExistence(timeout: 60),
+            "la section des favoris n'apparaît pas après la mise en favori")
+        // Le favori vit dans son propre registre chiffré : il ne doit pas non plus se
+        // montrer comme un élément.
+        aucuneLigneFantome(app, "après mise en favori")
+        shot(app, "4-favoris")
+
+        // 5. Santé du coffre
+        ouvrirLeMenu(app, "button.health")
+        let resume = app.descendants(matching: .any)
+            .matching(identifier: "card.healthSummary").firstMatch
+        XCTAssertTrue(
+            resume.waitForExistence(timeout: 30),
+            "l'écran de santé ne montre pas son résumé")
+        shot(app, "4-sante")
+        app.buttons["button.closeHealth"].tap()
+
+        // 6. Modification
+        app.buttons["Forgejo, clara"].firstMatch.tap()
         XCTAssertTrue(app.buttons["button.edit"].waitForExistence(timeout: 30))
         app.buttons["button.edit"].tap()
         XCTAssertTrue(app.buttons["button.cancel"].waitForExistence(timeout: 30))
@@ -245,7 +281,7 @@ final class VaultFlowTests: XCTestCase {
         app.buttons["button.closeFolders"].firstMatch.tap()
 
         // On y range l'élément, puis on filtre : le dossier doit le contenir.
-        app.buttons["Forgejo prod, clara"].tap()
+        app.buttons["Forgejo prod, clara"].firstMatch.tap()
         XCTAssertTrue(app.buttons["button.edit"].waitForExistence(timeout: 20))
         app.buttons["button.edit"].tap()
         XCTAssertTrue(app.buttons["button.cancel"].waitForExistence(timeout: 20))
@@ -273,7 +309,7 @@ final class VaultFlowTests: XCTestCase {
 
         // 5. Suppression
         if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
-        let ligne = app.buttons["Forgejo prod, clara"]
+        let ligne = app.buttons["Forgejo prod, clara"].firstMatch
         XCTAssertTrue(ligne.waitForExistence(timeout: 30))
         ligne.swipeLeft()
         XCTAssertTrue(app.buttons["Supprimer"].waitForExistence(timeout: 30))
@@ -307,7 +343,7 @@ final class VaultFlowTests: XCTestCase {
             "l'item restauré n'est pas revenu dans le coffre")
 
         // 5c. Cette fois pour de bon : suppression, puis purge confirmée
-        app.buttons["Forgejo prod, clara"].swipeLeft()
+        app.buttons["Forgejo prod, clara"].firstMatch.swipeLeft()
         XCTAssertTrue(app.buttons["Supprimer"].waitForExistence(timeout: 20))
         app.buttons["Supprimer"].tap()
         expectation(

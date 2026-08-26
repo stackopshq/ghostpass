@@ -98,8 +98,18 @@ struct VaultEntry: Identifiable, Hashable {
 }
 
 enum VaultConstants {
-    /// L'item qui stocke l'arborescence des dossiers porte un nom commençant par un
-    /// octet NUL : il est invisible dans l'UI web, il doit l'être ici aussi. Un nom
-    /// choisi par l'utilisateur ne peut pas entrer en collision avec celui-là.
-    static let foldersItemName = "\u{0}gp:folders"
+    /// Le coffre ne connaît que des éléments chiffrés : tout ce que l'application doit
+    /// retenir en plus — la liste des dossiers vides, celle des favoris — vit donc dans
+    /// des éléments comme les autres, sous un nom commençant par un octet NUL. Aucun nom
+    /// choisi par l'utilisateur ne peut entrer en collision avec celui-là, et l'interface
+    /// masque tout ce qui commence ainsi plutôt que d'énumérer les registres un par un :
+    /// c'est ce qui permet d'en ajouter un sans faire apparaître de ligne fantôme dans
+    /// les autres applications de la suite.
+    static let registryPrefix = "\u{0}gp:"
+
+    /// Les dossiers vides — ceux qu'aucun élément n'habite.
+    static let foldersItemName = registryPrefix + "folders"
+
+    /// Les identifiants des éléments mis en favori.
+    static let favoritesItemName = registryPrefix + "favorites"
 }

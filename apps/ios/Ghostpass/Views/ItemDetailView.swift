@@ -51,6 +51,15 @@ struct ItemDetailView: View {
         .navigationTitle(Text(verbatim: live.item.name))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            Button {
+                Task { await store.toggleFavorite(live) }
+            } label: {
+                Image(systemName: store.isFavorite(live) ? "star.fill" : "star")
+            }
+            .foregroundStyle(Color.gpAccentText)
+            .accessibilityLabel(store.isFavorite(live) ? "Retirer des favoris" : "Mettre en favori")
+            .accessibilityIdentifier("button.favorite")
+
             Button("Modifier", action: onEdit)
                 .foregroundStyle(Color.gpAccentText)
                 .accessibilityIdentifier("button.edit")
@@ -80,6 +89,10 @@ struct ItemDetailView: View {
                 GhostIconButton(systemImage: "doc.on.doc") {
                     copier(login.password, "Mot de passe copié")
                 }
+            }
+            if !login.password.isEmpty {
+                GhostDivider()
+                force(login.password)
             }
         }
 
@@ -160,6 +173,29 @@ struct ItemDetailView: View {
             GhostDivider()
             GhostRow(intitule: "Expiration", valeur: "\(card.expMonth)/\(card.expYear)") {}
         }
+    }
+
+    /// La force du mot de passe, au même barème que la web app : une jauge et un mot.
+    /// Le dire ici évite d'avoir à ouvrir l'écran de santé pour le savoir.
+    private func force(_ motDePasse: String) -> some View {
+        let force = PasswordHealth.force(motDePasse)
+        return HStack(spacing: 10) {
+            Text("Force").font(.caption).foregroundStyle(Color.gpMuted)
+            Spacer(minLength: 8)
+            HStack(spacing: 3) {
+                ForEach(0..<4, id: \.self) { index in
+                    Capsule()
+                        .fill(index < force.niveau ? force.couleur : Color.gpBorderStrong)
+                        .frame(width: 18, height: 4)
+                }
+            }
+            Text(force.libelle)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(force.couleur)
+                .accessibilityIdentifier("text.strength")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
     }
 
     /// Le temps qu'il reste au code, lisible d'un coup d'œil : un anneau qui se vide, et

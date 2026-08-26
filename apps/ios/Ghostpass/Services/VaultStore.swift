@@ -18,8 +18,13 @@ final class VaultStore: ObservableObject {
     /// de quoi créer un dossier avant d'y ranger quoi que ce soit ne laisserait aucune
     /// trace. C'est le rôle de l'item de registre, partagé avec la web app.
     @Published private(set) var emptyFolders: [String] = []
-    /// Identité de cet item de registre, pour le mettre à jour plutôt que le multiplier.
-    private var folderRegistryID: String?
+    /// Les éléments mis en favori, par identifiant. Un favori n'est pas une propriété de
+    /// l'élément — le modèle du cœur Rust n'en a pas — mais une liste tenue à part, dans
+    /// son propre registre chiffré.
+    @Published private(set) var favorites: Set<String> = []
+    /// Identité de chaque registre, par nom, pour les mettre à jour plutôt que les
+    /// multiplier. Un registre absent de ce dictionnaire n'existe pas encore côté serveur.
+    private var registryIDs: [String: String] = [:]
     /// Vrai juste après un déverrouillage réussi, quand la biométrie est disponible mais
     /// pas encore configurée : l'UI peut alors proposer de l'activer.
     @Published var offersBiometricEnrollment = false
@@ -121,7 +126,8 @@ final class VaultStore: ObservableObject {
         pendingPassword = nil
         offersBiometricEnrollment = false
         emptyFolders = []
-        folderRegistryID = nil
+        favorites = []
+        registryIDs = [:]
     }
 
     /// Déconnexion : révoque la session côté serveur et efface tout localement.
@@ -282,35 +288,52 @@ final class VaultStore: ObservableObject {
         lecture(dtos, account).entries
     }
 
-    /// Le même travail, mais en retenant au passage le registre des dossiers : il traverse
-    /// la liste comme les autres éléments, autant le cueillir là plutôt que de refaire un
-    /// tour de déchiffrement pour lui seul.
-    private static func lecture(_ dtos: [EncryptedItemDTO], _ account: Account)
-        -> (entries: [VaultEntry], registryID: String?, folders: [String])
-    {
+    /// Ce qu'un tour de déchiffrement rapporte : les éléments, et les registres cueillis
+    /// au passage. Ils traversent la liste comme les autres éléments — autant les prendre
+    /// là plutôt que de refaire un tour pour eux seuls.
+    struct Lecture {
         var entries: [VaultEntry] = []
-        var registryID: String?
         var folders: [String] = []
+        var favorites: Set<String> = []
+        /// Identité serveur de chaque registre, par nom.
+        var registryIDs: [String: String] = [:]
+    }
+
+    nonisolated static func lecture(_ dtos: [EncryptedItemDTO], _ account: Account) -> Lecture {
+        var resultat = Lecture()
 
         for dto in dtos {
             guard let item = try? decrypt(dto, with: account) else { continue }
             if isRegistry(item) {
-                registryID = dto.id
-                if case .secureNote(let note) = item.data,
-                    let data = note.content.data(using: .utf8),
-                    let chemins = try? JSONDecoder().decode([String].self, from: data)
-                {
-                    folders = chemins
+                resultat.registryIDs[item.name] = dto.id
+                let liste = contenuDeRegistre(item)
+                switch item.name {
+                case VaultConstants.foldersItemName: resultat.folders = liste
+                case VaultConstants.favoritesItemName: resultat.favorites = Set(liste)
+                // Un registre d'une version plus récente, ou d'un autre produit de la
+                // suite : on ne sait pas le lire, mais on sait ne pas l'afficher.
+                default: break
                 }
                 continue
             }
-            entries.append(VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt))
+            resultat.entries.append(VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt))
         }
 
-        entries.sort {
+        resultat.entries.sort {
             $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending
         }
-        return (entries, registryID, folders.sorted { $0.localizedCompare($1) == .orderedAscending })
+        resultat.folders.sort { $0.localizedCompare($1) == .orderedAscending }
+        return resultat
+    }
+
+    /// Un registre est un `SecureNote` dont le contenu est un tableau JSON de chaînes.
+    /// Illisible, il vaut mieux le tenir pour vide que faire échouer toute la lecture.
+    nonisolated private static func contenuDeRegistre(_ item: VaultItem) -> [String] {
+        guard case .secureNote(let note) = item.data,
+            let data = note.content.data(using: .utf8),
+            let liste = try? JSONDecoder().decode([String].self, from: data)
+        else { return [] }
+        return liste
     }
 
     func save(_ item: VaultItem, id: String?) async {
@@ -350,12 +373,11 @@ final class VaultStore: ObservableObject {
         }
     }
 
-    private func appliquer(
-        _ lecture: (entries: [VaultEntry], registryID: String?, folders: [String])
-    ) {
+    private func appliquer(_ lecture: Lecture) {
         entries = lecture.entries
-        folderRegistryID = lecture.registryID
+        registryIDs = lecture.registryIDs
         emptyFolders = lecture.folders
+        favorites = lecture.favorites
     }
 
     // ─── Dossiers ───
@@ -400,28 +422,64 @@ final class VaultStore: ObservableObject {
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 
-    /// Écrit le registre : un `SecureNote` dont le contenu est la liste des chemins, sous
-    /// un nom que l'interface masque. Même format que la web app, au caractère près.
     private func saveFolders() async {
+        await enregistrerRegistre(
+            VaultConstants.foldersItemName, emptyFolders,
+            echec: tr("Serveur injoignable : les dossiers n'ont pas été enregistrés."))
+    }
+
+    // ─── Favoris ───
+
+    /// Les favoris, dans l'ordre du coffre. Un identifiant qui ne correspond plus à rien —
+    /// l'élément a été supprimé ailleurs — disparaît de lui-même : le registre garde une
+    /// trace inoffensive, que la prochaine écriture nettoie.
+    var favoriteEntries: [VaultEntry] {
+        entries.filter { favorites.contains($0.id) }
+    }
+
+    func isFavorite(_ entry: VaultEntry) -> Bool { favorites.contains(entry.id) }
+
+    func toggleFavorite(_ entry: VaultEntry) async {
+        if favorites.contains(entry.id) {
+            favorites.remove(entry.id)
+        } else {
+            favorites.insert(entry.id)
+        }
+        // On ne réécrit que ce qui existe encore : sans ce filtrage, le registre
+        // accumulerait les identifiants d'éléments supprimés depuis longtemps.
+        let vivants = Set(entries.map(\.id))
+        favorites.formIntersection(vivants)
+        await enregistrerRegistre(
+            VaultConstants.favoritesItemName, favorites.sorted(),
+            echec: tr("Serveur injoignable : les favoris n'ont pas été enregistrés."))
+    }
+
+    // ─── Registres ───
+
+    /// Écrit un registre : un `SecureNote` dont le contenu est un tableau JSON, sous un nom
+    /// que l'interface masque. Même format que la web app, au caractère près.
+    private func enregistrerRegistre(
+        _ nom: String, _ valeurs: [String], echec: String
+    ) async {
         guard let api, let token, let account else { return }
         let contenu = String(
-            decoding: (try? JSONEncoder().encode(emptyFolders)) ?? Data("[]".utf8), as: UTF8.self)
+            decoding: (try? JSONEncoder().encode(valeurs)) ?? Data("[]".utf8), as: UTF8.self)
         let item = VaultItem(
-            name: VaultConstants.foldersItemName, notes: nil, folder: nil,
+            name: nom, notes: nil, folder: nil,
             data: .secureNote(SecureNote(content: contenu)))
         do {
             let (key, data) = try Self.encrypt(item, with: account)
-            if let folderRegistryID {
+            if let identifiant = registryIDs[nom] {
                 _ = try await api.updateItem(
-                    token: token, id: folderRegistryID, encryptedKey: key, encryptedData: data)
+                    token: token, id: identifiant, encryptedKey: key, encryptedData: data)
             } else {
                 let cree = try await api.createItem(
                     token: token, encryptedKey: key, encryptedData: data)
-                folderRegistryID = cree.id
+                registryIDs[nom] = cree.id
             }
             await refresh()
         } catch is URLError {
-            errorMessage = tr("Serveur injoignable : les dossiers n'ont pas été enregistrés.")
+            errorMessage = echec
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -477,7 +535,7 @@ final class VaultStore: ObservableObject {
     /// Un item de registre interne — l'arborescence des dossiers partagée avec la web app —
     /// n'a rien à faire dans la liste. L'afficher serait une régression visible.
     nonisolated static func isRegistry(_ item: VaultItem) -> Bool {
-        item.name == VaultConstants.foldersItemName
+        item.name.hasPrefix(VaultConstants.registryPrefix)
     }
 
     /// Le cœur échange des `EncryptedItem` en JSON (`encrypted_key` / `encrypted_data`),

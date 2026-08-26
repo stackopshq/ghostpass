@@ -12,6 +12,7 @@
       }
     },
     "%1$@ n'a pas pu être activé (code %2$d).": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -41,12 +42,32 @@
         }
       }
     },
+    "%lld mots de passe à revoir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld passwords to review"
+          }
+        }
+      }
+    },
     "%lld s": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld s"
+          }
+        }
+      }
+    },
+    "%lld éléments examinés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld items examined"
           }
         }
       }
@@ -181,6 +202,16 @@
         }
       }
     },
+    "Aucun mot de passe connu des fuites publiques.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No password known to public breaches."
+          }
+        }
+      }
+    },
     "Aucune session enregistrée sur cet appareil.": {
       "localizations": {
         "en": {
@@ -197,6 +228,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Other logins"
+          }
+        }
+      }
+    },
+    "Bon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Good"
           }
         }
       }
@@ -541,12 +582,42 @@
         }
       }
     },
+    "Favoris": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favourites"
+          }
+        }
+      }
+    },
     "Fermer": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Close"
+          }
+        }
+      }
+    },
+    "Force": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strength"
+          }
+        }
+      }
+    },
+    "Fuites connues": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Known breaches"
           }
         }
       }
@@ -651,6 +722,26 @@
         }
       }
     },
+    "Le second facteur protège même un mot de passe connu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A second factor protects even a known password."
+          }
+        }
+      }
+    },
+    "Le service de vérification n'a pas répondu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The checking service did not respond."
+          }
+        }
+      }
+    },
     "Les éléments supprimés atterrissent ici.": {
       "localizations": {
         "en": {
@@ -687,6 +778,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uppercase"
+          }
+        }
+      }
+    },
+    "Mettre en favori": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to favourites"
           }
         }
       }
@@ -747,6 +848,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Incorrect master password."
+          }
+        }
+      }
+    },
+    "Mots de passe faibles": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weak passwords"
+          }
+        }
+      }
+    },
+    "Mots de passe réutilisés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reused passwords"
+          }
+        }
+      }
+    },
+    "Moyen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medium"
           }
         }
       }
@@ -921,12 +1052,32 @@
         }
       }
     },
+    "Retirer des favoris": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from favourites"
+          }
+        }
+      }
+    },
     "Revenir au coffre enregistré": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Back to saved vault"
+          }
+        }
+      }
+    },
+    "Rien à signaler": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to report"
           }
         }
       }
@@ -947,6 +1098,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Regenerate"
+          }
+        }
+      }
+    },
+    "Sans code à usage unique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without a one-time code"
+          }
+        }
+      }
+    },
+    "Santé du coffre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault health"
           }
         }
       }
@@ -1027,6 +1198,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Server unreachable: folders were not saved."
+          }
+        }
+      }
+    },
+    "Serveur injoignable : les favoris n'ont pas été enregistrés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: favourites were not saved."
+          }
+        }
+      }
+    },
+    "Seuls les cinq premiers caractères de l'empreinte du mot de passe sont envoyés : ni le mot de passe ni son empreinte complète ne quittent l'appareil.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the first five characters of the password’s hash are sent: neither the password nor its full hash leaves the device."
           }
         }
       }
@@ -1151,6 +1342,46 @@
         }
       }
     },
+    "Trop courts, ou faits d'une seule sorte de caractères.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too short, or made of a single kind of character."
+          }
+        }
+      }
+    },
+    "Très bon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Very good"
+          }
+        }
+      }
+    },
+    "Très faible": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Very weak"
+          }
+        }
+      }
+    },
+    "Une seule fuite suffit alors à ouvrir plusieurs comptes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A single breach then opens several accounts."
+          }
+        }
+      }
+    },
     "Utiliser": {
       "localizations": {
         "en": {
@@ -1217,6 +1448,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your note"
+          }
+        }
+      }
+    },
+    "Vérification…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking…"
+          }
+        }
+      }
+    },
+    "Vérifier les fuites": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for breaches"
           }
         }
       }

@@ -14,6 +14,7 @@
     ensureCryptoReady,
     faviconUrl,
     FOLDERS_ITEM_NAME,
+    REGISTRY_PREFIX,
     openEmergency,
     recoverAccount,
     register,
@@ -396,7 +397,7 @@
       const vault = openEmergency(account, data.grantorPublicKey, data.sealedUserKey);
       emgViewItems = data.items
         .map((it) => decryptEmergencyItem(vault, it.encryptedKey, it.encryptedData))
-        .filter((i) => i.name !== FOLDERS_ITEM_NAME);
+        .filter((i) => !i.name.startsWith(REGISTRY_PREFIX));
       emgViewFrom = data.grantorEmail;
     } catch (err) {
       error = errMsg(err);
@@ -897,7 +898,7 @@
       if (r.kind === "folders") {
         registryId = d.id;
         registryPaths = r.paths;
-      } else {
+      } else if (r.kind === "item") {
         entries.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
       }
     }
