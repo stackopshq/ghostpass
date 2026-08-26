@@ -75,7 +75,7 @@ passe faux, et le fait qu'aucune session n'autorise l'activation.
 | `Ghostpass/Services/SiteMatching.swift` | Rapprochement site ↔ adresses d'un item |
 | `Ghostpass/Services/CredentialIdentities.swift` | Inscription des identifiants auprès d'iOS |
 | `GhostpassAutoFill/` | L'extension de remplissage : écran, état, point d'entrée |
-| `Ghostpass/Assets.xcassets` | Icône, dérivée de `assets/logo/ghostpass.svg` |
+| `Ghostpass/Assets.xcassets` | Icône : la marque de GhostPass, cadenas et dégradé d'accent |
 | `Ghostpass/Services/VaultStore.swift` | État de l'app, passage de frontière chiffré/clair |
 | `Ghostpass/Views/` | SwiftUI : déverrouillage, liste, détail, édition |
 
@@ -125,6 +125,12 @@ aussi côté remplissage. Sans lui, l'extension demandera le mot de passe maîtr
 - **Localisation** : l'interface est en français, sans catalogue de traductions.
 
 ## Points de vigilance
+
+- **L'icône reprend la marque du produit**, pas celle de la suite : le cadenas de
+  `logoMark()` (`apps/web/src/App.svelte`) sur le dégradé `--accent` → `--accent-2` du
+  thème clair, tel que l'affiche la web app. `assets/logo/ghostpass.svg` porte un nom
+  trompeur — c'est le fantôme de **ghost-suite**, ajouté par le commit
+  « feat(brand): add ghost-suite logo », et non la marque de GhostPass.
 
 - L'item nommé `"\0gp:folders"` est un **registre interne** partagé avec la web app.
   Il est filtré de la liste ; l'afficher serait une régression visible.

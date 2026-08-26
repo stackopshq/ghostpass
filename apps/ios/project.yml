@@ -36,7 +36,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass
         CODE_SIGN_ENTITLEMENTS: Ghostpass/Ghostpass.entitlements
         GENERATE_INFOPLIST_FILE: YES
-        # Icône dérivée du logo du produit (assets/logo/ghostpass.svg).
+        # Icône reprenant la marque de GhostPass : le cadenas de `logoMark()` sur le
+        # dégradé d'accent de la web app. À ne pas confondre avec
+        # assets/logo/ghostpass.svg, qui est le logo de ghost-suite, pas du produit.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: GhostPass
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
