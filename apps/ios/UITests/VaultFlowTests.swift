@@ -239,13 +239,20 @@ final class VaultFlowTests: XCTestCase {
         // 3. Création
         let plus = app.buttons["button.add"]
         XCTAssertTrue(plus.waitForExistence(timeout: 30))
-        plus.tap()
-        if !app.buttons["button.cancel"].waitForExistence(timeout: 10) {
-            plus.tap()  // la feuille rate parfois le premier tap juste après le chargement
-            XCTAssertTrue(
-                app.buttons["button.cancel"].waitForExistence(timeout: 30),
-                "la feuille de création ne s'ouvre pas")
+        // `taper` et non `tap` : « Ajouter » vit dans la barre de navigation, où un tap
+        // ordinaire sur une vue encore en cours de mise en page rend {-1, -1} et se perd en
+        // silence. La reprise d'avant réessayait le même geste raté — elle a laissé passer
+        // un échec intermittent qui ne disait rien de son sujet, seulement que « field.name »
+        // était introuvable sur un écran qui ne l'a jamais porté.
+        var ouverte = false
+        for _ in 0..<4 {
+            taper(plus)
+            if app.buttons["button.cancel"].waitForExistence(timeout: 8) {
+                ouverte = true
+                break
+            }
         }
+        XCTAssertTrue(ouverte, "la feuille de création ne s'ouvre pas")
         remplir(app, "field.name", "Forgejo")
         remplir(app, "field.username", "clara")
 
