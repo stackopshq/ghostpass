@@ -93,6 +93,17 @@ cd ~/.gitea-runner && PATH="$HOME/.cargo/bin:$PATH" nohup gitea-runner daemon \
   >> ~/.gitea-runner/logs/daemon.log 2>&1 &
 ```
 
+**La machine ne porte qu'une suite à la fois.** `run-ios-tests.sh` prend le port 3111 en
+dur, crée un simulateur et écrit dans `apps/ios/TestResults/` : deux exécutions
+concurrentes se marchent dessus, et celle qui perd la course meurt sur « Le port 3111 est
+déjà occupé » — un échec qui ne dit rien du code.
+
+Le runner ne prévient pas avant de démarrer un job, et rien ne verrouille la machine entre
+lui et un lancement à la main. Vérifier que le poste est libre avant de lancer ne suffit
+donc pas : c'est une course, et un job CI peut arriver dans l'intervalle. En pratique, on
+attend le verdict d'un push avant de relancer une suite locale, plutôt que de courir à
+côté du runner.
+
 **Pour voir ce qu'un job a fait**, activer la conservation des logs dans
 `~/.gitea-runner/config.yaml` — le journal du daemon ne contient que « tâche reçue », et
 sans ça un échec ne laisse qu'un silence de deux minutes :
