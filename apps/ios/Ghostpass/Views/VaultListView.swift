@@ -127,6 +127,10 @@ struct VaultListView: View {
                             sheet = .emergency
                         }
                         .accessibilityIdentifier("button.emergency")
+                        Button("Coffres partagés", systemImage: "person.2") {
+                            sheet = .organizations
+                        }
+                        .accessibilityIdentifier("button.organizations")
                         Button("Importer un CSV", systemImage: "square.and.arrow.down") {
                             sheet = .importCSV
                         }
@@ -185,6 +189,8 @@ struct VaultListView: View {
                     ExportView().environmentObject(store)
                 case .emergency:
                     EmergencyView().environmentObject(store)
+                case .organizations:
+                    OrganizationsView().environmentObject(store)
                 }
             }
             // Une seule alerte, et rien d'autre par-dessus : deux modificateurs `.alert`
@@ -366,6 +372,7 @@ enum VaultSheet: Identifiable {
     case importCSV
     case exportCSV
     case emergency
+    case organizations
 
     var id: String {
         switch self {
@@ -379,6 +386,7 @@ enum VaultSheet: Identifiable {
         case .health: return "health"
         case .recoveryKey: return "recoveryKey"
         case .emergency: return "emergency"
+        case .organizations: return "organizations"
         case .importCSV: return "import"
         case .exportCSV: return "export"
         }

@@ -857,6 +857,119 @@ final class VaultStore: ObservableObject {
             return false
         }
     }
+
+    // ─── Organisations ───
+
+    /// Les organisations dont on est membre, invitations comprises.
+    func organisations() async -> [Organisation] {
+        guard let api, let token else { return [] }
+        do {
+            return try await api.listOrgs(token: token).compactMap(Organisation.init)
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
+        }
+    }
+
+    func accepterLOrganisation(_ id: String) async -> Bool {
+        guard let api, let token else { return false }
+        do {
+            try await api.acceptOrg(token: token, org: id)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Ouvre le coffre d'une organisation : récupère l'Org Key scellée pour nous et la fait
+    /// ouvrir par le cœur, **en vérifiant qu'elle vient bien de l'admin**. Sans cette
+    /// vérification, un serveur actif pourrait substituer une Org Key de son choix et lire
+    /// tout ce qu'on y écrirait ensuite.
+    func ouvrirLOrganisation(_ organisation: Organisation) async -> CoffrePartageOuvert? {
+        guard let api, let token, let account else { return nil }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let appartenance = try await api.orgMembership(token: token, org: organisation.id)
+            guard let scellee = appartenance.encryptedOrgKey,
+                let adminPublicKey = appartenance.sealedByPublicKey
+            else {
+                errorMessage = tr("Aucune clé ne vous a encore été remise pour ce coffre.")
+                return nil
+            }
+            let org = try account.openOrg(adminPublicKey: adminPublicKey, sealed: scellee)
+            let collections = try await api.orgCollections(token: token, org: organisation.id)
+            return CoffrePartageOuvert(
+                organisation: organisation, collections: collections, org: org)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Les items d'une collection, déchiffrés sous l'Org Key.
+    func itemsPartages(_ ouvert: CoffrePartageOuvert, collection: String) async -> [VaultEntry] {
+        guard let api, let token else { return [] }
+        do {
+            let dtos = try await api.orgItems(
+                token: token, org: ouvert.organisation.id, collection: collection)
+            return dtos.compactMap { dto -> VaultEntry? in
+                guard let item = try? ouvert.org.ouvrir(dto) else { return nil }
+                return VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt)
+            }
+            .sorted {
+                $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
+        }
+    }
+
+    /// Dépose ou met à jour un item dans une collection partagée. Le chiffrement se fait sous
+    /// l'Org Key, jamais sous la nôtre : c'est ce qui rend l'item lisible par les autres
+    /// membres et illisible pour quiconque quitte l'organisation après une rotation.
+    func enregistrerDansLaCollection(
+        _ ouvert: CoffrePartageOuvert, collection: String, item: VaultItem, remplace id: String?
+    ) async -> Bool {
+        guard let api, let token else { return false }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let json = String(data: try JSONEncoder().encode(item), encoding: .utf8) ?? "{}"
+            let chiffre = try ouvert.org.encryptItem(itemJson: json)
+            let enveloppe = try JSONDecoder().decode(
+                EnveloppeChiffree.self, from: Data(chiffre.utf8))
+            if let id {
+                try await api.updateOrgItem(
+                    token: token, org: ouvert.organisation.id, collection: collection, id: id,
+                    encryptedKey: enveloppe.encryptedKey, encryptedData: enveloppe.encryptedData)
+            } else {
+                _ = try await api.createOrgItem(
+                    token: token, org: ouvert.organisation.id, collection: collection,
+                    encryptedKey: enveloppe.encryptedKey, encryptedData: enveloppe.encryptedData)
+            }
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func supprimerDeLaCollection(
+        _ ouvert: CoffrePartageOuvert, collection: String, id: String
+    ) async -> Bool {
+        guard let api, let token else { return false }
+        do {
+            try await api.deleteOrgItem(
+                token: token, org: ouvert.organisation.id, collection: collection, id: id)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
 }
 
 /// Coffre d'un donneur, ouvert le temps d'une consultation. `coffre` reste un objet opaque du
@@ -878,5 +991,17 @@ private struct RepriseDUrgence: Decodable {
     enum CodingKeys: String, CodingKey {
         case masterPasswordHash = "master_password_hash"
         case encryptedUserKey = "encrypted_user_key"
+    }
+}
+
+/// L'enveloppe que rend le cœur : les deux moitiés d'un item chiffré, telles que le serveur
+/// les stocke. En snake_case, comme tout ce qui traverse la frontière FFI.
+private struct EnveloppeChiffree: Decodable {
+    let encryptedKey: String
+    let encryptedData: String
+
+    enum CodingKeys: String, CodingKey {
+        case encryptedKey = "encrypted_key"
+        case encryptedData = "encrypted_data"
     }
 }

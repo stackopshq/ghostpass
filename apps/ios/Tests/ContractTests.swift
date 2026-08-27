@@ -1203,3 +1203,81 @@ final class AccesDUrgenceTests: XCTestCase {
         }
     }
 }
+
+// ─── Organisations ────────────────────────────────────────────────────────────
+
+final class OrganisationsTests: XCTestCase {
+    private func dto(role: String = "member", status: String = "active") -> OrgSummaryDTO {
+        OrgSummaryDTO(orgId: "org-1", name: "Équipe Sécurité", role: role, status: status)
+    }
+
+    func testUneOrganisationValideSeTraduitFidelement() throws {
+        let org = try XCTUnwrap(Organisation(dto(role: "admin", status: "invited")))
+        XCTAssertEqual(org.id, "org-1")
+        XCTAssertEqual(org.nom, "Équipe Sécurité")
+        XCTAssertEqual(org.role, .admin)
+        XCTAssertEqual(org.etat, .invited)
+    }
+
+    /// Un rôle que cette version ne connaît pas ne doit pas produire une ligne muette : on
+    /// préfère ne rien afficher qu'afficher une équipe dont on ignore ce qu'on y peut.
+    func testUnRoleInconnuEstEcarte() {
+        XCTAssertNil(Organisation(dto(role: "owner")))
+    }
+
+    func testUnEtatInconnuEstEcarte() {
+        XCTAssertNil(Organisation(dto(status: "pending")))
+    }
+
+    /// La lecture seule est le seul rôle qui n'écrit pas. Se tromper ici proposerait un
+    /// bouton « ajouter » que le serveur refuserait ensuite — une promesse non tenue.
+    func testSeuleLaLectureSeuleNEcritPas() {
+        XCTAssertFalse(RoleDOrganisation.readonly.peutEcrire)
+        XCTAssertTrue(RoleDOrganisation.member.peutEcrire)
+        XCTAssertTrue(RoleDOrganisation.admin.peutEcrire)
+    }
+
+    @MainActor
+    func testLesLibellesDesRolesEtEtatsSontTraduits() {
+        for role in [RoleDOrganisation.admin, .member, .readonly] {
+            XCTAssertFalse(role.intitule.isEmpty, "intitulé vide pour \(role.rawValue)")
+        }
+        for etat in [EtatDAppartenance.invited, .active, .revoked] {
+            XCTAssertFalse(etat.intitule.isEmpty, "intitulé vide pour \(etat.rawValue)")
+        }
+    }
+
+    /// Le coffre partagé et le coffre personnel ouvrent la même enveloppe : c'est ce que le
+    /// protocole garantit, et c'est ce qui permet de n'écrire ce code qu'une fois.
+    func testLeCoffreDEquipeOuvreLaMemeEnveloppeQueLeCompte() throws {
+        let inscription = try register(password: "correct horse battery staple", email: "clara@test.ch")
+        let compte = inscription.account()
+        let creation = try compte.createOrg()
+        let org = creation.org()
+
+        let item = VaultItem(
+            name: "Serveur de production", notes: nil, folder: nil,
+            data: .login(Login(username: "root", password: "s3cr3t")))
+        let json = String(data: try JSONEncoder().encode(item), encoding: .utf8) ?? "{}"
+        let chiffre = try org.encryptItem(itemJson: json)
+
+        // Le DTO tel que le serveur le rendrait.
+        struct Enveloppe: Decodable {
+            let encryptedKey: String
+            let encryptedData: String
+            enum CodingKeys: String, CodingKey {
+                case encryptedKey = "encrypted_key"
+                case encryptedData = "encrypted_data"
+            }
+        }
+        let e = try JSONDecoder().decode(Enveloppe.self, from: Data(chiffre.utf8))
+        let dto = EncryptedItemDTO(
+            id: "item-1", encryptedKey: e.encryptedKey, encryptedData: e.encryptedData)
+
+        let relu = try org.ouvrir(dto)
+        XCTAssertEqual(relu.name, "Serveur de production")
+
+        // Et le compte, lui, ne peut pas l'ouvrir : ce n'est pas sa clé.
+        XCTAssertThrowsError(try compte.ouvrir(dto))
+    }
+}

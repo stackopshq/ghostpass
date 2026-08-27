@@ -168,6 +168,16 @@
         }
       }
     },
+    "Accepter vous donnera accès aux coffres que l'équipe partage avec vous.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accepting will give you access to the vaults the team shares with you."
+          }
+        }
+      }
+    },
     "Accès automatique le %@ si vous ne faites rien.": {
       "localizations": {
         "en": {
@@ -218,6 +228,26 @@
         }
       }
     },
+    "Accès révoqué": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access revoked"
+          }
+        }
+      }
+    },
+    "Accès révoqués": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revoked access"
+          }
+        }
+      }
+    },
     "Activer": {
       "localizations": {
         "en": {
@@ -234,6 +264,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Turn on %@"
+          }
+        }
+      }
+    },
+    "Administrateur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administrator"
           }
         }
       }
@@ -418,6 +458,26 @@
         }
       }
     },
+    "Aucune clé ne vous a encore été remise pour ce coffre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No key has been handed to you for this vault yet."
+          }
+        }
+      }
+    },
+    "Aucune collection ne vous est ouverte dans cette équipe. Un administrateur doit vous y donner accès.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No collection is open to you in this team. An administrator must grant you access."
+          }
+        }
+      }
+    },
     "Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont pas reconnues.": {
       "localizations": {
         "en": {
@@ -504,6 +564,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "What others have left you, and what you can do with it."
+          }
+        }
+      }
+    },
+    "Ces coffres ne s'ouvrent plus. Après une rotation de clé, ce que vous en aviez vu reste connu de vous — les mots de passe concernés doivent être changés par l'équipe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These vaults no longer open. After a key rotation, what you already saw remains known to you — the passwords involved must be changed by the team."
+          }
+        }
+      }
+    },
+    "Cette collection est vide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This collection is empty."
           }
         }
       }
@@ -688,12 +768,32 @@
         }
       }
     },
+    "Coffres partagés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared vaults"
+          }
+        }
+      }
+    },
     "Coffres qui me sont confiés": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Vaults entrusted to me"
+          }
+        }
+      }
+    },
+    "Collection": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collection"
           }
         }
       }
@@ -1268,6 +1368,26 @@
         }
       }
     },
+    "Invitation reçue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitation received"
+          }
+        }
+      }
+    },
+    "Invitations": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitations"
+          }
+        }
+      }
+    },
     "La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre.": {
       "localizations": {
         "en": {
@@ -1468,6 +1588,16 @@
         }
       }
     },
+    "Les coffres partagés se créent depuis l'application web ; ils apparaîtront ici dès qu'on vous y aura invité.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared vaults are created from the web app; they will appear here once you are invited."
+          }
+        }
+      }
+    },
     "Les deux saisies diffèrent.": {
       "localizations": {
         "en": {
@@ -1528,12 +1658,42 @@
         }
       }
     },
+    "Membre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Member"
+          }
+        }
+      }
+    },
+    "Membre actif": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active member"
+          }
+        }
+      }
+    },
     "Mes contacts de confiance": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "My trusted contacts"
+          }
+        }
+      }
+    },
+    "Mes équipes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My teams"
           }
         }
       }
@@ -1934,6 +2094,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deny"
+          }
+        }
+      }
+    },
+    "Rejoindre l'équipe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join the team"
           }
         }
       }
@@ -2514,6 +2684,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "You are viewing someone else's vault. This access is recorded in their audit log."
+          }
+        }
+      }
+    },
+    "Vous n'appartenez à aucune équipe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not belong to any team."
           }
         }
       }

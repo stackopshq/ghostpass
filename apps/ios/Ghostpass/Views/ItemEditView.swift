@@ -5,6 +5,10 @@ import SwiftUI
 /// chiffre, l'écran ne manipule que du clair éphémère.
 struct ItemEditView: View {
     let target: EditTarget
+    /// Où enregistrer. Par défaut le coffre personnel ; une collection d'équipe fournit le
+    /// sien, car un item partagé se chiffre sous l'Org Key et non sous la nôtre. Le
+    /// formulaire, lui, est le même — il n'y a aucune raison d'en tenir deux.
+    var enregistrer: ((VaultItem, String?) async -> Void)?
 
     @EnvironmentObject private var store: VaultStore
     @Environment(\.dismiss) private var dismiss
@@ -94,7 +98,11 @@ struct ItemEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer") {
                         Task {
-                            await store.save(build(), id: existingID)
+                            if let enregistrer {
+                                await enregistrer(build(), existingID)
+                            } else {
+                                await store.save(build(), id: existingID)
+                            }
                             dismiss()
                         }
                     }

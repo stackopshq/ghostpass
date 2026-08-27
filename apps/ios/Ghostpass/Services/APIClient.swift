@@ -116,6 +116,41 @@ private struct TakeoverBody: Encodable {
     let encryptedUserKey: String
 }
 
+
+// ─── Organisations ───
+
+struct OrgSummaryDTO: Decodable, Identifiable {
+    let orgId: String
+    let name: String
+    let role: String
+    let status: String
+
+    var id: String { orgId }
+}
+
+private struct OrgListDTO: Decodable {
+    let organizations: [OrgSummaryDTO]
+}
+
+/// Ce qu'il faut pour ouvrir le coffre d'une organisation : l'Org Key scellée pour nous, et
+/// la clé publique de l'admin qui l'a scellée — sans elle, on ne pourrait pas vérifier
+/// qu'elle vient bien de lui, et un serveur actif pourrait en substituer une autre.
+struct OrgMembershipDTO: Decodable {
+    let role: String
+    let status: String
+    let encryptedOrgKey: String?
+    let sealedByPublicKey: String?
+}
+
+struct OrgCollectionDTO: Decodable, Identifiable {
+    let id: String
+    let name: String
+}
+
+private struct OrgCollectionsDTO: Decodable {
+    let collections: [OrgCollectionDTO]
+}
+
 /// Client HTTP du serveur GhostPass. Il ne voit jamais que du chiffré : le clair
 /// n'existe que de l'autre côté de la frontière FFI.
 struct APIClient {
@@ -313,5 +348,69 @@ struct APIClient {
             TakeoverBody(
                 masterPasswordHash: masterPasswordHash, encryptedUserKey: encryptedUserKey))
         _ = try await request("POST", "api/emergency/\(id)/takeover", token: token, body: body)
+    }
+    // ─── Organisations ───
+
+    func listOrgs(token: String) async throws -> [OrgSummaryDTO] {
+        try decode(OrgListDTO.self, from: await request("GET", "api/orgs", token: token))
+            .organizations
+    }
+
+    func orgMembership(token: String, org: String) async throws -> OrgMembershipDTO {
+        try decode(
+            OrgMembershipDTO.self,
+            from: await request("GET", "api/orgs/\(org)/membership", token: token))
+    }
+
+    func acceptOrg(token: String, org: String) async throws {
+        _ = try await request("POST", "api/orgs/\(org)/accept", token: token)
+    }
+
+    /// Le serveur ne rend que les collections auxquelles ce membre a droit : la permission
+    /// est tranchée là-bas, l'application ne fait qu'afficher ce qu'on lui donne.
+    func orgCollections(token: String, org: String) async throws -> [OrgCollectionDTO] {
+        try decode(
+            OrgCollectionsDTO.self,
+            from: await request("GET", "api/orgs/\(org)/collections", token: token)
+        ).collections
+    }
+
+    func orgItems(token: String, org: String, collection: String) async throws
+        -> [EncryptedItemDTO]
+    {
+        try decode(
+            ItemsEnvelope.self,
+            from: await request(
+                "GET", "api/orgs/\(org)/collections/\(collection)/items", token: token)
+        ).items
+    }
+
+    func createOrgItem(
+        token: String, org: String, collection: String, encryptedKey: String,
+        encryptedData: String
+    ) async throws -> EncryptedItemDTO {
+        let body = try JSONEncoder().encode(
+            ItemBody(encryptedKey: encryptedKey, encryptedData: encryptedData))
+        return try decode(
+            EncryptedItemDTO.self,
+            from: await request(
+                "POST", "api/orgs/\(org)/collections/\(collection)/items", token: token,
+                body: body))
+    }
+
+    func updateOrgItem(
+        token: String, org: String, collection: String, id: String, encryptedKey: String,
+        encryptedData: String
+    ) async throws {
+        let body = try JSONEncoder().encode(
+            ItemBody(encryptedKey: encryptedKey, encryptedData: encryptedData))
+        _ = try await request(
+            "PUT", "api/orgs/\(org)/collections/\(collection)/items/\(id)", token: token,
+            body: body)
+    }
+
+    func deleteOrgItem(token: String, org: String, collection: String, id: String) async throws {
+        _ = try await request(
+            "DELETE", "api/orgs/\(org)/collections/\(collection)/items/\(id)", token: token)
     }
 }
