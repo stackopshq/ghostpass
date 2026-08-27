@@ -47,7 +47,13 @@ DEVICE=""
 cleanup() {
   local code=$?
   [[ -n "$BIO_PID" ]] && kill "$BIO_PID" 2>/dev/null || true
-  [[ -n "$PAGE_PID" ]] && kill "$PAGE_PID" 2>/dev/null || true
+  [[ -n "$PAGE_PID" ]] && # Le remplissage se saute encore sur certaines versions d'iOS ; le test joint alors l'écran
+# qu'il a vu. On le remonte ici, sans quoi il resterait dans un journal que personne n'ouvre.
+xcrun simctl spawn "$DEVICE" log show --last 5m --style compact \
+  --predicate 'process == "GhostpassUITests-Runner"' 2>/dev/null |
+  grep -a "GP-AUTOFILL" | head -40 >&2 || true
+
+kill "$PAGE_PID" 2>/dev/null || true
   [[ -n "$SERVER_PID" ]] && kill "$SERVER_PID" 2>/dev/null || true
   # `npm start` lance tsx dans un processus fils : tuer le sous-shell le laisserait
   # orphelin, à écouter le port, et le run suivant se heurterait à son compte déjà créé.
@@ -129,6 +135,13 @@ defaults write com.apple.iphonesimulator PasteboardAutomaticSync -bool false
 # réglage vaut aussi pour Safari, qui héberge l'extension de remplissage.
 xcrun simctl spawn "$DEVICE" defaults write .GlobalPreferences AppleLanguages -array fr
 xcrun simctl spawn "$DEVICE" defaults write .GlobalPreferences AppleLocale -string fr_CH
+
+# Le remplissage automatique vit dans la barre d'accessoires du clavier : sans clavier
+# logiciel, il n'y a pas de barre. Ce réglage demande au simulateur de ne pas se croire
+# relié à un clavier matériel — mais il est lu par l'application Simulator, qui ne tourne
+# pas dans une exécution sans interface. On le pose quand même, pour les lancements depuis
+# Xcode ; `test04Remplissage` se saute en le disant quand aucun clavier ne paraît.
+defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false 2>/dev/null || true
 
 # ── Biométrie simulée ─────────────────────────────────────────────────────────
 # Sans inscription, `test02Biometrie` se met en skip plutôt que de passer par hasard.

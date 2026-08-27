@@ -35,16 +35,51 @@ final class AutoFillSafariTests: XCTestCase {
         safari.typeText(page + "\n")
         sleep(5)
 
-        // Un tap par coordonnée : dans une vue web, le champ existe dans l'arbre
-        // d'accessibilité sans toujours être atteignable par un tap ordinaire.
-        safari.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.23)).tap()
+        // Le champ de la page, trouvé dans l'arbre plutôt que deviné. La version précédente
+        // tapait à 23 % de la hauteur de l'écran : il suffisait que l'habillage de Safari
+        // change d'une version d'iOS à l'autre pour taper à côté, et le test concluait « le
+        // clavier ne s'est pas ouvert » — ce qui accusait le système d'une erreur de visée.
+        //
+        // Le tap reste en coordonnées : dans une vue web, le champ existe dans l'arbre sans
+        // toujours être « hittable », et un `tap()` ordinaire s'y perd. Mais on vise
+        // maintenant le centre de son cadre réel.
+        let champDeLaPage = safari.webViews.textFields.firstMatch
+        try XCTSkipUnless(
+            champDeLaPage.waitForExistence(timeout: 20),
+            "la page de test ne s'est pas chargée dans Safari")
+        let cadre = champDeLaPage.frame
+        safari.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: cadre.midX, dy: cadre.midY))
+            .tap()
         sleep(4)
-        try XCTSkipUnless(safari.keyboards.count > 0, "le clavier ne s'est pas ouvert sur la page")
+        // L'entrée « Mots de passe » vit dans la barre d'accessoires du clavier : sans
+        // clavier, pas de barre, donc pas de remplissage. Le constat a été fait en joignant
+        // l'écran au saut — l'hypothèse inverse, qu'un simulateur sans clavier logiciel
+        // proposerait quand même le remplissage, était fausse.
+        //
+        // Ce simulateur sans interface n'en affiche aucun, et le réglage
+        // `ConnectHardwareKeyboard` n'y peut rien : il est lu par l'application Simulator,
+        // qui ne tourne pas ici. C'est une limite de l'environnement, pas de GhostPass.
+        let sansClavier = safari.keyboards.count == 0
+        if sansClavier {
+            NSLog("GP-AUTOFILL aucun clavier logiciel : la barre de remplissage n'existera pas")
+        }
 
         let motsDePasse = safari.buttons["Mots de passe"].firstMatch
-        try XCTSkipUnless(
-            motsDePasse.waitForExistence(timeout: 20),
-            "le clavier ne propose pas « Mots de passe » sur cette version d'iOS")
+        if !motsDePasse.waitForExistence(timeout: 20) {
+            // Deux causes possibles, et le message seul ne les distingue pas : GhostPass
+            // n'est pas activé comme fournisseur de remplissage, ou le libellé a changé
+            // avec la version d'iOS. On joint donc l'écran plutôt que de trancher à
+            // l'aveugle — c'est la seule façon de savoir laquelle des deux.
+            capture(safari, "A0-sans-remplissage")
+            NSLog("GP-AUTOFILL écran sans « Mots de passe » :\n%@", safari.debugDescription)
+            throw XCTSkip(
+                sansClavier
+                    ? "aucun clavier logiciel dans ce simulateur sans interface : la barre "
+                        + "de remplissage n'y apparaît jamais, GhostPass n'est pas en cause"
+                    : "le clavier est là mais ne propose pas « Mots de passe » : GhostPass "
+                        + "n'est probablement pas activé comme fournisseur de remplissage")
+        }
         motsDePasse.tap()
         sleep(4)
 
