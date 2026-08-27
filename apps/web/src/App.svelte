@@ -488,6 +488,9 @@
 
   function selectFolder(path: string | null) {
     selectedFolder = path;
+    // Sur téléphone, choisir un dossier est une navigation : le tiroir doit se
+    // refermer, sinon il masque la liste qu'on vient de demander.
+    menuOpen = false;
   }
 
   // Santé des mots de passe (calcul 100 % local).
@@ -639,6 +642,10 @@
     }
   }
 
+  // Tiroir de navigation — n'existe que sous 760 px (voir app.css). Au-dessus,
+  // la barre latérale est toujours là et cet état n'a aucun effet visible.
+  let menuOpen = $state(false);
+
   // Thème (clair/sombre) — appliqué sur <html data-theme>, persisté en localStorage.
   let theme = $state<"dark" | "light">(
     document.documentElement.dataset.theme === "light" ? "light" : "dark",
@@ -775,6 +782,7 @@
 
   // ─── Corbeille ───
   async function openTrash() {
+    menuOpen = false;
     nav = "trash";
     if (!token || !account) return;
     try {
@@ -1183,6 +1191,11 @@
     {#if theme === "dark"}{@render sunIcon()}{:else}{@render moonIcon()}{/if}
   </button>
 {/snippet}
+{#snippet menuIcon()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
+{/snippet}
 {#snippet trashIcon()}
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
@@ -1389,6 +1402,13 @@
 {:else}
   <div class="layout">
     <header class="topbar">
+      <button
+        class="icon-btn nav-toggle"
+        onclick={() => (menuOpen = !menuOpen)}
+        aria-label="Ouvrir la navigation"
+        aria-expanded={menuOpen}
+        aria-controls="gp-sidebar"
+      >{@render menuIcon()}</button>
       <span class="brand"><span class="mark">{@render logoMark()}</span><span>GhostPass</span></span>
       {#if nav === "vault"}
         <input class="search topbar-search" placeholder="Rechercher dans le coffre" bind:value={search} />
@@ -1404,14 +1424,24 @@
     </header>
 
     <div class="body">
-      <aside class="sidebar">
-        <button class="nav-item" class:active={nav === "vault"} onclick={() => (nav = "vault")}>
+      <!-- Le voile est un vrai bouton, pas un div décoré : c'est la sortie de
+           secours du tiroir, et elle doit être atteignable au clavier comme au
+           doigt. Il est `display: none` hors téléphone, donc hors du parcours
+           de tabulation le reste du temps. -->
+      <button
+        class="scrim"
+        class:show={menuOpen}
+        onclick={() => (menuOpen = false)}
+        aria-label="Fermer la navigation"
+      ></button>
+      <aside class="sidebar" class:open={menuOpen} id="gp-sidebar">
+        <button class="nav-item" class:active={nav === "vault"} onclick={() => { nav = "vault"; menuOpen = false; }}>
           {@render vaultIcon()}<span>Mon coffre</span>
         </button>
-        <button class="nav-item" class:active={nav === "orgs"} onclick={() => (nav = "orgs")}>
+        <button class="nav-item" class:active={nav === "orgs"} onclick={() => { nav = "orgs"; menuOpen = false; }}>
           {@render orgIcon()}<span>Organisations</span>
         </button>
-        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; loadWebauthn(); loadActivity(); loadEmergency(); loadPasskeys(); }}>
+        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; menuOpen = false; loadWebauthn(); loadActivity(); loadEmergency(); loadPasskeys(); }}>
           {@render shieldIcon()}<span>Sécurité</span>
         </button>
         <button class="nav-item" class:active={nav === "trash"} onclick={openTrash}>
