@@ -541,6 +541,33 @@ final class VaultFlowTests: XCTestCase {
             app.staticTexts[demoItem].waitForExistence(timeout: 120),
             "la biométrie n'a pas rouvert le coffre")
         shot(app, "4-biometrie")
+
+        // Reposer la machine comme on l'a trouvée. Un coffre qui se rouvre tout seul n'a
+        // plus d'écran de connexion : les tests suivants y cherchent un formulaire qui
+        // n'apparaît jamais, et échouent sur « ni formulaire, ni bascule de compte » —
+        // c'est-à-dire sur un symptôme qui ne dit rien de leur propre sujet. Tant que ce
+        // test sautait, la question ne se posait pas ; elle se pose maintenant qu'il
+        // s'exécute vraiment.
+        desactiverLaBiometrie(app)
+    }
+
+    /// Coupe le déverrouillage biométrique s'il est actif, pour rendre à l'application son
+    /// écran de connexion. Sans effet s'il ne l'est pas.
+    private func desactiverLaBiometrie(_ app: XCUIApplication) {
+        guard deplierLeMenu(app, jusqua: "button.health") else {
+            XCTFail("le menu ne s'ouvre pas : impossible de reposer la biométrie")
+            return
+        }
+        let couper = app.buttons["button.biometricOff"].firstMatch
+        if couper.waitForExistence(timeout: 5) {
+            couper.tap()
+        } else {
+            // Déjà coupée : refermer le menu sans rien changer.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+        }
+        XCTAssertTrue(
+            app.navigationBars["Coffre"].waitForExistence(timeout: 30),
+            "le coffre n'est pas revenu après la coupure de la biométrie")
     }
 
     /// Le coffre doit s'ouvrir **sans serveur**. Lancé par le script après extinction du
