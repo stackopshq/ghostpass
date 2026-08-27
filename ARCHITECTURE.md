@@ -348,7 +348,12 @@ Ordre de priorité (décidé) :
 - [x] **Backend** : TypeScript + Fastify (un seul langage front/back, itération rapide).
 - [x] **Front** : SvelteKit (léger, WebCrypto natif).
 - [x] **1er IdP SSO** : Entra ID via **OIDC** (portable ensuite vers Google Workspace / Keycloak).
-- [x] **Différenciation** : souveraineté suisse (hébergement CH, nLPD) + simplicité pour les PME.
+- [ ] **Différenciation** : souveraineté suisse (hébergement CH, nLPD) + simplicité
+  pour les PME. **Case décochée le 2026-08-27** : l'hébergement est en France, et la
+  conformité nLPD figure toujours dans le reste-à-faire de `docs/ROADMAP.md`. La
+  moitié « simplicité PME » tient ; la moitié « souveraineté » est un objectif, pas
+  un acquis. Cette case cochée est ce qui avait fait écrire « Hébergé en Suisse ·
+  conforme nLPD » sur l'écran de connexion, où des clients la lisaient.
 
 ## Décisions encore ouvertes
 
