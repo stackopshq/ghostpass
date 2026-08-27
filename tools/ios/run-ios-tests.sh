@@ -22,6 +22,11 @@ IOS="$ROOT/apps/ios"
 PORT=3111
 EMAIL="clara@ghostpass.test"
 PASSWORD="correct horse battery staple"
+# Un second compte, sans coffre : c'est le contact de confiance de l'accès d'urgence.
+# Sceller une clé vers quelqu'un suppose que ce quelqu'un existe déjà côté serveur — sa
+# clé publique est la seule chose qui protège la nôtre.
+CONTACT_EMAIL="kevin@ghostpass.test"
+CONTACT_PASSWORD="un tout autre mot de passe de test"
 SERVER_URL="http://127.0.0.1:$PORT"
 UNIT_ONLY=false
 [[ "${1:-}" == "--unit-only" ]] && UNIT_ONLY=true
@@ -216,6 +221,22 @@ for item in seed["items"]:
 print(f"  compte créé, {len(seed['items'])} items déposés")
 PY
 
+say "Amorçage du contact de confiance (compte seul, sans coffre)"
+cargo run -q -p ghostpass-crypto-ffi --example seed-vault -- \
+  "$CONTACT_EMAIL" "$CONTACT_PASSWORD" >"$WORK/contact.json"
+SERVER_URL="$SERVER_URL" python3 - "$WORK/contact.json" <<'CONTACT'
+import json, os, sys, urllib.request
+base = os.environ["SERVER_URL"]
+seed = json.load(open(sys.argv[1]))
+req = urllib.request.Request(
+    base + "/api/auth/register",
+    data=json.dumps(seed["registration"]).encode(),
+    headers={"Content-Type": "application/json"})
+with urllib.request.urlopen(req) as r:
+    r.read()
+print("  contact créé")
+CONTACT
+
 # ── Parcours de bout en bout ──────────────────────────────────────────────────
 say "Parcours de bout en bout"
 # Pas d'environnement à passer : `xcodebuild` n'en propage aucun jusqu'au processus de
@@ -224,7 +245,8 @@ say "Parcours de bout en bout"
 if ! run_tests GhostpassUITests/VaultFlowTests/test01ParcoursComplet \
   -only-testing:GhostpassUITests/VaultFlowTests/test02Biometrie \
   -only-testing:GhostpassUITests/VaultFlowTests/test05Preferences \
-  -only-testing:GhostpassUITests/VaultFlowTests/test06Recuperation; then
+  -only-testing:GhostpassUITests/VaultFlowTests/test06Recuperation \
+  -only-testing:GhostpassUITests/VaultFlowTests/test07Urgence; then
   echo "--- journal de l'application ---" >&2
   xcrun simctl spawn "$DEVICE" log show --last 15m --style compact \
     --predicate 'process == "Ghostpass"' 2>/dev/null | grep -a "GP-" | tail -25 >&2 ||

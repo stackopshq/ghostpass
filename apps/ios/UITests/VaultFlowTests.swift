@@ -20,6 +20,9 @@ final class VaultFlowTests: XCTestCase {
     private var email: String { env["GHOSTPASS_EMAIL"] ?? "clara@ghostpass.test" }
     private var master: String { env["GHOSTPASS_PASSWORD"] ?? "correct horse battery staple" }
     private var demoItem: String { env["GHOSTPASS_DEMO_ITEM"] ?? "GitHub" }
+    /// Le contact de confiance amorcé par le script : un compte sans coffre, qui n'existe
+    /// que pour avoir une clé publique vers laquelle sceller.
+    private var contact: String { env["GHOSTPASS_CONTACT"] ?? "kevin@ghostpass.test" }
 
     override func setUp() {
         continueAfterFailure = false
@@ -169,22 +172,29 @@ final class VaultFlowTests: XCTestCase {
 
     /// Ouvre le menu du coffre et frappe une de ses entrées.
     private func ouvrirLeMenu(_ app: XCUIApplication, _ identifiant: String) {
+        XCTAssertTrue(
+            deplierLeMenu(app, jusqua: identifiant), "« \(identifiant) » absent du menu")
+        app.buttons[identifiant].tap()
+    }
+
+    /// Déplie le menu du coffre et attend qu'une entrée connue y paraisse. Rend `false` si
+    /// le menu ne s'est pas ouvert — à l'appelant de décider si c'est une erreur.
+    ///
+    /// Un tap sur une barre de navigation encore en cours de mise en page ne porte pas :
+    /// XCUITest calcule un point de frappe {-1, -1} et le menu ne s'ouvre jamais. On
+    /// réessaie plutôt que d'en conclure que l'entrée n'existe pas — cette confusion-là a
+    /// fait passer `test02Biometrie` pour « pas de biométrie sur ce simulateur » pendant
+    /// des mois, alors que l'application la voyait très bien.
+    @discardableResult
+    private func deplierLeMenu(_ app: XCUIApplication, jusqua identifiant: String) -> Bool {
         let menu = app.buttons["button.settings"]
         XCTAssertTrue(menu.waitForExistence(timeout: 30), "le menu du coffre est absent")
         let entree = app.buttons[identifiant]
-        // Un tap sur une barre de navigation encore en cours de mise en page ne porte
-        // pas : XCUITest calcule un point de frappe {-1, -1} et le menu ne s'ouvre
-        // jamais. On réessaie plutôt que d'en conclure que l'entrée n'existe pas.
-        var ouvert = false
         for _ in 0..<4 {
             taper(menu)
-            if entree.waitForExistence(timeout: 5) {
-                ouvert = true
-                break
-            }
+            if entree.waitForExistence(timeout: 5) { return true }
         }
-        XCTAssertTrue(ouvert, "« \(identifiant) » absent du menu")
-        entree.tap()
+        return false
     }
 
     /// La luminance moyenne d'une capture, entre 0 et 1.
@@ -487,9 +497,11 @@ final class VaultFlowTests: XCTestCase {
         // Activation par les réglages, et non par la proposition qui suit la connexion :
         // celle-ci ne paraît qu'une fois, alors que le réglage est toujours là — c'est
         // d'ailleurs le seul recours après un « Plus tard ».
-        let reglages = app.buttons["button.settings"]
-        XCTAssertTrue(reglages.waitForExistence(timeout: 30), "menu des réglages absent")
-        reglages.tap()
+        // « Santé du coffre » est toujours là, quelle que soit la biométrie : c'est donc
+        // elle qui atteste que le menu s'est bien déplié, et pas l'entrée qu'on cherche.
+        XCTAssertTrue(
+            deplierLeMenu(app, jusqua: "button.health"),
+            "le menu du coffre ne s'ouvre pas — impossible de conclure sur la biométrie")
 
         let activer = app.buttons["button.biometricOn"].firstMatch
         let desactiver = app.buttons["button.biometricOff"].firstMatch
@@ -511,10 +523,10 @@ final class VaultFlowTests: XCTestCase {
             // Déjà active : refermer le menu sans y toucher.
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
         } else {
-            // Le menu ne propose rien : l'application ne voit aucune biométrie, alors même
-            // que le runner en voyait une. L'inscription simulée du simulateur ne survit
-            // pas toujours au recyclage que fait xcodebuild entre deux invocations. On
-            // s'arrête là plutôt que de rendre vert un chemin qu'on n'a pas exercé.
+            // Le menu est bien ouvert — « Santé du coffre » l'atteste — mais il ne propose
+            // ni activation ni désactivation : l'application ne voit réellement aucune
+            // biométrie, alors que le runner en voyait une. On s'arrête là plutôt que de
+            // rendre vert un chemin qu'on n'a pas exercé.
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
             throw XCTSkip(
                 "l'application ne voit pas de biométrie sur ce simulateur — "
@@ -681,6 +693,57 @@ final class VaultFlowTests: XCTestCase {
             "le mot de passe d'origine ne revient pas")
         ecarterLaPropositionBiometrique(app, delai: 5)
     }
+
+
+    /// Confier l'accès de son coffre à un contact, puis le retirer.
+    ///
+    /// Ce que le test prouve vraiment, c'est la chaîne complète du scellement : l'app va
+    /// chercher la clé publique du contact, demande au cœur Rust de sceller l'USK vers
+    /// elle, et le serveur accepte un blob qu'il ne peut pas ouvrir. Aucune de ces trois
+    /// étapes n'est observable depuis l'écran — seul leur enchaînement l'est, sous la
+    /// forme d'un contact qui apparaît dans la liste.
+    func test07Urgence() throws {
+        let app = XCUIApplication()
+        app.launch()
+        seConnecter(app)
+
+        ouvrirLeMenu(app, "button.emergency")
+        let inviter = app.buttons["button.inviteEmergency"]
+        XCTAssertTrue(
+            inviter.waitForExistence(timeout: 30), "l'écran d'accès d'urgence ne s'ouvre pas")
+        shot(app, "12-urgence-vide")
+
+        // 1. Confier l'accès. Le rôle par défaut suffit : c'est le scellement qu'on éprouve.
+        taper(inviter)
+        remplir(app, "field.emergencyEmail", contact)
+        let confirmer = app.buttons["button.confirmInvite"]
+        XCTAssertTrue(confirmer.waitForExistence(timeout: 30), "le formulaire d'invitation manque")
+        degager(app, confirmer)
+        confirmer.tap()
+
+        // 2. Le contact apparaît. S'il n'apparaît pas, c'est que l'une des trois étapes
+        // invisibles a échoué — la recherche de clé, le scellement, ou le dépôt.
+        let ligne = app.staticTexts[contact]
+        XCTAssertTrue(
+            ligne.waitForExistence(timeout: 60),
+            "le contact n'apparaît pas : recherche de clé publique, scellement ou dépôt en échec")
+        shot(app, "13-urgence-confie")
+
+        // 3. Le retirer, et vérifier qu'il s'en va pour de bon.
+        app.buttons["Retirer cet accès"].firstMatch.tap()
+        let retirer = app.buttons["Retirer"]
+        XCTAssertTrue(retirer.waitForExistence(timeout: 30), "la confirmation de retrait manque")
+        retirer.tap()
+        XCTAssertTrue(
+            aDisparu(ligne, delai: 60), "le contact reste affiché après le retrait")
+
+        app.buttons["button.closeEmergency"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Coffre"].waitForExistence(timeout: 30),
+            "la fermeture ne ramène pas au coffre")
+        aucuneLigneFantome(app, "après un aller-retour par l'accès d'urgence")
+    }
+
 
     /// Remplit le formulaire « mot de passe oublié » et attend la confirmation. Laisse
     /// l'écran de connexion prêt, serveur et compte déjà saisis.
