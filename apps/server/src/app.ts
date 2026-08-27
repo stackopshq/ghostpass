@@ -23,7 +23,22 @@ import { getAllowedOrigins } from "./services/webauthn.js";
 /// Séparé de `index.ts` pour permettre les tests via `app.inject()` sur une DB en mémoire.
 export function buildApp(db: DB): FastifyInstance {
   const app = Fastify({
-    logger: { level: process.env.LOG_LEVEL ?? "warn" },
+    // `info` et non `warn` : à `warn`, Fastify ne journalise NI les requêtes
+    // servies NI les 4xx. Le 2026-08-27, un bouton qui ne faisait rien était
+    // indiagnosticable — le conteneur n'avait produit que ses quatre lignes de
+    // démarrage depuis son lancement. Une requête refusée doit laisser une trace.
+    //
+    // Les sérialiseurs sont restreints à la méthode, au chemin et au statut.
+    // Le sérialiseur par défaut de Fastify journalise `remoteAddress` : sur un
+    // coffre zero-knowledge, consigner l'adresse IP de chaque porteur à chaque
+    // requête reprendrait d'une main ce que le chiffrement donne de l'autre.
+    logger: {
+      level: process.env.LOG_LEVEL ?? "info",
+      serializers: {
+        req: (req) => ({ method: req.method, url: req.url }),
+        res: (res) => ({ statusCode: res.statusCode }),
+      },
+    },
     // Borne la taille des corps : les blobs chiffrés sont petits, on coupe court au DoS mémoire.
     bodyLimit: 256 * 1024,
   });

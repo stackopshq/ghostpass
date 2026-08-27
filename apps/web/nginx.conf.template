@@ -37,6 +37,15 @@ server {
     # HTML — une police absente échouerait alors en silence, l'interface se
     # rabattrait sur la fonte système, et rien nulle part ne le signalerait.
     # Mesuré : `GET /fonts/nexiste-pas.woff2` rendait 779 octets de `text/html`.
+    # Les fichiers statiques de la RACINE, eux aussi. Le 2026-08-27, le bloc
+    # ci-dessous ne couvrait que les deux préfixes et `/apple-touch-icon.png`
+    # tombait donc dans le repli ci-dessous : il rendait `index.html` en 200
+    # avec `text/html`. iOS a lu ça comme une icône, et Cloudflare l'a mis en
+    # cache. Un fichier absent doit dire qu'il est absent.
+    location ~ ^/[^/]+\.(png|svg|ico|webmanifest|txt|xml)$ {
+        try_files $uri =404;
+    }
+
     location ~ ^/(assets|fonts)/ {
         try_files $uri =404;
         # Noms portant une empreinte pour les ressources, contenu figé pour les

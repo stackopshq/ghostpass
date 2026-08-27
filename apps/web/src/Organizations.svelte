@@ -375,7 +375,17 @@
       <div class="panel-head"><h2>Créer une organisation</h2></div>
       <form onsubmit={submitCreateOrg}>
         <label class="field"><span>Nom de l'organisation</span><input bind:value={newOrgName} placeholder="StackOps Team" required /></label>
-        <button type="submit" disabled={busy}>Créer l'organisation</button>
+        <!-- Le bouton porte lui-même la raison de son inaction. `required` seul
+             laissait le navigateur bloquer l'envoi en affichant une bulle
+             native : sur Safari iOS elle est fugace, et le geste ressemblait
+             alors à un bouton mort. Un contrôle doit dire pourquoi il ne fait
+             rien, au moment où on le regarde. -->
+        <button type="submit" disabled={busy || !newOrgName.trim()}>
+          {busy ? "Création…" : "Créer l'organisation"}
+        </button>
+        {#if !newOrgName.trim()}
+          <p class="hint">Donnez un nom à l'organisation pour pouvoir la créer.</p>
+        {/if}
       </form>
     </section>
   </div>
