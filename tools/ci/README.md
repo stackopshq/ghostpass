@@ -98,6 +98,14 @@ dur, crée un simulateur et écrit dans `apps/ios/TestResults/` : deux exécutio
 concurrentes se marchent dessus, et celle qui perd la course meurt sur « Le port 3111 est
 déjà occupé » — un échec qui ne dit rien du code.
 
+**Et ne jamais tuer par motif ce qui décrit aussi les processus du runner.** Le harnais
+lance son backend par `npm start`, c'est-à-dire `tsx src/index.ts`. Un `pkill -f "tsx
+src/index.ts"` destiné à son propre serveur de test emporte donc aussi celui du job en
+cours — les tests suivants échouent alors sur « le coffre ne s'est pas ouvert — serveur
+injoignable », un message qui accuse le code d'un dégât causé par le ménage. Payé une
+fois : viser le PID retenu au démarrage, ou le port, jamais une chaîne que le runner
+partage.
+
 Le runner ne prévient pas avant de démarrer un job, et rien ne verrouille la machine entre
 lui et un lancement à la main. Vérifier que le poste est libre avant de lancer ne suffit
 donc pas : c'est une course, et un job CI peut arriver dans l'intervalle. En pratique, on
