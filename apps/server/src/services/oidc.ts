@@ -12,6 +12,8 @@ export interface OidcConfig {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
+  /// Voir `getOidcConfig` : déplace la preuve de l'adresse du claim vers l'émetteur.
+  trustIssuerEmail: boolean;
 }
 
 /// Config lue dynamiquement (testable). SSO actif ⇔ `OIDC_ISSUER` défini.
@@ -23,6 +25,7 @@ export function getOidcConfig(): OidcConfig | null {
     clientId: process.env.OIDC_CLIENT_ID ?? "",
     clientSecret: process.env.OIDC_CLIENT_SECRET ?? "",
     redirectUri: process.env.OIDC_REDIRECT_URI ?? "",
+    trustIssuerEmail: (process.env.OIDC_TRUST_ISSUER_EMAIL ?? "").toLowerCase() === "true",
   };
 }
 
@@ -143,8 +146,23 @@ export async function verifyIdToken(
     audience: cfg.clientId,
   });
   if (payload.nonce !== expectedNonce) throw new Error("nonce invalide");
+  // `email_verified` absent ≠ adresse non prouvée : certains émetteurs n'émettent
+  // AUCUN claim applicatif. Cloudflare Access est de ceux-là — son document de
+  // découverte ne déclare pas un seul `claims_supported` (mesuré le 2026-08-27).
+  //
+  // Sans échappatoire, brancher un tel émetteur ne produit pas un refus lisible :
+  // il produit un SSO dont AUCUNE connexion n'aboutit, pour personne, avec un
+  // échec indiscernable d'un SSO volontairement éteint.
+  //
+  // Le drapeau déplace donc la preuve du claim vers l'ÉMETTEUR. Ce qui le rend
+  // défendable, c'est que `jwtVerify` ci-dessus a déjà exigé `iss === cfg.issuer`
+  // et une signature du JWKS de cet émetteur : la confiance ne s'élargit pas,
+  // elle change de porteur. Un `email_verified: false` explicite reste refusé —
+  // un émetteur qui prend la peine de nier n'est pas un émetteur qui se tait.
+  const nie = payload.email_verified === false;
+  const atteste = payload.email_verified === true || (cfg.trustIssuerEmail && !nie);
   return {
     email: typeof payload.email === "string" ? payload.email : "",
-    emailVerified: payload.email_verified === true,
+    emailVerified: atteste,
   };
 }
