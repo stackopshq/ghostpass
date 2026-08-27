@@ -79,7 +79,10 @@ Sauf mention, tout est conçu pour rester **zero-knowledge**.
 - ✅ **Accès d'urgence** (USK scellée pour un contact, délai géré serveur, lecture + takeover)
 - ✅ **Passkeys passwordless** : login & enrôlement via **PRF WebAuthn** (USK enveloppée par le secret PRF, ZK). **Web app fonctionnelle**. **Backend Related Origin Requests** ajouté (`/.well-known/webauthn` + `WEBAUTHN_EXTRA_ORIGINS`, `expectedOrigin` multi-origines) pour autoriser des origines non same-site — prérequis des passkeys **dans l'extension**. *Flux passkey côté extension différé* : Chrome-only (nécessite un `chrome-extension://<id>` **publié et stable** dans `WEBAUTHN_EXTRA_ORIGINS`) ; Firefox/Safari ont des origines non stables.
 
-### Phase 4 — Différenciateurs souveraineté CH (L, à arbitrer)
+### Phase 4 — Différenciateurs (L, à arbitrer)
+
+> Intitulée « souveraineté CH » jusqu'au 2026-08-27. L'hébergement passe en
+> France ; ce qui reste de cette phase ne dépend pas d'un pays.
 - ⬜ **Alias hide-my-email** auto-hébergés (forwarding souverain) — meilleur angle anti-Proton, infra email — **L**
 - ⬜ **Pièces jointes chiffrées** — **M**
 - ⬜ **Travel Mode** (masquer des coffres) — **S/M**
