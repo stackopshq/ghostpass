@@ -30,7 +30,15 @@ export function buildApp(db: DB): FastifyInstance {
 
   // Plugins de durcissement (chargés au ready()/inject()).
   app.register(helmet);
-  app.register(cors, { origin: process.env.CORS_ORIGIN ?? false });
+  // `||` et non `??` : `.env.example` documente « vide = désactivé », et `??`
+  // ne se replie que sur `undefined`. Une chaîne vide — ce qu'écrit n'importe
+  // quel gabarit de configuration qui rend une valeur absente — passait donc
+  // jusqu'à @fastify/cors, qui la rejette À CHAQUE REQUÊTE et non au
+  // démarrage. Le serveur démarrait, restait sain aux yeux de systemd, et
+  // rendait 500 sur tout, y compris /health. Le gestionnaire d'erreurs
+  // ci-dessous masque la cause à l'appelant, à raison — mais elle devient
+  // alors introuvable sans le journal du conteneur.
+  app.register(cors, { origin: process.env.CORS_ORIGIN || false });
   // Rate-limiting global par IP (anti brute-force / DoS). Durcissable par route ensuite.
   app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 
