@@ -1311,7 +1311,15 @@
           <li>{@render checkIcon()}<span>Récupération <strong>sans backdoor</strong>, par kit de secours.</span></li>
         </ul>
       </div>
-      <div class="auth-brand-foot">Hébergé en Suisse · conforme nLPD</div>
+      <!-- Cette ligne annonçait « Hébergé en Suisse · conforme nLPD ». Les deux
+           affirmations étaient fausses. L'hébergement est en France, et
+           docs/ROADMAP.md range la conformité nLPD/RGPD dans ce qui RESTE à
+           faire, avec l'audit externe et le SOC 2.
+      
+           Sur un produit dont l'argument de vente est qu'il ne peut pas mentir
+           sur ce qu'il voit, une conformité revendiquée mais non acquise coûte
+           plus cher que l'absence de mention. On ne garde que le vérifiable. -->
+      <div class="auth-brand-foot">Hébergé en France · chiffré de bout en bout</div>
     </aside>
 
     <main class="auth-form-wrap">
