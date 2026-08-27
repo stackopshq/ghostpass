@@ -1,12 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 421 548" fill="none">
-  <!-- Généré par tools/brand/ghost_suite.py — ne pas éditer à la main.
-       La silhouette, les tirets et l'épaisseur sont communs à toute la suite ;
-       seuls le glyphe intérieur et les trois teintes distinguent ghostpass. -->
+  <!-- Charte ghost-suite, variante logo — produit par tools/brand/ghost_suite.py.
+       Ne pas retoucher : régénérer. -->
   <defs>
     <linearGradient id="g" x1="421" y1="0" x2="0" y2="548" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#B79CFF"/>
-      <stop offset="0.5" stop-color="#7B4DFF"/>
-      <stop offset="1" stop-color="#3E1DA8"/>
+      <stop offset="0" stop-color="#9CC3FF"/>
+      <stop offset="0.5" stop-color="#2E7DFF"/>
+      <stop offset="1" stop-color="#143F8F"/>
     </linearGradient>
   </defs>
   <g stroke="url(#g)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
@@ -15,9 +14,9 @@
   </g>
   <g stroke="url(#g)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"
      opacity="0.92">
-      <path d="M 306 180 m -36 0 a 36 36 0 1 0 72 0 a 36 36 0 1 0 -72 0 Z"/>
-      <path d="M 270 180 L 178 180"/>
-      <path d="M 198 180 L 198 208"/>
-      <path d="M 226 180 L 226 202"/>
+    <circle cx="214" cy="187" r="26"/>
+    <path d="M 240 187 L 336 187"/>
+    <path d="M 310 187 L 310 213"/>
+    <path d="M 334 187 L 334 207"/>
   </g>
 </svg>

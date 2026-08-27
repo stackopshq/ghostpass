@@ -20,3 +20,4 @@ dist/
 CLAUDE.md
 .claude/
 
+__pycache__/

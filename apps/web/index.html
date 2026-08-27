@@ -3,9 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0e6a6f" />
+    <!-- La teinte primaire de GhostPass à la charte. Elle valait #0e6a6f, un
+         vert-bleu qui n'appartient à aucune palette de la suite. -->
+    <meta name="theme-color" content="#2E7DFF" />
     <meta name="description" content="GhostPass — coffre-fort de mots de passe zero-knowledge. Le chiffrement a lieu sur votre appareil ; le serveur ne voit jamais vos secrets." />
     <title>GhostPass — Coffre zero-knowledge</title>
+
+    <!-- Icônes. `apple-touch-icon` n'est pas un doublon de `icon` : c'est LA
+         balise que Safari iOS lit pour la feuille de partage et pour « sur
+         l'écran d'accueil ». Sans elle, iOS affiche sa boussole générique — ce
+         qu'il faisait ici jusqu'au 2026-08-27.
+         Le PNG est aplati sur le fond de l'application : iOS n'honore aucune
+         transparence et rendrait un carré noir. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Aperçu du lien dans WhatsApp, Messages, Slack. L'URL doit être ABSOLUE :
+         les moteurs d'aperçu ne résolvent pas les chemins relatifs. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="GhostPass" />
+    <meta property="og:title" content="GhostPass — Coffre zero-knowledge" />
+    <meta property="og:description" content="Le chiffrement a lieu sur votre appareil ; le serveur ne voit jamais vos secrets." />
+    <meta property="og:url" content="https://ghostpass.stackops.ch/" />
+    <meta property="og:image" content="https://ghostpass.stackops.ch/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
     <link rel="preload" href="/fonts/hanken-grotesk-variable-latin.woff2"
           as="font" type="font/woff2" crossorigin />
   </head>
