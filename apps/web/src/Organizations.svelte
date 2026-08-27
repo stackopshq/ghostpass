@@ -325,7 +325,7 @@
           <button class="icon-btn {copiedKey === `user-${i}` ? 'copied' : ''}" title="Copier l'identifiant" aria-label="Copier l'identifiant" onclick={() => copy(item.username, `user-${i}`)}>
             {#if copiedKey === `user-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
           </button>
-        {:else}<span class="muted">—</span>{/if}
+        {:else}<span class="muted">Sans identifiant</span>{/if}
       </span>
     </div>
     <span class="mono dots">{revealed.has(i) ? item.password : "••••••••••"}</span>
@@ -435,7 +435,7 @@
           <li>
             <span class="avatar">{(m.email ?? "?").charAt(0).toUpperCase()}</span>
             <div class="row-main">
-              <span class="row-title">{m.email ?? "—"}</span>
+              <span class="row-title">{m.email ?? "Adresse inconnue"}</span>
               <span class="row-sub"><span class="pill pill-role">{m.role}</span><span class="pill pill-muted">{m.status}</span></span>
             </div>
             <div class="row-actions"><button class="danger" onclick={() => revoke(m)} disabled={busy}>Révoquer</button></div>

@@ -555,7 +555,7 @@
 
   // Estimation locale de la force d'un mot de passe (longueur + variété de caractères).
   function passwordStrength(pw: string): { label: string; level: number } {
-    if (!pw) return { label: "—", level: 0 };
+    if (!pw) return { label: "Vide", level: 0 };
     let score = 0;
     if (pw.length >= 8) score++;
     if (pw.length >= 14) score++;
@@ -1306,7 +1306,7 @@
       <div>
         <h1 class="auth-hero">Le coffre-fort que même nous ne pouvons pas ouvrir.</h1>
         <ul class="auth-points">
-          <li>{@render checkIcon()}<span>Architecture <strong>zero-knowledge</strong> — le serveur ne voit que du chiffré.</span></li>
+          <li>{@render checkIcon()}<span>Architecture <strong>zero-knowledge</strong> : le serveur ne voit que du chiffré.</span></li>
           <li>{@render checkIcon()}<span>Chiffrement <strong>de bout en bout</strong>, sur votre appareil uniquement.</span></li>
           <li>{@render checkIcon()}<span>Récupération <strong>sans backdoor</strong>, par kit de secours.</span></li>
         </ul>
@@ -1528,7 +1528,7 @@
               </div>
               <label class="field"><span>Nom</span><input bind:value={itemName} placeholder="GitHub" required /></label>
               <label class="field">
-                <span>Dossier <span class="muted" style="font-weight:400">— optionnel, séparez les niveaux par /</span></span>
+                <span>Dossier <span class="muted" style="font-weight:400">(optionnel, séparez les niveaux par /)</span></span>
                 <input bind:value={itemFolder} placeholder="Travail/Serveurs" list="folder-list" />
               </label>
 
@@ -1558,7 +1558,7 @@
                   {/if}
                 </div>
                 <label class="field">
-                  <span>Clé TOTP <span class="muted" style="font-weight:400">— secret base32 ou otpauth://</span></span>
+                  <span>Clé TOTP <span class="muted" style="font-weight:400">(secret base32 ou otpauth://)</span></span>
                   <input bind:value={itemTotp} placeholder="JBSWY3DPEHPK3PXP" autocomplete="off" />
                 </label>
               {:else if itemKind === "note"}
@@ -1593,7 +1593,7 @@
 
             {#if shareLink}
               <div class="callout info" style="flex-direction:column;align-items:stretch;gap:0.4rem;margin-bottom:1rem">
-                <span>Lien de partage — <strong>1 vue, expire dans 24 h</strong>. La clé est dans l'URL (#), jamais envoyée au serveur.</span>
+                <span>Lien de partage : <strong>1 vue, expire dans 24 h</strong>. La clé est dans l'URL (#), jamais envoyée au serveur.</span>
                 <div class="codeblock-wrap">
                   <code class="codeblock">{shareLink}</code>
                   <button class="icon-btn {copiedKey === 'share' ? 'copied' : ''}" title="Copier" aria-label="Copier le lien" onclick={() => copy(shareLink!, "share")}>
@@ -1618,7 +1618,7 @@
                 {#if selected.folder}<div class="kv-row"><span class="kv-label">Dossier</span><span class="kv-value">{selected.folder}</span></div>{/if}
                 <div class="kv-row">
                   <span class="kv-label">Titulaire</span>
-                  <span class="kv-value">{selected.cardholder || "—"}</span>
+                  <span class="kv-value">{selected.cardholder || "Non renseigné"}</span>
                   {#if selected.cardholder}<span class="kv-actions"><button class="icon-btn {copiedKey === 'd-holder' ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(selected!.cardholder, "d-holder")}>{#if copiedKey === "d-holder"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button></span>{/if}
                 </div>
                 <div class="kv-row">
@@ -1657,7 +1657,7 @@
               {/if}
               <div class="kv-row">
                 <span class="kv-label">Identifiant</span>
-                <span class="kv-value">{selected.username || "—"}</span>
+                <span class="kv-value">{selected.username || "Non renseigné"}</span>
                 {#if selected.username}
                   <span class="kv-actions">
                     <button class="icon-btn {copiedKey === 'd-user' ? 'copied' : ''}" title="Copier" aria-label="Copier l'identifiant" onclick={() => copy(selected!.username, "d-user")}>
@@ -1722,7 +1722,7 @@
               </details>
             {/if}
             {/if}
-            <p class="detail-meta">Dernière modification — {formatDate(selected.updatedAt)}</p>
+            <p class="detail-meta">Dernière modification : {formatDate(selected.updatedAt)}</p>
           {:else}
             <div class="detail-empty">
               <div>
@@ -1898,7 +1898,7 @@
 
             {#if emgViewItems}
               <hr class="sep" />
-              <p class="label">Coffre de {emgViewFrom} — lecture d'urgence ({emgViewItems.length})</p>
+              <p class="label">Coffre de {emgViewFrom}, lecture d'urgence ({emgViewItems.length})</p>
               {#if emgViewItems.length === 0}
                 <p class="muted">Aucun secret.</p>
               {:else}
@@ -1930,7 +1930,7 @@
             {#if recoveryKitDisplay}
               <div class="callout warn">
                 {@render alertIcon()}
-                <span>Conservez cette clé en lieu sûr — elle ne sera plus jamais affichée. Sans elle, un mot de passe maître perdu est définitivement perdu.</span>
+                <span>Conservez cette clé en lieu sûr : elle ne sera plus jamais affichée. Sans elle, un mot de passe maître perdu est définitivement perdu.</span>
               </div>
               <div class="codeblock-wrap">
                 <code class="codeblock">{recoveryKitDisplay}</code>
@@ -1939,7 +1939,7 @@
                 </button>
               </div>
             {:else}
-              <p class="muted" style="margin:0 0 0.8rem">Génère une clé de secours qui permet de réinitialiser le mot de passe maître — sans backdoor côté serveur.</p>
+              <p class="muted" style="margin:0 0 0.8rem">Génère une clé de secours qui permet de réinitialiser le mot de passe maître, sans backdoor côté serveur.</p>
               <button class="ghost" onclick={generateRecoveryKit} disabled={busy}>Générer un kit de récupération</button>
             {/if}
           </section>
