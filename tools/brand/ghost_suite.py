@@ -55,7 +55,9 @@ class Produit:
     primaire: str
     profonde: str
     glyphe_trait: str
-    glyphe_plein: str
+    # `None` quand aucune variante icône n'a été publiée pour ce produit : on ne devine
+    # pas un glyphe plein à partir d'un glyphe au trait.
+    glyphe_plein: str | None
 
 
 PRODUITS = {
@@ -68,12 +70,84 @@ PRODUITS = {
         glyphe_trait='<circle cx="214" cy="187" r="26"/>\n      <path d="M 240 187 L 336 187"/>\n      <path d="M 310 187 L 310 213"/>\n      <path d="M 334 187 L 334 207"/>',
         glyphe_plein='M 142 196 A 48 48 0 1 0 238 196 A 48 48 0 1 0 142 196 Z M 170 196 A 20 20 0 1 0 210 196 A 20 20 0 1 0 170 196 Z M 243 181 H 325 A 15 15 0 0 1 340 196 V 196 A 15 15 0 0 1 325 211 H 243 A 15 15 0 0 1 228 196 V 196 A 15 15 0 0 1 243 181 Z M 298 205 H 298 A 12 12 0 0 1 310 217 V 235 A 12 12 0 0 1 298 247 H 298 A 12 12 0 0 1 286 235 V 217 A 12 12 0 0 1 298 205 Z M 328 205 H 328 A 12 12 0 0 1 340 217 V 225 A 12 12 0 0 1 328 237 H 328 A 12 12 0 0 1 316 225 V 217 A 12 12 0 0 1 328 205 Z',
     ),
+    "ghostauth": Produit(
+        nom="GhostAuth",
+        claire="#FFA05C",
+        primaire="#FF6A00",
+        profonde="#A34400",
+        # Orange à 25°, dans le plus large intervalle libre restant — 55° de ghostlink
+        # (330°) et 29° de ghostmail (54°). Son `brand.css` déclare #00E6A8, un vert d'eau :
+        # comme le logo de ghostboard, ce fichier a dérivé et devra suivre.
+        #
+        # Un bouclier portant une coche. La clé de ghostpass dit « un secret que tu
+        # détiens » ; l'authentification dit « on a vérifié qui tu es » — c'est un verdict,
+        # pas un objet. Aucun autre glyphe de la suite ne l'occupe, et il tient à 16 px là
+        # où un trousseau ou une empreinte se brouillent.
+        glyphe_trait='<path d="M 192 150 L 260 132 L 328 150 L 328 192 A 88 88 0 0 1 260 252 A 88 88 0 0 1 192 192 Z"/>\n      <path d="M 226 190 L 250 216 L 298 164"/>',
+        # Bouclier plein, coche découpée en creux : au contour, il se refermerait en tache.
+        glyphe_plein='M 175.0 140.0 L 260.0 117.5 L 345.0 140.0 L 345.0 192.5 A 110.0 110.0 0 0 1 260.0 267.5 A 110.0 110.0 0 0 1 175.0 192.5 Z M 207.4 199.4 L 247.5 242.8 L 317.6 166.9 L 297.4 148.1 L 247.5 202.2 L 227.6 180.6 Z',
+    ),
+    "ghostbit": Produit(
+        nom="GhostBit",
+        claire="#F050FF",
+        primaire="#A93BFF",
+        profonde="#6C1BD8",
+        glyphe_trait='<path d="M 224 138 L 188 178 L 222 220"/>\n      <path d="M 295 138 L 332 180 L 295 222"/>',
+        glyphe_plein='M 250 122 L 190 180 L 250 238 L 222 238 L 162 180 L 222 122 Z M 268 122 L 328 180 L 268 238 L 296 238 L 356 180 L 296 122 Z',
+    ),
+    "ghostmon": Produit(
+        nom="GhostMon",
+        claire="#CFFF5E",
+        primaire="#A3FF00",
+        profonde="#5BC800",
+        glyphe_trait='<path d="M 198 224 L 198 186"/>\n      <path d="M 260 224 L 260 158"/>\n      <path d="M 322 224 L 322 134"/>',
+        glyphe_plein='M 168.7 198.8 A 13.8 13.8 0 0 1 196.3 198.8 L 196.3 218.7 A 13.8 13.8 0 0 1 168.7 218.7 Z M 246.2 163.8 A 13.8 13.8 0 0 1 273.8 163.8 L 273.8 218.7 A 13.8 13.8 0 0 1 246.2 218.7 Z M 323.7 133.8 A 13.8 13.8 0 0 1 351.3 133.8 L 351.3 218.7 A 13.8 13.8 0 0 1 323.7 218.7 Z',
+    ),
+    "ghostboard": Produit(
+        nom="GhostBoard",
+        claire="#5CFF7F",
+        primaire="#00FF37",
+        profonde="#00A323",
+        # Vert à 133°, décidé après avoir constaté que le logo publié (#3D7BFF) et le
+        # `style.css` (#FF6B1A) se contredisaient — et qu'aucune des deux teintes n'allait :
+        # le bleu se confondait avec ghostpass à quatre points près, l'orange est pris.
+        # 133° tombe dans le plus large intervalle libre de la suite : 51° de ghostmon (82°)
+        # et 31° de ghostauth (164°).
+        #
+        # Ce script ne reproduit donc plus le logo publié de ghostboard : c'est le logo qui
+        # doit être régénéré, pas cette déclaration qui doit revenir en arrière.
+        glyphe_trait='<path d="M 200 136 L 236 136 A 14 14 0 0 1 250 150 L 250 172 A 14 14 0 0 1 236 186 L 200 186 A 14 14 0 0 1 186 172 L 186 150 A 14 14 0 0 1 200 136 Z"/>\n      <path d="M 282 136 L 318 136 A 14 14 0 0 1 332 150 L 332 172 A 14 14 0 0 1 318 186 L 282 186 A 14 14 0 0 1 268 172 L 268 150 A 14 14 0 0 1 282 136 Z"/>\n      <path d="M 200 196 L 236 196 A 14 14 0 0 1 250 210 L 250 232 A 14 14 0 0 1 236 246 L 200 246 A 14 14 0 0 1 186 232 L 186 210 A 14 14 0 0 1 200 196 Z"/>\n      <path d="M 282 196 L 318 196 A 14 14 0 0 1 332 210 L 332 232 A 14 14 0 0 1 318 246 L 282 246 A 14 14 0 0 1 268 232 L 268 210 A 14 14 0 0 1 282 196 Z"/>',
+        glyphe_plein='M 185.0 122.5 L 230.0 122.5 A 17.5 17.5 0 0 1 247.5 140.0 L 247.5 167.5 A 17.5 17.5 0 0 1 230.0 185.0 L 185.0 185.0 A 17.5 17.5 0 0 1 167.5 167.5 L 167.5 140.0 A 17.5 17.5 0 0 1 185.0 122.5 Z M 287.5 122.5 L 332.5 122.5 A 17.5 17.5 0 0 1 350.0 140.0 L 350.0 167.5 A 17.5 17.5 0 0 1 332.5 185.0 L 287.5 185.0 A 17.5 17.5 0 0 1 270.0 167.5 L 270.0 140.0 A 17.5 17.5 0 0 1 287.5 122.5 Z M 185.0 197.5 L 230.0 197.5 A 17.5 17.5 0 0 1 247.5 215.0 L 247.5 242.5 A 17.5 17.5 0 0 1 230.0 260.0 L 185.0 260.0 A 17.5 17.5 0 0 1 167.5 242.5 L 167.5 215.0 A 17.5 17.5 0 0 1 185.0 197.5 Z M 287.5 197.5 L 332.5 197.5 A 17.5 17.5 0 0 1 350.0 215.0 L 350.0 242.5 A 17.5 17.5 0 0 1 332.5 260.0 L 287.5 260.0 A 17.5 17.5 0 0 1 270.0 242.5 L 270.0 215.0 A 17.5 17.5 0 0 1 287.5 197.5 Z',
+    ),
+    "ghostlink": Produit(
+        nom="GhostLink",
+        claire="#FF8FC6",
+        primaire="#FF2D95",
+        profonde="#B00A5E",
+        glyphe_trait='<path d="M 212 206 L 244 174 A 30 30 0 0 1 286 216 L 254 248 A 30 30 0 0 1 212 206 Z"/>\n      <path d="M 236 144 L 268 112 A 30 30 0 0 1 310 154 L 278 186 A 30 30 0 0 1 236 144 Z"/>',
+        glyphe_plein='M 200.0 210.0 L 240.0 170.0 A 37.5 37.5 0 0 1 292.5 222.5 L 252.5 262.5 A 37.5 37.5 0 0 1 200.0 210.0 Z M 213.8 223.8 L 253.8 183.8 A 9.9 9.9 0 0 1 278.7 208.7 L 238.7 248.7 A 9.9 9.9 0 0 1 213.8 223.8 Z M 230.0 132.5 L 270.0 92.5 A 37.5 37.5 0 0 1 322.5 145.0 L 282.5 185.0 A 37.5 37.5 0 0 1 230.0 132.5 Z M 243.8 146.3 L 283.8 106.3 A 9.9 9.9 0 0 1 308.7 131.2 L 268.7 171.2 A 9.9 9.9 0 0 1 243.8 146.3 Z',
+    ),
+    "ghostcal": Produit(
+        nom="GhostCal",
+        claire="#9CFBFF",
+        primaire="#00F0FF",
+        profonde="#0E8FA8",
+        glyphe_trait='<path d="M 194 152 L 326 152 A 14 14 0 0 1 340 166 L 340 212 A 14 14 0 0 1 326 226 L 194 226 A 14 14 0 0 1 180 212 L 180 166 A 14 14 0 0 1 194 152 Z"/>\n      <path d="M 180 182 L 340 182"/>\n      <path d="M 216 134 L 216 158"/>\n      <path d="M 304 134 L 304 158"/>',
+        glyphe_plein='M 164 140 L 356 140 L 356 174 L 164 174 Z M 164 192 L 356 192 L 356 268 L 164 268 Z M 190 112 L 216 112 L 216 156 L 190 156 Z M 304 112 L 330 112 L 330 156 L 304 156 Z',
+    ),
+    "ghostmail": Produit(
+        nom="GhostMail",
+        claire="#FFF48A",
+        primaire="#FFE500",
+        profonde="#D9A800",
+        glyphe_trait='<path d="M 194 146 L 326 146 A 14 14 0 0 1 340 160 L 340 214 A 14 14 0 0 1 326 228 L 194 228 A 14 14 0 0 1 180 214 L 180 160 A 14 14 0 0 1 194 146 Z"/>\n      <path d="M 186 154 L 260 208 L 334 154"/>',
+        glyphe_plein='M 160 138 L 360 138 L 260 226 Z M 160 170 L 160 268 L 360 268 L 360 170 L 260 254 Z',
+    ),
 }
 
-# Les autres produits de la suite — ghostbit, ghostmon, ghostboard, ghostauth, ghostcal,
-# ghostmail, ghostlink — partagent cette silhouette et n'attendent que leur glyphe et
-# leurs teintes. On les déclare ici au fur et à mesure qu'on récupère leurs tracés, plutôt
-# que d'en inventer d'approchants : un logo presque juste est pire qu'un logo absent.
+# La suite est complète : sept produits, sept teintes, sept glyphes. Ceux de ghostbit,
+# ghostcal, ghostmail, ghostmon, ghostboard et ghostlink ont été relevés sur leurs logos
+# publiés ; celui de ghostauth a été composé ici, faute de tracé publié.
 
 
 # ─── Rendu ────────────────────────────────────────────────────────────────────
@@ -122,6 +196,11 @@ def icone(produit: Produit) -> str:
     Le cadre passe de 421 × 548 à 548 × 548 : on écarte le viewBox de part et d'autre
     plutôt que de déformer la silhouette.
     """
+    if produit.glyphe_plein is None:
+        raise ValueError(
+            f"{produit.nom} n'a pas de glyphe plein : la variante icône ne peut pas être"
+            " produite sans lui, et l'approcher donnerait un logo faux."
+        )
     marge = (HAUTEUR - LARGEUR) / 2
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="{-marge} 0 {HAUTEUR} {HAUTEUR}" fill="none">
   <!-- Charte ghost-suite, variante icône — produit par tools/brand/ghost_suite.py.
@@ -134,14 +213,55 @@ def icone(produit: Produit) -> str:
 """
 
 
+def verifier(repertoire: Path) -> int:
+    """Les SVG du dépôt sont-ils bien ce que ce script produit ?
+
+    Un générateur qui a dérivé de ses propres sorties ne sert plus à rien : on croit tenir
+    la source, on tient un fichier écrit à la main à côté d'un script qui dit autre chose.
+    Cette vérification ne demande pas le réseau et tient en une seconde.
+    """
+    import re
+
+    def normalise(svg: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"<!--.*?-->", "", svg, flags=re.S)).strip()
+
+    ecarts = []
+    for cle, produit in sorted(PRODUITS.items()):
+        variantes = [("brand", logo(produit))]
+        if produit.glyphe_plein is not None:
+            variantes.append(("icon", icone(produit)))
+        for suffixe, attendu in variantes:
+            chemin = repertoire / f"{cle}-{suffixe}.svg"
+            if not chemin.exists():
+                continue  # seuls les produits dont le dépôt porte les SVG sont comparés
+            if normalise(chemin.read_text(encoding="utf-8")) != normalise(attendu):
+                ecarts.append(chemin.name)
+            else:
+                print(f"{chemin.name:28} conforme")
+
+    if ecarts:
+        print(f"\nont dérivé : {', '.join(ecarts)}", file=sys.stderr)
+        return 1
+    print("\nLes SVG du dépôt sont bien ceux que ce script produit.")
+    return 0
+
+
 def main() -> int:
     analyseur = argparse.ArgumentParser(description=__doc__)
     analyseur.add_argument("produit", nargs="?", help="nom du produit à générer")
     analyseur.add_argument("--liste", action="store_true", help="produits déclarés")
     analyseur.add_argument(
+        "--verifier",
+        action="store_true",
+        help="régénère et compare aux SVG du dépôt, sans rien écrire",
+    )
+    analyseur.add_argument(
         "--sortie", type=Path, default=Path(__file__).parent, help="répertoire de sortie"
     )
     args = analyseur.parse_args()
+
+    if args.verifier:
+        return verifier(args.sortie)
 
     if args.liste or not args.produit:
         for cle, p in sorted(PRODUITS.items()):
@@ -155,7 +275,13 @@ def main() -> int:
         return 1
 
     args.sortie.mkdir(parents=True, exist_ok=True)
-    for suffixe, contenu in (("brand", logo(produit)), ("icon", icone(produit))):
+    variantes = [("brand", logo(produit))]
+    try:
+        variantes.append(("icon", icone(produit)))
+    except ValueError as refus:
+        print(f"variante icône non produite — {refus}", file=sys.stderr)
+
+    for suffixe, contenu in variantes:
         chemin = args.sortie / f"{args.produit}-{suffixe}.svg"
         chemin.write_text(contenu, encoding="utf-8")
         print(f"écrit {chemin}")
