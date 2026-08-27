@@ -67,6 +67,9 @@ struct UnlockView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 64, height: 64)
+                // La marque rayonne : c'est le seul néon de cet écran, et c'est ce qui
+                // rattache GhostPass au reste de la suite.
+                .neon()
             Text("GhostPass")
                 .font(.system(.title, design: .rounded, weight: .bold))
                 .foregroundStyle(Color.gpInk)

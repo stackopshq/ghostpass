@@ -12,26 +12,44 @@
   --radius-sm: 8px;
   --radius-pill: 999px;
 
-  /* ── Thème SOMBRE (défaut) ── */
-  --canvas: #15171c;
-  --surface: #1f2229;
-  --surface-2: #292d35;
-  --ink: #e7e9ed;
-  --ink-2: #a9afba;
-  --ink-3: #757c88;
-  --line: #2f333b;
-  --line-2: #3a3f49;
+  /* ── Thème SOMBRE (défaut) ──
+     Base Dracula, commune à toute la suite ; seule la teinte de marque distingue les
+     produits. Pour GhostPass c'est le bleu #2E7DFF, celui du logo — le seul créneau
+     froid encore libre : ghostbit est violet, ghostmon lime, ghostboard orange,
+     ghostauth menthe, ghostcal cyan, ghostmail jaune. */
+  --canvas: #21222c;
+  --surface: #282a36;
+  --surface-2: #323445;
+  --ink: #f8f8f2;
+  --ink-2: #8b9cc8;
+  --ink-3: #6b7a9e;
+  --line: #44475a;
+  --line-2: #565a70;
 
-  --accent: #5394f5;
-  --accent-2: #6ea7f7;
-  --accent-soft: #243349;
-  --ring: rgba(83, 148, 245, 0.35);
+  /* Marque : bleu néon */
+  --brand-primary: #2e7dff;
+  --brand-light: #7fb2ff;
+  --brand-deep: #1a4fcc;
+  --brand-ghost: #d6e6ff;
+  --brand-bg: #080d18;
+  --brand-gradient: linear-gradient(135deg, #2e7dff 0%, #1a4fcc 100%);
+  /* Le néon de la suite : un noyau serré et vif, une aura large et discrète. Les deux
+     comptent — un seul halo fait une tache molle, la superposition fait une source. */
+  --brand-glow: drop-shadow(0 0 8px rgba(46, 125, 255, 0.6))
+    drop-shadow(0 0 20px rgba(46, 125, 255, 0.35));
+  --bg-gradient: linear-gradient(150deg, #080d18 0%, #0a1220 45%, #080f1a 75%, #090a10 100%);
 
-  --danger: #ef6b72;
+  --accent: var(--brand-primary);
+  --accent-2: var(--brand-light);
+  --accent-soft: rgba(46, 125, 255, 0.15);
+  --ring: rgba(46, 125, 255, 0.35);
+
+  /* Sémantiques : celles de la base Dracula partagée. */
+  --danger: #ff5555;
   --danger-soft: #3a2123;
-  --success: #4fc28a;
+  --success: #50fa7b;
   --success-soft: #1d3a2c;
-  --warn: #e0a23c;
+  --warn: #ffb86c;
   --warn-soft: #3a2f1a;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -54,10 +72,13 @@
   --line: #e4e7ec;
   --line-2: #d3d8e0;
 
-  --accent: #2e5cc5;
+  --accent: var(--brand-deep);
   --accent-2: #244a9e;
   --accent-soft: #eaf0fb;
-  --ring: rgba(46, 92, 197, 0.26);
+  --ring: rgba(26, 79, 204, 0.26);
+  /* En plein jour, le néon devient une bavure : on le réduit sans le supprimer. */
+  --brand-glow: drop-shadow(0 0 6px rgba(46, 125, 255, 0.3));
+  --bg-gradient: none;
 
   --danger: #b3261e;
   --danger-soft: #fbece9;
@@ -86,7 +107,11 @@ body {
   color: var(--ink);
   font-size: 15px;
   line-height: 1.5;
+  /* Le dégradé de la suite empêche le noir d'être plat ; en thème clair il n'a pas lieu
+     d'être, et `--canvas` reprend la main. */
   background: var(--canvas);
+  background-image: var(--bg-gradient, none);
+  background-attachment: fixed;
 }
 
 /* ─── Typographie ─── */
@@ -146,9 +171,11 @@ code,
   width: 1.9em;
   height: 1.9em;
   color: #fff;
-  background: linear-gradient(160deg, var(--accent), var(--accent-2));
+  background: var(--brand-gradient);
   border-radius: 9px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  /* La marque rayonne : c'est elle qui rattache GhostPass au reste de la suite. */
+  filter: var(--brand-glow);
 }
 
 .brand .mark svg {

@@ -1,40 +1,54 @@
 import SwiftUI
 
-/// Le système visuel de la suite, transposé de `ghostcal/frontend/src/app/globals.css`.
+/// Le système visuel néon de la suite, partagé avec `ghostbit`, `ghostmon`, `ghostboard`,
+/// `ghostauth` et `ghostcal`.
 ///
-/// Les produits partagent la même structure — nuit profonde, surfaces de verre fumé,
-/// halo coloré diffusé depuis le haut — et ne se distinguent que par leur accent, qui est
-/// la teinte de leur logo. Pour GhostPass, c'est le violet : `#7B4DFF`, et sa variante
-/// claire `#B79CFF` pour ce qui doit rester lisible sur fond sombre.
+/// La structure est commune à tous les produits : une base sombre dérivée de Dracula, des
+/// surfaces de verre fumé, et un halo coloré diffusé depuis le haut. Ce qui les distingue
+/// est leur teinte néon, celle de leur logo — violet pour ghostbit, lime pour ghostmon,
+/// orange pour ghostboard, menthe pour ghostauth, cyan pour ghostcal, jaune pour
+/// ghostmail. Pour GhostPass, c'est le **bleu `#2E7DFF`**, seul créneau froid encore libre
+/// et déjà celui de la marque.
+///
+/// Le néon n'est pas dans la couleur mais dans son rayonnement : deux halos superposés,
+/// l'un serré et vif, l'autre large et discret. Voir `neon()`.
 ///
 /// Les deux palettes existent, comme sur le web : le sombre est la teinte d'origine, le
 /// clair une déclinaison de plein jour. On suit le réglage du système plutôt que d'imposer
 /// l'un des deux.
 extension Color {
+    // ─── Base sombre commune à la suite (Dracula) ───
+
     /// Fond de page.
-    static let gpBase = adaptative(sombre: 0x0B0F19, clair: 0xF5F8FC)
+    static let gpBase = adaptative(sombre: 0x21222C, clair: 0xF5F8FC)
     /// Cartes et lignes.
-    static let gpSurface = adaptative(sombre: 0x1E293B, clair: 0xFFFFFF)
+    static let gpSurface = adaptative(sombre: 0x282A36, clair: 0xFFFFFF)
     /// Champs et surfaces imbriquées.
-    static let gpSurface2 = adaptative(sombre: 0x161E2E, clair: 0xEEF3F9)
+    static let gpSurface2 = adaptative(sombre: 0x323445, clair: 0xEEF3F9)
     /// Texte principal.
-    static let gpInk = adaptative(sombre: 0xE2E8F0, clair: 0x0F1B2D)
+    static let gpInk = adaptative(sombre: 0xF8F8F2, clair: 0x0F1B2D)
     /// Texte secondaire.
-    static let gpMuted = adaptative(sombre: 0x94A3B8, clair: 0x5B6B82)
+    static let gpMuted = adaptative(sombre: 0x8B9CC8, clair: 0x5B6B82)
+
+    // ─── Teinte de marque : bleu néon ───
 
     /// Accent plein : fonds de boutons, pastilles. Assez sombre pour porter du blanc.
-    static let gpAccent = adaptative(sombre: 0x7B4DFF, clair: 0x5B2FD0)
-    /// Accent en texte ou en icône. Sur fond de nuit, le violet plein manque de clarté :
-    /// c'est la teinte haute du logo qui prend le relais.
-    static let gpAccentText = adaptative(sombre: 0xB79CFF, clair: 0x5B2FD0)
+    static let gpAccent = adaptative(sombre: 0x2E7DFF, clair: 0x1A4FCC)
+    /// Accent en texte ou en icône. Sur fond de nuit, le bleu plein manque de clarté :
+    /// c'est la teinte haute de la marque qui prend le relais.
+    static let gpAccentText = adaptative(sombre: 0x7FB2FF, clair: 0x1A4FCC)
     /// Ce qui se pose sur `gpAccent`.
     static let gpOnAccent = Color.white
+    /// La teinte du halo. Fixe : un néon garde sa couleur, c'est ce qui le fait lire comme
+    /// une source lumineuse plutôt que comme une ombre portée teintée.
+    static let gpNeon = Color(rgb: 0x2E7DFF)
 
     static let gpBorder = adaptativeAlpha(sombre: (0xFFFFFF, 0.08), clair: (0x0F172A, 0.10))
     static let gpBorderStrong = adaptativeAlpha(sombre: (0xFFFFFF, 0.16), clair: (0x0F172A, 0.16))
 
-    static let gpDanger = adaptative(sombre: 0xFB7185, clair: 0xD11F45)
-    static let gpSuccess = adaptative(sombre: 0x4ADE80, clair: 0x15803D)
+    /// Sémantiques, reprises telles quelles de la base Dracula partagée.
+    static let gpDanger = adaptative(sombre: 0xFF5555, clair: 0xD11F45)
+    static let gpSuccess = adaptative(sombre: 0x50FA7B, clair: 0x15803D)
 
     /// Une teinte fixe, en hexadécimal. Sert aux couleurs qui ne dépendent pas du thème :
     /// les pastilles d'initiale, dont la palette est partagée avec la web app.
@@ -79,14 +93,47 @@ enum GP {
     static let paddingCard: CGFloat = 24
 }
 
-/// Le fond de l'application : nuit profonde et halo diffusé depuis le haut — la lueur du
-/// fantôme, qui donne sa profondeur à l'ensemble sans rien coûter en lisibilité.
+/// Le halo néon de la suite : deux rayonnements superposés, l'un serré et vif, l'autre
+/// large et diffus.
+///
+/// C'est la transposition exacte du `--brand-glow` partagé — `drop-shadow(0 0 8px …0.6)`
+/// puis `drop-shadow(0 0 20px …0.35)`. Les deux comptent : un seul halo fait une tache
+/// molle, tandis que la superposition d'un noyau net et d'une aura étalée est ce qui donne
+/// l'impression d'une source de lumière. Le rayon est réduit en thème clair, où un néon
+/// sur fond blanc devient une bavure.
+struct Neon: ViewModifier {
+    /// Multiplicateur d'intensité : 1 pour une marque, moins pour un détail.
+    var force: Double = 1
+
+    @Environment(\.colorScheme) private var schema
+
+    func body(content: Content) -> some View {
+        let echelle = schema == .dark ? force : force * 0.45
+        return
+            content
+            .shadow(color: Color.gpNeon.opacity(0.60 * echelle), radius: 8 * echelle)
+            .shadow(color: Color.gpNeon.opacity(0.35 * echelle), radius: 20 * echelle)
+    }
+}
+
+extension View {
+    /// Fait rayonner un élément dans la teinte de la marque.
+    func neon(_ force: Double = 1) -> some View { modifier(Neon(force: force)) }
+}
+
+/// Le fond de l'application : nuit profonde et halo néon diffusé depuis le haut — la lueur
+/// du fantôme, qui donne sa profondeur à l'ensemble sans rien coûter en lisibilité.
+///
+/// Le dégradé du fond est celui de la suite : quatre arrêts à 150°, teintés de la couleur
+/// de marque, qui empêchent le noir d'être plat.
 struct GhostBackground: View {
+    @Environment(\.colorScheme) private var schema
+
     var body: some View {
-        Color.gpBase
+        fond
             .overlay(alignment: .top) {
                 RadialGradient(
-                    colors: [Color.gpAccent.opacity(0.18), .clear],
+                    colors: [Color.gpNeon.opacity(schema == .dark ? 0.26 : 0.12), .clear],
                     center: .top, startRadius: 0, endRadius: 520
                 )
                 .frame(height: 620)
@@ -94,6 +141,19 @@ struct GhostBackground: View {
                 .blur(radius: 40)
             }
             .ignoresSafeArea()
+    }
+
+    @ViewBuilder private var fond: some View {
+        if schema == .dark {
+            LinearGradient(
+                colors: [
+                    Color(rgb: 0x080D18), Color(rgb: 0x0A1220),
+                    Color(rgb: 0x080F1A), Color(rgb: 0x090A10),
+                ],
+                startPoint: .top, endPoint: .bottom)
+        } else {
+            Color.gpBase
+        }
     }
 }
 
@@ -130,7 +190,11 @@ struct PrimaryButtonStyle: ButtonStyle {
             .padding(.vertical, 14)
             .background(
                 Color.gpAccent.opacity(enabled ? (configuration.isPressed ? 0.8 : 1) : 0.35),
-                in: RoundedRectangle(cornerRadius: GP.radius))
+                in: RoundedRectangle(cornerRadius: GP.radius)
+            )
+            // Seule l'action disponible rayonne. Faire luire un bouton inerte reviendrait
+            // à appeler l'œil vers ce sur quoi on ne peut pas appuyer.
+            .neon(enabled ? (configuration.isPressed ? 0.5 : 0.85) : 0)
             .contentShape(RoundedRectangle(cornerRadius: GP.radius))
     }
 }
