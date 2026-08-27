@@ -32,6 +32,18 @@ server {
         proxy_buffering off;
     }
 
+    # Ressources versionnées et polices : elles existent ou elles n'existent pas.
+    # Sans ce bloc, le repli `/index.html` ci-dessous leur répondrait 200 avec du
+    # HTML — une police absente échouerait alors en silence, l'interface se
+    # rabattrait sur la fonte système, et rien nulle part ne le signalerait.
+    # Mesuré : `GET /fonts/nexiste-pas.woff2` rendait 779 octets de `text/html`.
+    location ~ ^/(assets|fonts)/ {
+        try_files $uri =404;
+        # Noms portant une empreinte pour les ressources, contenu figé pour les
+        # polices : un an de cache, et une révision change le nom du fichier.
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
     # Application à page unique : toute route inconnue rend l'index, sinon un
     # rechargement sur une URL profonde répond 404.
     location / {
