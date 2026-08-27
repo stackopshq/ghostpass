@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""Générateur de la charte ghost-suite.
+
+Les produits de la suite partagent une même silhouette de fantôme ; seuls le glyphe
+qu'elle porte et ses trois teintes les distinguent. Ce script tient cette silhouette une
+fois pour toutes et en tire, pour chaque produit, les deux variantes de la charte :
+
+  logo  — la silhouette au trait, avec ses trois tirets détachés. Le trait fait 4 % de la
+          hauteur et disparaît en dessous de 16 px ; c'est la variante des en-têtes.
+  icone — la même courbe refermée et remplie, le glyphe découpé en creux, cadrée au carré.
+          C'est la variante des favicons et des icônes d'application, qui tient petit.
+
+Usage :
+    python3 tools/brand/ghost_suite.py ghostpass          # écrit les deux SVG
+    python3 tools/brand/ghost_suite.py --liste            # produits déclarés
+
+Les SVG produits sont des *sorties* : on ne les retouche pas à la main, on change la
+déclaration du produit ici et on régénère. C'est ce qui permet à un changement de teinte
+de rester une opération d'une ligne.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+# ─── Ce qui est commun à toute la suite ───────────────────────────────────────
+
+# La silhouette, en coordonnées d'un cadre 421 × 548. Tracé ouvert : la variante logo le
+# caresse au trait, la variante icône le referme et le remplit.
+SILHOUETTE = 'M 240.0 9.0 C 245.3 9.3 262.5 9.7 272.0 11.0 C 281.5 12.3 288.0 13.8 297.0 17.0 C 306.0 20.2 317.8 25.7 326.0 30.0 C 334.2 34.3 338.5 36.8 346.0 43.0 C 353.5 49.2 365.2 60.8 371.0 67.0 C 376.8 73.2 377.0 73.5 381.0 80.0 C 385.0 86.5 390.8 96.2 395.0 106.0 C 399.2 115.8 403.5 129.0 406.0 139.0 C 408.5 149.0 409.3 154.0 410.0 166.0 C 410.7 178.0 410.8 195.8 410.0 211.0 C 409.2 226.2 407.0 244.0 405.0 257.0 C 403.0 270.0 401.2 277.5 398.0 289.0 C 394.8 300.5 391.0 313.2 386.0 326.0 C 381.0 338.8 374.7 353.0 368.0 366.0 C 361.3 379.0 354.8 390.8 346.0 404.0 C 337.2 417.2 322.2 436.2 315.0 445.0 C 307.8 453.8 308.0 454.0 303.0 457.0 C 298.0 460.0 290.7 462.5 285.0 463.0 C 279.3 463.5 273.7 462.0 269.0 460.0 C 264.3 458.0 259.7 453.8 257.0 451.0 C 254.3 448.2 253.8 446.5 253.0 443.0 C 252.2 439.5 251.5 434.3 252.0 430.0 C 252.5 425.7 253.0 422.3 256.0 417.0 C 259.0 411.7 267.2 403.2 270.0 398.0 C 272.8 392.8 272.7 389.7 273.0 386.0 C 273.3 382.3 272.7 378.8 272.0 376.0 C 271.3 373.2 271.2 371.5 269.0 369.0 C 266.8 366.5 263.7 362.3 259.0 361.0 C 254.3 359.7 244.8 360.5 241.0 361.0 C 237.2 361.5 238.5 361.7 236.0 364.0 C 233.5 366.3 234.0 363.0 226.0 375.0 C 218.0 387.0 199.5 419.3 188.0 436.0 C 176.5 452.7 164.3 466.3 157.0 475.0 C 149.7 483.7 147.8 484.8 144.0 488.0 C 140.2 491.2 137.2 492.7 134.0 494.0 C 130.8 495.3 129.2 495.8 125.0 496.0 C 120.8 496.2 113.2 495.8 109.0 495.0 C 104.8 494.2 102.5 492.7 100.0 491.0 C 97.5 489.3 95.7 487.3 94.0 485.0 C 92.3 482.7 90.7 482.0 90.0 477.0 C 89.3 472.0 88.7 461.0 90.0 455.0 C 91.3 449.0 92.5 447.8 98.0 441.0 C 103.5 434.2 116.5 421.8 123.0 414.0 C 129.5 406.2 134.0 400.2 137.0 394.0 C 140.0 387.8 141.2 382.5 141.0 377.0 C 140.8 371.5 138.3 364.8 136.0 361.0 C 133.7 357.2 131.5 355.2 127.0 354.0 C 122.5 352.8 113.8 352.7 109.0 354.0 C 104.2 355.3 101.8 357.7 98.0 362.0 C 94.2 366.3 89.3 375.7 86.0 380.0 C 82.7 384.3 81.0 385.5 78.0 388.0 C 75.0 390.5 71.8 393.0 68.0 395.0 C 64.2 397.0 60.5 399.0 55.0 400.0 C 49.5 401.0 40.0 401.2 35.0 401.0 C 30.0 400.8 28.5 400.7 25.0 399.0 C 21.5 397.3 16.5 394.0 14.0 391.0 C 11.5 388.0 10.7 384.5 10.0 381.0 C 9.3 377.5 9.3 373.7 10.0 370.0 C 10.7 366.3 11.2 363.0 14.0 359.0 C 16.8 355.0 22.0 351.8 27.0 346.0 C 32.0 340.2 38.8 332.0 44.0 324.0 C 49.2 316.0 54.0 306.5 58.0 298.0 C 62.0 289.5 65.0 282.0 68.0 273.0 C 71.0 264.0 74.0 253.2 76.0 244.0 C 78.0 234.8 78.8 233.3 80.0 218.0 C 81.2 202.7 82.0 165.5 83.0 152.0 C 84.0 138.5 84.5 143.2 86.0 137.0 C 87.5 130.8 88.3 123.8 92.0 115.0 C 95.7 106.2 102.8 92.5 108.0 84.0 C 113.2 75.5 118.2 69.7 123.0 64.0 C 127.8 58.3 130.8 55.2 137.0 50.0 C 143.2 44.8 150.3 38.5 160.0 33.0 C 169.7 27.5 185.0 20.7 195.0 17.0 C 205.0 13.3 212.7 12.2 220.0 11.0 C 227.3 9.8 235.8 10.2 239.0 10.0'
+
+# Les trois tirets détachés qui accompagnent la silhouette dans la variante logo. Ils
+# disparaissent de la variante icône, où ils deviendraient des salissures à 16 px.
+TIRETS = 'M 201.0 509.0 L 227.0 478.0 M 38.0 537.0 L 63.0 508.0 M 50.0 442.0 L 26.0 470.0'
+
+LARGEUR, HAUTEUR = 421, 548
+EPAISSEUR = 22  # 4 % de la hauteur
+
+
+@dataclass(frozen=True)
+class Produit:
+    """Un produit de la suite : son nom, ses trois teintes, son glyphe.
+
+    `glyphe_trait` est dessiné au trait par-dessus la silhouette (variante logo) ;
+    `glyphe_plein` est découpé en creux dans la silhouette remplie (variante icône).
+    Les deux décrivent la même figure, dans les deux techniques que réclament les deux
+    variantes — un tracé au trait ne se remplit pas, et l'inverse non plus.
+    """
+
+    nom: str
+    claire: str
+    primaire: str
+    profonde: str
+    glyphe_trait: str
+    glyphe_plein: str
+
+
+PRODUITS = {
+    "ghostpass": Produit(
+        nom="GhostPass",
+        claire="#9CC3FF",
+        primaire="#2E7DFF",
+        profonde="#143F8F",
+        # Une clé : l'anneau, la tige, et deux dents.
+        glyphe_trait='<circle cx="214" cy="187" r="26"/>\n      <path d="M 240 187 L 336 187"/>\n      <path d="M 310 187 L 310 213"/>\n      <path d="M 334 187 L 334 207"/>',
+        glyphe_plein='M 142 196 A 48 48 0 1 0 238 196 A 48 48 0 1 0 142 196 Z M 170 196 A 20 20 0 1 0 210 196 A 20 20 0 1 0 170 196 Z M 243 181 H 325 A 15 15 0 0 1 340 196 V 196 A 15 15 0 0 1 325 211 H 243 A 15 15 0 0 1 228 196 V 196 A 15 15 0 0 1 243 181 Z M 298 205 H 298 A 12 12 0 0 1 310 217 V 235 A 12 12 0 0 1 298 247 H 298 A 12 12 0 0 1 286 235 V 217 A 12 12 0 0 1 298 205 Z M 328 205 H 328 A 12 12 0 0 1 340 217 V 225 A 12 12 0 0 1 328 237 H 328 A 12 12 0 0 1 316 225 V 217 A 12 12 0 0 1 328 205 Z',
+    ),
+}
+
+# Les autres produits de la suite — ghostbit, ghostmon, ghostboard, ghostauth, ghostcal,
+# ghostmail, ghostlink — partagent cette silhouette et n'attendent que leur glyphe et
+# leurs teintes. On les déclare ici au fur et à mesure qu'on récupère leurs tracés, plutôt
+# que d'en inventer d'approchants : un logo presque juste est pire qu'un logo absent.
+
+
+# ─── Rendu ────────────────────────────────────────────────────────────────────
+
+
+def indente(tracé: str, marge: str = "    ") -> str:
+    """Aligne un bloc de tracés sur l'indentation du SVG produit."""
+    return "\n".join(marge + l.strip() for l in tracé.strip().split("\n"))
+
+
+def degrade(produit: Produit) -> str:
+    """Le dégradé diagonal de la charte : claire en haut à droite, profonde en bas à gauche."""
+    return (
+        f'  <defs>\n'
+        f'    <linearGradient id="g" x1="{LARGEUR}" y1="0" x2="0" y2="{HAUTEUR}"'
+        f' gradientUnits="userSpaceOnUse">\n'
+        f'      <stop offset="0" stop-color="{produit.claire}"/>\n'
+        f'      <stop offset="0.5" stop-color="{produit.primaire}"/>\n'
+        f'      <stop offset="1" stop-color="{produit.profonde}"/>\n'
+        f'    </linearGradient>\n'
+        f'  </defs>'
+    )
+
+
+def logo(produit: Produit) -> str:
+    """La silhouette au trait, ses tirets, et le glyphe par-dessus."""
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {LARGEUR} {HAUTEUR}" fill="none">
+  <!-- Charte ghost-suite, variante logo — produit par tools/brand/ghost_suite.py.
+       Ne pas retoucher : régénérer. -->
+{degrade(produit)}
+  <g stroke="url(#g)" stroke-width="{EPAISSEUR}" stroke-linecap="round" stroke-linejoin="round">
+    <path d="{SILHOUETTE}"/>
+    <path d="{TIRETS}"/>
+  </g>
+  <g stroke="url(#g)" stroke-width="{EPAISSEUR}" stroke-linecap="round" stroke-linejoin="round"
+     opacity="0.92">
+{indente(produit.glyphe_trait)}
+  </g>
+</svg>
+"""
+
+
+def icone(produit: Produit) -> str:
+    """La même courbe, refermée et remplie, le glyphe en creux, cadrée au carré.
+
+    Le cadre passe de 421 × 548 à 548 × 548 : on écarte le viewBox de part et d'autre
+    plutôt que de déformer la silhouette.
+    """
+    marge = (HAUTEUR - LARGEUR) / 2
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="{-marge} 0 {HAUTEUR} {HAUTEUR}" fill="none">
+  <!-- Charte ghost-suite, variante icône — produit par tools/brand/ghost_suite.py.
+       La silhouette pleine, sans les tirets détachés : ils deviendraient des salissures
+       à 16 px, alors que la silhouette, elle, tient. Ne pas retoucher : régénérer. -->
+{degrade(produit)}
+  <path fill="url(#g)" fill-rule="evenodd" clip-rule="evenodd"
+        d="{SILHOUETTE} Z {produit.glyphe_plein}"/>
+</svg>
+"""
+
+
+def main() -> int:
+    analyseur = argparse.ArgumentParser(description=__doc__)
+    analyseur.add_argument("produit", nargs="?", help="nom du produit à générer")
+    analyseur.add_argument("--liste", action="store_true", help="produits déclarés")
+    analyseur.add_argument(
+        "--sortie", type=Path, default=Path(__file__).parent, help="répertoire de sortie"
+    )
+    args = analyseur.parse_args()
+
+    if args.liste or not args.produit:
+        for cle, p in sorted(PRODUITS.items()):
+            print(f"{cle:12} {p.nom:12} {p.primaire}")
+        return 0
+
+    produit = PRODUITS.get(args.produit)
+    if produit is None:
+        connus = ", ".join(sorted(PRODUITS))
+        print(f"produit inconnu : {args.produit} (connus : {connus})", file=sys.stderr)
+        return 1
+
+    args.sortie.mkdir(parents=True, exist_ok=True)
+    for suffixe, contenu in (("brand", logo(produit)), ("icon", icone(produit))):
+        chemin = args.sortie / f"{args.produit}-{suffixe}.svg"
+        chemin.write_text(contenu, encoding="utf-8")
+        print(f"écrit {chemin}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

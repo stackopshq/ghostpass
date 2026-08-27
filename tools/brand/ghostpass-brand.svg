@@ -1,8 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 421 548" fill="none">
-  <!-- Déclinaison GhostPass de la charte ghost-suite : silhouette, tirets et épaisseur
-       repris tels quels de ghostmail/ghostcal ; seuls le glyphe (une clé) et les trois
-       teintes changent. À régénérer par tools/brand/ghost_suite.py une fois celui-ci
-       accessible — ce fichier n'est qu'une reprise fidèle de sa sortie. -->
+  <!-- Charte ghost-suite, variante logo — produit par tools/brand/ghost_suite.py.
+       Ne pas retoucher : régénérer. -->
   <defs>
     <linearGradient id="g" x1="421" y1="0" x2="0" y2="548" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#9CC3FF"/>
@@ -16,9 +14,9 @@
   </g>
   <g stroke="url(#g)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"
      opacity="0.92">
-      <circle cx="214" cy="187" r="26"/>
-      <path d="M 240 187 L 336 187"/>
-      <path d="M 310 187 L 310 213"/>
-      <path d="M 334 187 L 334 207"/>
+    <circle cx="214" cy="187" r="26"/>
+    <path d="M 240 187 L 336 187"/>
+    <path d="M 310 187 L 310 213"/>
+    <path d="M 334 187 L 334 207"/>
   </g>
 </svg>

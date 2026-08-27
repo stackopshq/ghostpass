@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rend les assets iOS depuis les sources vectorielles de la charte.
+# Rend les assets applicatifs depuis les sources vectorielles de la charte.
 #
 # Les PNG du catalogue Xcode sont des *sorties* : les retoucher à la main condamne le
 # prochain changement de teinte à de la peinture pixel. La source est le SVG, et cette
@@ -30,5 +30,10 @@ done
 rsvg-convert -w 1024 -h 1024 -b white \
   "$BRAND/ghostpass-icon.svg" \
   -o "$ASSETS/AppIcon.appiconset/AppIcon-1024.png"
+
+# Web : le favicon et la marque de l'en-tête sont le même fichier, servi tel quel. Un SVG
+# tient à 16 px comme à 512, et évite d'entretenir six tailles de PNG.
+mkdir -p "$ROOT/apps/web/public"
+cp "$BRAND/ghostpass-icon.svg" "$ROOT/apps/web/public/favicon.svg"
 
 echo "Assets rendus depuis tools/brand/ghostpass-icon.svg"

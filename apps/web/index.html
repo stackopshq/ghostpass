@@ -3,15 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0e6a6f" />
+    <meta name="theme-color" content="#080d18" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="description" content="GhostPass — coffre-fort de mots de passe zero-knowledge. Le chiffrement a lieu sur votre appareil ; le serveur ne voit jamais vos secrets." />
     <title>GhostPass — Coffre zero-knowledge</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Spectral:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Aucune police distante : la suite emploie celles du système. Un coffre
+         zero-knowledge qui contacte fonts.googleapis.com à chaque chargement révélerait
+         l'adresse IP de ses utilisateurs à un tiers, à chaque déverrouillage. -->
   </head>
   <body>
     <div id="app"></div>

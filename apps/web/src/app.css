@@ -3,9 +3,14 @@
 
 :root {
   /* Typographies */
-  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-serif: "Spectral", Georgia, "Times New Roman", serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Les polices de la suite, à l'identique de ghostbit et ghostmon. Aucune n'est
+     téléchargée : un coffre zero-knowledge qui appelle Google Fonts à chaque ouverture
+     livrerait l'adresse IP de ses utilisateurs à un tiers, à chaque déverrouillage. */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Le serif de l'ancienne charte n'existe plus dans la suite ; les titres prennent la
+     police d'interface. Le jeton reste, pour ne pas casser ce qui le référence. */
+  --font-serif: var(--font-sans);
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
 
   /* Rayons (partagés) */
   --radius: 12px;
@@ -37,6 +42,10 @@
      comptent — un seul halo fait une tache molle, la superposition fait une source. */
   --brand-glow: drop-shadow(0 0 8px rgba(46, 125, 255, 0.6))
     drop-shadow(0 0 20px rgba(46, 125, 255, 0.35));
+  /* Le même halo en `box-shadow`, pour ce qui a un fond : `filter` s'applique au rendu
+     entier de l'élément et mangerait son propre remplissage. */
+  --glow-shadow: 0 0 10px rgba(46, 125, 255, 0.55), 0 0 28px rgba(46, 125, 255, 0.32);
+  --glow-shadow-faible: 0 0 12px rgba(46, 125, 255, 0.25);
   --bg-gradient: linear-gradient(150deg, #080d18 0%, #0a1220 45%, #080f1a 75%, #090a10 100%);
 
   --accent: var(--brand-primary);
@@ -78,6 +87,8 @@
   --ring: rgba(26, 79, 204, 0.26);
   /* En plein jour, le néon devient une bavure : on le réduit sans le supprimer. */
   --brand-glow: drop-shadow(0 0 6px rgba(46, 125, 255, 0.3));
+  --glow-shadow: none;
+  --glow-shadow-faible: none;
   --bg-gradient: none;
 
   --danger: #b3261e;
@@ -170,17 +181,16 @@ code,
   place-items: center;
   width: 1.9em;
   height: 1.9em;
-  color: #fff;
-  background: var(--brand-gradient);
-  border-radius: 9px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  /* Pas de badge : la silhouette porte elle-même le dégradé de la charte. Le poser aussi en
+     fond aurait rendu le fantôme invisible sur son propre dégradé. */
+  background: none;
   /* La marque rayonne : c'est elle qui rattache GhostPass au reste de la suite. */
   filter: var(--brand-glow);
 }
 
 .brand .mark svg {
-  width: 1em;
-  height: 1em;
+  width: 100%;
+  height: 100%;
 }
 
 /* ─── App shell : topbar + (sidebar · liste · détail) ─── */
@@ -966,9 +976,23 @@ a.kv-value:hover {
   justify-content: space-between;
   gap: 2rem;
   padding: clamp(2rem, 5vw, 3.75rem);
-  color: #fff;
-  background: linear-gradient(150deg, var(--accent) 0%, var(--accent-2) 68%, #16306b 100%);
+  color: var(--ink);
+  /* La suite pose du sombre et laisse le néon faire l'accent. Inonder la moitié de l'écran
+     de la couleur de marque écrasait tout le reste — et rendait le halo invisible, faute
+     de nuit pour le porter. */
+  background: var(--bg-gradient, var(--canvas));
   overflow: hidden;
+}
+
+/* Le halo de marque, diffusé depuis le haut : la lueur du fantôme. */
+.auth-brand::before {
+  content: "";
+  position: absolute;
+  inset: -20% -20% auto -20%;
+  height: 70%;
+  background: radial-gradient(60% 60% at 30% 0%, var(--accent-soft), transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
 }
 
 /* Motif de points discret, estompé vers un coin */
@@ -976,7 +1000,7 @@ a.kv-value:hover {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   background-size: 22px 22px;
   -webkit-mask-image: radial-gradient(120% 75% at 85% 15%, #000, transparent 70%);
   mask-image: radial-gradient(120% 75% at 85% 15%, #000, transparent 70%);
@@ -994,8 +1018,11 @@ a.kv-value:hover {
 }
 
 .auth-brand .brand .mark {
-  background: rgba(255, 255, 255, 0.16);
+  /* Pas de fond : c'est la silhouette elle-même qui porte le dégradé et le halo. Le badge
+     translucide d'avant aplatissait les deux. */
+  background: none;
   box-shadow: none;
+  filter: var(--brand-glow);
 }
 
 .auth-hero {
@@ -1247,7 +1274,8 @@ button {
 
 button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--ring);
+  box-shadow: 0 0 0 3px var(--ring), var(--glow-shadow-faible, none);
+  border-color: var(--brand-primary, var(--accent));
 }
 
 form > button[type="submit"],
@@ -1256,9 +1284,18 @@ form > button[type="submit"],
   font-weight: 600;
   font-size: 0.92rem;
   color: #fff;
-  background: var(--accent);
+  background: var(--brand-gradient, var(--accent));
   border-color: var(--accent);
+  /* Le néon de la suite, en ombre portée plutôt qu'en filtre : un `filter` sur un bouton
+     rognerait son propre fond. */
+  box-shadow: var(--shadow-sm), var(--glow-shadow, none);
+}
+
+/* Faire luire ce sur quoi on ne peut pas appuyer appellerait l'œil au mauvais endroit. */
+form > button[type="submit"]:disabled,
+.btn-primary:disabled {
   box-shadow: var(--shadow-sm);
+  filter: saturate(0.5);
 }
 
 .btn-primary {
