@@ -67,3 +67,61 @@ struct CoffrePartageOuvert {
     let collections: [OrgCollectionDTO]
     let org: Org
 }
+
+/// Un membre d'équipe, vu par un administrateur.
+struct MembreDEquipe: Identifiable {
+    let id: String
+    let email: String?
+    let role: RoleDOrganisation
+    let etat: EtatDAppartenance
+
+    init?(_ dto: OrgMemberDTO) {
+        guard let role = RoleDOrganisation(rawValue: dto.role),
+            let etat = EtatDAppartenance(rawValue: dto.status)
+        else { return nil }
+        self.id = dto.userId
+        self.email = dto.email
+        self.role = role
+        self.etat = etat
+    }
+}
+
+/// Ce qu'un groupe peut faire d'une collection.
+enum DroitSurCollection: String, CaseIterable, Identifiable {
+    case read
+    case write
+    case manage
+
+    var id: String { rawValue }
+
+    @MainActor
+    var intitule: String {
+        switch self {
+        case .read: return tr("Lecture")
+        case .write: return tr("Écriture")
+        case .manage: return tr("Gestion")
+        }
+    }
+}
+
+/// Ce qui empêche une rotation d'aboutir, quand la faute n'est pas technique.
+///
+/// Pas de `LocalizedError` ici : `errorDescription` est appelé hors du fil principal, alors
+/// que la traduction dépend de la langue choisie et vit sur le `MainActor`. L'erreur porte
+/// donc de quoi composer son message, et c'est l'affichage qui le compose.
+enum RotationImpossible: Error {
+    /// Un membre restant dont on n'a pas pu obtenir la clé publique. Le sauter reviendrait à
+    /// l'exclure sans le dire : il ne recevrait pas la nouvelle Org Key et perdrait l'accès
+    /// au prochain déverrouillage, sans que personne ne l'ait décidé.
+    case cleIntrouvable(membre: String)
+
+    @MainActor
+    var message: String {
+        switch self {
+        case .cleIntrouvable(let membre):
+            return String(
+                format: tr("Impossible d'obtenir la clé publique de %@ : rotation annulée."),
+                membre)
+        }
+    }
+}

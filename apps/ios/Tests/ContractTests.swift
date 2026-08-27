@@ -1281,3 +1281,82 @@ final class OrganisationsTests: XCTestCase {
         XCTAssertThrowsError(try compte.ouvrir(dto))
     }
 }
+
+// ─── Administration d'équipe ──────────────────────────────────────────────────
+
+final class AdministrationDEquipeTests: XCTestCase {
+    private func membre(id: String, email: String?, role: String = "member") -> MembreDEquipe? {
+        MembreDEquipe(
+            OrgMemberDTO(userId: id, email: email, role: role, status: "active"))
+    }
+
+    func testUnMembreValideSeTraduitFidelement() throws {
+        let m = try XCTUnwrap(membre(id: "u1", email: "kevin@stackops.ch", role: "readonly"))
+        XCTAssertEqual(m.id, "u1")
+        XCTAssertEqual(m.email, "kevin@stackops.ch")
+        XCTAssertEqual(m.role, .readonly)
+        XCTAssertEqual(m.etat, .active)
+    }
+
+    func testUnMembreSansAdresseResteUtilisable() throws {
+        // Le serveur peut rendre `email: null` ; la ligne doit tout de même s'afficher,
+        // sous l'identifiant, plutôt que de disparaître de la liste des membres.
+        let m = try XCTUnwrap(membre(id: "u2", email: nil))
+        XCTAssertNil(m.email)
+        XCTAssertEqual(m.id, "u2")
+    }
+
+    @MainActor
+    func testLesDroitsSurCollectionSontTousTraduits() {
+        for droit in DroitSurCollection.allCases {
+            XCTAssertFalse(droit.intitule.isEmpty, "intitulé vide pour \(droit.rawValue)")
+        }
+        XCTAssertEqual(DroitSurCollection.allCases.map(\.rawValue), ["read", "write", "manage"])
+    }
+
+    /// Le refus de rotation doit nommer la personne concernée : « rotation annulée » sans
+    /// dire de qui il s'agit laisserait l'administrateur sans rien à faire.
+    @MainActor
+    func testLeRefusDeRotationNommeLaPersonne() {
+        let message = RotationImpossible.cleIntrouvable(membre: "kevin@stackops.ch").message
+        XCTAssertTrue(
+            message.contains("kevin@stackops.ch"),
+            "le refus ne nomme pas la personne : « \(message) »")
+    }
+
+    /// Une rotation ré-enveloppe les items **sans** toucher au contenu chiffré. Si le
+    /// contenu changeait, ce ne serait plus une rotation de clé mais un re-chiffrement
+    /// complet — beaucoup plus coûteux, et inutile.
+    func testLaRotationNeReChiffrePasLeContenu() throws {
+        let compte = try register(password: "correct horse battery staple", email: "clara@test.ch")
+            .account()
+        let ancienne = try compte.createOrg().org()
+        let nouvelle = try compte.createOrg().org()
+
+        let item = VaultItem(
+            name: "Base de production", notes: nil, folder: nil,
+            data: .login(Login(username: "admin", password: "tr3s-secret")))
+        let json = String(data: try JSONEncoder().encode(item), encoding: .utf8) ?? "{}"
+        let chiffre = try ancienne.encryptItem(itemJson: json)
+        let refait = try nouvelle.rewrapItem(oldOrg: ancienne, encryptedItemJson: chiffre)
+
+        struct Enveloppe: Decodable {
+            let encryptedKey: String
+            let encryptedData: String
+            enum CodingKeys: String, CodingKey {
+                case encryptedKey = "encrypted_key"
+                case encryptedData = "encrypted_data"
+            }
+        }
+        let avant = try JSONDecoder().decode(Enveloppe.self, from: Data(chiffre.utf8))
+        let apres = try JSONDecoder().decode(Enveloppe.self, from: Data(refait.utf8))
+        XCTAssertEqual(avant.encryptedData, apres.encryptedData, "le contenu a été re-chiffré")
+        XCTAssertNotEqual(avant.encryptedKey, apres.encryptedKey, "l'enveloppe n'a pas changé")
+
+        // Et la conséquence qui compte : l'ancienne clé ne lit plus l'item ré-enveloppé.
+        let dto = EncryptedItemDTO(
+            id: "i1", encryptedKey: apres.encryptedKey, encryptedData: apres.encryptedData)
+        XCTAssertNoThrow(try nouvelle.ouvrir(dto))
+        XCTAssertThrowsError(try ancienne.ouvrir(dto))
+    }
+}

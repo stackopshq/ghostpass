@@ -32,6 +32,16 @@
         }
       }
     },
+    "%1$d membres · %2$d collections": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d members · %2$d collections"
+          }
+        }
+      }
+    },
     "%@ n'a pas permis d'ouvrir le coffre.": {
       "localizations": {
         "en": {
@@ -278,6 +288,16 @@
         }
       }
     },
+    "Administration": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administration"
+          }
+        }
+      }
+    },
     "Adresse copiée": {
       "localizations": {
         "en": {
@@ -428,6 +448,16 @@
         }
       }
     },
+    "Aucun accès": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No access"
+          }
+        }
+      }
+    },
     "Aucun dossier": {
       "localizations": {
         "en": {
@@ -474,6 +504,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "No collection is open to you in this team. An administrator must grant you access."
+          }
+        }
+      }
+    },
+    "Aucune collection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No collection."
           }
         }
       }
@@ -564,6 +604,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "What others have left you, and what you can do with it."
+          }
+        }
+      }
+    },
+    "Ce que le groupe ouvre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What the group opens"
           }
         }
       }
@@ -798,6 +848,16 @@
         }
       }
     },
+    "Collections": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collections"
+          }
+        }
+      }
+    },
     "Compte": {
       "localizations": {
         "en": {
@@ -968,6 +1028,16 @@
         }
       }
     },
+    "Créez-en une, ou attendez qu'on vous invite : les équipes dont vous ferez partie apparaîtront ici.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create one, or wait to be invited: the teams you belong to will appear here."
+          }
+        }
+      }
+    },
     "Demande refusée": {
       "localizations": {
         "en": {
@@ -1064,6 +1134,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unlock with %@"
+          }
+        }
+      }
+    },
+    "Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They must already have a GhostPass account: it is their public key that protects the team's."
           }
         }
       }
@@ -1218,6 +1298,16 @@
         }
       }
     },
+    "Gestion": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage"
+          }
+        }
+      }
+    },
     "GhostPass": {
       "localizations": {
         "en": {
@@ -1234,6 +1324,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "GitHub, Amazon…"
+          }
+        }
+      }
+    },
+    "Groupes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groups"
           }
         }
       }
@@ -1358,6 +1458,16 @@
         }
       }
     },
+    "Impossible d'obtenir la clé publique de %@ : rotation annulée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not obtain %@'s public key: rotation cancelled."
+          }
+        }
+      }
+    },
     "Invitation envoyée": {
       "localizations": {
         "en": {
@@ -1388,6 +1498,46 @@
         }
       }
     },
+    "Inviter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite"
+          }
+        }
+      }
+    },
+    "Inviter quelqu'un": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite someone"
+          }
+        }
+      }
+    },
+    "Inviter quelqu'un lui scelle la clé de l'équipe vers sa clé publique. Le serveur ne transporte qu'un blob qu'il ne peut pas ouvrir.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inviting someone seals the team key to their public key. The server only carries a blob it cannot open."
+          }
+        }
+      }
+    },
+    "La clé de l'équipe sera changée et redistribuée aux autres membres. Ce que cette personne a déjà vu reste connu d'elle : les mots de passe concernés doivent être changés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The team key will be changed and redistributed to the other members. What this person already saw remains known to them: the passwords involved must be changed."
+          }
+        }
+      }
+    },
     "La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre.": {
       "localizations": {
         "en": {
@@ -1398,12 +1548,32 @@
         }
       }
     },
+    "La clé du coffre est créée sur cet appareil et scellée pour vous seul. Le serveur n'en connaîtra jamais le contenu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The vault key is created on this device and sealed for you alone. The server will never know its contents."
+          }
+        }
+      }
+    },
     "La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "The key stays encrypted in the item; codes are computed on the device."
+          }
+        }
+      }
+    },
+    "La personne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The person"
           }
         }
       }
@@ -1578,6 +1748,26 @@
         }
       }
     },
+    "Lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read"
+          }
+        }
+      }
+    },
+    "Lecture pour consulter, écriture pour modifier, gestion pour régler les accès de la collection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read to consult, write to modify, manage to set the collection's access."
+          }
+        }
+      }
+    },
     "Lecture seule": {
       "localizations": {
         "en": {
@@ -1678,6 +1868,26 @@
         }
       }
     },
+    "Membres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Members"
+          }
+        }
+      }
+    },
+    "Membres du groupe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group members"
+          }
+        }
+      }
+    },
     "Mes contacts de confiance": {
       "localizations": {
         "en": {
@@ -1734,6 +1944,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit"
+          }
+        }
+      }
+    },
+    "Modifier ce membre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit this member"
           }
         }
       }
@@ -1878,6 +2098,16 @@
         }
       }
     },
+    "Nom de l'équipe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team name"
+          }
+        }
+      }
+    },
     "Note": {
       "localizations": {
         "en": {
@@ -1894,6 +2124,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notes"
+          }
+        }
+      }
+    },
+    "Nouveau groupe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New group"
           }
         }
       }
@@ -1924,6 +2164,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "New item"
+          }
+        }
+      }
+    },
+    "Nouvelle collection": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New collection"
+          }
+        }
+      }
+    },
+    "Nouvelle équipe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New team"
           }
         }
       }
@@ -2024,6 +2284,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "No one yet."
+          }
+        }
+      }
+    },
+    "Peut inviter, révoquer et gérer les droits.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can invite, revoke and manage permissions."
+          }
+        }
+      }
+    },
+    "Peut lire et modifier les identifiants partagés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can read and edit the shared credentials."
+          }
+        }
+      }
+    },
+    "Peut lire, sans rien modifier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can read, without modifying anything."
           }
         }
       }
@@ -2198,6 +2488,16 @@
         }
       }
     },
+    "Retirer l'accès": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove access"
+          }
+        }
+      }
+    },
     "Revenir au coffre enregistré": {
       "localizations": {
         "en": {
@@ -2264,6 +2564,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "The server’s response could not be understood."
+          }
+        }
+      }
+    },
+    "Révoquer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revoke"
+          }
+        }
+      }
+    },
+    "Révoquer ce membre ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revoke this member?"
           }
         }
       }
@@ -2408,6 +2728,16 @@
         }
       }
     },
+    "Ses membres perdront les accès qu'il leur donnait. Les identifiants, eux, restent dans leurs collections.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its members will lose the access it granted them. The credentials themselves stay in their collections."
+          }
+        }
+      }
+    },
     "Seuls les cinq premiers caractères de l'empreinte du mot de passe sont envoyés : ni le mot de passe ni son empreinte complète ne quittent l'appareil.": {
       "localizations": {
         "en": {
@@ -2438,6 +2768,16 @@
         }
       }
     },
+    "Son rôle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Their role"
+          }
+        }
+      }
+    },
     "Supprimer": {
       "localizations": {
         "en": {
@@ -2454,6 +2794,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete this folder?"
+          }
+        }
+      }
+    },
+    "Supprimer ce groupe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this group"
+          }
+        }
+      }
+    },
+    "Supprimer ce groupe ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this group?"
           }
         }
       }
@@ -2574,6 +2934,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "An end-to-end encrypted vault does not reopen without its master password: nobody, not even the server, can retrieve it for you."
+          }
+        }
+      }
+    },
+    "Un groupe donne accès à des collections. C'est par lui qu'on ouvre un coffre à plusieurs personnes sans les nommer une à une.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A group grants access to collections. It is how you open a vault to several people without naming them one by one."
           }
         }
       }
@@ -2718,6 +3088,16 @@
         }
       }
     },
+    "adresse@exemple.com": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "address@example.com"
+          }
+        }
+      }
+    },
     "et %lld autres": {
       "localizations": {
         "en": {
@@ -2784,6 +3164,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "To import"
+          }
+        }
+      }
+    },
+    "Écriture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write"
           }
         }
       }

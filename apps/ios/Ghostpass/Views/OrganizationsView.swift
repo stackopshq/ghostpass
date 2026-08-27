@@ -13,6 +13,8 @@ struct OrganizationsView: View {
     @State private var organisations: [Organisation] = []
     @State private var chargement = true
     @State private var ouvert: CoffrePartageOuvert?
+    @State private var creation = false
+    @State private var nom = ""
 
     var body: some View {
         NavigationStack {
@@ -54,12 +56,35 @@ struct OrganizationsView: View {
                         .foregroundStyle(Color.gpAccentText)
                         .accessibilityIdentifier("button.closeOrgs")
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        creation = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityIdentifier("button.newOrg")
+                }
             }
         }
         .tint(Color.gpAccentText)
         .task { await recharger() }
         .sheet(item: $ouvert) { coffre in
             OrgVaultView(ouvert: coffre).environmentObject(store)
+        }
+        .alert("Nouvelle équipe", isPresented: $creation) {
+            TextField("Nom de l'équipe", text: $nom)
+            Button("Annuler", role: .cancel) { nom = "" }
+            Button("Créer") {
+                let choisi = nom
+                nom = ""
+                Task {
+                    if await store.creerUneOrganisation(nom: choisi) { await recharger() }
+                }
+            }
+        } message: {
+            Text(
+                "La clé du coffre est créée sur cet appareil et scellée pour vous seul. Le serveur n'en connaîtra jamais le contenu."
+            )
         }
     }
 
@@ -79,7 +104,7 @@ struct OrganizationsView: View {
                 .foregroundStyle(Color.gpInk)
                 .frame(maxWidth: .infinity, alignment: .center)
             Text(
-                "Les coffres partagés se créent depuis l'application web ; ils apparaîtront ici dès qu'on vous y aura invité."
+                "Créez-en une, ou attendez qu'on vous invite : les équipes dont vous ferez partie apparaîtront ici."
             )
             .font(.footnote)
             .foregroundStyle(Color.gpMuted)

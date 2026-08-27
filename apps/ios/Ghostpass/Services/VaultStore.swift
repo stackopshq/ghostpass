@@ -970,6 +970,233 @@ final class VaultStore: ObservableObject {
             return false
         }
     }
+
+    // ─── Administration d'organisation ───
+
+    /// Crée une équipe. L'Org Key naît ici, dans le cœur Rust, et le créateur se la scelle à
+    /// lui-même : le serveur reçoit un blob qu'il ne peut pas ouvrir, et n'a donc jamais
+    /// connu la clé du coffre qu'il héberge.
+    func creerUneOrganisation(nom: String) async -> Bool {
+        guard let api, let token, let account else { return false }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let creation = try account.createOrg()
+            try await api.createOrg(
+                token: token, name: nom, encryptedOrgKey: creation.sealedForSelf())
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func membres(_ organisation: Organisation) async -> [MembreDEquipe] {
+        guard let api, let token else { return [] }
+        do {
+            return try await api.orgMembers(token: token, org: organisation.id)
+                .compactMap(MembreDEquipe.init)
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
+        }
+    }
+
+    /// Invite quelqu'un dans une équipe : on récupère sa clé publique, on lui scelle l'Org
+    /// Key, et c'est ce blob-là qui part au serveur.
+    func inviterDansLEquipe(
+        _ ouvert: CoffrePartageOuvert, email: String, role: RoleDOrganisation
+    ) async -> Bool {
+        guard let api, let token, let account else { return false }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let cle = try await api.lookupPublicKey(token: token, email: email)
+            let scellee = try account.sealOrgKeyForMember(org: ouvert.org, memberPublicKey: cle)
+            try await api.addOrgMember(
+                token: token, org: ouvert.organisation.id, email: email, role: role.rawValue,
+                encryptedOrgKey: scellee)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func changerLeRole(
+        _ organisation: Organisation, membre: String, role: RoleDOrganisation
+    ) async -> Bool {
+        guard let api, let token else { return false }
+        do {
+            try await api.setOrgMemberRole(
+                token: token, org: organisation.id, userId: membre, role: role.rawValue)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Révoque un membre, et fait tourner l'Org Key dans le même mouvement.
+    ///
+    /// Les deux sont indissociables : retirer quelqu'un sans changer la clé le laisserait
+    /// capable de lire tout ce qui s'écrira ensuite, puisqu'il en garde une copie. La
+    /// rotation ne re-protège pas pour autant ce qu'il a déjà vu — ces mots de passe-là
+    /// doivent être changés, et l'interface le dit.
+    ///
+    /// Tout est calculé ici et part en une seule requête, que le serveur applique dans une
+    /// transaction : une rotation à moitié appliquée laisserait un coffre dont une part
+    /// serait illisible pour tout le monde, y compris pour l'administrateur.
+    func revoquerEtFaireTourner(
+        _ ouvert: CoffrePartageOuvert, revoquer membre: String?, restants: [MembreDEquipe]
+    ) async -> Bool {
+        guard let api, let token, let account else { return false }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let anciens = try await api.allOrgItems(token: token, org: ouvert.organisation.id)
+
+            // La nouvelle Org Key naît d'une création d'organisation jetable : c'est le seul
+            // chemin qu'expose le binding pour en produire une, et il fait exactement cela.
+            let neuve = try account.createOrg().org()
+
+            var reenveloppes: [RotationBody.ItemReenveloppe] = []
+            for dto in anciens {
+                let enveloppe = [
+                    "encrypted_key": dto.encryptedKey, "encrypted_data": dto.encryptedData,
+                ]
+                let json = String(data: try JSONEncoder().encode(enveloppe), encoding: .utf8) ?? "{}"
+                let refait = try neuve.rewrapItem(oldOrg: ouvert.org, encryptedItemJson: json)
+                let relu = try JSONDecoder().decode(
+                    EnveloppeChiffree.self, from: Data(refait.utf8))
+                reenveloppes.append(
+                    .init(id: dto.id, encryptedKey: relu.encryptedKey))
+            }
+
+            // Le serveur ne rend pas la clé publique des membres : il faut la résoudre par
+            // leur adresse. Un échec ici **annule la rotation** au lieu de sauter la
+            // personne — la sauter l'exclurait en silence, puisqu'elle ne recevrait pas la
+            // nouvelle clé et perdrait l'accès sans que personne ne l'ait décidé.
+            var scelles: [RotationBody.MembreScelle] = []
+            for membre in restants {
+                guard let email = membre.email else {
+                    throw RotationImpossible.cleIntrouvable(membre: membre.id)
+                }
+                let cle: String
+                do {
+                    cle = try await api.lookupPublicKey(token: token, email: email)
+                } catch {
+                    throw RotationImpossible.cleIntrouvable(membre: email)
+                }
+                scelles.append(
+                    .init(
+                        userId: membre.id,
+                        encryptedOrgKey: try account.sealOrgKeyForMember(
+                            org: neuve, memberPublicKey: cle)))
+            }
+
+            try await api.rotateOrgKey(
+                token: token, org: ouvert.organisation.id,
+                corps: RotationBody(
+                    revokeUserId: membre, members: scelles, items: reenveloppes))
+            return true
+        } catch let refus as RotationImpossible {
+            errorMessage = refus.message
+            return false
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func creerUneCollection(_ ouvert: CoffrePartageOuvert, nom: String) async -> Bool {
+        guard let api, let token else { return false }
+        do {
+            try await api.createOrgCollection(
+                token: token, org: ouvert.organisation.id, name: nom)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    // ─── Groupes ───
+
+    func groupes(_ organisation: Organisation) async -> [OrgGroupDTO] {
+        guard let api, let token else { return [] }
+        do {
+            return try await api.orgGroups(token: token, org: organisation.id)
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
+        }
+    }
+
+    func creerUnGroupe(_ organisation: Organisation, nom: String) async -> Bool {
+        await agirSurLEquipe(organisation) { api, token in
+            try await api.createOrgGroup(token: token, org: organisation.id, name: nom)
+        }
+    }
+
+    func supprimerLeGroupe(_ organisation: Organisation, groupe: String) async -> Bool {
+        await agirSurLEquipe(organisation) { api, token in
+            try await api.deleteOrgGroup(token: token, org: organisation.id, group: groupe)
+        }
+    }
+
+    func ajouterAuGroupe(
+        _ organisation: Organisation, groupe: String, membre: String
+    ) async -> Bool {
+        await agirSurLEquipe(organisation) { api, token in
+            try await api.addToOrgGroup(
+                token: token, org: organisation.id, group: groupe, userId: membre)
+        }
+    }
+
+    func retirerDuGroupe(
+        _ organisation: Organisation, groupe: String, membre: String
+    ) async -> Bool {
+        await agirSurLEquipe(organisation) { api, token in
+            try await api.removeFromOrgGroup(
+                token: token, org: organisation.id, group: groupe, userId: membre)
+        }
+    }
+
+    func donnerAcces(
+        _ organisation: Organisation, groupe: String, collection: String, droit: DroitSurCollection
+    ) async -> Bool {
+        await agirSurLEquipe(organisation) { api, token in
+            try await api.setGroupCollectionAccess(
+                token: token, org: organisation.id, group: groupe, collection: collection,
+                permission: droit.rawValue)
+        }
+    }
+
+    func retirerLAcces(
+        _ organisation: Organisation, groupe: String, collection: String
+    ) async -> Bool {
+        await agirSurLEquipe(organisation) { api, token in
+            try await api.revokeGroupCollectionAccess(
+                token: token, org: organisation.id, group: groupe, collection: collection)
+        }
+    }
+
+    /// Les gestes de groupe ne diffèrent que par l'appel : même garde, même report d'erreur.
+    /// Les écrire un par un aurait multiplié la même dizaine de lignes par sept.
+    private func agirSurLEquipe(
+        _ organisation: Organisation, _ geste: (APIClient, String) async throws -> Void
+    ) async -> Bool {
+        guard let api, let token else { return false }
+        do {
+            try await geste(api, token)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
 }
 
 /// Coffre d'un donneur, ouvert le temps d'une consultation. `coffre` reste un objet opaque du

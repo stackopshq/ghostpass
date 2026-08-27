@@ -151,6 +151,92 @@ private struct OrgCollectionsDTO: Decodable {
     let collections: [OrgCollectionDTO]
 }
 
+/// Un membre d'organisation, vu par un administrateur.
+struct OrgMemberDTO: Decodable, Identifiable {
+    let userId: String
+    let email: String?
+    let role: String
+    let status: String
+
+    var id: String { userId }
+}
+
+private struct OrgMembersDTO: Decodable {
+    let members: [OrgMemberDTO]
+}
+
+struct OrgGroupMemberDTO: Decodable, Identifiable {
+    let userId: String
+    let email: String?
+
+    var id: String { userId }
+}
+
+struct OrgGroupCollectionDTO: Decodable, Identifiable {
+    let collectionId: String
+    let permission: String
+
+    var id: String { collectionId }
+}
+
+struct OrgGroupDTO: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let members: [OrgGroupMemberDTO]
+    let collections: [OrgGroupCollectionDTO]
+}
+
+private struct OrgGroupsDTO: Decodable {
+    let groups: [OrgGroupDTO]
+}
+
+private struct CreateOrgBody: Encodable {
+    let name: String
+    let encryptedOrgKey: String
+}
+
+private struct AddMemberBody: Encodable {
+    let email: String
+    let role: String
+    let encryptedOrgKey: String
+}
+
+private struct RoleBody: Encodable {
+    let role: String
+}
+
+private struct NameBody: Encodable {
+    let name: String
+}
+
+private struct UserIdBody: Encodable {
+    let userId: String
+}
+
+private struct PermissionBody: Encodable {
+    let permission: String
+}
+
+/// Une rotation d'Org Key : la nouvelle clé redistribuée à chaque membre restant, et toutes
+/// les item keys ré-enveloppées. Le tout part en une seule requête — le serveur l'applique
+/// dans une transaction, faute de quoi une rotation interrompue laisserait un coffre dont
+/// une partie serait illisible pour tout le monde.
+struct RotationBody: Encodable {
+    let revokeUserId: String?
+    let members: [MembreScelle]
+    let items: [ItemReenveloppe]
+
+    struct MembreScelle: Encodable {
+        let userId: String
+        let encryptedOrgKey: String
+    }
+
+    struct ItemReenveloppe: Encodable {
+        let id: String
+        let encryptedKey: String
+    }
+}
+
 /// Client HTTP du serveur GhostPass. Il ne voit jamais que du chiffré : le clair
 /// n'existe que de l'autre côté de la frontière FFI.
 struct APIClient {
@@ -413,4 +499,103 @@ struct APIClient {
         _ = try await request(
             "DELETE", "api/orgs/\(org)/collections/\(collection)/items/\(id)", token: token)
     }
+
+    // ─── Administration d'organisation ───
+
+    /// Crée une équipe. `encryptedOrgKey` est l'Org Key que le créateur s'est scellée à
+    /// lui-même : c'est par elle qu'il rouvrira le coffre à sa prochaine session.
+    func createOrg(token: String, name: String, encryptedOrgKey: String) async throws {
+        let body = try JSONEncoder().encode(
+            CreateOrgBody(name: name, encryptedOrgKey: encryptedOrgKey))
+        _ = try await request("POST", "api/orgs", token: token, body: body)
+    }
+
+    func orgMembers(token: String, org: String) async throws -> [OrgMemberDTO] {
+        try decode(
+            OrgMembersDTO.self, from: await request("GET", "api/orgs/\(org)/members", token: token)
+        ).members
+    }
+
+    /// Invite un membre. L'Org Key a été scellée en local vers SA clé publique : le serveur
+    /// transporte un blob qu'il ne peut pas ouvrir.
+    func addOrgMember(
+        token: String, org: String, email: String, role: String, encryptedOrgKey: String
+    ) async throws {
+        let body = try JSONEncoder().encode(
+            AddMemberBody(email: email, role: role, encryptedOrgKey: encryptedOrgKey))
+        _ = try await request("POST", "api/orgs/\(org)/members", token: token, body: body)
+    }
+
+    func setOrgMemberRole(token: String, org: String, userId: String, role: String) async throws {
+        let body = try JSONEncoder().encode(RoleBody(role: role))
+        _ = try await request(
+            "PUT", "api/orgs/\(org)/members/\(userId)", token: token, body: body)
+    }
+
+    /// Révoque un membre **et** fait tourner l'Org Key dans le même mouvement. Les deux sont
+    /// indissociables : retirer quelqu'un sans changer la clé le laisserait capable de lire
+    /// tout ce qui s'écrira ensuite.
+    func rotateOrgKey(token: String, org: String, corps: RotationBody) async throws {
+        let body = try JSONEncoder().encode(corps)
+        _ = try await request("POST", "api/orgs/\(org)/rotate", token: token, body: body)
+    }
+
+    /// Tous les items de l'organisation, pour les ré-envelopper lors d'une rotation.
+    func allOrgItems(token: String, org: String) async throws -> [EncryptedItemDTO] {
+        try decode(
+            ItemsEnvelope.self, from: await request("GET", "api/orgs/\(org)/items", token: token)
+        ).items
+    }
+
+    func createOrgCollection(token: String, org: String, name: String) async throws {
+        let body = try JSONEncoder().encode(NameBody(name: name))
+        _ = try await request("POST", "api/orgs/\(org)/collections", token: token, body: body)
+    }
+
+    // ─── Groupes ───
+
+    func orgGroups(token: String, org: String) async throws -> [OrgGroupDTO] {
+        try decode(
+            OrgGroupsDTO.self, from: await request("GET", "api/orgs/\(org)/groups", token: token)
+        ).groups
+    }
+
+    func createOrgGroup(token: String, org: String, name: String) async throws {
+        let body = try JSONEncoder().encode(NameBody(name: name))
+        _ = try await request("POST", "api/orgs/\(org)/groups", token: token, body: body)
+    }
+
+    func deleteOrgGroup(token: String, org: String, group: String) async throws {
+        _ = try await request("DELETE", "api/orgs/\(org)/groups/\(group)", token: token)
+    }
+
+    func addToOrgGroup(token: String, org: String, group: String, userId: String) async throws {
+        let body = try JSONEncoder().encode(UserIdBody(userId: userId))
+        _ = try await request(
+            "POST", "api/orgs/\(org)/groups/\(group)/members", token: token, body: body)
+    }
+
+    func removeFromOrgGroup(token: String, org: String, group: String, userId: String) async throws
+    {
+        _ = try await request(
+            "DELETE", "api/orgs/\(org)/groups/\(group)/members/\(userId)", token: token)
+    }
+
+    /// Donne à un groupe un droit sur une collection : lecture, écriture ou gestion.
+    func setGroupCollectionAccess(
+        token: String, org: String, group: String, collection: String, permission: String
+    ) async throws {
+        let body = try JSONEncoder().encode(PermissionBody(permission: permission))
+        _ = try await request(
+            "PUT", "api/orgs/\(org)/groups/\(group)/collections/\(collection)", token: token,
+            body: body)
+    }
+
+    func revokeGroupCollectionAccess(
+        token: String, org: String, group: String, collection: String
+    ) async throws {
+        _ = try await request(
+            "DELETE", "api/orgs/\(org)/groups/\(group)/collections/\(collection)", token: token)
+    }
+
 }

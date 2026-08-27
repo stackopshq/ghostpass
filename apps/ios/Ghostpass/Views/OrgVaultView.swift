@@ -17,6 +17,7 @@ struct OrgVaultView: View {
     @State private var recherche = ""
     @State private var edition: VaultEntry?
     @State private var creation = false
+    @State private var administration = false
 
     private var visibles: [VaultEntry] {
         let q = recherche.trimmingCharacters(in: .whitespaces)
@@ -48,6 +49,16 @@ struct OrgVaultView: View {
                         .foregroundStyle(Color.gpAccentText)
                         .accessibilityIdentifier("button.closeOrgVault")
                 }
+                if ouvert.organisation.role == .admin {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            administration = true
+                        } label: {
+                            Image(systemName: "person.2.badge.gearshape")
+                        }
+                        .accessibilityIdentifier("button.orgAdmin")
+                    }
+                }
                 if ouvert.organisation.role.peutEcrire && choisie != nil {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
@@ -66,6 +77,13 @@ struct OrgVaultView: View {
             await recharger()
         }
         .onChange(of: choisie?.id) { _, _ in Task { await recharger() } }
+        .sheet(isPresented: $administration) {
+            // L'administration change les collections et peut faire tourner la clé : dans les
+            // deux cas ce qu'on affiche devient périmé, donc on referme plutôt que de montrer
+            // un coffre dont la moitié ne se déchiffrerait plus.
+            OrgAdminView(ouvert: ouvert) { dismiss() }
+                .environmentObject(store)
+        }
         .sheet(isPresented: $creation) { editeur(nil) }
         .sheet(item: $edition) { entree in editeur(entree) }
     }
