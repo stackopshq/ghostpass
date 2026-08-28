@@ -27,6 +27,7 @@
   } from "./lib/crypto.js";
   import { generateOtp, parseOtp } from "./lib/totp.js";
   import LanguageSwitcher from "./LanguageSwitcher.svelte";
+  import { t } from "./lib/i18n.svelte.js";
   import { DEFAULT_GEN_OPTIONS, generatePassword, type GenOptions } from "./lib/generator.js";
   import { parseCsv } from "./lib/csv.js";
   import { pwnedCount } from "./lib/breach.js";
@@ -1193,7 +1194,7 @@
   </svg>
 {/snippet}
 {#snippet themeToggle(extra: string)}
-  <button class="icon-btn {extra}" onclick={toggleTheme} title={theme === "dark" ? "Passer en clair" : "Passer en sombre"} aria-label="Basculer le thème">
+  <button class="icon-btn {extra}" onclick={toggleTheme} title={theme === "dark" ? "Passer en clair" : "Passer en sombre"} aria-label={t("app.toggleTheme")}>
     {#if theme === "dark"}{@render sunIcon()}{:else}{@render moonIcon()}{/if}
   </button>
 {/snippet}
@@ -1251,7 +1252,7 @@
     <span class="entry-main">
       <span class="entry-title">{item.name}</span>
       {#if item.kind === "login" && item.username}<span class="entry-sub">{item.username}</span>
-      {:else if item.kind === "note"}<span class="entry-sub">Note sécurisée</span>
+      {:else if item.kind === "note"}<span class="entry-sub">{t("app.secureNote")}</span>
       {:else if item.kind === "card" && item.cardNumber}<span class="entry-sub">•••• {item.cardNumber.slice(-4)}</span>{/if}
     </span>
   </button>
@@ -1278,7 +1279,7 @@
 {#snippet folderNode(node: TreeNode, depth: number)}
   <div class="tree-folder" class:active={selectedFolder === node.path} style="padding-left:{depth * 14 + 8}px">
     {#if node.children.length > 0}
-      <button class="tree-chevron-btn" title="Déplier/replier" aria-label="Déplier/replier" onclick={() => toggleFolder(node.path)}>
+      <button class="tree-chevron-btn" title={t("app.expandCollapse")} aria-label={t("app.expandCollapse")} onclick={() => toggleFolder(node.path)}>
         <span class="chevron" class:open={isExpanded(node.path)}>{@render chevronIcon()}</span>
       </button>
     {:else}
@@ -1290,7 +1291,7 @@
     </button>
     <span class="tree-count">{countItems(node)}</span>
     {#if countItems(node) === 0}
-      <button class="icon-btn tree-remove" title="Supprimer le dossier" aria-label="Supprimer le dossier vide" onclick={() => removeFolder(node.path)}>×</button>
+      <button class="icon-btn tree-remove" title={t("app.deleteFolder")} aria-label={t("app.deleteEmptyFolder")} onclick={() => removeFolder(node.path)}>×</button>
     {/if}
   </div>
   {#if isExpanded(node.path)}
@@ -1303,18 +1304,18 @@
 {#if !cryptoReady}
   <div class="boot">
     <div class="spinner"></div>
-    <p class="muted">Chargement du module cryptographique…</p>
+    <p class="muted">{t("app.loadingCrypto")}</p>
   </div>
 {:else if !token}
   <div class="auth">
     <aside class="auth-brand">
       <span class="brand"><span class="mark">{@render logoMark()}</span>GhostPass</span>
       <div>
-        <h1 class="auth-hero">Le coffre-fort que même nous ne pouvons pas ouvrir.</h1>
+        <h1 class="auth-hero">{t("app.tagline")}</h1>
         <ul class="auth-points">
-          <li>{@render checkIcon()}<span>Architecture <strong>zero-knowledge</strong> : le serveur ne voit que du chiffré.</span></li>
-          <li>{@render checkIcon()}<span>Chiffrement <strong>de bout en bout</strong>, sur votre appareil uniquement.</span></li>
-          <li>{@render checkIcon()}<span>Récupération <strong>sans backdoor</strong>, par kit de secours.</span></li>
+          <li>{@render checkIcon()}<span>{t("app.pt1a")}<strong>{t("app.pt1b")}</strong>{t("app.pt1c")}</span></li>
+          <li>{@render checkIcon()}<span>{t("app.pt2a")}<strong>{t("app.pt2b")}</strong>{t("app.pt2c")}</span></li>
+          <li>{@render checkIcon()}<span>{t("app.pt3a")}<strong>{t("app.pt3b")}</strong>{t("app.pt3c")}</span></li>
         </ul>
       </div>
       <!-- Cette ligne annonçait « Hébergé en Suisse · conforme nLPD ». Les deux
@@ -1343,33 +1344,33 @@
         {/if}
 
         {#if ssoPending}
-          <h2 class="auth-title">Connexion SSO</h2>
-          <p class="auth-sub">Identité vérifiée. Saisissez votre mot de passe maître pour déverrouiller votre coffre.</p>
+          <h2 class="auth-title">{t("app.ssoTitle")}</h2>
+          <p class="auth-sub">{t("app.ssoSub")}</p>
           <form onsubmit={finishSso}>
-            <label class="field"><span>Email</span><input type="email" value={ssoPending.email} readonly /></label>
+            <label class="field"><span>{t("app.email")}</span><input type="email" value={ssoPending.email} readonly /></label>
             <label class="field">
-              <span>Mot de passe maître</span>
+              <span>{t("app.masterPassword")}</span>
               <input type="password" bind:value={password} required autocomplete="current-password" />
             </label>
             <button type="submit" disabled={busy}>{busy ? "Déverrouillage…" : "Déverrouiller"}</button>
           </form>
-          <button class="link" onclick={() => { ssoPending = null; error = null; }}>← Annuler</button>
+          <button class="link" onclick={() => { ssoPending = null; error = null; }}>{t("app.cancelBack")}</button>
         {:else if mode === "recover"}
-          <h2 class="auth-title">Mot de passe oublié</h2>
-          <p class="auth-sub">Réinitialisez votre mot de passe maître avec votre clé de récupération.</p>
+          <h2 class="auth-title">{t("app.forgotTitle")}</h2>
+          <p class="auth-sub">{t("app.forgotSub")}</p>
           <form onsubmit={submitRecover}>
-            <label class="field"><span>Email</span><input type="email" bind:value={email} required /></label>
+            <label class="field"><span>{t("app.email")}</span><input type="email" bind:value={email} required /></label>
             <label class="field">
-              <span>Clé de récupération</span>
-              <input bind:value={recoveryKeyInput} required placeholder="votre clé sauvegardée" />
+              <span>{t("app.recoveryKey")}</span>
+              <input bind:value={recoveryKeyInput} required placeholder={t("app.savedKeyPh")} />
             </label>
             <label class="field">
-              <span>Nouveau mot de passe maître</span>
+              <span>{t("app.newMaster")}</span>
               <input type="password" bind:value={recoverNewPassword} required />
             </label>
             <button type="submit" disabled={busy}>{busy ? "Réinitialisation…" : "Réinitialiser"}</button>
           </form>
-          <button class="link" onclick={() => { mode = "login"; error = null; }}>← Retour à la connexion</button>
+          <button class="link" onclick={() => { mode = "login"; error = null; }}>{t("app.backToLogin")}</button>
         {:else}
           <h2 class="auth-title">{mode === "login" ? "Bon retour" : "Créer votre coffre"}</h2>
           <p class="auth-sub">
@@ -1379,22 +1380,22 @@
           </p>
 
           <div class="segmented full" style="margin-bottom:1.25rem">
-            <button class:active={mode === "login"} onclick={() => (mode = "login")}>Connexion</button>
-            <button class:active={mode === "register"} onclick={() => (mode = "register")}>Créer un compte</button>
+            <button class:active={mode === "login"} onclick={() => (mode = "login")}>{t("app.login")}</button>
+            <button class:active={mode === "register"} onclick={() => (mode = "register")}>{t("app.createAccount")}</button>
           </div>
 
           <form onsubmit={submitAuth}>
             <label class="field">
-              <span>Email</span>
+              <span>{t("app.email")}</span>
               <input type="email" bind:value={email} required autocomplete="username" />
             </label>
             <label class="field">
-              <span>Mot de passe maître</span>
+              <span>{t("app.masterPassword")}</span>
               <input type="password" bind:value={password} required autocomplete="current-password" />
             </label>
             {#if mode === "login" && mfaRequired}
               <label class="field">
-                <span>Code de double authentification</span>
+                <span>{t("app.twoFaCode")}</span>
                 <input bind:value={totpCode} inputmode="numeric" placeholder="123456" autocomplete="one-time-code" />
               </label>
             {/if}
@@ -1403,17 +1404,17 @@
             </button>
           </form>
           {#if mode === "login"}
-            <button type="button" class="ghost full" style="margin-top:0.6rem" onclick={loginWithPasskey} disabled={busy}>{@render lockIcon()}<span>Se connecter avec une passkey</span></button>
+            <button type="button" class="ghost full" style="margin-top:0.6rem" onclick={loginWithPasskey} disabled={busy}>{@render lockIcon()}<span>{t("app.loginPasskey")}</span></button>
             {#if ssoEnabled}
-              <button type="button" class="ghost full" style="margin-top:0.6rem" onclick={startSso} disabled={busy}>{@render lockIcon()}<span>Se connecter en SSO</span></button>
+              <button type="button" class="ghost full" style="margin-top:0.6rem" onclick={startSso} disabled={busy}>{@render lockIcon()}<span>{t("app.loginSso")}</span></button>
             {/if}
-            <button class="link" onclick={() => { mode = "recover"; error = null; }}>Mot de passe oublié ?</button>
+            <button class="link" onclick={() => { mode = "recover"; error = null; }}>{t("app.forgot")}</button>
           {/if}
         {/if}
 
         <div class="auth-foot">
           {@render lockIcon()}
-          <span>Chiffré de bout en bout. Votre mot de passe maître n'est jamais transmis.</span>
+          <span>{t("app.authFoot")}</span>
         </div>
       </div>
     </main>
@@ -1424,13 +1425,13 @@
       <button
         class="icon-btn nav-toggle"
         onclick={() => (menuOpen = !menuOpen)}
-        aria-label="Ouvrir la navigation"
+        aria-label={t("app.openNav")}
         aria-expanded={menuOpen}
         aria-controls="gp-sidebar"
       >{@render menuIcon()}</button>
       <span class="brand"><span class="mark">{@render logoMark()}</span><span>GhostPass</span></span>
       {#if nav === "vault"}
-        <input class="search topbar-search" placeholder="Rechercher dans le coffre" bind:value={search} />
+        <input class="search topbar-search" placeholder={t("app.searchVault")} bind:value={search} />
       {:else}
         <div class="topbar-search"></div>
       {/if}
@@ -1438,7 +1439,7 @@
         <LanguageSwitcher />
         {@render themeToggle("")}
         {#if nav === "vault"}
-          <button class="btn-primary" onclick={startAdd}>{@render plusIcon()}<span>Nouvel élément</span></button>
+          <button class="btn-primary" onclick={startAdd}>{@render plusIcon()}<span>{t("app.newItem")}</span></button>
         {/if}
       </div>
     </header>
@@ -1452,35 +1453,35 @@
         class="scrim"
         class:show={menuOpen}
         onclick={() => (menuOpen = false)}
-        aria-label="Fermer la navigation"
+        aria-label={t("app.closeNav")}
       ></button>
       <aside class="sidebar" class:open={menuOpen} id="gp-sidebar">
         <button class="nav-item" class:active={nav === "vault"} onclick={() => { nav = "vault"; menuOpen = false; }}>
-          {@render vaultIcon()}<span>Mon coffre</span>
+          {@render vaultIcon()}<span>{t("app.myVault")}</span>
         </button>
         <button class="nav-item" class:active={nav === "orgs"} onclick={() => { nav = "orgs"; menuOpen = false; }}>
-          {@render orgIcon()}<span>Organisations</span>
+          {@render orgIcon()}<span>{t("app.orgs")}</span>
         </button>
         <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; menuOpen = false; loadWebauthn(); loadActivity(); loadEmergency(); loadPasskeys(); }}>
-          {@render shieldIcon()}<span>Sécurité</span>
+          {@render shieldIcon()}<span>{t("app.security")}</span>
         </button>
         <button class="nav-item" class:active={nav === "trash"} onclick={openTrash}>
-          {@render trashIcon()}<span>Corbeille</span>
+          {@render trashIcon()}<span>{t("app.trash")}</span>
         </button>
 
         {#if nav === "vault"}
           <div class="sidebar-tree">
             <button class="tree-all" class:active={selectedFolder === null} onclick={() => selectFolder(null)}>
-              {@render vaultIcon()}<span class="tree-name">Tous les éléments</span><span class="tree-count">{items.length}</span>
+              {@render vaultIcon()}<span class="tree-name">{t("app.allItems")}</span><span class="tree-count">{items.length}</span>
             </button>
             <div class="tree-section">
-              <span class="label" style="margin:0">Dossiers</span>
-              <button class="icon-btn" title="Nouveau dossier" aria-label="Nouveau dossier" onclick={() => { newFolderOpen = !newFolderOpen; newFolderName = ""; }}>{@render folderPlusIcon()}</button>
+              <span class="label" style="margin:0">{t("app.folders")}</span>
+              <button class="icon-btn" title={t("app.newFolder")} aria-label={t("app.newFolder")} onclick={() => { newFolderOpen = !newFolderOpen; newFolderName = ""; }}>{@render folderPlusIcon()}</button>
             </div>
             {#if newFolderOpen}
               <form class="new-folder" onsubmit={(e) => { e.preventDefault(); createFolder(); }}>
-                <input bind:value={newFolderName} placeholder="Nom (ou A/B)" list="folder-list" />
-                <button type="submit" class="ghost sm">Créer</button>
+                <input bind:value={newFolderName} placeholder={t("app.folderPh")} list="folder-list" />
+                <button type="submit" class="ghost sm">{t("app.create")}</button>
               </form>
             {/if}
             <datalist id="folder-list">
@@ -1493,8 +1494,8 @@
         {/if}
 
         <div class="sidebar-foot">
-          <span class="pill pill-lock"><span class="dot"></span>Coffre déverrouillé</span>
-          <button class="ghost full" onclick={logout}>{@render lockIcon()}<span>Verrouiller</span></button>
+          <span class="pill pill-lock"><span class="dot"></span>{t("app.unlocked")}</span>
+          <button class="ghost full" onclick={logout}>{@render lockIcon()}<span>{t("app.lock")}</span></button>
         </div>
       </aside>
 
@@ -1529,33 +1530,33 @@
               <span class="avatar lg">{@render plusIcon()}</span>
               <div>
                 <h2>{editingId ? "Modifier le secret" : "Nouveau secret"}</h2>
-                <div class="sub">Chiffré sur votre appareil avant l'envoi</div>
+                <div class="sub">{t("app.encBeforeSend")}</div>
               </div>
             </div>
             <form onsubmit={addItem} style="max-width:480px">
               <div class="segmented full" style="margin-bottom:0.3rem">
-                <button type="button" class:active={itemKind === "login"} onclick={() => (itemKind = "login")}>Identifiant</button>
-                <button type="button" class:active={itemKind === "note"} onclick={() => (itemKind = "note")}>Note</button>
-                <button type="button" class:active={itemKind === "card"} onclick={() => (itemKind = "card")}>Carte</button>
+                <button type="button" class:active={itemKind === "login"} onclick={() => (itemKind = "login")}>{t("app.kindLogin")}</button>
+                <button type="button" class:active={itemKind === "note"} onclick={() => (itemKind = "note")}>{t("app.kindNote")}</button>
+                <button type="button" class:active={itemKind === "card"} onclick={() => (itemKind = "card")}>{t("app.kindCard")}</button>
               </div>
-              <label class="field"><span>Nom</span><input bind:value={itemName} placeholder="GitHub" required /></label>
+              <label class="field"><span>{t("app.name")}</span><input bind:value={itemName} placeholder="GitHub" required /></label>
               <label class="field">
-                <span>Dossier <span class="muted" style="font-weight:400">(optionnel, séparez les niveaux par /)</span></span>
-                <input bind:value={itemFolder} placeholder="Travail/Serveurs" list="folder-list" />
+                <span>{t("app.folder")} <span class="muted" style="font-weight:400">{t("app.folderHint")}</span></span>
+                <input bind:value={itemFolder} placeholder={t("app.folderExample")} list="folder-list" />
               </label>
 
               {#if itemKind === "login"}
-                <label class="field"><span>Site web</span><input bind:value={itemUrl} placeholder="github.com" inputmode="url" /></label>
-                <label class="field"><span>Identifiant</span><input bind:value={itemUsername} placeholder="kevin" /></label>
+                <label class="field"><span>{t("app.website")}</span><input bind:value={itemUrl} placeholder="github.com" inputmode="url" /></label>
+                <label class="field"><span>{t("app.kindLogin")}</span><input bind:value={itemUsername} placeholder="kevin" /></label>
                 <div class="field">
-                  <span>Mot de passe</span>
+                  <span>{t("app.password")}</span>
                   <div class="input-row">
                     <input type={showItemPassword ? "text" : "password"} bind:value={itemPassword} placeholder="••••••" autocomplete="off" autocapitalize="off" spellcheck="false" />
                     <button type="button" class="icon-btn" title={showItemPassword ? "Masquer" : "Afficher"} aria-label={showItemPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} onclick={() => (showItemPassword = !showItemPassword)}>
                       {#if showItemPassword}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
                     </button>
-                    <button type="button" class="icon-btn" title="Générer un mot de passe" aria-label="Générer" onclick={genPassword}>{@render diceIcon()}</button>
-                    <button type="button" class="icon-btn" class:copied={genOpen} title="Options du générateur" aria-label="Options" onclick={() => (genOpen = !genOpen)}>{@render slidersIcon()}</button>
+                    <button type="button" class="icon-btn" title={t("app.genPassword")} aria-label={t("app.generate")} onclick={genPassword}>{@render diceIcon()}</button>
+                    <button type="button" class="icon-btn" class:copied={genOpen} title={t("app.genOptions")} aria-label={t("app.options")} onclick={() => (genOpen = !genOpen)}>{@render slidersIcon()}</button>
                   </div>
                   {#if genOpen}
                     <div class="gen-options">
@@ -1573,22 +1574,22 @@
                   {/if}
                 </div>
                 <label class="field">
-                  <span>Clé TOTP <span class="muted" style="font-weight:400">(secret base32 ou otpauth://)</span></span>
+                  <span>Clé TOTP <span class="muted" style="font-weight:400">{t("app.totpHint")}</span></span>
                   <input bind:value={itemTotp} placeholder="JBSWY3DPEHPK3PXP" autocomplete="off" />
                 </label>
               {:else if itemKind === "note"}
-                <label class="field"><span>Contenu</span><textarea bind:value={itemNote} rows="6" placeholder="Note sécurisée…"></textarea></label>
+                <label class="field"><span>{t("app.content")}</span><textarea bind:value={itemNote} rows="6" placeholder={t("app.notePh")}></textarea></label>
               {:else}
-                <label class="field"><span>Titulaire</span><input bind:value={itemCardholder} placeholder="Kevin Allioli" /></label>
-                <label class="field"><span>Numéro</span><input bind:value={itemCardNumber} inputmode="numeric" placeholder="4111 1111 1111 1111" /></label>
+                <label class="field"><span>{t("app.cardholder")}</span><input bind:value={itemCardholder} placeholder="Kevin Allioli" /></label>
+                <label class="field"><span>{t("app.cardNumber")}</span><input bind:value={itemCardNumber} inputmode="numeric" placeholder="4111 1111 1111 1111" /></label>
                 <div class="grid-2">
-                  <label class="field"><span>Expiration (MM/AA)</span><input bind:value={itemCardExp} placeholder="12/30" /></label>
-                  <label class="field"><span>Cryptogramme</span><input bind:value={itemCardCode} inputmode="numeric" placeholder="123" /></label>
+                  <label class="field"><span>{t("app.cardExp")}</span><input bind:value={itemCardExp} placeholder="12/30" /></label>
+                  <label class="field"><span>{t("app.cardCvv")}</span><input bind:value={itemCardCode} inputmode="numeric" placeholder="123" /></label>
                 </div>
               {/if}
               <div style="display:flex;gap:0.6rem">
                 <button type="submit" disabled={busy}>{editingId ? "Enregistrer" : "Chiffrer & enregistrer"}</button>
-                <button type="button" class="ghost" onclick={() => { adding = false; editingId = null; }}>Annuler</button>
+                <button type="button" class="ghost" onclick={() => { adding = false; editingId = null; }}>{t("app.cancel")}</button>
               </div>
             </form>
           {:else if selected}
@@ -1601,17 +1602,17 @@
               </div>
               <div class="detail-actions">
                 <button class="ghost sm" onclick={shareEntry} disabled={shareBusy}>{shareBusy ? "…" : "Partager"}</button>
-                <button class="ghost sm" onclick={startEdit}>Modifier</button>
-                <button class="danger" onclick={deleteEntry} disabled={busy}>Supprimer</button>
+                <button class="ghost sm" onclick={startEdit}>{t("app.edit")}</button>
+                <button class="danger" onclick={deleteEntry} disabled={busy}>{t("app.delete")}</button>
               </div>
             </div>
 
             {#if shareLink}
               <div class="callout info" style="flex-direction:column;align-items:stretch;gap:0.4rem;margin-bottom:1rem">
-                <span>Lien de partage : <strong>1 vue, expire dans 24 h</strong>. La clé est dans l'URL (#), jamais envoyée au serveur.</span>
+                <span>{t("app.shareA")}<strong>{t("app.shareB")}</strong>{t("app.shareC")}</span>
                 <div class="codeblock-wrap">
                   <code class="codeblock">{shareLink}</code>
-                  <button class="icon-btn {copiedKey === 'share' ? 'copied' : ''}" title="Copier" aria-label="Copier le lien" onclick={() => copy(shareLink!, "share")}>
+                  <button class="icon-btn {copiedKey === 'share' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copyLink")} onclick={() => copy(shareLink!, "share")}>
                     {#if copiedKey === "share"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                   </button>
                 </div>
@@ -1620,95 +1621,95 @@
 
             {#if selected.kind === "note"}
               {#if selected.folder}
-                <div class="kv"><div class="kv-row"><span class="kv-label">Dossier</span><span class="kv-value">{selected.folder}</span></div></div>
+                <div class="kv"><div class="kv-row"><span class="kv-label">{t("app.folder")}</span><span class="kv-value">{selected.folder}</span></div></div>
               {/if}
               <div class="note-block">
-                <button class="icon-btn {copiedKey === 'd-note' ? 'copied' : ''}" title="Copier" aria-label="Copier la note" onclick={() => copy(selected!.note, "d-note")}>
+                <button class="icon-btn {copiedKey === 'd-note' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copyNote")} onclick={() => copy(selected!.note, "d-note")}>
                   {#if copiedKey === "d-note"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                 </button>
                 <pre class="note-content">{selected.note}</pre>
               </div>
             {:else if selected.kind === "card"}
               <div class="kv">
-                {#if selected.folder}<div class="kv-row"><span class="kv-label">Dossier</span><span class="kv-value">{selected.folder}</span></div>{/if}
+                {#if selected.folder}<div class="kv-row"><span class="kv-label">{t("app.folder")}</span><span class="kv-value">{selected.folder}</span></div>{/if}
                 <div class="kv-row">
-                  <span class="kv-label">Titulaire</span>
+                  <span class="kv-label">{t("app.cardholder")}</span>
                   <span class="kv-value">{selected.cardholder || "Non renseigné"}</span>
-                  {#if selected.cardholder}<span class="kv-actions"><button class="icon-btn {copiedKey === 'd-holder' ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(selected!.cardholder, "d-holder")}>{#if copiedKey === "d-holder"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button></span>{/if}
+                  {#if selected.cardholder}<span class="kv-actions"><button class="icon-btn {copiedKey === 'd-holder' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copy")} onclick={() => copy(selected!.cardholder, "d-holder")}>{#if copiedKey === "d-holder"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button></span>{/if}
                 </div>
                 <div class="kv-row">
-                  <span class="kv-label">Numéro</span>
+                  <span class="kv-label">{t("app.cardNumber")}</span>
                   <span class="kv-value" class:dots={!detailRevealed}>{detailRevealed ? selected.cardNumber : "•••• •••• •••• ••••"}</span>
                   <span class="kv-actions">
-                    <button class="icon-btn" title={detailRevealed ? "Masquer" : "Afficher"} aria-label="Afficher/masquer" onclick={() => (detailRevealed = !detailRevealed)}>{#if detailRevealed}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}</button>
-                    <button class="icon-btn {copiedKey === 'd-num' ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(selected!.cardNumber, "d-num")}>{#if copiedKey === "d-num"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button>
+                    <button class="icon-btn" title={detailRevealed ? "Masquer" : "Afficher"} aria-label={t("app.toggleReveal")} onclick={() => (detailRevealed = !detailRevealed)}>{#if detailRevealed}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}</button>
+                    <button class="icon-btn {copiedKey === 'd-num' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copy")} onclick={() => copy(selected!.cardNumber, "d-num")}>{#if copiedKey === "d-num"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button>
                   </span>
                 </div>
-                {#if selected.cardExp}<div class="kv-row"><span class="kv-label">Expiration</span><span class="kv-value">{selected.cardExp}</span></div>{/if}
+                {#if selected.cardExp}<div class="kv-row"><span class="kv-label">{t("app.expiry")}</span><span class="kv-value">{selected.cardExp}</span></div>{/if}
                 <div class="kv-row">
-                  <span class="kv-label">Cryptogramme</span>
+                  <span class="kv-label">{t("app.cardCvv")}</span>
                   <span class="kv-value" class:dots={!detailRevealed}>{detailRevealed ? selected.cardCode : "•••"}</span>
-                  <span class="kv-actions"><button class="icon-btn {copiedKey === 'd-code' ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(selected!.cardCode, "d-code")}>{#if copiedKey === "d-code"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button></span>
+                  <span class="kv-actions"><button class="icon-btn {copiedKey === 'd-code' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copy")} onclick={() => copy(selected!.cardCode, "d-code")}>{#if copiedKey === "d-code"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button></span>
                 </div>
               </div>
             {:else}
             <div class="kv">
               {#if selected.folder}
                 <div class="kv-row">
-                  <span class="kv-label">Dossier</span>
+                  <span class="kv-label">{t("app.folder")}</span>
                   <span class="kv-value">{selected.folder}</span>
                 </div>
               {/if}
               {#if selected.url}
                 <div class="kv-row">
-                  <span class="kv-label">Site web</span>
+                  <span class="kv-label">{t("app.website")}</span>
                   <a class="kv-value" href={selected.url.includes("://") ? selected.url : `https://${selected.url}`} target="_blank" rel="noopener noreferrer">{selected.url}</a>
                   <span class="kv-actions">
-                    <button class="icon-btn {copiedKey === 'd-url' ? 'copied' : ''}" title="Copier" aria-label="Copier l'URL" onclick={() => copy(selected!.url, "d-url")}>
+                    <button class="icon-btn {copiedKey === 'd-url' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copyUrl")} onclick={() => copy(selected!.url, "d-url")}>
                       {#if copiedKey === "d-url"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                     </button>
                   </span>
                 </div>
               {/if}
               <div class="kv-row">
-                <span class="kv-label">Identifiant</span>
+                <span class="kv-label">{t("app.kindLogin")}</span>
                 <span class="kv-value">{selected.username || "Non renseigné"}</span>
                 {#if selected.username}
                   <span class="kv-actions">
-                    <button class="icon-btn {copiedKey === 'd-user' ? 'copied' : ''}" title="Copier" aria-label="Copier l'identifiant" onclick={() => copy(selected!.username, "d-user")}>
+                    <button class="icon-btn {copiedKey === 'd-user' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copyUsername")} onclick={() => copy(selected!.username, "d-user")}>
                       {#if copiedKey === "d-user"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                     </button>
                   </span>
                 {/if}
               </div>
               <div class="kv-row">
-                <span class="kv-label">Mot de passe</span>
+                <span class="kv-label">{t("app.password")}</span>
                 <span class="kv-value" class:dots={!detailRevealed}>{detailRevealed ? selected.password : "••••••••••••"}</span>
                 {#if selected.password}
-                  <span class="strength strength-{strength.level}" title="Force estimée">{strength.label}</span>
+                  <span class="strength strength-{strength.level}" title={t("app.strength")}>{strength.label}</span>
                 {/if}
                 <span class="kv-actions">
-                  <button class="icon-btn" title={detailRevealed ? "Masquer" : "Afficher"} aria-label="Afficher/masquer" onclick={() => (detailRevealed = !detailRevealed)}>
+                  <button class="icon-btn" title={detailRevealed ? "Masquer" : "Afficher"} aria-label={t("app.toggleReveal")} onclick={() => (detailRevealed = !detailRevealed)}>
                     {#if detailRevealed}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
                   </button>
-                  <button class="icon-btn {copiedKey === 'd-pw' ? 'copied' : ''}" title="Copier" aria-label="Copier le mot de passe" onclick={() => copy(selected!.password, "d-pw")}>
+                  <button class="icon-btn {copiedKey === 'd-pw' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copyPassword")} onclick={() => copy(selected!.password, "d-pw")}>
                     {#if copiedKey === "d-pw"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                   </button>
                 </span>
               </div>
               {#if selected.totp}
                 <div class="kv-row">
-                  <span class="kv-label">Code à usage unique</span>
+                  <span class="kv-label">{t("app.otpCode")}</span>
                   {#if otp}
                     <span class="kv-value otp-code">{otp.code.slice(0, Math.ceil(otp.code.length / 2))} {otp.code.slice(Math.ceil(otp.code.length / 2))}</span>
                     <span class="otp-ring" style="--frac:{otp.remaining / otp.period}"><span>{otp.remaining}</span></span>
                     <span class="kv-actions">
-                      <button class="icon-btn {copiedKey === 'd-otp' ? 'copied' : ''}" title="Copier" aria-label="Copier le code" onclick={() => copy(otp!.code, "d-otp")}>
+                      <button class="icon-btn {copiedKey === 'd-otp' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copyCode")} onclick={() => copy(otp!.code, "d-otp")}>
                         {#if copiedKey === "d-otp"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                       </button>
                     </span>
                   {:else}
-                    <span class="kv-value muted">clé TOTP invalide</span>
+                    <span class="kv-value muted">{t("app.badTotp")}</span>
                   {/if}
                 </div>
               {/if}
@@ -1724,10 +1725,10 @@
                     <li>
                       <span class="mono dots">{histRevealed.has(i) ? old : "••••••••••"}</span>
                       <span class="row-actions">
-                        <button class="icon-btn" title={histRevealed.has(i) ? "Masquer" : "Afficher"} aria-label="Afficher/masquer" onclick={() => toggleHist(i)}>
+                        <button class="icon-btn" title={histRevealed.has(i) ? "Masquer" : "Afficher"} aria-label={t("app.toggleReveal")} onclick={() => toggleHist(i)}>
                           {#if histRevealed.has(i)}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
                         </button>
-                        <button class="icon-btn {copiedKey === `hist-${i}` ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(old, `hist-${i}`)}>
+                        <button class="icon-btn {copiedKey === `hist-${i}` ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copy")} onclick={() => copy(old, `hist-${i}`)}>
                           {#if copiedKey === `hist-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                         </button>
                       </span>
@@ -1742,7 +1743,7 @@
             <div class="detail-empty">
               <div>
                 {@render vaultIcon()}
-                <p class="muted" style="margin-top:.6rem">Sélectionnez un secret pour l'afficher,<br />ou créez-en un avec +.</p>
+                <p class="muted" style="margin-top:.6rem">{t("app.emptyA")}<br />{t("app.emptyB")}</p>
               </div>
             </div>
           {/if}
@@ -1754,21 +1755,21 @@
           {/if}
 
           <section class="panel">
-            <div class="panel-head"><h2>Santé des mots de passe</h2></div>
+            <div class="panel-head"><h2>{t("app.health")}</h2></div>
             {#if items.length === 0}
-              <p class="muted">Ajoutez des secrets pour voir leur analyse.</p>
+              <p class="muted">{t("app.healthEmpty")}</p>
             {:else}
               {@render healthRow("Mots de passe faibles", health.weak)}
               {@render healthRow("Mots de passe réutilisés", health.reused)}
               {@render healthRow("Sans double authentification", health.noTotp)}
               <hr class="sep" />
-              <p class="label">Fuites connues (dark web)</p>
+              <p class="label">{t("app.breaches")}</p>
               <p class="muted" style="margin:0 0 0.7rem">
                 Vérifie tes mots de passe contre Have I Been Pwned en <strong>k-anonymity</strong> :
                 seul un préfixe de hash (5 caractères) est transmis, jamais le mot de passe.
               </p>
               {#if breachDone && breached.length === 0}
-                <div class="callout success">{@render checkIcon()}<span>Aucun mot de passe trouvé dans une fuite connue.</span></div>
+                <div class="callout success">{@render checkIcon()}<span>{t("app.noBreach")}</span></div>
               {:else if breachDone}
                 {@render healthRow("Compromis dans une fuite", breached)}
               {/if}
@@ -1778,37 +1779,37 @@
             {/if}
           </section>
           <section class="panel">
-            <div class="panel-head"><h2>Double authentification</h2></div>
+            <div class="panel-head"><h2>{t("app.twoFa")}</h2></div>
             {#if mfaSetup}
-              <p class="muted">Ajoutez cette URI dans votre application d'authentification, puis saisissez un code généré :</p>
+              <p class="muted">{t("app.twoFaAdd")}</p>
               <div class="codeblock-wrap">
                 <code class="codeblock">{mfaSetup.otpauthUri}</code>
-                <button class="icon-btn {copiedKey === 'otpauth' ? 'copied' : ''}" title="Copier" aria-label="Copier l'URI" onclick={() => copy(mfaSetup!.otpauthUri, "otpauth")}>
+                <button class="icon-btn {copiedKey === 'otpauth' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copyUri")} onclick={() => copy(mfaSetup!.otpauthUri, "otpauth")}>
                   {#if copiedKey === "otpauth"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                 </button>
               </div>
               <form onsubmit={(e) => { e.preventDefault(); confirmMfa(); }} style="margin-top:0.8rem;max-width:320px">
-                <label class="field"><span>Code généré</span><input bind:value={mfaCode} inputmode="numeric" placeholder="123456" /></label>
-                <button type="submit" disabled={busy}>Activer la 2FA</button>
+                <label class="field"><span>{t("app.generatedCode")}</span><input bind:value={mfaCode} inputmode="numeric" placeholder="123456" /></label>
+                <button type="submit" disabled={busy}>{t("app.enable2fa")}</button>
               </form>
             {:else if !mfaMessage}
-              <p class="muted" style="margin:0 0 0.8rem">Renforce la connexion avec un code à usage unique (TOTP).</p>
-              <button class="ghost" onclick={startMfaSetup}>Configurer la double authentification</button>
+              <p class="muted" style="margin:0 0 0.8rem">{t("app.twoFaSub")}</p>
+              <button class="ghost" onclick={startMfaSetup}>{t("app.setup2fa")}</button>
             {/if}
           </section>
 
           <section class="panel">
-            <div class="panel-head"><h2>Passkeys (connexion sans mot de passe)</h2></div>
+            <div class="panel-head"><h2>{t("app.passkeys")}</h2></div>
             <p class="muted" style="margin:0 0 0.8rem">
               Déverrouille ton coffre avec une passkey (Face ID / Touch ID / clé FIDO2), sans mot de passe maître.
-              <span class="muted">Nécessite https ou localhost + un authentificateur compatible PRF.</span>
+              <span class="muted">{t("app.passkeysReq")}</span>
             </p>
             {#if passkeyKeys.length}
               <ul class="list">
                 {#each passkeyKeys as k (k.id)}
                   <li>
                     <div class="row-main"><span class="row-title">{k.name}</span></div>
-                    <div class="row-actions"><button class="danger" onclick={() => removePasskey(k.id)}>Supprimer</button></div>
+                    <div class="row-actions"><button class="danger" onclick={() => removePasskey(k.id)}>{t("app.delete")}</button></div>
                   </li>
                 {/each}
               </ul>
@@ -1820,17 +1821,17 @@
           </section>
 
           <section class="panel">
-            <div class="panel-head"><h2>Clés de sécurité (WebAuthn)</h2></div>
+            <div class="panel-head"><h2>{t("app.securityKeys")}</h2></div>
             <p class="muted" style="margin:0 0 0.8rem">
               Ajoutez une clé FIDO2 / YubiKey ou une passkey comme second facteur de connexion.
-              <span class="muted">Nécessite https ou localhost.</span>
+              <span class="muted">{t("app.securityKeysReq")}</span>
             </p>
             {#if webauthnKeys.length}
               <ul class="list">
                 {#each webauthnKeys as k (k.id)}
                   <li>
                     <div class="row-main"><span class="row-title">{k.name}</span></div>
-                    <div class="row-actions"><button class="danger" onclick={() => removeSecurityKey(k.id)}>Supprimer</button></div>
+                    <div class="row-actions"><button class="danger" onclick={() => removeSecurityKey(k.id)}>{t("app.delete")}</button></div>
                   </li>
                 {/each}
               </ul>
@@ -1842,12 +1843,12 @@
           </section>
 
           <section class="panel">
-            <div class="panel-head"><h2>Accès d'urgence</h2></div>
+            <div class="panel-head"><h2>{t("app.emergency")}</h2></div>
             {#if emgInfo}
               <div class="callout success" style="margin-bottom:0.8rem">{@render checkIcon()}<span>{emgInfo}</span></div>
             {/if}
 
-            <p class="label">Contacts qui pourront accéder à mon coffre</p>
+            <p class="label">{t("app.emergencyWho")}</p>
             {#if emgGrantor.length}
               <ul class="list">
                 {#each emgGrantor as e (e.id)}
@@ -1858,53 +1859,53 @@
                     </div>
                     <div class="row-actions">
                       {#if e.status === "requested"}
-                        <button class="ghost sm" onclick={() => emgAct(e.id, "approve")} disabled={emgBusy}>Approuver</button>
-                        <button class="ghost sm" onclick={() => emgAct(e.id, "reject")} disabled={emgBusy}>Refuser</button>
+                        <button class="ghost sm" onclick={() => emgAct(e.id, "approve")} disabled={emgBusy}>{t("app.approve")}</button>
+                        <button class="ghost sm" onclick={() => emgAct(e.id, "reject")} disabled={emgBusy}>{t("app.deny")}</button>
                       {/if}
-                      <button class="danger" onclick={() => emgRemove(e.id)}>Retirer</button>
+                      <button class="danger" onclick={() => emgRemove(e.id)}>{t("app.remove")}</button>
                     </div>
                   </li>
                 {/each}
               </ul>
             {:else}
-              <p class="muted">Aucun contact de confiance.</p>
+              <p class="muted">{t("app.noContacts")}</p>
             {/if}
 
             <hr class="sep" />
-            <p class="label">Inviter un contact</p>
+            <p class="label">{t("app.inviteContact")}</p>
             <form onsubmit={(ev) => { ev.preventDefault(); inviteEmergency(); }}>
               <div class="grid-2">
-                <label class="field"><span>Email du contact</span><input type="email" bind:value={emgEmail} required /></label>
-                <label class="field"><span>Délai (jours)</span><input type="number" min="1" max="90" bind:value={emgWait} /></label>
+                <label class="field"><span>{t("app.contactEmail")}</span><input type="email" bind:value={emgEmail} required /></label>
+                <label class="field"><span>{t("app.delayDays")}</span><input type="number" min="1" max="90" bind:value={emgWait} /></label>
               </div>
               <label class="field">
-                <span>Niveau d'accès</span>
+                <span>{t("app.accessLevel")}</span>
                 <select bind:value={emgRole}>
-                  <option value="view">Lecture seule</option>
-                  <option value="takeover">Lecture + takeover (reset du mot de passe)</option>
+                  <option value="view">{t("app.readOnly")}</option>
+                  <option value="takeover">{t("app.readTakeover")}</option>
                 </select>
               </label>
-              <button type="submit" disabled={emgBusy}>Inviter</button>
+              <button type="submit" disabled={emgBusy}>{t("app.invite")}</button>
             </form>
 
             {#if emgGrantee.length}
               <hr class="sep" />
-              <p class="label">Comptes auxquels je peux accéder</p>
+              <p class="label">{t("app.accountsIcanReach")}</p>
               <ul class="list">
                 {#each emgGrantee as e (e.id)}
                   <li>
                     <div class="row-main">
                       <span class="row-title">{e.contactEmail}</span>
-                      <span class="row-sub"><span class="pill pill-role">{e.role}</span><span class="pill pill-muted">{e.status}</span>{#if e.available}<span class="pill pill-lock"><span class="dot"></span>disponible</span>{/if}</span>
+                      <span class="row-sub"><span class="pill pill-role">{e.role}</span><span class="pill pill-muted">{e.status}</span>{#if e.available}<span class="pill pill-lock"><span class="dot"></span>{t("app.available")}</span>{/if}</span>
                     </div>
                     <div class="row-actions">
-                      {#if e.status === "invited"}<button class="ghost sm" onclick={() => emgAct(e.id, "accept")} disabled={emgBusy}>Accepter</button>{/if}
-                      {#if e.status === "accepted"}<button class="ghost sm" onclick={() => emgAct(e.id, "request")} disabled={emgBusy}>Demander l'accès</button>{/if}
+                      {#if e.status === "invited"}<button class="ghost sm" onclick={() => emgAct(e.id, "accept")} disabled={emgBusy}>{t("app.accept")}</button>{/if}
+                      {#if e.status === "accepted"}<button class="ghost sm" onclick={() => emgAct(e.id, "request")} disabled={emgBusy}>{t("app.requestAccess")}</button>{/if}
                       {#if e.available}
-                        <button class="ghost sm" onclick={() => emgView(e)} disabled={emgBusy}>Lire le coffre</button>
-                        {#if e.role === "takeover"}<button class="danger" onclick={() => emgTakeover(e)} disabled={emgBusy}>Reprendre</button>{/if}
+                        <button class="ghost sm" onclick={() => emgView(e)} disabled={emgBusy}>{t("app.readVault")}</button>
+                        {#if e.role === "takeover"}<button class="danger" onclick={() => emgTakeover(e)} disabled={emgBusy}>{t("app.takeover")}</button>{/if}
                       {/if}
-                      <button class="danger" onclick={() => emgRemove(e.id)}>Retirer</button>
+                      <button class="danger" onclick={() => emgRemove(e.id)}>{t("app.remove")}</button>
                     </div>
                   </li>
                 {/each}
@@ -1915,7 +1916,7 @@
               <hr class="sep" />
               <p class="label">Coffre de {emgViewFrom}, lecture d'urgence ({emgViewItems.length})</p>
               {#if emgViewItems.length === 0}
-                <p class="muted">Aucun secret.</p>
+                <p class="muted">{t("app.noSecret")}</p>
               {:else}
                 <ul class="list">
                   {#each emgViewItems as it, i (i)}
@@ -1926,10 +1927,10 @@
                       </div>
                       <span class="mono dots">{emgViewRevealed.has(i) ? it.password : "••••••••••"}</span>
                       <div class="row-actions">
-                        <button class="icon-btn" aria-label="Afficher/masquer" onclick={() => { const s = new Set(emgViewRevealed); s.has(i) ? s.delete(i) : s.add(i); emgViewRevealed = s; }}>
+                        <button class="icon-btn" aria-label={t("app.toggleReveal")} onclick={() => { const s = new Set(emgViewRevealed); s.has(i) ? s.delete(i) : s.add(i); emgViewRevealed = s; }}>
                           {#if emgViewRevealed.has(i)}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
                         </button>
-                        <button class="icon-btn {copiedKey === `emg-${i}` ? 'copied' : ''}" aria-label="Copier" onclick={() => copy(it.password, `emg-${i}`)}>
+                        <button class="icon-btn {copiedKey === `emg-${i}` ? 'copied' : ''}" aria-label={t("app.copy")} onclick={() => copy(it.password, `emg-${i}`)}>
                           {#if copiedKey === `emg-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                         </button>
                       </div>
@@ -1941,47 +1942,47 @@
           </section>
 
           <section class="panel">
-            <div class="panel-head"><h2>Kit de récupération</h2></div>
+            <div class="panel-head"><h2>{t("app.recoveryKit")}</h2></div>
             {#if recoveryKitDisplay}
               <div class="callout warn">
                 {@render alertIcon()}
-                <span>Conservez cette clé en lieu sûr : elle ne sera plus jamais affichée. Sans elle, un mot de passe maître perdu est définitivement perdu.</span>
+                <span>{t("app.recoveryWarn")}</span>
               </div>
               <div class="codeblock-wrap">
                 <code class="codeblock">{recoveryKitDisplay}</code>
-                <button class="icon-btn {copiedKey === 'recovery' ? 'copied' : ''}" title="Copier" aria-label="Copier la clé" onclick={() => copy(recoveryKitDisplay!, "recovery")}>
+                <button class="icon-btn {copiedKey === 'recovery' ? 'copied' : ''}" title={t("app.copy")} aria-label={t("app.copyKey")} onclick={() => copy(recoveryKitDisplay!, "recovery")}>
                   {#if copiedKey === "recovery"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
                 </button>
               </div>
             {:else}
-              <p class="muted" style="margin:0 0 0.8rem">Génère une clé de secours qui permet de réinitialiser le mot de passe maître, sans backdoor côté serveur.</p>
-              <button class="ghost" onclick={generateRecoveryKit} disabled={busy}>Générer un kit de récupération</button>
+              <p class="muted" style="margin:0 0 0.8rem">{t("app.recoverySub")}</p>
+              <button class="ghost" onclick={generateRecoveryKit} disabled={busy}>{t("app.genRecovery")}</button>
             {/if}
           </section>
 
           <section class="panel">
-            <div class="panel-head"><h2>Données</h2></div>
+            <div class="panel-head"><h2>{t("app.data")}</h2></div>
             {#if importMessage}
               <div class="callout success" style="margin-bottom:0.8rem">{@render checkIcon()}<span>{importMessage}</span></div>
             {/if}
             <div class="callout warn">
               {@render alertIcon()}
-              <span>L'export contient vos secrets <strong>en clair</strong> dans un fichier CSV. Conservez-le en lieu sûr et supprimez-le après usage.</span>
+              <span>{t("app.exportA")}<strong>{t("app.exportB")}</strong>{t("app.exportC")}</span>
             </div>
             <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:0.9rem">
-              <button class="ghost" onclick={exportCsv} disabled={items.length === 0}>Exporter (CSV)</button>
+              <button class="ghost" onclick={exportCsv} disabled={items.length === 0}>{t("app.exportCsv")}</button>
               <label class="ghost" style="cursor:pointer">
                 Importer (CSV)
                 <input type="file" accept=".csv,text/csv" onchange={importCsv} style="display:none" />
               </label>
             </div>
-            <p class="muted" style="margin:0.7rem 0 0">Colonnes reconnues : name, username, password, url, folder, totp (compatible exports 1Password / Bitwarden / Proton).</p>
+            <p class="muted" style="margin:0.7rem 0 0">{t("app.importCols")}</p>
           </section>
 
           <section class="panel">
-            <div class="panel-head"><h2>Connexions récentes</h2><span class="count">{activity.length}</span></div>
+            <div class="panel-head"><h2>{t("app.recentLogins")}</h2><span class="count">{activity.length}</span></div>
             {#if activity.length === 0}
-              <p class="muted">Aucune connexion enregistrée.</p>
+              <p class="muted">{t("app.noLogins")}</p>
             {:else}
               <ul class="list">
                 {#each activity as e, i (i)}
@@ -1990,7 +1991,7 @@
                       <span class="row-title">{deviceLabel(e.userAgent)}</span>
                       <span class="row-sub"><span class="mono">{e.ip}</span> · {formatDate(e.createdAt)}</span>
                     </div>
-                    {#if e.newDevice}<div class="row-actions"><span class="pill pill-warn">Nouvel appareil</span></div>{/if}
+                    {#if e.newDevice}<div class="row-actions"><span class="pill pill-warn">{t("app.newDevice")}</span></div>{/if}
                   </li>
                 {/each}
               </ul>
@@ -2000,9 +2001,9 @@
       {:else if nav === "trash"}
         <div class="single">
           <section class="panel">
-            <div class="panel-head"><h2>Corbeille</h2><span class="count">{trashItems.length}</span></div>
+            <div class="panel-head"><h2>{t("app.trash")}</h2><span class="count">{trashItems.length}</span></div>
             {#if trashItems.length === 0}
-              <div class="empty">{@render trashIcon()}<p>La corbeille est vide.</p></div>
+              <div class="empty">{@render trashIcon()}<p>{t("app.trashEmpty")}</p></div>
             {:else}
               <ul class="list">
                 {#each trashItems as item (item.id)}
@@ -2013,8 +2014,8 @@
                       {#if item.username}<span class="row-sub"><span class="mono">{item.username}</span></span>{/if}
                     </div>
                     <div class="row-actions">
-                      <button class="ghost sm" onclick={() => restoreEntry(item)} disabled={busy}>Restaurer</button>
-                      <button class="danger" onclick={() => purgeEntry(item)} disabled={busy}>Supprimer</button>
+                      <button class="ghost sm" onclick={() => restoreEntry(item)} disabled={busy}>{t("app.restore")}</button>
+                      <button class="danger" onclick={() => purgeEntry(item)} disabled={busy}>{t("app.delete")}</button>
                     </div>
                   </li>
                 {/each}
@@ -2034,6 +2035,6 @@
   <div class="toast" role="alert">
     {@render alertIcon()}
     <span>{error}</span>
-    <button onclick={() => (error = null)} aria-label="Fermer">×</button>
+    <button onclick={() => (error = null)} aria-label={t("app.close")}>×</button>
   </div>
 {/if}
