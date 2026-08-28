@@ -43,7 +43,10 @@ CSS_API = "https://fonts.googleapis.com/css2"
 FAMILIES = {
     "Hanken Grotesk": ("hanken-grotesk", "400;500;600;700"),
     "Spectral": ("spectral", "500;600;700"),
-    "IBM Plex Mono": ("ibm-plex-mono", "400;500"),
+    # Le monospace de la charte ghost-suite, commun aux huit produits
+    # (ghostsuite/tools/brand/vendor_fonts.py, décision du 2026-08-27).
+    # GhostPass servait IBM Plex Mono, seul de la suite à le faire.
+    "JetBrains Mono": ("jetbrains-mono", "400;500;700"),
 }
 SUBSETS = {"latin", "latin-ext"}
 
@@ -60,9 +63,12 @@ HEADER = """/* Polices auto-hébergées — aucune requête ne sort de l'origine
  * chargement de page : adresse IP, agent et référent du porteur partaient chez
  * un tiers avant même l'écran de déverrouillage.
  *
- * Hanken Grotesk est une POLICE VARIABLE : un seul fichier par sous-ensemble
- * couvre 100 à 900. Spectral et IBM Plex Mono sont des instances statiques,
- * un fichier par poids. Licences dans public/fonts/OFL.txt.
+ * Hanken Grotesk et JetBrains Mono sont des POLICES VARIABLES : un seul
+ * fichier par sous-ensemble couvre tout l'intervalle de graisses, et
+ * l'intervalle déclaré est lu dans la table fvar de chaque fichier — le coder
+ * en dur donnait 100 à 900 à JetBrains Mono, qui s'arrête à 800. Spectral est
+ * une instance statique, un fichier par poids. Licences dans
+ * public/fonts/OFL.txt.
  *
  * font-display: swap — sur un coffre-fort, ne rien voir vaut moins que voir
  * dans la police de repli.
@@ -140,7 +146,16 @@ def main() -> int:
 
     body = [HEADER]
     for e in faces:
-        weight = "100 900" if e["variable"] else str(e["weights"][0])
+        if e["variable"]:
+            # L'intervalle vient de la police, pas d'une constante : « 100 900 »
+            # était juste pour Hanken Grotesk et faux pour toute autre variable.
+            # Un navigateur à qui on promet un poids que le fichier n'a pas
+            # synthétise un gras, ce qui ne ressemble à aucune erreur.
+            axe = next(a for a in TTFont(FONT_DIR / e["name"])["fvar"].axes
+                       if a.axisTag == "wght")
+            weight = f"{int(axe.minValue)} {int(axe.maxValue)}"
+        else:
+            weight = str(e["weights"][0])
         body.append(f"""
 @font-face {{
   font-family: "{e['family']}";
