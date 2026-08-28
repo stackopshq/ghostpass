@@ -2,7 +2,11 @@
 //! par les mêmes fonctions publiques, avec les mêmes chaînes JSON. Ils tournent sur
 //! n'importe quelle machine, donc le cœur mobile reste prouvable sans Mac.
 
-use ghostpass_crypto_ffi::{default_kdf_params, master_password_hash, recover, register, Account};
+use base64::engine::general_purpose::STANDARD as STANDARD_TEST;
+use base64::Engine as _;
+use ghostpass_crypto_ffi::{
+    default_kdf_params, master_password_hash, open_send, recover, register, seal_send, Account,
+};
 use serde_json::Value;
 
 const EMAIL: &str = "clara@stackops.ch";
@@ -300,4 +304,44 @@ fn l_ancien_mot_de_passe_du_donneur_ne_vaut_plus_apres_la_reprise() {
     let euk = reset["encrypted_user_key"].as_str().unwrap().to_string();
 
     assert!(Account::unlock(PASSWORD.into(), EMAIL.into(), kdf, euk, epk).is_err());
+}
+
+// ─── Partage ponctuel ───
+
+#[test]
+fn un_secret_partage_se_rouvre_avec_sa_cle() {
+    let scelle = seal_send("le code du coffre : 4821".into()).unwrap();
+    let relu = open_send(scelle.key, scelle.nonce, scelle.ciphertext).unwrap();
+    assert_eq!(relu, "le code du coffre : 4821");
+}
+
+/// Sans la clé, le serveur ne détient qu'un chiffre. C'est tout l'intérêt du fragment
+/// d'URL : il ne quitte jamais le navigateur.
+#[test]
+fn une_mauvaise_cle_n_ouvre_rien() {
+    let scelle = seal_send("secret".into()).unwrap();
+    let autre = seal_send("autre".into()).unwrap();
+    assert!(open_send(autre.key, scelle.nonce, scelle.ciphertext).is_err());
+}
+
+/// Deux partages du même texte ne doivent pas produire le même chiffre : sinon un serveur
+/// curieux saurait que deux personnes se sont transmis la même chose.
+#[test]
+fn deux_partages_du_meme_texte_different() {
+    let a = seal_send("identique".into()).unwrap();
+    let b = seal_send("identique".into()).unwrap();
+    assert_ne!(a.ciphertext, b.ciphertext);
+    assert_ne!(a.nonce, b.nonce);
+    assert_ne!(a.key, b.key);
+}
+
+/// Un chiffre modifié doit être refusé, pas déchiffré de travers : c'est ce que garantit
+/// l'authentification de l'AEAD.
+#[test]
+fn un_chiffre_altere_est_refuse() {
+    let scelle = seal_send("secret".into()).unwrap();
+    let mut octets = STANDARD_TEST.decode(&scelle.ciphertext).unwrap();
+    octets[0] ^= 0xFF;
+    let altere = STANDARD_TEST.encode(octets);
+    assert!(open_send(scelle.key, scelle.nonce, altere).is_err());
 }

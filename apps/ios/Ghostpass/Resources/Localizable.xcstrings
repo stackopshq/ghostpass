@@ -78,6 +78,16 @@
         }
       }
     },
+    "%d consultation(s)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d view(s)"
+          }
+        }
+      }
+    },
     "%d jours": {
       "localizations": {
         "en": {
@@ -148,12 +158,52 @@
         }
       }
     },
+    "1 heure": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 hour"
+          }
+        }
+      }
+    },
+    "1 jour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 day"
+          }
+        }
+      }
+    },
+    "1 semaine": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 week"
+          }
+        }
+      }
+    },
     "123456": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "123456"
+          }
+        }
+      }
+    },
+    "30 jours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 days"
           }
         }
       }
@@ -888,6 +938,16 @@
         }
       }
     },
+    "Consultations": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Views"
+          }
+        }
+      }
+    },
     "Contact accepté": {
       "localizations": {
         "en": {
@@ -924,6 +984,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copy code"
+          }
+        }
+      }
+    },
+    "Copier le lien": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the link"
           }
         }
       }
@@ -1004,6 +1074,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Create"
+          }
+        }
+      }
+    },
+    "Créer le lien": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create the link"
           }
         }
       }
@@ -1104,6 +1184,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Twelve characters minimum. It will replace the owner's."
+          }
+        }
+      }
+    },
+    "Durée de vie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifetime"
           }
         }
       }
@@ -1408,6 +1498,16 @@
         }
       }
     },
+    "Il est chiffré sur cet appareil. Le serveur n'en reçoit que le chiffre, jamais la clé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It is encrypted on this device. The server only receives the ciphertext, never the key."
+          }
+        }
+      }
+    },
     "Ils pourront ouvrir votre coffre si vous ne le pouvez plus. Vous gardez la main tant que vous répondez.": {
       "localizations": {
         "en": {
@@ -1568,6 +1668,16 @@
         }
       }
     },
+    "La clé se trouve après le # du lien. Elle n'a jamais été envoyée au serveur, et ne peut plus être retrouvée si vous perdez le lien.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The key sits after the # in the link. It was never sent to the server, and cannot be recovered if you lose the link."
+          }
+        }
+      }
+    },
     "La personne": {
       "localizations": {
         "en": {
@@ -1708,6 +1818,26 @@
         }
       }
     },
+    "Le lien": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link"
+          }
+        }
+      }
+    },
+    "Le lien s'efface une fois ce nombre atteint. Une seule consultation vous dit aussi que quelqu'un d'autre l'a lu avant vous.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link is erased once this count is reached. A single view also tells you if someone else read it before you."
+          }
+        }
+      }
+    },
     "Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste intact : rien n'est perdu, rien n'est déchiffré côté serveur.": {
       "localizations": {
         "en": {
@@ -1734,6 +1864,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "A second factor protects even a known password."
+          }
+        }
+      }
+    },
+    "Le secret": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The secret"
           }
         }
       }
@@ -1814,6 +1954,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deleted items land here."
+          }
+        }
+      }
+    },
+    "Lien copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link copied"
           }
         }
       }
@@ -2258,6 +2408,26 @@
         }
       }
     },
+    "Partager un secret": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share a secret"
+          }
+        }
+      }
+    },
+    "Partager…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share…"
+          }
+        }
+      }
+    },
     "Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d'applications.": {
       "localizations": {
         "en": {
@@ -2364,6 +2534,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "When the contact requests access, you are notified and can deny it during this window. Once it elapses without an answer from you, access opens — which is exactly what makes it useful the day you can no longer answer."
+          }
+        }
+      }
+    },
+    "Quiconque l'a peut lire le secret. Envoyez-le par un canal différent de celui où vous avez annoncé son existence.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anyone holding it can read the secret. Send it through a different channel than the one where you announced it."
           }
         }
       }

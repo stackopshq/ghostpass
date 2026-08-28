@@ -1468,3 +1468,74 @@ final class ImportDepuisConcurrentsTests: XCTestCase {
             item.notes, "Première ligne, avec virgule\nDeuxième ligne avec \"guillemets\"")
     }
 }
+
+// ─── Partage ponctuel ─────────────────────────────────────────────────────────
+
+/// Le partage est la seule fonctionnalité où un secret quitte le coffre. Ce qui compte
+/// n'est donc pas qu'il marche, mais qu'il ne livre rien de plus qu'on ne l'a voulu.
+final class PartagePonctuelTests: XCTestCase {
+    func testUnSecretSeRouvreAvecSaCle() throws {
+        let scelle = try sealSend(plaintext: "le code du coffre : 4821")
+        XCTAssertEqual(
+            try openSend(key: scelle.key, nonce: scelle.nonce, ciphertext: scelle.ciphertext),
+            "le code du coffre : 4821")
+    }
+
+    /// Sans la clé, le serveur ne détient qu'un chiffre — c'est tout l'objet du fragment
+    /// d'URL, que les navigateurs n'envoient jamais.
+    func testUneAutreCleNOuvreRien() throws {
+        let scelle = try sealSend(plaintext: "secret")
+        let autre = try sealSend(plaintext: "autre")
+        XCTAssertThrowsError(
+            try openSend(key: autre.key, nonce: scelle.nonce, ciphertext: scelle.ciphertext))
+    }
+
+    /// Deux partages du même texte ne doivent pas se ressembler : sinon un serveur curieux
+    /// saurait que deux personnes se sont transmis la même chose.
+    func testDeuxPartagesDuMemeTexteDifferent() throws {
+        let a = try sealSend(plaintext: "identique")
+        let b = try sealSend(plaintext: "identique")
+        XCTAssertNotEqual(a.ciphertext, b.ciphertext)
+        XCTAssertNotEqual(a.key, b.key)
+    }
+
+    /// Le lien que produit l'application place la clé **après le `#`**. C'est ce qui la
+    /// garde hors du serveur : le chemin et la requête lui sont transmis, pas le fragment.
+    /// S'en remettre à l'habitude serait risqué — d'où ce test.
+    func testLaCleVitDansLeFragmentEtNullePartAilleurs() throws {
+        let scelle = try sealSend(plaintext: "secret")
+        let fragment =
+            scelle.key
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        var composants = try XCTUnwrap(URLComponents(string: "https://ghostpass.example.ch"))
+        composants.path = "/s/abc123"
+        composants.fragment = fragment
+
+        let url = try XCTUnwrap(composants.url)
+        XCTAssertEqual(url.fragment, fragment)
+        XCTAssertFalse(url.path.contains(fragment), "la clé ne doit pas être dans le chemin")
+        XCTAssertNil(url.query, "la clé ne doit pas être dans la requête")
+    }
+
+    /// Le fragment doit survivre à l'aller-retour vers l'encodage d'URL : un `+` ou un `/`
+    /// mal traduit donnerait une clé fausse, et un partage illisible sans qu'on sache
+    /// pourquoi.
+    func testLaConversionDuFragmentEstReversible() throws {
+        for _ in 0..<50 {
+            let scelle = try sealSend(plaintext: "secret")
+            let fragment =
+                scelle.key
+                .replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: "")
+            var rendu =
+                fragment
+                .replacingOccurrences(of: "-", with: "+")
+                .replacingOccurrences(of: "_", with: "/")
+            rendu += String(repeating: "=", count: (4 - rendu.count % 4) % 4)
+            XCTAssertEqual(rendu, scelle.key)
+        }
+    }
+}

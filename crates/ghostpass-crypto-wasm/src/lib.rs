@@ -10,7 +10,9 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use crypto_box::PublicKey;
-use ghostpass_crypto::{keys, org, sharing, vault, EncString, EncryptedItem, KdfParams, VaultItem};
+use ghostpass_crypto::{
+    keys, org, sharing, symmetric, vault, EncString, EncryptedItem, KdfParams, VaultItem,
+};
 use wasm_bindgen::prelude::*;
 use zeroize::Zeroizing;
 
@@ -211,6 +213,39 @@ impl Account {
         let account_keys = keys::unlock_with_passkey(&prf, &wrapped, &epk).map_err(js_err)?;
         Ok(Account { keys: account_keys })
     }
+}
+
+// ─── Partage ponctuel ──────────────────────────────────────────────────────────
+
+/// Scelle un secret sous une clé neuve. Renvoie un JSON
+/// `{ ciphertext, nonce, key }` — la clé voyage dans le fragment du lien, que les
+/// navigateurs n'envoient jamais au serveur.
+///
+/// Le chiffrement se fait ici, dans le cœur, et non plus en AES-GCM via WebCrypto : c'était
+/// le seul endroit du produit où de la crypto vivait hors du cœur, et c'est ce qui
+/// empêchait l'application iOS d'ouvrir un partage créé depuis le navigateur.
+#[wasm_bindgen]
+pub fn seal_send(plaintext: &str) -> Result<String, JsError> {
+    let key = org::generate_org_key();
+    let enc = symmetric::encrypt(&key, plaintext.as_bytes()).map_err(js_err)?;
+    serde_json::to_string(&serde_json::json!({
+        "ciphertext": STANDARD.encode(&enc.ciphertext),
+        "nonce": STANDARD.encode(&enc.nonce),
+        "key": STANDARD.encode(key),
+    }))
+    .map_err(js_err)
+}
+
+/// Ouvre un secret partagé.
+#[wasm_bindgen]
+pub fn open_send(key: &str, nonce: &str, ciphertext: &str) -> Result<String, JsError> {
+    let key = decode_key_32(key)?;
+    let enc = EncString::new(
+        STANDARD.decode(nonce).map_err(js_err)?,
+        STANDARD.decode(ciphertext).map_err(js_err)?,
+    );
+    let clair = symmetric::decrypt(&key, &enc).map_err(js_err)?;
+    String::from_utf8(clair).map_err(|_| JsError::new("le secret partagé n'est pas du texte"))
 }
 
 // ─── Partage / organisations ───────────────────────────────────────────────

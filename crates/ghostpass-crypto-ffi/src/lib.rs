@@ -13,7 +13,9 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use crypto_box::PublicKey;
-use ghostpass_crypto::{keys, org, sharing, vault, EncString, EncryptedItem, KdfParams, VaultItem};
+use ghostpass_crypto::{
+    keys, org, sharing, symmetric, vault, EncString, EncryptedItem, KdfParams, VaultItem,
+};
 use std::sync::Arc;
 use zeroize::Zeroizing;
 
@@ -223,6 +225,49 @@ impl Account {
         let wrapped = keys::wrap_user_key_for_passkey(&self.keys.user_key, &prf).map_err(err)?;
         Ok(wrapped.to_string())
     }
+}
+
+// ─── Partage ponctuel ──────────────────────────────────────────────────────────
+
+/// Un secret scellé pour être partagé une fois : le serveur stocke `ciphertext` et `nonce`,
+/// la clé voyage à part — dans le fragment d'une URL, que les navigateurs n'envoient jamais.
+/// Le serveur héberge donc quelque chose qu'il ne peut pas lire.
+#[derive(uniffi::Record)]
+pub struct SealedSend {
+    pub ciphertext: String,
+    pub nonce: String,
+    /// À placer dans le fragment du lien, jamais dans son chemin ni sa requête.
+    pub key: String,
+}
+
+/// Scelle un secret sous une clé neuve, tirée pour ce seul partage.
+#[uniffi::export]
+pub fn seal_send(plaintext: String) -> Result<SealedSend, GhostpassError> {
+    // `generate_org_key` tire 256 bits du générateur du cœur : c'est la seule fonction
+    // publique qui le fasse, son nom vient de son premier usage. Le tirage reste en Rust —
+    // Swift n'a pas à produire de matière cryptographique.
+    let key = org::generate_org_key();
+    let enc = symmetric::encrypt(&key, plaintext.as_bytes()).map_err(err)?;
+    Ok(SealedSend {
+        ciphertext: STANDARD.encode(&enc.ciphertext),
+        nonce: STANDARD.encode(&enc.nonce),
+        key: STANDARD.encode(key),
+    })
+}
+
+/// Ouvre un secret partagé. Rend une erreur si la clé ne correspond pas — il n'y a pas de
+/// demi-succès : l'authentification du chiffre l'interdit.
+#[uniffi::export]
+pub fn open_send(key: String, nonce: String, ciphertext: String) -> Result<String, GhostpassError> {
+    let key = decode_key_32(&key)?;
+    let enc = EncString::new(
+        STANDARD.decode(nonce).map_err(err)?,
+        STANDARD.decode(ciphertext).map_err(err)?,
+    );
+    let clair = symmetric::decrypt(&key, &enc).map_err(err)?;
+    String::from_utf8(clair).map_err(|_| GhostpassError::Crypto {
+        message: "le secret partagé n'est pas du texte".to_string(),
+    })
 }
 
 // ─── Partage / organisations ───────────────────────────────────────────────

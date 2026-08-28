@@ -1197,6 +1197,40 @@ final class VaultStore: ObservableObject {
         }
     }
 
+
+    // ─── Partage ponctuel ───
+
+    /// Scelle un secret et le dépose. Rend le lien complet, clé comprise — celle-ci vit
+    /// dans le fragment, que les navigateurs n'envoient jamais au serveur. C'est la raison
+    /// pour laquelle le lien lui-même ne doit pas transiter par un canal qu'on ne
+    /// contrôle pas : quiconque l'a peut lire une fois.
+    func partager(_ secret: String, heures: Int, consultations: Int) async -> URL? {
+        guard let api, let token,
+            let serveur = URL(string: SharedStore.load()?.serverURL ?? "")
+        else { return nil }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let scelle = try sealSend(plaintext: secret)
+            let id = try await api.createSend(
+                token: token, ciphertext: scelle.ciphertext, iv: scelle.nonce,
+                expiresInHours: heures, maxViews: consultations)
+            var composants = URLComponents(url: serveur, resolvingAgainstBaseURL: false)
+            composants?.path = "/s/\(id)"
+            // Le base64 du cœur est standard ; un fragment d'URL réclame la variante sans
+            // caractères à échapper. Le web fait exactement la même conversion.
+            composants?.fragment =
+                scelle.key
+                .replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: "")
+            return composants?.url
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
 }
 
 /// Coffre d'un donneur, ouvert le temps d'une consultation. `coffre` reste un objet opaque du

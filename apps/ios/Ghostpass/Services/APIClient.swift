@@ -237,6 +237,25 @@ struct RotationBody: Encodable {
     }
 }
 
+// ─── Partage ponctuel ───
+
+private struct SendBody: Encodable {
+    let ciphertext: String
+    let iv: String
+    let expiresInHours: Int
+    let maxViews: Int
+}
+
+private struct SendCreatedDTO: Decodable {
+    let id: String
+}
+
+/// Ce que le serveur rend d'un partage : le chiffre et son nonce, jamais la clé.
+struct SendContentDTO: Decodable {
+    let ciphertext: String
+    let iv: String
+}
+
 /// Client HTTP du serveur GhostPass. Il ne voit jamais que du chiffré : le clair
 /// n'existe que de l'autre côté de la frontière FFI.
 struct APIClient {
@@ -596,6 +615,29 @@ struct APIClient {
     ) async throws {
         _ = try await request(
             "DELETE", "api/orgs/\(org)/groups/\(group)/collections/\(collection)", token: token)
+    }
+
+
+    // ─── Partage ponctuel ───
+
+    /// Dépose un secret déjà chiffré. Le serveur ne reçoit ni la clé ni le texte : il
+    /// héberge un chiffre, en compte les consultations, et l'efface à échéance.
+    func createSend(
+        token: String, ciphertext: String, iv: String, expiresInHours: Int, maxViews: Int
+    ) async throws -> String {
+        let body = try JSONEncoder().encode(
+            SendBody(
+                ciphertext: ciphertext, iv: iv, expiresInHours: expiresInHours,
+                maxViews: maxViews))
+        return try decode(
+            SendCreatedDTO.self, from: await request("POST", "api/send", token: token, body: body)
+        ).id
+    }
+
+    /// Récupère un partage. Route publique — pas de jeton : celui qui a le lien y accède,
+    /// et c'est la clé du fragment qui protège le contenu.
+    func fetchSend(id: String) async throws -> SendContentDTO {
+        try decode(SendContentDTO.self, from: await request("GET", "api/send/\(id)"))
     }
 
 }
