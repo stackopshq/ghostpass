@@ -167,3 +167,30 @@ test("désactiver la 2FA (mot de passe + code) rétablit le login sans code", as
   assert.equal(login.statusCode, 200);
   await app.close();
 });
+
+test("l'état de la 2FA est lisible, et distingue activée d'inactive", async () => {
+  // Un compte neuf : rien n'est activé.
+  const app = buildApp(openDatabase(":memory:"));
+  const inscription = await app.inject({
+    method: "POST",
+    url: "/api/auth/register",
+    payload: { ...REG, email: "clara@stackops.ch" },
+  });
+  const token = inscription.json().token as string;
+
+  const avant = await app.inject({ method: "GET", url: "/api/mfa", headers: auth(token) });
+  assert.equal(avant.statusCode, 200);
+  assert.equal(avant.json().enabled, false);
+
+  // Le même compte, 2FA activée : l'état doit suivre. C'est ce qui permet à un client de
+  // ne pas proposer « activer » — et donc de ne pas réinitialiser un secret en place.
+  const { app: avecMfa, token: tokenMfa } = await appWithMfa();
+  const apres = await avecMfa.inject({ method: "GET", url: "/api/mfa", headers: auth(tokenMfa) });
+  assert.equal(apres.json().enabled, true);
+});
+
+test("l'état de la 2FA n'est pas public", async () => {
+  const app = buildApp(openDatabase(":memory:"));
+  const sansJeton = await app.inject({ method: "GET", url: "/api/mfa" });
+  assert.equal(sansJeton.statusCode, 401);
+});
