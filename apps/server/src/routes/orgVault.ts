@@ -8,6 +8,7 @@ import {
   groupCollectionAccess,
   orgItems,
   orgMembers,
+  users,
 } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { newId } from "../services/security.js";
@@ -257,6 +258,52 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
         permission: parsed.data.permission,
       });
       return reply.code(201).send({ ok: true });
+    },
+  );
+
+  // Qui a acces a cette collection. L'octroi existait sans son miroir : on
+  // pouvait donner un acces et n'avoir ensuite aucun moyen de dire a qui, ni
+  // de le reprendre. Meme garde que l'octroi -- qui peut donner peut voir et
+  // reprendre.
+  app.get<{ Params: { id: string; cid: string } }>(
+    "/api/orgs/:id/collections/:cid/access",
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
+      if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
+      if (!await collectionInOrg(db, req.params.id, req.params.cid)) {
+        return reply.code(404).send({ error: "collection introuvable" });
+      }
+      if (await permissionFor(db, req.params.cid, member) !== "manage") {
+        return reply.code(403).send({ error: "gestion de la collection requise" });
+      }
+      const rows = await collectionAccess.listForCollection(db, req.params.cid);
+      const access = await Promise.all(
+        rows.map(async (r) => {
+          const u = await users.findById(db, r.user_id);
+          return { userId: r.user_id, email: u?.email ?? null, permission: r.permission };
+        }),
+      );
+      return { access };
+    },
+  );
+
+  // Retire un acces explicite. Idempotent : 204 meme si la ligne n'existait
+  // pas, pour qu'un second clic ne ressemble pas a une panne.
+  app.delete<{ Params: { id: string; cid: string; userId: string } }>(
+    "/api/orgs/:id/collections/:cid/access/:userId",
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
+      if (!member) return reply.code(403).send({ error: "non membre de l'organisation" });
+      if (!await collectionInOrg(db, req.params.id, req.params.cid)) {
+        return reply.code(404).send({ error: "collection introuvable" });
+      }
+      if (await permissionFor(db, req.params.cid, member) !== "manage") {
+        return reply.code(403).send({ error: "gestion de la collection requise" });
+      }
+      await collectionAccess.revoke(db, req.params.cid, req.params.userId);
+      return reply.code(204).send();
     },
   );
 }
