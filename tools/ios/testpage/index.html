@@ -21,5 +21,18 @@
            style="display:block;width:90%;padding:12px;margin:8px 0;font-size:16px">
     <button type="button" style="padding:12px">Entrer</button>
   </form>
+
+  <h2 style="margin-top:32px">Code de vérification</h2>
+  <form>
+    <!--
+      `one-time-code` est ce qui distingue ce champ du précédent aux yeux d'iOS : c'est
+      lui qui déclenche la proposition de code plutôt que celle d'un mot de passe, et
+      donc le seul moyen d'exercer `prepareOneTimeCodeCredentialList`.
+    -->
+    <input id="otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code"
+           placeholder="Code à 6 chiffres"
+           style="display:block;width:90%;padding:12px;margin:8px 0;font-size:16px">
+    <button type="button" style="padding:12px">Valider</button>
+  </form>
 </body>
 </html>

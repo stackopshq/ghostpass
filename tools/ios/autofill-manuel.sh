@@ -135,8 +135,16 @@ $(printf "\033[1m")Tout est prêt. Dans le simulateur :$(printf "\033[0m")
   4. Safari > 127.0.0.1:$PAGE > toucher le champ « Identifiant ».
      Le clavier doit proposer « Mots de passe », puis GhostPass, puis remplir.
 
+  5. Codes à usage unique (iOS 18 ou plus) :
+     Réglages > Général > Saisie automatique > « Configurer les codes dans »
+     doit maintenant proposer GhostPass. Le cocher, puis dans Safari toucher
+     le champ « Code à 6 chiffres » de la même page.
+     Le compte « Site local » porte un secret TOTP ; son code doit apparaître
+     dans la liste et remplir le champ.
+
 $(printf "\033[1m")Ce qu'on vérifie$(printf "\033[0m") : que l'extension s'ouvre, déchiffre le coffre local,
-propose l'identifiant du site, et que le formulaire finit rempli.
+propose l'identifiant du site, que le formulaire finit rempli — et, pour les codes,
+que GhostPass figure bien sous « Configurer les codes dans » et livre un code valide.
 
 Ctrl-C pour tout couper.
 INSTRUCTIONS

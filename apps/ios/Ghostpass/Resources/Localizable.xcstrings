@@ -632,6 +632,38 @@
         }
       }
     },
+    "Aucun code": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun code"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No codes"
+          }
+        }
+      }
+    },
+    "Aucun compte du coffre n'a de code à usage unique.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun compte du coffre n'a de code à usage unique."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No account in your vault has a one-time code."
+          }
+        }
+      }
+    },
     "Aucun dossier": {
       "localizations": {
         "en": {
@@ -648,6 +680,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "No logins"
+          }
+        }
+      }
+    },
+    "Aucun identifiant dans la copie locale du coffre.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun identifiant dans la copie locale du coffre."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No logins in the local copy of your vault."
           }
         }
       }
@@ -732,6 +780,22 @@
         }
       }
     },
+    "Autres comptes": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres comptes"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other accounts"
+          }
+        }
+      }
+    },
     "Autres identifiants": {
       "localizations": {
         "en": {
@@ -778,6 +842,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "This vault is empty."
+          }
+        }
+      }
+    },
+    "Ce compte n'a pas de code à usage unique exploitable.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce compte n'a pas de code à usage unique exploitable."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account has no usable one-time code."
           }
         }
       }
@@ -3121,6 +3201,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Replaced"
+          }
+        }
+      }
+    },
+    "Remplir depuis votre coffre GhostPass": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplir depuis votre coffre GhostPass"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fill from your GhostPass vault"
           }
         }
       }

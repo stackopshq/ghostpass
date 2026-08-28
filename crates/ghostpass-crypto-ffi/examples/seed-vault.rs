@@ -62,9 +62,14 @@ fn main() {
 
     // Un identifiant pointant sur la page de test locale : c'est lui qui doit remonter
     // en tête quand le remplissage est demandé depuis cette page.
+    //
+    // Il porte un secret TOTP — le vecteur de test usuel de la RFC 4648 — parce que sans
+    // lui rien ne permet d'exercer le remplissage des codes à usage unique : l'extension
+    // ne publie d'identité de code que pour les entrées dont le secret est exploitable,
+    // et un coffre sans TOTP rendrait ce chemin intestable.
     let local = vault_item(
         "Site local",
-        r#"{"kind":"Login","data":{"username":"clara","password":"local-s3cret","uris":["http://127.0.0.1:8099"],"totp":null,"password_history":[]}}"#,
+        r#"{"kind":"Login","data":{"username":"clara","password":"local-s3cret","uris":["http://127.0.0.1:8099"],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
     );
 
     let out = serde_json::json!({

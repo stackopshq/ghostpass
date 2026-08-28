@@ -112,16 +112,16 @@ struct AutoFillView: View {
             }
             if !store.others.isEmpty {
                 section(
-                    store.suggested.isEmpty ? Text("Coffre") : Text("Autres identifiants"),
+                    store.suggested.isEmpty ? Text("Coffre") : Text(titreDesAutres),
                     store.others)
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .overlay {
-            if store.entries.isEmpty {
+            if store.suggested.isEmpty && store.others.isEmpty {
                 ContentUnavailableView {
-                    Label("Aucun identifiant", systemImage: "key")
+                    Label(titreDuVide, systemImage: iconeDuMode)
                 } description: {
                     if let message = store.errorMessage {
                         Text(verbatim: message)
@@ -152,7 +152,7 @@ struct AutoFillView: View {
             store.pick(entry)
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: "person.badge.key")
+                Image(systemName: iconeDuMode)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.gpAccentText)
                     .frame(width: 34, height: 34)
@@ -167,6 +167,14 @@ struct AutoFillView: View {
                     }
                 }
                 Spacer(minLength: 8)
+                // Le code est montré autant qu'il est rempli : si le champ visé refuse la
+                // saisie automatique, il reste recopiable à la main plutôt que perdu.
+                if store.demande == .codeAUsageUnique, let code = store.code(pour: entry) {
+                    Text(verbatim: code)
+                        .font(.system(.body, design: .monospaced, weight: .semibold))
+                        .foregroundStyle(Color.gpAccentText)
+                        .monospacedDigit()
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 11)
@@ -176,6 +184,20 @@ struct AutoFillView: View {
                     .strokeBorder(Color.gpBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
+    }
+
+    // ─── Ce que le mode change dans les mots ───
+
+    private var iconeDuMode: String {
+        store.demande == .codeAUsageUnique ? "123.rectangle" : "person.badge.key"
+    }
+
+    private var titreDesAutres: LocalizedStringKey {
+        store.demande == .codeAUsageUnique ? "Autres comptes" : "Autres identifiants"
+    }
+
+    private var titreDuVide: LocalizedStringKey {
+        store.demande == .codeAUsageUnique ? "Aucun code" : "Aucun identifiant"
     }
 
     private func invite(_ texte: LocalizedStringKey) -> Text {

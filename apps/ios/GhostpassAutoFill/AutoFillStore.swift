@@ -18,7 +18,19 @@ final class AutoFillStore: ObservableObject {
     /// Identifiant précis attendu, quand iOS en désigne un.
     var requested: String?
 
+    /// Ce qu'iOS est venu chercher. Le même écran sert les deux, mais pas avec le même
+    /// contenu : en mode code, une entrée sans secret TOTP n'a rien à offrir et ne doit
+    /// pas figurer dans la liste.
+    enum Demande {
+        case motDePasse
+        case codeAUsageUnique
+    }
+    var demande: Demande = .motDePasse
+
     var onPick: ((String, String) -> Void)?
+    /// Rendre un code calculé. Distinct de `onPick` : iOS attend un autre type de réponse,
+    /// et se tromper de méthode de complétion laisse la requête sans réponse.
+    var onPickCode: ((String) -> Void)?
     var onCancel: (() -> Void)?
 
     var account: String { SharedStore.load()?.email ?? "" }
@@ -30,8 +42,25 @@ final class AutoFillStore: ObservableObject {
 
     /// Les entrées dont une adresse correspond au domaine demandé, d'abord ; le reste
     /// ensuite, car un identifiant peut servir sur un domaine que le coffre ignore.
-    var suggested: [VaultEntry] { entries.filter { matches($0) } }
-    var others: [VaultEntry] { entries.filter { !matches($0) } }
+    var suggested: [VaultEntry] { proposables.filter { matches($0) } }
+    var others: [VaultEntry] { proposables.filter { !matches($0) } }
+
+    /// Les entrées qui peuvent répondre à la demande en cours.
+    private var proposables: [VaultEntry] {
+        switch demande {
+        case .motDePasse: return entries
+        case .codeAUsageUnique: return entries.filter { code(pour: $0) != nil }
+        }
+    }
+
+    /// Le code de cette entrée, s'il est calculable. Sert deux fois : à filtrer la liste,
+    /// et à l'afficher — un code visible se recopie à la main si le remplissage échoue.
+    func code(pour entry: VaultEntry) -> String? {
+        guard let secret = entry.login?.totp, let config = Totp.parse(secret) else {
+            return nil
+        }
+        return Totp.code(for: config)?.code
+    }
 
     private func matches(_ entry: VaultEntry) -> Bool {
         SiteMatching.matches(entry.item, domains: domains)
@@ -60,7 +89,7 @@ final class AutoFillStore: ObservableObject {
     func unlockWithBiometrics() async {
         guard canUseBiometrics else { return }
         isBusy = true
-        let prompt = "Remplir depuis votre coffre GhostPass"
+        let prompt = tr("Remplir depuis votre coffre GhostPass")
         let password = await Task.detached {
             Keychain.getBiometric(Keychain.Key.masterPassword, prompt: prompt)
         }.value
@@ -84,7 +113,14 @@ final class AutoFillStore: ObservableObject {
         }
         .sorted { $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending }
         isUnlocked = true
-        errorMessage = entries.isEmpty ? "Aucun identifiant dans la copie locale du coffre." : nil
+        if !entries.isEmpty && proposables.isEmpty && demande == .codeAUsageUnique {
+            // Le coffre n'est pas vide : il ne contient simplement aucun code. Le dire,
+            // plutôt que de laisser croire que le déchiffrement a échoué.
+            errorMessage = tr("Aucun compte du coffre n'a de code à usage unique.")
+        } else {
+            errorMessage =
+                entries.isEmpty ? tr("Aucun identifiant dans la copie locale du coffre.") : nil
+        }
 
         // iOS peut désigner l'entrée attendue : la fournir sans rien demander de plus.
         if let requested, let entry = entries.first(where: { $0.id == requested }) {
@@ -93,8 +129,19 @@ final class AutoFillStore: ObservableObject {
     }
 
     func pick(_ entry: VaultEntry) {
-        guard let login = entry.login else { return }
-        onPick?(login.username, login.password)
+        switch demande {
+        case .motDePasse:
+            guard let login = entry.login else { return }
+            onPick?(login.username, login.password)
+        case .codeAUsageUnique:
+            // Recalculé au moment du choix, jamais réutilisé depuis l'affichage : entre les
+            // deux, la fenêtre de trente secondes a pu tourner et le code livré serait périmé.
+            guard let code = code(pour: entry) else {
+                errorMessage = tr("Ce compte n'a pas de code à usage unique exploitable.")
+                return
+            }
+            onPickCode?(code)
+        }
     }
 
     func cancel() { onCancel?() }

@@ -28,11 +28,33 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
                 code: ASExtensionError.userInteractionRequired.rawValue))
     }
 
+    /// Appelé quand l'utilisateur ouvre GhostPass depuis le champ d'un code à usage
+    /// unique. Le pendant de `prepareCredentialList`, pour l'autre nature de secret.
+    @available(iOS 18.0, *)
+    override func prepareOneTimeCodeCredentialList(
+        for serviceIdentifiers: [ASCredentialServiceIdentifier]
+    ) {
+        store.demande = .codeAUsageUnique
+        store.domains = serviceIdentifiers.map(\.identifier)
+        present()
+    }
+
     /// Appelé après le refus précédent : cette fois l'interface a le droit de s'afficher.
+    ///
+    /// Le type de l'identité désigne la nature de la demande — c'est la seule indication
+    /// qu'iOS donne ici, et s'y tromper ferait répondre un mot de passe à un champ de code.
     override func prepareInterfaceToProvideCredential(
         for credentialRequest: any ASCredentialRequest
     ) {
         if let identity = credentialRequest.credentialIdentity as? ASPasswordCredentialIdentity {
+            store.demande = .motDePasse
+            store.requested = identity.recordIdentifier
+            store.domains = [identity.serviceIdentifier.identifier]
+        } else if #available(iOS 18.0, *),
+            let identity = credentialRequest.credentialIdentity
+                as? ASOneTimeCodeCredentialIdentity
+        {
+            store.demande = .codeAUsageUnique
             store.requested = identity.recordIdentifier
             store.domains = [identity.serviceIdentifier.identifier]
         }
@@ -50,6 +72,14 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             self?.extensionContext.completeRequest(
                 withSelectedCredential: ASPasswordCredential(
                     user: identifiant, password: motDePasse))
+        }
+        store.onPickCode = { [weak self] code in
+            // Une autre méthode de complétion, pas la même que pour un mot de passe :
+            // `completeRequest(withSelectedCredential:)` laisserait la requête sans réponse.
+            if #available(iOS 18.0, *) {
+                self?.extensionContext.completeOneTimeCodeRequest(
+                    using: ASOneTimeCodeCredential(code: code))
+            }
         }
 
         // L'extension est un autre processus : elle relit les mêmes préférences pour ne

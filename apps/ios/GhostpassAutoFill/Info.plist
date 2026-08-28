@@ -37,11 +37,22 @@
 		<string>$(PRODUCT_MODULE_NAME).CredentialProviderViewController</string>
 		<key>NSExtensionAttributes</key>
 		<dict>
-			<!-- L'extension fournit des mots de passe, pas des passkeys : l'annoncer évite
-			     qu'iOS la propose là où elle n'aurait rien à offrir. -->
+			<!-- L'extension fournit des mots de passe et des codes à usage unique, pas de
+			     passkeys : l'annoncer évite qu'iOS la propose là où elle n'aurait rien à
+			     offrir.
+
+			     `ProvidesOneTimeCodes` est ce qui fait apparaître GhostPass sous
+			     « Réglages > Apps > Mots de passe > Configurer les codes dans ». Sans cette
+			     clé, l'extension reste invisible à cet endroit même si elle sait calculer
+			     les codes — le coffre les détenait, iOS ne le savait pas.
+
+			     La clé est ignorée sous iOS 17, où l'API des codes n'existe pas ; le code
+			     qui la sert est conditionné en conséquence. -->
 			<key>ASCredentialProviderExtensionCapabilities</key>
 			<dict>
 				<key>ProvidesPasswords</key>
+				<true/>
+				<key>ProvidesOneTimeCodes</key>
 				<true/>
 			</dict>
 		</dict>
