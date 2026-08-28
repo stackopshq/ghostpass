@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Account } from "ghostpass-crypto-wasm";
   import { api } from "./lib/api.js";
+  import { generateOtp, parseOtp } from "./lib/totp.js";
   import {
     createOrg,
     decryptOrgItem,
@@ -35,7 +36,10 @@
   let members = $state<Member[]>([]);
   let collections = $state<Collection[]>([]);
   let selectedCollection = $state<Collection | null>(null);
-  let items = $state<DecryptedItem[]>([]);
+  // L'identifiant serveur etait jete au dechiffrement. Sans lui aucune mise a
+  // jour n'etait possible : c'est la raison de fond pour laquelle un mot de
+  // passe d'organisation ne pouvait plus etre corrige une fois enregistre.
+  let items = $state<Array<DecryptedItem & { itemId: string }>>([]);
   let pane = $state<"members" | "collection" | null>(null);
 
   // Formulaires.
@@ -47,6 +51,12 @@
   let itemUsername = $state("");
   let itemPassword = $state("");
   let itemUrl = $state("");
+  let itemNotes = $state("");
+  let itemTotp = $state("");
+  // Un champ de mot de passe se saisit masque ; l'oeil sert a le montrer.
+  let showItemPassword = $state(false);
+  // Non nul : le formulaire met a jour cet element au lieu d'en creer un.
+  let editingId = $state<string | null>(null);
   let grantUserId = $state("");
   let grantPermission = $state("read");
 
@@ -59,6 +69,10 @@
 
   // État d'affichage (UI uniquement).
   let revealed = $state<Set<number>>(new Set());
+  // Qui a un acces explicite a la collection ouverte.
+  let access = $state<Array<{ userId: string; email: string | null; permission: string }>>([]);
+  // Codes TOTP du moment, indexes par rang de ligne.
+  let otpCodes = $state<Record<number, string>>({});
   let copiedKey = $state<string | null>(null);
 
   function fail(err: unknown) {
@@ -261,7 +275,13 @@
     revealed = new Set();
     try {
       const dtos = (await api.listCollectionItems(token, current.orgId, c.id)).items;
-      items = dtos.map((d) => decryptOrgItem(currentOrg!, d.encryptedKey, d.encryptedData));
+      // On conserve `d.id` : c'est lui qui rend la modification possible.
+      items = dtos.map((d) => ({
+        ...decryptOrgItem(currentOrg!, d.encryptedKey, d.encryptedData),
+        itemId: d.id,
+      }));
+      resetItemForm();
+      await loadAccess();
     } catch (err) {
       fail(err);
     }
@@ -277,6 +297,9 @@
         permission: grantPermission,
       });
       grantUserId = "";
+      // Relire tout de suite : un octroi qui ne se voit pas est indiscernable
+      // d'un octroi qui a echoue.
+      await loadAccess();
     } catch (err) {
       fail(err);
     } finally {
@@ -284,6 +307,33 @@
     }
   }
 
+  /// Vide le formulaire et sort du mode modification.
+  function resetItemForm() {
+    itemName = "";
+    itemUsername = "";
+    itemPassword = "";
+    itemUrl = "";
+    itemNotes = "";
+    itemTotp = "";
+    showItemPassword = false;
+    editingId = null;
+  }
+
+  /// Charge le formulaire depuis un element existant pour le corriger.
+  function startEditItem(item: DecryptedItem & { itemId: string }) {
+    editingId = item.itemId;
+    itemName = item.name;
+    itemUsername = item.username;
+    itemPassword = item.password;
+    itemUrl = item.url;
+    itemNotes = item.note ?? "";
+    itemTotp = item.totp ?? "";
+    showItemPassword = false;
+  }
+
+  /// Cree, ou met a jour si le formulaire est en mode modification. Les champs
+  /// `notes` et `totp` etaient absents de l'appel : encryptOrgLogin les portait
+  /// deja, mais personne ne les lui passait.
   async function addItem(e: SubmitEvent) {
     e.preventDefault();
     if (!current || !currentOrg || !selectedCollection) return;
@@ -294,13 +344,39 @@
         username: itemUsername,
         password: itemPassword,
         url: itemUrl,
+        notes: itemNotes,
+        totp: itemTotp,
       });
-      await api.createOrgItem(token, current.orgId, selectedCollection.id, enc);
-      itemName = "";
-      itemUsername = "";
-      itemPassword = "";
-      itemUrl = "";
+      if (editingId) {
+        await api.updateOrgItem(token, current.orgId, selectedCollection.id, editingId, enc);
+      } else {
+        await api.createOrgItem(token, current.orgId, selectedCollection.id, enc);
+      }
       await selectCollection(selectedCollection);
+    } catch (err) {
+      fail(err);
+    } finally {
+      busy = false;
+    }
+  }
+
+  /// Qui a acces a la collection ouverte. Reserve aux administrateurs cote
+  /// serveur : on avale le refus plutot que d'alarmer un membre simple.
+  async function loadAccess() {
+    if (!current || !selectedCollection) return;
+    try {
+      access = (await api.listCollectionAccess(token, current.orgId, selectedCollection.id)).access;
+    } catch {
+      access = [];
+    }
+  }
+
+  async function revokeAccess(userId: string) {
+    if (!current || !selectedCollection) return;
+    busy = true;
+    try {
+      await api.revokeCollectionAccess(token, current.orgId, selectedCollection.id, userId);
+      await loadAccess();
     } catch (err) {
       fail(err);
     } finally {
@@ -356,7 +432,7 @@
   </span>
 {/snippet}
 
-{#snippet secretRow(item: DecryptedItem, i: number)}
+{#snippet secretRow(item: DecryptedItem & { itemId: string }, i: number)}
   <li>
     {@render itemAvatar(item.name, item.url)}
     <div class="row-main">
@@ -368,7 +444,25 @@
             {#if copiedKey === `user-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
           </button>
         {:else}<span class="muted">Sans identifiant</span>{/if}
+        <!-- L'URL etait saisie et chiffree, mais jamais rendue : elle ne
+             servait qu'a choisir le favicon, donc renseigner le champ n'avait
+             aucun effet visible. -->
+        {#if item.url}
+          <span class="muted">·</span>
+          <a href={item.url.startsWith("http") ? item.url : `https://${item.url}`}
+             target="_blank" rel="noopener noreferrer" class="muted">{item.url}</a>
+        {/if}
+        {#if otpCodes[i]}
+          <span class="muted">·</span>
+          <span class="mono">{otpCodes[i]}</span>
+          <button class="icon-btn {copiedKey === `otp-${i}` ? 'copied' : ''}" title="Copier le code TOTP" aria-label="Copier le code TOTP" onclick={() => copy(otpCodes[i], `otp-${i}`)}>
+            {#if copiedKey === `otp-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
+          </button>
+        {/if}
       </span>
+      {#if item.note}
+        <span class="row-sub muted" style="white-space:pre-wrap">{item.note}</span>
+      {/if}
     </div>
     <span class="mono dots">{revealed.has(i) ? item.password : "••••••••••"}</span>
     <div class="row-actions">
@@ -378,6 +472,7 @@
       <button class="icon-btn {copiedKey === `pw-${i}` ? 'copied' : ''}" title="Copier le mot de passe" aria-label="Copier le mot de passe" onclick={() => copy(item.password, `pw-${i}`)}>
         {#if copiedKey === `pw-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
       </button>
+      <button class="ghost sm" onclick={() => startEditItem(item)}>Modifier</button>
     </div>
   </li>
 {/snippet}
@@ -552,15 +647,51 @@
         </ul>
       {/if}
       <hr class="sep" />
-      <p class="label">Partager un secret</p>
+      <p class="label">{editingId ? "Modifier le secret" : "Partager un secret"}</p>
       <form onsubmit={addItem} style="max-width:480px">
         <label class="field"><span>Nom</span><input bind:value={itemName} placeholder="DB prod" required /></label>
         <label class="field"><span>Site web</span><input bind:value={itemUrl} placeholder="exemple.com" inputmode="url" /></label>
         <div class="grid-2">
           <label class="field"><span>Identifiant</span><input bind:value={itemUsername} placeholder="svc" /></label>
-          <label class="field"><span>Mot de passe</span><input type="password" bind:value={itemPassword} placeholder="••••••" /></label>
+          <div class="field">
+            <span>Mot de passe</span>
+            <div class="input-row">
+              <input
+                type={showItemPassword ? "text" : "password"}
+                bind:value={itemPassword}
+                placeholder="••••••"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+              />
+              <button
+                type="button"
+                class="icon-btn"
+                title={showItemPassword ? "Masquer" : "Afficher"}
+                aria-label={showItemPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                onclick={() => (showItemPassword = !showItemPassword)}
+              >
+                {#if showItemPassword}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
+              </button>
+            </div>
+          </div>
         </div>
-        <button type="submit" disabled={busy}>Chiffrer & partager</button>
+        <label class="field">
+          <span>Clé TOTP <span class="muted" style="font-weight:400">(secret base32 ou otpauth://)</span></span>
+          <input bind:value={itemTotp} placeholder="JBSWY3DPEHPK3PXP" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Notes</span>
+          <textarea bind:value={itemNotes} rows="3" placeholder="Contexte, procédure, contact…"></textarea>
+        </label>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <button type="submit" disabled={busy}>
+            {editingId ? "Enregistrer les modifications" : "Chiffrer & partager"}
+          </button>
+          {#if editingId}
+            <button type="button" class="ghost sm" onclick={resetItemForm}>Annuler</button>
+          {/if}
+        </div>
       </form>
 
       {#if current.role === "admin"}
@@ -586,6 +717,30 @@
           </div>
           <button type="submit" disabled={busy}>Accorder l'accès</button>
         </form>
+
+        {#if access.length === 0}
+          <p class="muted" style="margin-top:0.6rem">
+            Personne n'a d'accès explicite à cette collection.
+          </p>
+        {:else}
+          <p class="label" style="margin-top:0.9rem">Qui a accès aujourd'hui</p>
+          <ul class="list">
+            {#each access as a (a.userId)}
+              <li>
+                <span class="avatar">{(a.email ?? "?").charAt(0).toUpperCase()}</span>
+                <div class="row-main">
+                  <span class="row-title">{a.email ?? "Adresse inconnue"}</span>
+                  <span class="row-sub"><span class="pill pill-role">{a.permission}</span></span>
+                </div>
+                <div class="row-actions">
+                  <button class="danger" onclick={() => revokeAccess(a.userId)} disabled={busy}>
+                    Révoquer
+                  </button>
+                </div>
+              </li>
+            {/each}
+          </ul>
+        {/if}
       {/if}
     {:else}
       <div class="detail-empty">
