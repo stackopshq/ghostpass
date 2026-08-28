@@ -419,7 +419,9 @@
                     L'organisation, ses membres et ses groupes disparaissent. Ni GhostPass ni
                     personne ne peut les rétablir : le serveur ne détient que des blobs chiffrés.
                     La suppression est refusée tant qu'il reste des collections, des secrets
-                    partagés ou d'autres membres actifs.
+                    partagés ou d'autres membres actifs. Le coffre partagé créé avec
+                    l'organisation ne compte pas tant qu'il est vide : sinon aucune organisation
+                    neuve ne serait supprimable.
                   </p>
                   <label class="field">
                     <span>Saisissez le nom de l'organisation pour confirmer</span>

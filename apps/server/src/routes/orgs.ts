@@ -4,6 +4,10 @@ import type { DB } from "../db/database.js";
 import { collections, organizations, orgItems, orgMembers, users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
+import {
+  createDefaultCollection,
+  grantDefaultCollectionAccess,
+} from "../services/defaultCollection.js";
 import { newId, normalizeEmail } from "../services/security.js";
 
 const createOrgSchema = z.object({
@@ -46,7 +50,9 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
     },
   );
 
-  // Crée une organisation ; le créateur en devient l'admin (membre actif).
+  // Crée une organisation ; le créateur en devient l'admin (membre actif), et l'organisation
+  // reçoit sa collection par défaut : sans elle, elle naîtrait sans nulle part où ranger un
+  // secret partagé, ceux-ci s'attachant à une collection et non à l'organisation.
   app.post("/api/orgs", { preHandler: authenticate }, async (req, reply) => {
     const parsed = createOrgSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
@@ -62,6 +68,8 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
       encryptedOrgKey: parsed.data.encryptedOrgKey,
       sealedByUserId: me.id,
     });
+    // Le créateur est admin : il voit toutes les collections de son org, aucun octroi à écrire.
+    await createDefaultCollection(db, orgId);
     return reply.code(201).send({ orgId });
   });
 
@@ -102,6 +110,13 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
         status: "invited",
         encryptedOrgKey: parsed.data.encryptedOrgKey,
         sealedByUserId: req.currentUser!.id,
+      });
+      // Inviter, c'est donner l'accès au coffre commun : en lecture pour un rôle `readonly`,
+      // en écriture sinon. Les autres collections restent fermées, c'est leur raison d'être.
+      await grantDefaultCollectionAccess(db, {
+        orgId: req.params.id,
+        userId: invitee.id,
+        role: parsed.data.role,
       });
       await recordAudit(db, req, "org.member.add", {
         userId: req.currentUser!.id,
@@ -241,17 +256,23 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
         orgMembers.listByOrg(db, req.params.id),
       ]);
 
-      if (orgCollections.length > 0 || items.length > 0) {
+      // La collection par défaut ne compte pas : le produit la pose lui-même à la création, et
+      // la faire barrer la route rendrait toute organisation neuve indestructible. Les secrets
+      // qu'elle contiendrait, eux, sont comptés comme les autres (`items` porte toute l'org),
+      // donc un coffre partagé non vide continue de refuser la suppression.
+      const userCollections = orgCollections.filter((c) => c.is_default !== 1);
+
+      if (userCollections.length > 0 || items.length > 0) {
         const parts: string[] = [];
-        if (orgCollections.length > 0) {
-          parts.push(plural(orgCollections.length, "collection", "collections"));
+        if (userCollections.length > 0) {
+          parts.push(plural(userCollections.length, "collection", "collections"));
         }
         if (items.length > 0) {
           parts.push(plural(items.length, "secret partagé", "secrets partagés"));
         }
         return reply.code(409).send({
           error: `L'organisation contient encore ${parts.join(" et ")}. Videz-la avant de la supprimer.`,
-          collections: orgCollections.length,
+          collections: userCollections.length,
           items: items.length,
         });
       }
