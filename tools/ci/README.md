@@ -98,6 +98,14 @@ dur, crée un simulateur et écrit dans `apps/ios/TestResults/` : deux exécutio
 concurrentes se marchent dessus, et celle qui perd la course meurt sur « Le port 3111 est
 déjà occupé » — un échec qui ne dit rien du code.
 
+**La contention compte autant que le conflit de port.** Les tests d'interface attendent des
+animations, des transitions de clavier, des apparitions de cellules : ils échouent sur des
+délais dépassés dès que la machine est saturée. Un `xcodebuild build`, un `wasm-pack`, un
+`cargo test` lancés pendant qu'un job tourne suffisent — les tests tombent alors sur « champ
+hors d'atteinte » ou « serveur injoignable », deux messages qui accusent le code d'une
+famine de processeur. Vérifier qu'aucune suite ne tourne avant de *lancer une suite* ne
+suffit donc pas : il faut le vérifier avant toute opération lourde.
+
 **Et ne jamais tuer par motif ce qui décrit aussi les processus du runner.** Le harnais
 lance son backend par `npm start`, c'est-à-dire `tsx src/index.ts`. Un `pkill -f "tsx
 src/index.ts"` destiné à son propre serveur de test emporte donc aussi celui du job en
