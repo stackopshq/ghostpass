@@ -153,6 +153,19 @@ PRODUITS = {
 # ─── Rendu ────────────────────────────────────────────────────────────────────
 
 
+def boite_englobante(trace: str) -> tuple[float, float, float, float]:
+    """Les extrêmes d'un tracé, en (gauche, haut, droite, bas).
+
+    Les nombres se lisent par paires : les points de contrôle des courbes restent dans
+    l'enveloppe du tracé, ce qui suffit à cadrer.
+    """
+    import re
+
+    nombres = [float(n) for n in re.findall(r"-?\d+\.?\d*", trace)]
+    xs, ys = nombres[0::2], nombres[1::2]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
 def indente(tracé: str, marge: str = "    ") -> str:
     """Aligne un bloc de tracés sur l'indentation du SVG produit."""
     return "\n".join(marge + l.strip() for l in tracé.strip().split("\n"))
@@ -201,8 +214,21 @@ def icone(produit: Produit) -> str:
             f"{produit.nom} n'a pas de glyphe plein : la variante icône ne peut pas être"
             " produite sans lui, et l'approcher donnerait un logo faux."
         )
-    marge = (HAUTEUR - LARGEUR) / 2
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="{-marge} 0 {HAUTEUR} {HAUTEUR}" fill="none">
+    # Le cadre est calculé, pas supposé.
+    #
+    # La variante icône retire les trois tirets détachés, qui descendaient jusqu'à y=537.
+    # Les enlever sans recadrer laissait le vide qu'ils occupaient : la silhouette s'arrête
+    # à y=496, d'où 9 unités de marge en haut contre 52 en bas — un fantôme visiblement
+    # haut dans son icône, une fois posé sur un écran d'accueil.
+    #
+    # On centre donc sur la boîte englobante de ce qui reste réellement dessiné.
+    # Le cadre garde la taille d'origine — 548, soit la hauteur de la charte : c'est elle
+    # qui donne au sujet sa respiration habituelle. Seul son centre bouge.
+    gauche, haut, droite, bas = boite_englobante(SILHOUETTE)
+    cote = float(HAUTEUR)
+    x = (gauche + droite) / 2 - cote / 2
+    y = (haut + bas) / 2 - cote / 2
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="{x:.1f} {y:.1f} {cote:.1f} {cote:.1f}" fill="none">
   <!-- Charte ghost-suite, variante icône — produit par tools/brand/ghost_suite.py.
        La silhouette pleine, sans les tirets détachés : ils deviendraient des salissures
        à 16 px, alors que la silhouette, elle, tient. Ne pas retoucher : régénérer. -->
