@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Account } from "ghostpass-crypto-wasm";
   import { api } from "./lib/api.js";
+  import { t } from "./lib/i18n.svelte.js";
   import { generateOtp, parseOtp } from "./lib/totp.js";
   import {
     createOrg,
@@ -440,10 +441,10 @@
       <span class="row-sub">
         {#if item.username}
           <span class="mono">{item.username}</span>
-          <button class="icon-btn {copiedKey === `user-${i}` ? 'copied' : ''}" title="Copier l'identifiant" aria-label="Copier l'identifiant" onclick={() => copy(item.username, `user-${i}`)}>
+          <button class="icon-btn {copiedKey === `user-${i}` ? 'copied' : ''}" title={t("org.copyUsername")} aria-label={t("org.copyUsername")} onclick={() => copy(item.username, `user-${i}`)}>
             {#if copiedKey === `user-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
           </button>
-        {:else}<span class="muted">Sans identifiant</span>{/if}
+        {:else}<span class="muted">{t("org.noUsername")}</span>{/if}
         <!-- L'URL etait saisie et chiffree, mais jamais rendue : elle ne
              servait qu'a choisir le favicon, donc renseigner le champ n'avait
              aucun effet visible. -->
@@ -455,7 +456,7 @@
         {#if otpCodes[i]}
           <span class="muted">·</span>
           <span class="mono">{otpCodes[i]}</span>
-          <button class="icon-btn {copiedKey === `otp-${i}` ? 'copied' : ''}" title="Copier le code TOTP" aria-label="Copier le code TOTP" onclick={() => copy(otpCodes[i], `otp-${i}`)}>
+          <button class="icon-btn {copiedKey === `otp-${i}` ? 'copied' : ''}" title={t("org.copyTotp")} aria-label={t("org.copyTotp")} onclick={() => copy(otpCodes[i], `otp-${i}`)}>
             {#if copiedKey === `otp-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
           </button>
         {/if}
@@ -466,13 +467,13 @@
     </div>
     <span class="mono dots">{revealed.has(i) ? item.password : "••••••••••"}</span>
     <div class="row-actions">
-      <button class="icon-btn" title={revealed.has(i) ? "Masquer" : "Afficher"} aria-label="Afficher/masquer" onclick={() => toggleReveal(i)}>
+      <button class="icon-btn" title={revealed.has(i) ? t("org.hide") : t("org.show")} aria-label={t("org.toggleReveal")} onclick={() => toggleReveal(i)}>
         {#if revealed.has(i)}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
       </button>
-      <button class="icon-btn {copiedKey === `pw-${i}` ? 'copied' : ''}" title="Copier le mot de passe" aria-label="Copier le mot de passe" onclick={() => copy(item.password, `pw-${i}`)}>
+      <button class="icon-btn {copiedKey === `pw-${i}` ? 'copied' : ''}" title={t("org.copyPassword")} aria-label={t("org.copyPassword")} onclick={() => copy(item.password, `pw-${i}`)}>
         {#if copiedKey === `pw-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
       </button>
-      <button class="ghost sm" onclick={() => startEditItem(item)}>Modifier</button>
+      <button class="ghost sm" onclick={() => startEditItem(item)}>{t("org.edit")}</button>
     </div>
   </li>
 {/snippet}
@@ -480,11 +481,11 @@
 {#if !current}
   <div class="single">
     <section class="panel">
-      <div class="panel-head"><h2>Mes organisations</h2><span class="count">{orgs.length}</span></div>
+      <div class="panel-head"><h2>{t("org.myOrgs")}</h2><span class="count">{orgs.length}</span></div>
       {#if orgs.length === 0}
         <div class="empty">
           {@render orgIcon()}
-          <p>Aucune organisation pour l'instant.<br />Créez-en une pour partager des secrets en équipe.</p>
+          <p>{t("org.noOrgs")}<br />{t("org.noOrgsSub")}</p>
         </div>
       {:else}
         <ul class="list">
@@ -497,11 +498,11 @@
               </div>
               <div class="row-actions">
                 {#if o.status === "invited"}
-                  <button class="ghost sm" onclick={() => accept(o)} disabled={busy}>Accepter l'invitation</button>
+                  <button class="ghost sm" onclick={() => accept(o)} disabled={busy}>{t("org.accept")}</button>
                 {:else}
-                  <button class="ghost sm" onclick={() => open(o)} disabled={busy}>Ouvrir</button>
+                  <button class="ghost sm" onclick={() => open(o)} disabled={busy}>{t("org.open")}</button>
                   {#if o.role === "admin"}
-                    <button class="danger" onclick={() => askDelete(o)} disabled={busy}>Supprimer</button>
+                    <button class="danger" onclick={() => askDelete(o)} disabled={busy}>{t("org.delete")}</button>
                   {/if}
                 {/if}
               </div>
@@ -519,7 +520,7 @@
                     neuve ne serait supprimable.
                   </p>
                   <label class="field">
-                    <span>Saisissez le nom de l'organisation pour confirmer</span>
+                    <span>{t("org.confirmName")}</span>
                     <input bind:value={deleteConfirmName} placeholder={o.name} autocomplete="off" />
                   </label>
                   <!-- Le refus du serveur s'affiche ici, sous le bouton qui l'a provoqué, et
@@ -532,7 +533,7 @@
                     <button type="submit" class="danger" disabled={busy || deleteConfirmName.trim() !== o.name}>
                       {busy ? "Suppression…" : "Supprimer définitivement"}
                     </button>
-                    <button type="button" class="ghost sm" onclick={cancelDelete} disabled={busy}>Annuler</button>
+                    <button type="button" class="ghost sm" onclick={cancelDelete} disabled={busy}>{t("org.cancel")}</button>
                   </div>
                   {#if deleteConfirmName.trim() !== o.name}
                     <p class="hint">Le bouton s'active quand le nom saisi correspond exactement à « {o.name} ».</p>
@@ -546,9 +547,9 @@
     </section>
 
     <section class="panel">
-      <div class="panel-head"><h2>Créer une organisation</h2></div>
+      <div class="panel-head"><h2>{t("org.createOrg")}</h2></div>
       <form onsubmit={submitCreateOrg}>
-        <label class="field"><span>Nom de l'organisation</span><input bind:value={newOrgName} placeholder="StackOps Team" required /></label>
+        <label class="field"><span>{t("org.orgName")}</span><input bind:value={newOrgName} placeholder={t("org.orgNamePh")} required /></label>
         <!-- Le bouton porte lui-même la raison de son inaction. `required` seul
              laissait le navigateur bloquer l'envoi en affichant une bulle
              native : sur Safari iOS elle est fugace, et le geste ressemblait
@@ -558,7 +559,7 @@
           {busy ? "Création…" : "Créer l'organisation"}
         </button>
         {#if !newOrgName.trim()}
-          <p class="hint">Donnez un nom à l'organisation pour pouvoir la créer.</p>
+          <p class="hint">{t("org.nameRequired")}</p>
         {/if}
       </form>
     </section>
@@ -572,12 +573,12 @@
       {#if current.role === "admin"}
         <button class="entry" class:active={pane === "members"} onclick={openMembers}>
           <span class="avatar">{@render membersIcon()}</span>
-          <span class="entry-main"><span class="entry-title">Membres</span><span class="entry-sub">{members.length} membre{members.length > 1 ? "s" : ""}</span></span>
+          <span class="entry-main"><span class="entry-title">{t("org.members")}</span><span class="entry-sub">{t("org.membersCount", { n: members.length })}</span></span>
         </button>
       {/if}
-      <div class="section-label label">Collections</div>
+      <div class="section-label label">{t("org.collections")}</div>
       {#if collections.length === 0}
-        <p class="muted" style="padding:0 1rem 0.6rem">Aucune collection.</p>
+        <p class="muted" style="padding:0 1rem 0.6rem">{t("org.noCollections")}</p>
       {:else}
         {#each collections as c}
           <button class="entry" class:active={pane === "collection" && selectedCollection?.id === c.id} onclick={() => selectCollection(c)}>
@@ -590,11 +591,11 @@
     <div style="padding:0.8rem;border-top:1px solid var(--line)">
       <form onsubmit={addCollection}>
         <div style="display:flex;gap:0.5rem">
-          <input bind:value={newCollName} placeholder="Nouvelle collection" required />
-          <button type="submit" class="icon-add" title="Créer la collection" aria-label="Créer la collection" disabled={busy} style="border:none">+</button>
+          <input bind:value={newCollName} placeholder={t("org.newCollection")} required />
+          <button type="submit" class="icon-add" title={t("org.createCollection")} aria-label={t("org.createCollection")} disabled={busy} style="border:none">+</button>
         </div>
       </form>
-      <button class="link" style="align-self:flex-start;margin-top:0.6rem" onclick={back}>← Mes organisations</button>
+      <button class="link" style="align-self:flex-start;margin-top:0.6rem" onclick={back}>{t("org.backToOrgs")}</button>
     </div>
   </div>
 
@@ -602,43 +603,43 @@
     {#if pane === "members" && current.role === "admin"}
       <div class="detail-head">
         <span class="avatar lg">{@render membersIcon()}</span>
-        <div><h2>Membres</h2><div class="sub">{members.length} membre{members.length > 1 ? "s" : ""} · accès à l'Org Key</div></div>
+        <div><h2>{t("org.members")}</h2><div class="sub">{t("org.membersCount", { n: members.length })}</div></div>
       </div>
       <ul class="list">
         {#each members as m}
           <li>
             <span class="avatar">{(m.email ?? "?").charAt(0).toUpperCase()}</span>
             <div class="row-main">
-              <span class="row-title">{m.email ?? "Adresse inconnue"}</span>
+              <span class="row-title">{m.email ?? t("org.unknownEmail")}</span>
               <span class="row-sub"><span class="pill pill-role">{m.role}</span><span class="pill pill-muted">{m.status}</span></span>
             </div>
-            <div class="row-actions"><button class="danger" onclick={() => revoke(m)} disabled={busy}>Révoquer</button></div>
+            <div class="row-actions"><button class="danger" onclick={() => revoke(m)} disabled={busy}>{t("org.revoke")}</button></div>
           </li>
         {/each}
       </ul>
       <hr class="sep" />
-      <p class="label">Inviter un membre</p>
+      <p class="label">{t("org.inviteTitle")}</p>
       <form onsubmit={invite} style="max-width:480px">
         <div class="grid-2">
-          <label class="field"><span>Email</span><input type="email" bind:value={inviteEmail} required /></label>
+          <label class="field"><span>{t("org.email")}</span><input type="email" bind:value={inviteEmail} required /></label>
           <label class="field">
-            <span>Rôle</span>
+            <span>{t("org.role")}</span>
             <select bind:value={inviteRole}>
-              <option value="member">Membre</option>
-              <option value="readonly">Lecture seule</option>
-              <option value="admin">Admin</option>
+              <option value="member">{t("org.roleMember")}</option>
+              <option value="readonly">{t("org.roleReadonly")}</option>
+              <option value="admin">{t("org.roleAdmin")}</option>
             </select>
           </label>
         </div>
-        <button type="submit" disabled={busy}>Inviter</button>
+        <button type="submit" disabled={busy}>{t("org.invite")}</button>
       </form>
     {:else if pane === "collection" && selectedCollection}
       <div class="detail-head">
         <span class="avatar lg">{@render folderIcon()}</span>
-        <div><h2>{selectedCollection.name}</h2><div class="sub">{items.length} secret{items.length > 1 ? "s" : ""} partagé{items.length > 1 ? "s" : ""}</div></div>
+        <div><h2>{selectedCollection.name}</h2><div class="sub">{t("org.secretsCount", { n: items.length })}</div></div>
       </div>
       {#if items.length === 0}
-        <div class="empty">{@render folderIcon()}<p>Aucun secret partagé dans cette collection.</p></div>
+        <div class="empty">{@render folderIcon()}<p>{t("org.emptyCollection")}</p></div>
       {:else}
         <ul class="list">
           {#each items as item, i (i)}
@@ -647,14 +648,14 @@
         </ul>
       {/if}
       <hr class="sep" />
-      <p class="label">{editingId ? "Modifier le secret" : "Partager un secret"}</p>
+      <p class="label">{editingId ? t("org.editSecret") : t("org.addSecret")}</p>
       <form onsubmit={addItem} style="max-width:480px">
-        <label class="field"><span>Nom</span><input bind:value={itemName} placeholder="DB prod" required /></label>
-        <label class="field"><span>Site web</span><input bind:value={itemUrl} placeholder="exemple.com" inputmode="url" /></label>
+        <label class="field"><span>{t("org.name")}</span><input bind:value={itemName} placeholder={t("org.namePh")} required /></label>
+        <label class="field"><span>{t("org.website")}</span><input bind:value={itemUrl} placeholder={t("org.websitePh")} inputmode="url" /></label>
         <div class="grid-2">
-          <label class="field"><span>Identifiant</span><input bind:value={itemUsername} placeholder="svc" /></label>
+          <label class="field"><span>{t("org.username")}</span><input bind:value={itemUsername} placeholder={t("org.usernamePh")} /></label>
           <div class="field">
-            <span>Mot de passe</span>
+            <span>{t("org.password")}</span>
             <div class="input-row">
               <input
                 type={showItemPassword ? "text" : "password"}
@@ -667,8 +668,8 @@
               <button
                 type="button"
                 class="icon-btn"
-                title={showItemPassword ? "Masquer" : "Afficher"}
-                aria-label={showItemPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                title={showItemPassword ? t("org.hide") : t("org.show")}
+                aria-label={showItemPassword ? t("org.hidePassword") : t("org.showPassword")}
                 onclick={() => (showItemPassword = !showItemPassword)}
               >
                 {#if showItemPassword}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
@@ -677,59 +678,59 @@
           </div>
         </div>
         <label class="field">
-          <span>Clé TOTP <span class="muted" style="font-weight:400">(secret base32 ou otpauth://)</span></span>
+          <span>{t("org.totpKey")} <span class="muted" style="font-weight:400">{t("org.totpHint")}</span></span>
           <input bind:value={itemTotp} placeholder="JBSWY3DPEHPK3PXP" autocomplete="off" />
         </label>
         <label class="field">
-          <span>Notes</span>
-          <textarea bind:value={itemNotes} rows="3" placeholder="Contexte, procédure, contact…"></textarea>
+          <span>{t("org.notes")}</span>
+          <textarea bind:value={itemNotes} rows="3" placeholder={t("org.notesPh")}></textarea>
         </label>
         <div style="display:flex;gap:0.5rem;align-items:center">
           <button type="submit" disabled={busy}>
-            {editingId ? "Enregistrer les modifications" : "Chiffrer & partager"}
+            {editingId ? t("org.save") : t("org.encryptShare")}
           </button>
           {#if editingId}
-            <button type="button" class="ghost sm" onclick={resetItemForm}>Annuler</button>
+            <button type="button" class="ghost sm" onclick={resetItemForm}>{t("org.cancel")}</button>
           {/if}
         </div>
       </form>
 
       {#if current.role === "admin"}
         <hr class="sep" />
-        <p class="label">Accès à la collection</p>
+        <p class="label">{t("org.accessTitle")}</p>
         <form onsubmit={grantAccess} style="max-width:480px">
           <div class="grid-2">
             <label class="field">
-              <span>Membre</span>
+              <span>{t("org.member")}</span>
               <select bind:value={grantUserId}>
-                <option value="" disabled>Choisir un membre…</option>
+                <option value="" disabled>{t("org.pickMember")}</option>
                 {#each members as m}<option value={m.userId}>{m.email}</option>{/each}
               </select>
             </label>
             <label class="field">
-              <span>Permission</span>
+              <span>{t("org.permission")}</span>
               <select bind:value={grantPermission}>
-                <option value="read">Lecture</option>
-                <option value="write">Écriture</option>
-                <option value="manage">Gestion</option>
+                <option value="read">{t("org.permRead")}</option>
+                <option value="write">{t("org.permWrite")}</option>
+                <option value="manage">{t("org.permManage")}</option>
               </select>
             </label>
           </div>
-          <button type="submit" disabled={busy}>Accorder l'accès</button>
+          <button type="submit" disabled={busy}>{t("org.grant")}</button>
         </form>
 
         {#if access.length === 0}
           <p class="muted" style="margin-top:0.6rem">
-            Personne n'a d'accès explicite à cette collection.
+            {t("org.accessNone")}
           </p>
         {:else}
-          <p class="label" style="margin-top:0.9rem">Qui a accès aujourd'hui</p>
+          <p class="label" style="margin-top:0.9rem">{t("org.accessWho")}</p>
           <ul class="list">
             {#each access as a (a.userId)}
               <li>
                 <span class="avatar">{(a.email ?? "?").charAt(0).toUpperCase()}</span>
                 <div class="row-main">
-                  <span class="row-title">{a.email ?? "Adresse inconnue"}</span>
+                  <span class="row-title">{a.email ?? t("org.unknownEmail")}</span>
                   <span class="row-sub"><span class="pill pill-role">{a.permission}</span></span>
                 </div>
                 <div class="row-actions">
@@ -746,7 +747,7 @@
       <div class="detail-empty">
         <div>
           {@render folderIcon()}
-          <p class="muted" style="margin-top:.6rem">Sélectionnez une collection{current.role === "admin" ? " ou les membres" : ""}<br />dans la colonne de gauche.</p>
+          <p class="muted" style="margin-top:.6rem">Sélectionnez une collection{current.role === "admin" ? " ou les membres" : ""}<br />{t("org.pickInLeft")}</p>
         </div>
       </div>
     {/if}
