@@ -52,22 +52,41 @@ BIO_PID=""
 PAGE_PID=""
 DEVICE=""
 
+# Arrête le serveur de *ce* run, et lui seul.
+#
+# `npm start` lance tsx dans un processus fils : tuer le sous-shell le laisserait orphelin
+# à écouter le port. On le lance donc dans son propre groupe de processus (`set -m`) et on
+# arrête le groupe entier — ce qui emporte le fils sans jamais toucher à autre chose.
+#
+# Ce qu'on ne fait plus : balayer le port au `lsof` pour tuer ce qui l'occupe. Un run qui
+# refusait de démarrer *parce que* le port appartenait à quelqu'un d'autre abattait ensuite
+# ce quelqu'un dans son nettoyage. Le 28 août 2026, un job de CI a ainsi détruit le serveur
+# d'une suite locale en cours, qui a fini par quatre « serveur injoignable » accusant le
+# code. Ne jamais tuer ce qu'on n'a pas lancé.
+arreter_le_serveur() {
+  [[ -n "$SERVER_PID" ]] || return 0
+  kill -TERM -- "-$SERVER_PID" 2>/dev/null || kill "$SERVER_PID" 2>/dev/null || true
+  SERVER_PID=""
+}
+
 cleanup() {
   local code=$?
   [[ -n "$BIO_PID" ]] && kill "$BIO_PID" 2>/dev/null || true
-  [[ -n "$PAGE_PID" ]] && # Le remplissage se saute encore sur certaines versions d'iOS ; le test joint alors l'écran
-# qu'il a vu. On le remonte ici, sans quoi il resterait dans un journal que personne n'ouvre.
-xcrun simctl spawn "$DEVICE" log show --last 5m --style compact \
-  --predicate 'process == "GhostpassUITests-Runner"' 2>/dev/null |
-  grep -a "GP-AUTOFILL" | head -40 >&2 || true
+  [[ -n "$PAGE_PID" ]] && kill "$PAGE_PID" 2>/dev/null || true
 
-kill "$PAGE_PID" 2>/dev/null || true
-  [[ -n "$SERVER_PID" ]] && kill "$SERVER_PID" 2>/dev/null || true
-  # `npm start` lance tsx dans un processus fils : tuer le sous-shell le laisserait
-  # orphelin, à écouter le port, et le run suivant se heurterait à son compte déjà créé.
-  local lingering
-  lingering="$(lsof -ti "tcp:$PORT" 2>/dev/null || true)"
-  [[ -n "$lingering" ]] && kill $lingering 2>/dev/null || true
+  # Le remplissage se saute encore sur certaines versions d'iOS ; le test joint alors
+  # l'écran qu'il a vu. On le remonte ici, sans quoi il resterait dans un journal que
+  # personne n'ouvre.
+  #
+  # Le `&&` d'un `[[ -n "$PAGE_PID" ]]` traînait devant ce commentaire, ce qui rattachait
+  # silencieusement le vidage du journal à la présence de la page de test — sans rapport.
+  # Valide pour bash, d'où son passage inaperçu.
+  if [[ -n "$DEVICE" ]]; then
+    xcrun simctl spawn "$DEVICE" log show --last 5m --style compact \
+      --predicate 'process == "GhostpassUITests-Runner"' 2>/dev/null |
+      grep -a "GP-AUTOFILL" | head -40 >&2 || true
+  fi
+  arreter_le_serveur
   if [[ $code -ne 0 || "${GHOSTPASS_KEEP_RESULTS:-}" == "1" ]]; then
     mkdir -p "$RESULTS"
     for bundle in "$WORK"/*.xcresult; do
@@ -224,8 +243,12 @@ fi
 
 say "Démarrage du serveur GhostPass (SQLite jetable, port $PORT)"
 [[ -d "$ROOT/apps/server/node_modules" ]] || (cd "$ROOT/apps/server" && npm ci >/dev/null)
+# `set -m` le temps du lancement : le sous-shell devient chef de son propre groupe de
+# processus, ce qui permet ensuite de l'arrêter avec sa descendance sans viser le port.
+set -m
 (cd "$ROOT/apps/server" && DB_PATH="$WORK/ghostpass.db" PORT="$PORT" npm start >"$WORK/server.log" 2>&1) &
 SERVER_PID=$!
+set +m
 
 ready=false
 for _ in $(seq 1 60); do
@@ -301,10 +324,7 @@ fi
 # Le coffre doit s'ouvrir sans serveur. On coupe pour de bon : simuler l'absence de
 # réseau autrement reviendrait à éprouver le simulacre plutôt que l'application.
 say "Coupure du serveur, puis réouverture hors ligne"
-kill "$SERVER_PID" 2>/dev/null || true
-lingering="$(lsof -ti "tcp:$PORT" 2>/dev/null || true)"
-[[ -n "$lingering" ]] && kill $lingering 2>/dev/null || true
-SERVER_PID=""
+arreter_le_serveur
 sleep 2
 
 if [[ "$AUTOFILL_ONLY" != "1" ]] && ! run_tests GhostpassUITests/VaultFlowTests/test03HorsLigne; then

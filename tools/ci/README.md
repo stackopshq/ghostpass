@@ -186,3 +186,26 @@ face de son nom. Tant qu'il y figure, Gitea peut lui confier des tâches.
 
 Il apparaît dans **Settings > Actions > Runners**, en ligne, avec son étiquette. En cas de
 doute, `gitea-runner daemon` au premier plan montre les tâches qu'il reçoit.
+
+## Pousser déclenche un travail : ne pas lancer la suite en même temps
+
+Le 28 août 2026, un job a échoué sur `Le port 3111 est déjà occupé`. Le code n'y était
+pour rien : la suite avait été lancée à la main quatre minutes avant que la CI, déclenchée
+par le push qui venait de partir, ne lance *la même suite* sur *le même port*.
+
+La leçon précédente disait de regarder la charge de la machine avant toute opération
+lourde. Elle ne suffit pas : ici la machine était calme au moment du lancement, et c'est le
+push lui-même qui a créé le concurrent, quelques minutes plus tard. **Pousser, c'est
+programmer un travail sur cette machine.** Lancer la suite localement dans la foulée d'un
+push revient à la lancer deux fois.
+
+En pratique : pousser *ou* lancer la suite, pas les deux à quelques minutes d'intervalle.
+Si les deux sont nécessaires, attendre que le job de la forge soit terminé — il apparaît
+dans **Actions**, et son journal est sous `~/.gitea-runner/logs/jobs/`.
+
+Ce journal est d'ailleurs le moyen le plus court de savoir *pourquoi* un job a échoué :
+
+```sh
+ls -t ~/.gitea-runner/logs/jobs/ | head
+grep -nE '::error|Job failed' ~/.gitea-runner/logs/jobs/<fichier>.log
+```
