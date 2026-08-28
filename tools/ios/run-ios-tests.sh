@@ -201,9 +201,15 @@ run_tests() {
     -only-testing:"$only" "$@" test
 }
 
+# GHOSTPASS_AUTOFILL_ONLY=1 : ne garder que ce dont `test04Remplissage` a besoin — le
+# parcours complet, qui dépose une session dans le coffre, puis le remplissage lui-même.
+# Quatre minutes au lieu de quinze. Les autres tests n'apprennent rien sur ce sujet, et
+# attendre pour rien décourage de vérifier.
+AUTOFILL_ONLY="${GHOSTPASS_AUTOFILL_ONLY:-0}"
+
 # ── Tests de contrat ──────────────────────────────────────────────────────────
 say "Tests de contrat"
-run_tests GhostpassTests
+[[ "$AUTOFILL_ONLY" == "1" ]] || run_tests GhostpassTests
 
 if $UNIT_ONLY; then
   say "Tests de contrat : OK (parcours de bout en bout ignoré)"
@@ -274,11 +280,16 @@ say "Parcours de bout en bout"
 # Pas d'environnement à passer : `xcodebuild` n'en propage aucun jusqu'au processus de
 # test. Les tests connaissent ces valeurs par défaut ; c'est le contrat entre eux et ce
 # script — d'où le port et le compte figés plus haut.
+AUTRES_PARCOURS=(
+  -only-testing:GhostpassUITests/VaultFlowTests/test02Biometrie
+  -only-testing:GhostpassUITests/VaultFlowTests/test05Preferences
+  -only-testing:GhostpassUITests/VaultFlowTests/test06Recuperation
+  -only-testing:GhostpassUITests/VaultFlowTests/test07Urgence
+)
+[[ "$AUTOFILL_ONLY" == "1" ]] && AUTRES_PARCOURS=()
+
 if ! run_tests GhostpassUITests/VaultFlowTests/test01ParcoursComplet \
-  -only-testing:GhostpassUITests/VaultFlowTests/test02Biometrie \
-  -only-testing:GhostpassUITests/VaultFlowTests/test05Preferences \
-  -only-testing:GhostpassUITests/VaultFlowTests/test06Recuperation \
-  -only-testing:GhostpassUITests/VaultFlowTests/test07Urgence; then
+  "${AUTRES_PARCOURS[@]}"; then
   echo "--- journal de l'application ---" >&2
   xcrun simctl spawn "$DEVICE" log show --last 15m --style compact \
     --predicate 'process == "Ghostpass"' 2>/dev/null | grep -a "GP-" | tail -25 >&2 ||
@@ -296,7 +307,7 @@ lingering="$(lsof -ti "tcp:$PORT" 2>/dev/null || true)"
 SERVER_PID=""
 sleep 2
 
-if ! run_tests GhostpassUITests/VaultFlowTests/test03HorsLigne; then
+if [[ "$AUTOFILL_ONLY" != "1" ]] && ! run_tests GhostpassUITests/VaultFlowTests/test03HorsLigne; then
   echo "--- journal du serveur ---" >&2
   tail -20 "$WORK/server.log" >&2 || true
   exit 1
@@ -317,6 +328,24 @@ PAGE_PID=$!
 # arrière-plan, où `read </dev/tty` échoue aussitôt et la laisse filer sans que personne
 # n'ait eu la main. Le nombre de secondes est la valeur de la variable.
 if [[ "${GHOSTPASS_PAUSE_REMPLISSAGE:-0}" -gt 0 ]]; then
+  # « Toggle Software Keyboard » (Cmd-K) envoyé au simulateur : sous automatisation, iOS
+  # se croit relié à un clavier matériel et n'affiche jamais le clavier logiciel — or la
+  # barre de remplissage vit dedans. Le faire ici plutôt que de le demander à quelqu'un :
+  # la pause tombe un quart d'heure après le lancement, et personne n'attend devant
+  # l'écran pour appuyer sur deux touches.
+  if [[ "${GHOSTPASS_SIMULATOR_VISIBLE:-}" == "1" ]]; then
+    say "Bascule du clavier logiciel (Cmd-K)"
+    # La frappe est adressée **au processus Simulator**, pas à « l'application au premier
+    # plan » : envoyée sans cible, elle atteint n'importe quoi — y compris un test en train
+    # de saisir un mot de passe, qui échoue alors sur « neither element nor any descendant
+    # has keyboard focus ». Payé une fois.
+    osascript -e 'tell application "Simulator" to activate' 2>/dev/null || true
+    sleep 2
+    osascript -e 'tell application "System Events" to tell process "Simulator" to keystroke "k" using command down' \
+      2>/dev/null || say "Cmd-K refusé : autoriser le terminal dans Accessibilité"
+    sleep 2
+  fi
+
   say "Pause de ${GHOSTPASS_PAUSE_REMPLISSAGE} s avant le remplissage automatique."
   echo "  Deux gestes à faire dans le simulateur, dans cet ordre :" >&2
   echo "" >&2
