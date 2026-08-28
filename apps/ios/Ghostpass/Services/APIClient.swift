@@ -256,6 +256,56 @@ struct SendContentDTO: Decodable {
     let iv: String
 }
 
+// ─── Second facteur ───
+
+struct MfaStatusDTO: Decodable {
+    let enabled: Bool
+}
+
+/// Ce que le serveur rend pour configurer un second facteur : le secret, et l'URI que lit
+/// une application d'authentification.
+struct MfaSetupDTO: Decodable {
+    let secret: String
+    let otpauthUri: String
+}
+
+private struct MasterHashBody: Encodable {
+    let masterPasswordHash: String
+}
+
+private struct MfaCodeBody: Encodable {
+    let code: String
+}
+
+private struct MfaDisableBody: Encodable {
+    let masterPasswordHash: String
+    let code: String
+}
+
+// ─── Journal du compte ───
+
+struct LoginEventDTO: Decodable {
+    let ip: String?
+    let userAgent: String?
+    let newDevice: Bool
+    let createdAt: Int
+}
+
+private struct LoginEventsDTO: Decodable {
+    let events: [LoginEventDTO]
+}
+
+struct AuditEventDTO: Decodable {
+    let action: String
+    let target: String?
+    let ip: String?
+    let createdAt: Int
+}
+
+private struct AuditEventsDTO: Decodable {
+    let events: [AuditEventDTO]
+}
+
 /// Client HTTP du serveur GhostPass. Il ne voit jamais que du chiffré : le clair
 /// n'existe que de l'autre côté de la frontière FFI.
 struct APIClient {
@@ -638,6 +688,55 @@ struct APIClient {
     /// et c'est la clé du fragment qui protège le contenu.
     func fetchSend(id: String) async throws -> SendContentDTO {
         try decode(SendContentDTO.self, from: await request("GET", "api/send/\(id)"))
+    }
+
+
+    // ─── Second facteur ───
+
+    func mfaStatus(token: String) async throws -> Bool {
+        try decode(MfaStatusDTO.self, from: await request("GET", "api/mfa", token: token)).enabled
+    }
+
+    /// Prépare un second facteur. **Remet la configuration à zéro** : à n'appeler que
+    /// lorsque `mfaStatus` a répondu « inactif », sous peine de détruire un secret en place.
+    func mfaSetup(token: String, masterPasswordHash: String) async throws -> MfaSetupDTO {
+        let body = try JSONEncoder().encode(
+            MasterHashBody(masterPasswordHash: masterPasswordHash))
+        return try decode(
+            MfaSetupDTO.self, from: await request("POST", "api/mfa/setup", token: token, body: body)
+        )
+    }
+
+    /// Confirme la configuration par un premier code. Tant qu'elle n'est pas confirmée, le
+    /// compte reste accessible sans second facteur — c'est ce qui évite de s'enfermer
+    /// dehors avec une application d'authentification mal configurée.
+    func mfaActivate(token: String, code: String) async throws {
+        let body = try JSONEncoder().encode(MfaCodeBody(code: code))
+        _ = try await request("POST", "api/mfa/activate", token: token, body: body)
+    }
+
+    func mfaDisable(token: String, masterPasswordHash: String, code: String) async throws {
+        let body = try JSONEncoder().encode(
+            MfaDisableBody(masterPasswordHash: masterPasswordHash, code: code))
+        _ = try await request("POST", "api/mfa/disable", token: token, body: body)
+    }
+
+
+    // ─── Journal du compte ───
+
+    /// Les connexions enregistrées : adresse, appareil, et si celui-ci était inconnu.
+    func accountActivity(token: String) async throws -> [LoginEventDTO] {
+        try decode(
+            LoginEventsDTO.self, from: await request("GET", "api/account/activity", token: token)
+        ).events
+    }
+
+    /// Les actions sensibles : activation d'un second facteur, accès d'urgence accordé,
+    /// clé d'équipe renouvelée. C'est là qu'un accès illégitime laisse une trace.
+    func accountAudit(token: String) async throws -> [AuditEventDTO] {
+        try decode(
+            AuditEventsDTO.self, from: await request("GET", "api/account/audit", token: token)
+        ).events
     }
 
 }

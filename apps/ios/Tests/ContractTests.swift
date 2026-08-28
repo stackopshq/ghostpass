@@ -1539,3 +1539,132 @@ final class PartagePonctuelTests: XCTestCase {
         }
     }
 }
+
+// ─── Journal du compte ────────────────────────────────────────────────────────
+
+/// Le journal est le seul endroit où l'on peut s'apercevoir qu'un accès n'était pas le
+/// sien. Une ligne illisible ou un signalement manquant lui font perdre son objet.
+final class JournalDuCompteTests: XCTestCase {
+    private func action(_ nom: String) -> ActionDuJournal {
+        ActionDuJournal(
+            AuditEventDTO(action: nom, target: nil, ip: nil, createdAt: 1_800_000_000_000), rang: 0)
+    }
+
+    @MainActor
+    func testChaqueActionDuServeurEstTraduite() {
+        // La liste vient de `recordAudit` côté serveur. Une action non traduite s'afficherait
+        // sous son identifiant technique, que personne ne sait lire.
+        let connues = [
+            "login.password", "login.passkey", "login.sso", "logout",
+            "mfa.enable", "mfa.disable", "recovery.reset",
+            "passkey.add", "passkey.remove", "webauthn.add", "webauthn.remove",
+            "emergency.grant", "emergency.request", "emergency.approve",
+            "org.member.add", "org.member.role", "org.key.rotate",
+            "org.group.create", "org.group.delete",
+            "org.group.member.add", "org.group.member.remove",
+            "org.group.access.grant", "org.group.access.revoke",
+        ]
+        for nom in connues {
+            XCTAssertNotEqual(
+                action(nom).intitule, nom,
+                "« \(nom) » s'afficherait sous son identifiant technique")
+        }
+    }
+
+    /// Une action inconnue doit s'afficher telle quelle, pas disparaître : un serveur plus
+    /// récent peut en journaliser de nouvelles, et un journal dont l'objet est de révéler
+    /// l'inattendu ne peut pas se permettre de masquer ce qu'il ne connaît pas.
+    @MainActor
+    func testUneActionInconnueResteVisible() {
+        XCTAssertEqual(action("quelque.chose.de.neuf").intitule, "quelque.chose.de.neuf")
+    }
+
+    /// Ce qui retire une protection doit être signalé. Se tromper ici noierait la ligne
+    /// qu'il fallait voir au milieu de connexions ordinaires.
+    func testLesActionsQuiRetirentUneProtectionSontSignalees() {
+        for nom in ["mfa.disable", "recovery.reset", "passkey.remove", "emergency.approve"] {
+            XCTAssertTrue(action(nom).estSensible, "« \(nom) » devrait être signalée")
+        }
+        for nom in ["login.password", "logout", "org.group.create"] {
+            XCTAssertFalse(action(nom).estSensible, "« \(nom) » ne devrait pas l'être")
+        }
+    }
+
+    /// Le serveur horodate en millisecondes. Les lire en secondes placerait toutes les
+    /// connexions en 1970 — et un journal aux dates fausses ne sert à rien.
+    func testLesHorodatagesSontLusEnMillisecondes() {
+        let connexion = Connexion(
+            LoginEventDTO(
+                ip: "10.0.0.1", userAgent: "GhostPass/iOS", newDevice: true,
+                createdAt: 1_800_000_000_000),
+            rang: 0)
+        XCTAssertEqual(connexion.quand.timeIntervalSince1970, 1_800_000_000, accuracy: 1)
+        XCTAssertTrue(connexion.nouvelAppareil)
+    }
+}
+
+// ─── Adresse du serveur ───────────────────────────────────────────────────────
+
+/// Taper le nom de son serveur est le geste naturel. Le refuser au motif qu'il manque
+/// « https:// » fait échouer la toute première tentative de quelqu'un qui a pourtant donné
+/// la bonne adresse — et le message d'erreur accuse alors l'adresse plutôt que le manque.
+final class AdresseDuServeurTests: XCTestCase {
+    private func url(_ saisie: String) -> String? {
+        ServerAddress.normaliser(saisie)?.absoluteString
+    }
+
+    func testUnNomDeServeurSeulSuffit() {
+        XCTAssertEqual(url("ghostpass.stackops.ch"), "https://ghostpass.stackops.ch")
+    }
+
+    func testLesEspacesAutourNeGenentPas() {
+        XCTAssertEqual(url("  ghostpass.stackops.ch \n"), "https://ghostpass.stackops.ch")
+    }
+
+    /// Une barre finale doublerait les séparateurs des chemins construits ensuite.
+    func testLaBarreFinaleEstRetiree() {
+        XCTAssertEqual(url("https://ghostpass.stackops.ch/"), "https://ghostpass.stackops.ch")
+    }
+
+    func testUnSchemaExplicteEstRespecte() {
+        XCTAssertEqual(url("https://ghostpass.stackops.ch"), "https://ghostpass.stackops.ch")
+    }
+
+    /// On ne force pas `http` en `https` : un serveur de développement sur une machine
+    /// locale est un usage légitime, et le refuser n'apporterait aucune sécurité — la
+    /// personne a écrit `http` exprès.
+    func testHttpEstConserveTelQuel() {
+        XCTAssertEqual(url("http://127.0.0.1:3111"), "http://127.0.0.1:3111")
+    }
+
+    /// Un serveur local parle en clair. Lui imposer `https` produisait « une erreur TLS a
+    /// provoqué l'échec de la connexion sécurisée » — un message qui décrit la conséquence
+    /// et cache la cause. Trouvé en essayant le banc de remplissage automatique.
+    func testLaBoucleLocaleResteEnClair() {
+        XCTAssertEqual(url("127.0.0.1:3111"), "http://127.0.0.1:3111")
+        XCTAssertEqual(url("localhost:3111"), "http://localhost:3111")
+        XCTAssertEqual(url("LOCALHOST"), "http://LOCALHOST")
+    }
+
+    /// L'exception s'arrête à la boucle locale : un serveur sur un réseau privé peut
+    /// légitimement porter un certificat, et rétrograder son adresse ne rendrait service
+    /// à personne.
+    func testUnReseauPriveResteEnHttps() {
+        XCTAssertEqual(url("192.168.1.20:3111"), "https://192.168.1.20:3111")
+        XCTAssertEqual(url("coffre.interne"), "https://coffre.interne")
+    }
+
+    func testUnPortEtUnCheminSontConserves() {
+        XCTAssertEqual(url("ghostpass.stackops.ch:8443"), "https://ghostpass.stackops.ch:8443")
+        XCTAssertEqual(url("exemple.ch/ghostpass"), "https://exemple.ch/ghostpass")
+    }
+
+    /// Ce qui doit rester refusé. Sans ces cas, la normalisation accepterait n'importe quoi
+    /// et l'erreur reviendrait plus tard, plus loin, sous une forme moins compréhensible.
+    func testCeQuiNeMeneNullePartEstRefuse() {
+        XCTAssertNil(url(""))
+        XCTAssertNil(url("   "))
+        XCTAssertNil(url("ftp://exemple.ch"), "seuls http et https ont un sens ici")
+        XCTAssertNil(url("https://"), "un schéma sans hôte ne mène nulle part")
+    }
+}

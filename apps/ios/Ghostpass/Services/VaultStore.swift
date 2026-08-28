@@ -47,7 +47,10 @@ final class VaultStore: ObservableObject {
     /// d'authentification côté Rust, puis déverrouillage local avec les blobs reçus.
     /// Le mot de passe ne quitte jamais l'appareil ; le serveur ne voit qu'un hash.
     func signIn(server: String, email: String, password: String, totpCode: String?) async {
-        guard let url = URL(string: server) else {
+        // `ServerAddress` complète ce qui manque : taper « ghostpass.stackops.ch » est le
+        // geste naturel, et le refuser au motif qu'il manque « https:// » ferait échouer la
+        // toute première tentative de quelqu'un qui a pourtant donné la bonne adresse.
+        guard let url = ServerAddress.normaliser(server) else {
             errorMessage = APIError.badURL.localizedDescription
             return
         }
@@ -80,7 +83,9 @@ final class VaultStore: ObservableObject {
             Keychain.set(session.token, for: Keychain.Key.token)
             SharedStore.save(
                 SharedStore.Session(
-                    serverURL: server, email: email, kdfParams: session.kdfParams,
+                    // L'adresse normalisée, pas la saisie : sans quoi la prochaine
+                    // ouverture repartirait d'une URL sans schéma et échouerait de nouveau.
+                    serverURL: url.absoluteString, email: email, kdfParams: session.kdfParams,
                     encryptedUserKey: session.encryptedUserKey,
                     encryptedPrivateKey: session.encryptedPrivateKey))
 
@@ -95,7 +100,9 @@ final class VaultStore: ObservableObject {
     /// mot de passe manque. C'est ce chemin qu'emprunte l'extension AutoFill, qui doit
     /// pouvoir déverrouiller sans dépendre de la disponibilité du serveur.
     func unlockOffline(password: String) async {
-        guard let session = SharedStore.load(), let url = URL(string: session.serverURL) else {
+        guard let session = SharedStore.load(),
+            let url = ServerAddress.normaliser(session.serverURL)
+        else {
             errorMessage = tr("Aucune session enregistrée sur cet appareil.")
             return
         }
@@ -579,7 +586,7 @@ final class VaultStore: ObservableObject {
     func recoverAccount(server: String, email: String, recoveryKey: String, newPassword: String)
         async -> Bool
     {
-        guard let url = URL(string: server) else {
+        guard let url = ServerAddress.normaliser(server) else {
             errorMessage = tr("Adresse de serveur invalide.")
             return false
         }
@@ -1206,7 +1213,7 @@ final class VaultStore: ObservableObject {
     /// contrôle pas : quiconque l'a peut lire une fois.
     func partager(_ secret: String, heures: Int, consultations: Int) async -> URL? {
         guard let api, let token,
-            let serveur = URL(string: SharedStore.load()?.serverURL ?? "")
+            let serveur = ServerAddress.normaliser(SharedStore.load()?.serverURL ?? "")
         else { return nil }
         isBusy = true
         defer { isBusy = false }
@@ -1228,6 +1235,91 @@ final class VaultStore: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             return nil
+        }
+    }
+
+
+    // ─── Second facteur ───
+
+    /// Le compte est-il protégé par un second facteur ? La question décide de ce que
+    /// l'écran propose — et surtout de ce qu'il ne propose pas : relancer la configuration
+    /// sur un compte déjà protégé effacerait le secret en place.
+    func secondFacteurActif() async -> Bool? {
+        guard let api, let token else { return nil }
+        do {
+            return try await api.mfaStatus(token: token)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Prépare un second facteur. Le mot de passe maître est redemandé et transformé ici en
+    /// hash d'authentification par le cœur : il ne quitte jamais l'appareil.
+    func preparerLeSecondFacteur(motDePasse: String) async -> MfaSetupDTO? {
+        guard let api, let token, let session = SharedStore.load() else { return nil }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let hash = try masterPasswordHash(
+                password: motDePasse, email: session.email, kdfParamsJson: session.kdfParams)
+            return try await api.mfaSetup(token: token, masterPasswordHash: hash)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func confirmerLeSecondFacteur(code: String) async -> Bool {
+        guard let api, let token else { return false }
+        do {
+            try await api.mfaActivate(token: token, code: code)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Désactiver exige les deux : le mot de passe maître **et** un code valide. Quelqu'un
+    /// qui aurait volé le téléphone déverrouillé ne doit pas pouvoir retirer la protection.
+    func retirerLeSecondFacteur(motDePasse: String, code: String) async -> Bool {
+        guard let api, let token, let session = SharedStore.load() else { return false }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let hash = try masterPasswordHash(
+                password: motDePasse, email: session.email, kdfParamsJson: session.kdfParams)
+            try await api.mfaDisable(token: token, masterPasswordHash: hash, code: code)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+
+    // ─── Journal du compte ───
+
+    func connexions() async -> [Connexion] {
+        guard let api, let token else { return [] }
+        do {
+            return try await api.accountActivity(token: token).enumerated()
+                .map { Connexion($0.element, rang: $0.offset) }
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
+        }
+    }
+
+    func actionsDuJournal() async -> [ActionDuJournal] {
+        guard let api, let token else { return [] }
+        do {
+            return try await api.accountAudit(token: token).enumerated()
+                .map { ActionDuJournal($0.element, rang: $0.offset) }
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
         }
     }
 

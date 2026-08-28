@@ -3,6 +3,15 @@ import XCTest
 /// Remplissage automatique réel : une page de connexion ouverte dans Safari, et GhostPass
 /// appelé depuis le clavier pour remplir le formulaire.
 ///
+/// **Vérifié à la main le 28 août 2026**, sur simulateur, par `tools/ios/autofill-manuel.sh` :
+/// le clavier propose « clara — mot de passe pour ce site web — GhostPass », iOS demande
+/// confirmation pour « 127.0.0.1 », et les deux champs se remplissent. Le coffre contenait
+/// trois entrées : celle du bon site est remontée, donc l'appariement par domaine tient.
+///
+/// Ce test-ci, lui, continue de se sauter sous `xcodebuild` faute de clavier logiciel. On
+/// sait désormais que ce n'est pas le produit qui est en cause — c'est l'automatisation.
+/// Reste à l'éprouver sur un appareil réel avant publication.
+///
 /// Le chemin traverse des écrans du système dont l'agencement change d'une version d'iOS
 /// à l'autre. Ce qui relève du système est donc traité en `skip` — on ne fait pas échouer
 /// une intégration parce qu'Apple a déplacé un bouton. Ce qui relève de GhostPass, en

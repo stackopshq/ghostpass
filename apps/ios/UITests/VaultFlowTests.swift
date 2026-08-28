@@ -78,12 +78,34 @@ final class VaultFlowTests: XCTestCase {
         ecarterLaPropositionBiometrique(app)
     }
 
+    /// Verrouille le coffre comme le ferait quelqu'un.
+    ///
+    /// Le bouton « Verrouiller » ne paraît que si un délai de verrouillage est réglé : avec
+    /// le défaut — immédiat — quitter l'application suffit, et le bouton occuperait la
+    /// meilleure place de la barre pour rien. Le test emprunte donc le chemin réel plutôt
+    /// que de dépendre d'un bouton qui peut légitimement être absent.
+    private func verrouiller(_ app: XCUIApplication) {
+        let bouton = app.buttons["button.lock"]
+        if bouton.waitForExistence(timeout: 3) {
+            taper(bouton)
+            return
+        }
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        app.activate()
+    }
+
     /// Frappe un élément même si l'interface vient de changer.
     ///
     /// Un `tap()` ordinaire commence par calculer un point de frappe ; sur une vue encore
     /// en cours d'animation, ce calcul rend {-1, -1} et le geste se perd en silence. Le
     /// tap en coordonnées, lui, vise le centre du cadre sans rien demander à personne.
     private func taper(_ element: XCUIElement) {
+        // Disparu entre-temps : il n'y a plus rien à frapper, et c'est souvent que le geste
+        // précédent a porté. Sans ce garde, `coordinate` échoue durement sur « no matches
+        // found » — une erreur qui décrit la disparition de l'élément, jamais la raison
+        // pour laquelle on le cherchait.
+        guard element.exists else { return }
         if element.isHittable {
             element.tap()
         } else {
@@ -146,6 +168,9 @@ final class VaultFlowTests: XCTestCase {
         let plusTard = app.buttons["button.laterBiometric"].firstMatch
         guard plusTard.waitForExistence(timeout: delai) else { return }
         for _ in 0..<5 {
+            // La feuille peut s'être refermée depuis le tour précédent : on s'arrête là
+            // plutôt que de frapper dans le vide.
+            guard plusTard.exists else { return }
             taper(plusTard)
             if aDisparu(plusTard, delai: 3) { return }
         }
@@ -465,7 +490,7 @@ final class VaultFlowTests: XCTestCase {
         app.buttons["button.closeTrash"].firstMatch.tap()
 
         // 6. Verrouiller relâche vraiment les clés
-        app.buttons["button.lock"].tap()
+        verrouiller(app)
         XCTAssertTrue(app.buttons["button.submit"].waitForExistence(timeout: 30))
         XCTAssertFalse(app.staticTexts[demoItem].exists, "le coffre reste visible après verrouillage")
 
@@ -541,7 +566,7 @@ final class VaultFlowTests: XCTestCase {
         }
 
         // Le cycle qui compte : verrouiller, puis rouvrir sans aucune saisie.
-        app.buttons["button.lock"].tap()
+        verrouiller(app)
         sleep(5)
         shot(app, "4-apres-verrouillage")
         XCTAssertTrue(

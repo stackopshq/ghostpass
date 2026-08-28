@@ -15,6 +15,7 @@ struct VaultListView: View {
     /// L'élément qu'une feuille demande d'ouvrir. On attend qu'elle soit refermée pour
     /// pousser l'écran : présenter et empiler en même temps, et l'un des deux se perd.
     @State private var aOuvrir: VaultEntry?
+    @ObservedObject private var prefs = Preferences.shared
 
     private var visible: [VaultEntry] {
         store.entries.filter { entry in
@@ -97,10 +98,18 @@ struct VaultListView: View {
             .navigationTitle("Coffre")
             .toolbarBackground(Color.gpBase.opacity(0.9), for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Verrouiller") { store.lock() }
-                        .foregroundStyle(Color.gpAccentText)
-                        .accessibilityIdentifier("button.lock")
+                // Le bouton n'a de sens que si le verrouillage automatique attend.
+                //
+                // Avec le réglage par défaut — immédiat — quitter l'application verrouille
+                // déjà : le bouton occuperait alors la meilleure place de la barre pour un
+                // geste que le système fait tout seul. Dès qu'un délai est réglé, il
+                // redevient le seul moyen de verrouiller sur-le-champ.
+                if prefs.verrouillage != .immediat {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Verrouiller") { store.lock() }
+                            .foregroundStyle(Color.gpAccentText)
+                            .accessibilityIdentifier("button.lock")
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -135,6 +144,14 @@ struct VaultListView: View {
                             sheet = .send
                         }
                         .accessibilityIdentifier("button.send")
+                        Button("Second facteur", systemImage: "lock.shield") {
+                            sheet = .mfa
+                        }
+                        .accessibilityIdentifier("button.mfa")
+                        Button("Journal du compte", systemImage: "list.bullet.rectangle") {
+                            sheet = .activity
+                        }
+                        .accessibilityIdentifier("button.activity")
                         Button("Importer un CSV", systemImage: "square.and.arrow.down") {
                             sheet = .importCSV
                         }
@@ -197,6 +214,10 @@ struct VaultListView: View {
                     OrganizationsView().environmentObject(store)
                 case .send:
                     SendView().environmentObject(store)
+                case .mfa:
+                    MfaView().environmentObject(store)
+                case .activity:
+                    ActivityView().environmentObject(store)
                 }
             }
             // Une seule alerte, et rien d'autre par-dessus : deux modificateurs `.alert`
@@ -219,9 +240,19 @@ struct VaultListView: View {
 
     /// Une liaison qui écrit en retour : fermer l'alerte efface le message qu'elle
     /// portait, plutôt que de laisser SwiftUI la croire encore présentée.
+    /// L'alerte d'erreur de cet écran — et seulement de cet écran.
+    ///
+    /// Elle se tait tant qu'une feuille est présentée. Sans cette condition, une erreur
+    /// survenue *dans* une feuille — le second facteur qui interroge le serveur, un partage
+    /// refusé, une équipe injoignable — fait présenter l'alerte par le parent, et SwiftUI
+    /// referme la feuille pour y parvenir. L'utilisateur se retrouve brutalement rendu au
+    /// coffre, sans avoir rien lu.
+    ///
+    /// Chaque feuille affiche déjà `store.errorMessage` en ligne, à l'endroit du geste qui
+    /// a échoué. C'est là que le message a du sens.
     private var erreurAffichee: Binding<Bool> {
         Binding(
-            get: { store.errorMessage != nil },
+            get: { store.errorMessage != nil && sheet == nil && aOuvrir == nil },
             set: { presente in
                 if !presente { store.errorMessage = nil }
             })
@@ -380,6 +411,8 @@ enum VaultSheet: Identifiable {
     case emergency
     case organizations
     case send
+    case mfa
+    case activity
 
     var id: String {
         switch self {
@@ -395,6 +428,8 @@ enum VaultSheet: Identifiable {
         case .emergency: return "emergency"
         case .organizations: return "organizations"
         case .send: return "send"
+        case .mfa: return "mfa"
+        case .activity: return "activity"
         case .importCSV: return "import"
         case .exportCSV: return "export"
         }

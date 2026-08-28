@@ -188,6 +188,20 @@ struct OrgAdminView: View {
 
     // ─── Groupes ───
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Ce qui manque encore, et pourquoi ce n'est pas ici.
+    //
+    // Un administrateur peut accorder à un membre un accès **nommé** à une collection
+    // (`POST /api/orgs/:id/collections/:cid/access`). Mais le serveur n'expose aucune route
+    // pour lire qui détient quoi, ni pour retirer un accès accordé ainsi : c'est une porte
+    // à sens unique, et aucune interface ne peut la refermer seule. Pour les groupes, la
+    // révocation existe — pour les accès nommés, non.
+    //
+    // Ces deux routes sont en cours d'écriture côté web (août 2026). L'écran « qui a accès
+    // à quoi » viendra ici quand elles existeront ; l'écrire avant ne donnerait qu'une
+    // liste vide et un bouton qui échoue.
+    // ─────────────────────────────────────────────────────────────────────────
+
     private var sectionGroupes: some View {
         GhostSection(
             titre: "Groupes",
