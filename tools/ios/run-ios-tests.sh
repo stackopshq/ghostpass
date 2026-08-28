@@ -111,6 +111,17 @@ print(phones[-1]["identifier"], runtime["identifier"])
 DEVICE="$(xcrun simctl create "ghostpass-tests-$$" "$DEVTYPE" "$RUNTIME")"
 say "Simulateur éphémère $DEVICE ($DEVTYPE)"
 xcrun simctl boot "$DEVICE" >/dev/null 2>&1 || true
+# Par défaut le simulateur reste invisible : `xcodebuild` le pilote sans interface, ce qui
+# est plus rapide et convient à la CI. Mais aucun clavier logiciel n'y apparaît, et la
+# barre de remplissage automatique vit dans ce clavier — `test04Remplissage` s'y saute
+# donc toujours. GHOSTPASS_SIMULATOR_VISIBLE=1 demande à Simulator.app d'afficher **cet**
+# appareil : ouvrir l'application sans préciser l'identifiant montre le dernier utilisé,
+# pas l'éphémère qu'on vient de créer.
+if [[ "${GHOSTPASS_SIMULATOR_VISIBLE:-}" == "1" ]]; then
+  say "Simulateur visible : $DEVICE"
+  open -a Simulator --args -CurrentDeviceUDID "$DEVICE"
+  sleep 8
+fi
 # `simctl bootstatus -b` peut ne jamais rendre la main sur un simulateur qu'on vient de
 # créer — en intégration continue, le job tournerait alors jusqu'à son propre délai.
 # On interroge nous-mêmes, avec une borne.
