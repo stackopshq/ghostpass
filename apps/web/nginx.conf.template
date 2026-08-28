@@ -50,7 +50,18 @@ server {
         try_files $uri =404;
         # Noms portant une empreinte pour les ressources, contenu figé pour les
         # polices : un an de cache, et une révision change le nom du fichier.
-        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        #
+        # PAS de `always` ici, contrairement aux en-têtes de sécurité plus haut.
+        # `always` pose l'en-tête AUSSI sur les réponses d'erreur : un 404 sur un
+        # fichier renommé partait alors avec « un an, immuable », et un cache
+        # intermédiaire figeait l'absence pour un an. Mesuré le 2026-08-28 sur
+        # ghostpass.stackops.ch, où deux entrées Cloudflare servaient un 404 sur
+        # la police monospace pendant que l'origine la servait en 200 : les
+        # visiteurs touchés perdaient la police sans que rien ne le signale.
+        #
+        # Sur une réponse d'erreur, mieux vaut aucun en-tête de cache qu'un
+        # en-tête qui promet un an.
+        add_header Cache-Control "public, max-age=31536000, immutable";
     }
 
     # Application à page unique : toute route inconnue rend l'index, sinon un
