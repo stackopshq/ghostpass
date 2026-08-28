@@ -31,3 +31,6 @@ apps/ios/GhostpassCrypto.xcframework/
 apps/ios/TestResults/
 apps/ios/.build/
 __pycache__/
+
+# Métadonnées du Finder, jamais utiles à personne.
+.DS_Store

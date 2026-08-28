@@ -23,6 +23,10 @@ settings:
     # Sans cela, la compilation ne relève pas les chaînes du code et le catalogue reste
     # vide : on croirait l'application traduite alors que rien n'aurait été extrait.
     SWIFT_EMIT_LOC_STRINGS: YES
+    # Version affichée et numéro de build. Sans elles, l'envoi à App Store Connect échoue,
+    # et deux envois du même numéro sont refusés — le build s'incrémente à chaque montée.
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
 
 targets:
   Ghostpass:
@@ -54,6 +58,15 @@ targets:
         # Sans cette clé, iOS tue l'app à la première demande biométrique.
         INFOPLIST_KEY_NSFaceIDUsageDescription: >-
           Face ID déverrouille votre coffre sans ressaisir le mot de passe maître.
+        # Le chiffrement de GhostPass — Argon2id, XChaCha20-Poly1305 — n'entre dans aucune
+        # des exemptions d'Apple : ce n'est ni du HTTPS d'appoint, ni de l'authentification
+        # seule, c'est la fonction même du produit. Déclarer `false` serait donc faux.
+        #
+        # Conséquence à traiter avant publication : un rapport d'auto-classification annuel
+        # auprès du BIS américain (la distribution passe par l'App Store), et côté français
+        # la déclaration ANSSI de fourniture d'un moyen de cryptologie. Voir
+        # docs/appstore.md — ce sont des démarches, pas des réglages de compilation.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: YES
         OTHER_LDFLAGS: -lc++
 
   # Remplissage automatique : une cible à part, lancée par iOS dans son propre processus.
