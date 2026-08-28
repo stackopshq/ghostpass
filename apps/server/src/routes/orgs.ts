@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { DB } from "../db/database.js";
-import { organizations, orgItems, orgMembers, users } from "../db/repositories.js";
+import { collections, organizations, orgItems, orgMembers, users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
 import { newId, normalizeEmail } from "../services/security.js";
@@ -22,6 +22,12 @@ const rotateSchema = z.object({
   members: z.array(z.object({ userId: z.string(), encryptedOrgKey: z.string().min(1) })),
   items: z.array(z.object({ id: z.string(), encryptedKey: z.string().min(1) })),
 });
+
+/// Accord en nombre pour les messages de refus. Les décomptes sont la moitié de l'information :
+/// « il reste des collections » n'aide pas, « il reste 3 collections » dit quoi aller vider.
+function plural(n: number, singular: string, plural_: string): string {
+  return `${n} ${n > 1 ? plural_ : singular}`;
+}
 
 export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
   const authenticate = makeAuthenticate(db);
@@ -208,6 +214,68 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
         target: revokeUserId || req.params.id,
       });
       return { ok: true };
+    },
+  );
+
+  // Supprime une organisation (admin actif uniquement). C'est l'opération la plus destructrice
+  // du produit : `org_members`, `collections` et `org_groups` référencent l'org en
+  // `ON DELETE CASCADE`, donc une suppression emporte au passage tous les secrets partagés de
+  // l'équipe, sans récupération possible côté serveur (les blobs sont illisibles pour lui).
+  // D'où trois refus explicites plutôt qu'une confirmation : on exige que l'org soit déjà vide.
+  // Vider une collection et supprimer une organisation restent deux gestes séparés et délibérés.
+  app.delete<{ Params: { id: string } }>(
+    "/api/orgs/:id",
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const me = await orgMembers.findByOrgAndUser(db, req.params.id, req.currentUser!.id);
+      // 404 et non 403 pour un non-membre : répondre « réservé à l'administrateur » révélerait
+      // qu'une organisation porte cet identifiant.
+      if (!me) return reply.code(404).send({ error: "organisation introuvable" });
+      if (me.status !== "active" || me.role !== "admin") {
+        return reply.code(403).send({ error: "réservé à l'administrateur de l'organisation" });
+      }
+
+      const [orgCollections, items, allMembers] = await Promise.all([
+        collections.listByOrg(db, req.params.id),
+        orgItems.listByOrg(db, req.params.id),
+        orgMembers.listByOrg(db, req.params.id),
+      ]);
+
+      if (orgCollections.length > 0 || items.length > 0) {
+        const parts: string[] = [];
+        if (orgCollections.length > 0) {
+          parts.push(plural(orgCollections.length, "collection", "collections"));
+        }
+        if (items.length > 0) {
+          parts.push(plural(items.length, "secret partagé", "secrets partagés"));
+        }
+        return reply.code(409).send({
+          error: `L'organisation contient encore ${parts.join(" et ")}. Videz-la avant de la supprimer.`,
+          collections: orgCollections.length,
+          items: items.length,
+        });
+      }
+
+      // Seuls les membres actifs comptent : une invitation en attente n'a jamais donné accès à
+      // quoi que ce soit, et elle disparaît avec l'organisation.
+      const others = allMembers.filter((m) => m.user_id !== me.user_id && m.status === "active");
+      if (others.length > 0) {
+        const who = plural(others.length, "autre membre actif", "autres membres actifs");
+        const them = others.length > 1 ? "les" : "le";
+        return reply.code(409).send({
+          error: `Il reste ${who} dans l'organisation. Retirez-${them} avant de la supprimer.`,
+          activeMembers: others.length,
+        });
+      }
+
+      const org = await organizations.findById(db, req.params.id);
+      await organizations.remove(db, req.params.id);
+      await recordAudit(db, req, "org.delete", {
+        userId: req.currentUser!.id,
+        actorEmail: req.currentUser!.email,
+        target: org?.name ?? req.params.id,
+      });
+      return reply.code(204).send();
     },
   );
 }

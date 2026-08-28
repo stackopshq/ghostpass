@@ -597,6 +597,16 @@ export const organizations = {
   findById(db: DB, id: string): Promise<OrgRow | undefined> {
     return db.selectFrom("organizations").selectAll().where("id", "=", id).executeTakeFirst();
   },
+
+  /// Supprime l'organisation. Toutes les tables filles (`org_members`, `collections`,
+  /// `org_groups`, et par transitivité `org_items` et les tables d'accès) sont en
+  /// `ON DELETE CASCADE` : cet appel efface donc les secrets partagés de l'org. La route qui
+  /// l'expose refuse tant qu'il reste des collections, des items ou d'autres membres actifs.
+  /// Renvoie `false` si aucune ligne n'a été supprimée (org déjà absente).
+  async remove(db: DB, id: string): Promise<boolean> {
+    const result = await db.deleteFrom("organizations").where("id", "=", id).executeTakeFirst();
+    return Number(result.numDeletedRows) > 0;
+  },
 };
 
 export interface NewMember {

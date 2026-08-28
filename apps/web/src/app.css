@@ -1710,6 +1710,53 @@ button:disabled {
   animation: spin 0.7s linear infinite;
 }
 
+/* ─── Confirmation de suppression d'organisation ─── */
+/* Une ligne dépliée sous l'organisation visée, et non une boîte de dialogue : la saisie du nom
+   demande de relire ce qu'on s'apprête à détruire, ce qu'un « êtes-vous sûr ? » n'obtient pas. */
+.list > li.confirm-delete {
+  display: block;
+  padding: 0.9rem 0.1rem;
+}
+
+.confirm-delete form {
+  max-width: 520px;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line-2));
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+}
+
+.confirm-title {
+  margin: 0 0 0.4rem;
+  font-weight: 650;
+  color: var(--danger);
+}
+
+.confirm-body {
+  margin: 0 0 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* Le refus du serveur, à l'endroit du clic. Le toast global l'affiche aussi, mais il se ferme. */
+.confirm-error {
+  margin: 0 0 0.7rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  background: var(--surface);
+  color: var(--danger);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 /* ─── Toast (erreurs) ─── */
 /* Raison pour laquelle un contrôle est inerte, posée sous ce contrôle. Une
    bulle de validation native ne convient pas ici : Safari iOS l'escamote, et

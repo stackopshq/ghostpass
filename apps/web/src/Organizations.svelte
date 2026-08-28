@@ -50,6 +50,13 @@
   let grantUserId = $state("");
   let grantPermission = $state("read");
 
+  // Suppression d'organisation : cible en cours de confirmation, nom saisi, et dernier refus
+  // du serveur. `deleteError` est distinct du toast global : un 409 « il reste 3 collections »
+  // doit rester lisible SOUS le contrôle, à l'endroit où on vient de cliquer.
+  let deleteTarget = $state<OrgSummary | null>(null);
+  let deleteConfirmName = $state("");
+  let deleteError = $state<string | null>(null);
+
   // État d'affichage (UI uniquement).
   let revealed = $state<Set<number>>(new Set());
   let copiedKey = $state<string | null>(null);
@@ -95,6 +102,41 @@
       await loadOrgs();
     } catch (err) {
       fail(err);
+    } finally {
+      busy = false;
+    }
+  }
+
+  function askDelete(org: OrgSummary) {
+    deleteTarget = org;
+    deleteConfirmName = "";
+    deleteError = null;
+  }
+
+  function cancelDelete() {
+    deleteTarget = null;
+    deleteConfirmName = "";
+    deleteError = null;
+  }
+
+  async function confirmDelete(e: SubmitEvent) {
+    e.preventDefault();
+    const target = deleteTarget;
+    if (!target || deleteConfirmName.trim() !== target.name) return;
+    busy = true;
+    deleteError = null;
+    try {
+      await api.deleteOrg(token, target.orgId);
+      deleteTarget = null;
+      deleteConfirmName = "";
+      await loadOrgs();
+    } catch (err) {
+      // Le serveur refuse pour une raison précise (403, 404, 409 avec décomptes). On la garde
+      // affichée et le panneau ouvert : avaler ce message ferait passer une garantie pour un
+      // bouton mort. Le toast global double l'information, il ne la remplace pas.
+      const message = err instanceof Error ? err.message : String(err);
+      deleteError = message;
+      onError(message);
     } finally {
       busy = false;
     }
@@ -363,9 +405,44 @@
                   <button class="ghost sm" onclick={() => accept(o)} disabled={busy}>Accepter l'invitation</button>
                 {:else}
                   <button class="ghost sm" onclick={() => open(o)} disabled={busy}>Ouvrir</button>
+                  {#if o.role === "admin"}
+                    <button class="danger" onclick={() => askDelete(o)} disabled={busy}>Supprimer</button>
+                  {/if}
                 {/if}
               </div>
             </li>
+            {#if deleteTarget?.orgId === o.orgId}
+              <li class="confirm-delete">
+                <form onsubmit={confirmDelete}>
+                  <p class="confirm-title">Supprimer « {o.name} » définitivement ?</p>
+                  <p class="confirm-body">
+                    L'organisation, ses membres et ses groupes disparaissent. Ni GhostPass ni
+                    personne ne peut les rétablir : le serveur ne détient que des blobs chiffrés.
+                    La suppression est refusée tant qu'il reste des collections, des secrets
+                    partagés ou d'autres membres actifs.
+                  </p>
+                  <label class="field">
+                    <span>Saisissez le nom de l'organisation pour confirmer</span>
+                    <input bind:value={deleteConfirmName} placeholder={o.name} autocomplete="off" />
+                  </label>
+                  <!-- Le refus du serveur s'affiche ici, sous le bouton qui l'a provoqué, et
+                       le panneau reste ouvert. Un 409 « il reste 3 collections » est une
+                       information exploitable ; l'escamoter ferait passer la garde pour une panne. -->
+                  {#if deleteError}
+                    <p class="confirm-error" role="alert">{deleteError}</p>
+                  {/if}
+                  <div class="confirm-actions">
+                    <button type="submit" class="danger" disabled={busy || deleteConfirmName.trim() !== o.name}>
+                      {busy ? "Suppression…" : "Supprimer définitivement"}
+                    </button>
+                    <button type="button" class="ghost sm" onclick={cancelDelete} disabled={busy}>Annuler</button>
+                  </div>
+                  {#if deleteConfirmName.trim() !== o.name}
+                    <p class="hint">Le bouton s'active quand le nom saisi correspond exactement à « {o.name} ».</p>
+                  {/if}
+                </form>
+              </li>
+            {/if}
           {/each}
         </ul>
       {/if}

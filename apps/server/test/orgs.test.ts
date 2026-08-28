@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildApp } from "../src/app.js";
 import { openDatabase } from "../src/db/database.js";
+import { audit, organizations, orgMembers, users } from "../src/db/repositories.js";
 
 const KDF = JSON.stringify({ mem_cost_kib: 65536, time_cost: 3, parallelism: 4 });
 
@@ -29,9 +30,11 @@ async function registerUser(
   return res.json().token as string;
 }
 
-/// App + un admin ayant créé une org. Renvoie tokens et orgId.
+/// App + un admin ayant créé une org. Renvoie tokens, orgId et la DB (pour relire les lignes :
+/// un 204 dit ce que le serveur a répondu, pas ce qu'il a écrit).
 async function appWithOrg() {
-  const app = buildApp(openDatabase(":memory:"));
+  const db = openDatabase(":memory:");
+  const app = buildApp(db);
   const adminToken = await registerUser(app, "admin@stackops.ch", "QURNSU4tcHViLWtleQ");
   const memberToken = await registerUser(app, "member@stackops.ch", "TUVNQkVSLXB1Yi1rZXk");
   const created = await app.inject({
@@ -41,7 +44,30 @@ async function appWithOrg() {
     payload: { name: "StackOps Team", encryptedOrgKey: "2.c2VsZg.c2VsZmN0" },
   });
   assert.equal(created.statusCode, 201);
-  return { app, adminToken, memberToken, orgId: created.json().orgId as string };
+  return { app, db, adminToken, memberToken, orgId: created.json().orgId as string };
+}
+
+/// Fait entrer `member@stackops.ch` dans l'org avec le rôle donné, puis lui fait accepter.
+async function joinAsActiveMember(
+  app: ReturnType<typeof buildApp>,
+  adminToken: string,
+  memberToken: string,
+  orgId: string,
+  role: "admin" | "member" | "readonly" = "member",
+) {
+  const add = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/members`,
+    headers: auth(adminToken),
+    payload: { email: "member@stackops.ch", role, encryptedOrgKey: "2.bWVtYmVy.bWVtYmVyY3Q" },
+  });
+  assert.equal(add.statusCode, 201);
+  const accept = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/accept`,
+    headers: auth(memberToken),
+  });
+  assert.equal(accept.statusCode, 200);
 }
 
 test("créer une org : le créateur devient admin actif", async () => {
@@ -156,5 +182,140 @@ test("accès au coffre d'org refusé sans authentification", async () => {
   const { app, orgId } = await appWithOrg();
   const res = await app.inject({ method: "GET", url: `/api/orgs/${orgId}/membership` });
   assert.equal(res.statusCode, 401);
+  await app.close();
+});
+
+// ─── Suppression d'organisation ───
+//
+// L'opération est irréversible et emporte en cascade `org_members`, `collections` et
+// `org_groups`. Chaque refus est testé séparément : une garde qu'aucun test ne fait tomber
+// n'en est pas une.
+
+test("supprimer une org : un non-membre reçoit 404 (l'existence n'est pas révélée)", async () => {
+  const { app, db, memberToken, orgId } = await appWithOrg();
+  const res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}`,
+    headers: auth(memberToken),
+  });
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.json().error, "organisation introuvable");
+  // Et l'org est toujours là.
+  assert.ok(await organizations.findById(db, orgId));
+  await app.close();
+});
+
+test("supprimer une org : un membre actif non-admin reçoit 403", async () => {
+  const { app, db, adminToken, memberToken, orgId } = await appWithOrg();
+  await joinAsActiveMember(app, adminToken, memberToken, orgId, "member");
+  const res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}`,
+    headers: auth(memberToken),
+  });
+  assert.equal(res.statusCode, 403);
+  assert.match(res.json().error, /administrateur/);
+  assert.ok(await organizations.findById(db, orgId));
+  await app.close();
+});
+
+test("supprimer une org qui contient encore des collections et des secrets → 409 chiffré", async () => {
+  const { app, db, adminToken, orgId } = await appWithOrg();
+  const coll = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections`,
+    headers: auth(adminToken),
+    payload: { name: "Prod" },
+  });
+  assert.equal(coll.statusCode, 201);
+  const cid = coll.json().id as string;
+  const item = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${cid}/items`,
+    headers: auth(adminToken),
+    payload: { encryptedKey: "2.aXRlbQ.aXRlbWN0", encryptedData: "2.ZGF0YQ.ZGF0YWN0" },
+  });
+  assert.equal(item.statusCode, 201);
+
+  const res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(res.statusCode, 409);
+  const body = res.json();
+  assert.equal(body.collections, 1);
+  assert.equal(body.items, 1);
+  // Le décompte doit être DANS le message : c'est lui que l'interface affiche.
+  assert.match(body.error, /1 collection et 1 secret partagé/);
+  assert.ok(await organizations.findById(db, orgId));
+  await app.close();
+});
+
+test("supprimer une org où il reste un autre membre actif → 409 avec le décompte", async () => {
+  const { app, db, adminToken, memberToken, orgId } = await appWithOrg();
+  await joinAsActiveMember(app, adminToken, memberToken, orgId, "member");
+  const res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(res.statusCode, 409);
+  const body = res.json();
+  assert.equal(body.activeMembers, 1);
+  assert.match(body.error, /1 autre membre actif/);
+  assert.ok(await organizations.findById(db, orgId));
+  await app.close();
+});
+
+test("une invitation en attente ne bloque pas la suppression", async () => {
+  const { app, db, adminToken, orgId } = await appWithOrg();
+  // Invité mais jamais accepté : ce membre n'a jamais eu accès à quoi que ce soit.
+  const add = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/members`,
+    headers: auth(adminToken),
+    payload: {
+      email: "member@stackops.ch",
+      role: "member",
+      encryptedOrgKey: "2.bWVtYmVy.bWVtYmVyY3Q",
+    },
+  });
+  assert.equal(add.statusCode, 201);
+  const res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(res.statusCode, 204);
+  assert.equal(await organizations.findById(db, orgId), undefined);
+  await app.close();
+});
+
+test("supprimer une org vide : 204, la ligne disparaît vraiment et l'audit la consigne", async () => {
+  const { app, db, adminToken, orgId } = await appWithOrg();
+  assert.ok(await organizations.findById(db, orgId), "l'org doit exister avant la suppression");
+
+  const res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(res.statusCode, 204);
+
+  // Relecture directe en base : c'est la ligne qui fait foi, pas le code de retour.
+  assert.equal(await organizations.findById(db, orgId), undefined);
+  // Et l'adhésion de l'admin est partie en cascade.
+  assert.equal(await orgMembers.listByOrg(db, orgId).then((r) => r.length), 0);
+
+  const mine = await app.inject({ method: "GET", url: "/api/orgs", headers: auth(adminToken) });
+  assert.equal(mine.json().organizations.length, 0);
+
+  const admin = (await users.findByEmail(db, "admin@stackops.ch"))!;
+  const events = await audit.listByUser(db, admin.id, 50);
+  assert.ok(
+    events.some((e) => e.action === "org.delete" && e.target === "StackOps Team"),
+    "la suppression doit être consignée à l'audit",
+  );
   await app.close();
 });
