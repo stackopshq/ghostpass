@@ -359,6 +359,35 @@ export const api = {
       token,
     });
   },
+  /// Met a jour un identifiant d'organisation. La route existait cote serveur
+  /// depuis l'origine ; c'est l'interface qui n'avait aucun moyen de l'appeler,
+  /// donc un mot de passe entre dans une collection ne pouvait plus etre
+  /// corrige -- il fallait le supprimer et le ressaisir.
+  updateOrgItem(
+    token: string,
+    orgId: string,
+    collectionId: string,
+    itemId: string,
+    body: { encryptedKey: string; encryptedData: string },
+  ) {
+    return http<ItemDto>(`/api/orgs/${orgId}/collections/${collectionId}/items/${itemId}`, {
+      method: "PUT",
+      body,
+      token,
+    });
+  },
+  /// Qui a acces a une collection, et retrait de cet acces.
+  listCollectionAccess(token: string, orgId: string, collectionId: string) {
+    return http<{
+      access: Array<{ userId: string; email: string | null; permission: string }>;
+    }>(`/api/orgs/${orgId}/collections/${collectionId}/access`, { token });
+  },
+  revokeCollectionAccess(token: string, orgId: string, collectionId: string, userId: string) {
+    return http<void>(`/api/orgs/${orgId}/collections/${collectionId}/access/${userId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
   grantCollectionAccess(
     token: string,
     orgId: string,

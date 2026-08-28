@@ -89,6 +89,10 @@
   let itemName = $state("");
   let itemUsername = $state("");
   let itemPassword = $state("");
+  // Le champ etait en `type="text"` : le mot de passe s'affichait en clair
+  // pendant toute la saisie, sans moyen de le masquer. Dans un gestionnaire de
+  // mots de passe le defaut doit etre l'inverse -- masque, et l'oeil montre.
+  let showItemPassword = $state(false);
   let itemUrl = $state("");
   let itemFolder = $state("");
   let itemTotp = $state("");
@@ -727,6 +731,7 @@
     itemName = "";
     itemUsername = "";
     itemPassword = "";
+    showItemPassword = false;
     itemUrl = "";
     itemTotp = "";
     itemNote = "";
@@ -1538,7 +1543,10 @@
                 <div class="field">
                   <span>Mot de passe</span>
                   <div class="input-row">
-                    <input type="text" bind:value={itemPassword} placeholder="••••••" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                    <input type={showItemPassword ? "text" : "password"} bind:value={itemPassword} placeholder="••••••" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                    <button type="button" class="icon-btn" title={showItemPassword ? "Masquer" : "Afficher"} aria-label={showItemPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} onclick={() => (showItemPassword = !showItemPassword)}>
+                      {#if showItemPassword}{@render eyeOffIcon()}{:else}{@render eyeIcon()}{/if}
+                    </button>
                     <button type="button" class="icon-btn" title="Générer un mot de passe" aria-label="Générer" onclick={genPassword}>{@render diceIcon()}</button>
                     <button type="button" class="icon-btn" class:copied={genOpen} title="Options du générateur" aria-label="Options" onclick={() => (genOpen = !genOpen)}>{@render slidersIcon()}</button>
                   </div>

@@ -879,6 +879,28 @@ export const collectionAccess = {
       .executeTakeFirst();
   },
 
+  /// Qui a un accès explicite à CETTE collection. Sans cette lecture, l'octroi
+  /// est une écriture sans miroir : l'interface pouvait donner un accès et
+  /// n'avait ensuite aucun moyen de dire à qui il avait été donné.
+  listForCollection(db: DB, collectionId: string): Promise<CollectionAccessRow[]> {
+    return db
+      .selectFrom("collection_access")
+      .selectAll()
+      .where("collection_id", "=", collectionId)
+      .orderBy("created_at")
+      .execute();
+  },
+
+  /// Retire l'accès explicite d'un utilisateur. Idempotent : révoquer deux fois
+  /// n'est pas une erreur, et l'appelant n'a pas à savoir si la ligne existait.
+  async revoke(db: DB, collectionId: string, userId: string): Promise<void> {
+    await db
+      .deleteFrom("collection_access")
+      .where("collection_id", "=", collectionId)
+      .where("user_id", "=", userId)
+      .execute();
+  },
+
   /// Collections d'une org auxquelles l'utilisateur a un accès explicite.
   listCollectionsForUser(db: DB, orgId: string, userId: string): Promise<CollectionRow[]> {
     return db
