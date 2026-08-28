@@ -1323,6 +1323,43 @@ final class VaultStore: ObservableObject {
         }
     }
 
+
+    // ─── Accès nommés aux collections ───
+
+    func accesDeLaCollection(_ organisation: Organisation, collection: String) async
+        -> [AccesNomme]
+    {
+        guard let api, let token else { return [] }
+        do {
+            return try await api.collectionAccess(
+                token: token, org: organisation.id, collection: collection
+            ).compactMap(AccesNomme.init)
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
+        }
+    }
+
+    func accorderLAccesNomme(
+        _ organisation: Organisation, collection: String, membre: String,
+        droit: DroitSurCollection
+    ) async -> Bool {
+        await agirSurLEquipe(organisation) { api, token in
+            try await api.grantCollectionAccess(
+                token: token, org: organisation.id, collection: collection, userId: membre,
+                permission: droit.rawValue)
+        }
+    }
+
+    func revoquerLAccesNomme(
+        _ organisation: Organisation, collection: String, membre: String
+    ) async -> Bool {
+        await agirSurLEquipe(organisation) { api, token in
+            try await api.revokeCollectionAccess(
+                token: token, org: organisation.id, collection: collection, userId: membre)
+        }
+    }
+
 }
 
 /// Coffre d'un donneur, ouvert le temps d'une consultation. `coffre` reste un objet opaque du

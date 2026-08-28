@@ -306,6 +306,25 @@ private struct AuditEventsDTO: Decodable {
     let events: [AuditEventDTO]
 }
 
+/// Un accès **nommé** sur une collection : accordé à quelqu'un en particulier, par
+/// opposition à celui qu'un groupe confère. Le serveur ne renvoie ici que les premiers.
+///
+/// `email` peut être absent — le serveur renvoie `null` s'il ne retrouve pas le compte.
+struct OrgCollectionAccessDTO: Decodable {
+    let userId: String
+    let email: String?
+    let permission: String
+}
+
+private struct OrgCollectionAccessListDTO: Decodable {
+    let access: [OrgCollectionAccessDTO]
+}
+
+private struct CollectionAccessBody: Encodable {
+    let userId: String
+    let permission: String
+}
+
 /// Client HTTP du serveur GhostPass. Il ne voit jamais que du chiffré : le clair
 /// n'existe que de l'autre côté de la frontière FFI.
 struct APIClient {
@@ -737,6 +756,41 @@ struct APIClient {
         try decode(
             AuditEventsDTO.self, from: await request("GET", "api/account/audit", token: token)
         ).events
+    }
+
+
+    // ─── Accès nommés aux collections ───
+    // Les trois exigent la permission `manage` sur la collection ; le serveur le vérifie,
+    // on ne fait que transmettre son verdict.
+
+    func collectionAccess(token: String, org: String, collection: String) async throws
+        -> [OrgCollectionAccessDTO]
+    {
+        try decode(
+            OrgCollectionAccessListDTO.self,
+            from: await request(
+                "GET", "api/orgs/\(org)/collections/\(collection)/access", token: token)
+        ).access
+    }
+
+    func grantCollectionAccess(
+        token: String, org: String, collection: String, userId: String, permission: String
+    ) async throws {
+        let body = try JSONEncoder().encode(
+            CollectionAccessBody(userId: userId, permission: permission))
+        _ = try await request(
+            "POST", "api/orgs/\(org)/collections/\(collection)/access", token: token,
+            body: body)
+    }
+
+    /// Idempotent côté serveur : un second retrait répond comme le premier, pour qu'un
+    /// double appui ne ressemble pas à une panne.
+    func revokeCollectionAccess(
+        token: String, org: String, collection: String, userId: String
+    ) async throws {
+        _ = try await request(
+            "DELETE", "api/orgs/\(org)/collections/\(collection)/access/\(userId)",
+            token: token)
     }
 
 }

@@ -260,3 +260,75 @@ test("un non-admin ne peut pas déclencher de rotation", async () => {
   assert.equal(res.statusCode, 403);
   await app.close();
 });
+
+test("lire et reprendre un accès nommé", async () => {
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json();
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
+
+  const vide = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+  });
+  assert.equal(vide.statusCode, 200);
+  // Le créateur n'apparaît pas : sa gestion vient de la création, pas d'un octroi.
+  assert.deepEqual(vide.json().access, []);
+
+  await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+    payload: { userId: memberId, permission: "write" },
+  });
+
+  // La forme exacte compte : le client iOS décode ces trois champs, et une clé
+  // renommée le laisserait avec une liste vide plutôt qu'une erreur visible.
+  const liste = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+  });
+  assert.deepEqual(liste.json().access, [
+    { userId: memberId, email: "member@stackops.ch", permission: "write" },
+  ]);
+
+  // Le bénéficiaire lui-même ne peut pas lire la liste : il a `write`, pas `manage`.
+  const indiscret = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(memberToken),
+  });
+  assert.equal(indiscret.statusCode, 403);
+
+  const retrait = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access/${memberId}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(retrait.statusCode, 204);
+
+  // Retiré de la liste, et l'accès effectivement perdu — pas seulement la ligne.
+  const apres = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+  });
+  assert.deepEqual(apres.json().access, []);
+  const refuse = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items`,
+    headers: auth(memberToken),
+  });
+  assert.equal(refuse.statusCode, 403);
+
+  // Idempotent : un second retrait répond comme le premier. Un double appui ne
+  // doit pas ressembler à une panne.
+  const encore = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access/${memberId}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(encore.statusCode, 204);
+  await app.close();
+});

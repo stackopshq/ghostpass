@@ -125,3 +125,24 @@ enum RotationImpossible: Error {
         }
     }
 }
+
+/// Un accès nommé sur une collection.
+///
+/// La distinction avec l'accès qu'un groupe confère compte au moment de retirer : révoquer
+/// ici ne retire que cet accès-là. Si un groupe donne par ailleurs la collection à la même
+/// personne, elle la garde — et l'écran doit le dire, plutôt que de laisser croire à un
+/// retrait complet.
+struct AccesNomme: Identifiable {
+    let id: String
+    let email: String?
+    let droit: DroitSurCollection
+
+    /// Un droit que cette version ne connaît pas fait écarter la ligne : mieux vaut une
+    /// entrée absente qu'une entrée dont le libellé mentirait sur ce qu'elle autorise.
+    init?(_ dto: OrgCollectionAccessDTO) {
+        guard let droit = DroitSurCollection(rawValue: dto.permission) else { return nil }
+        self.id = dto.userId
+        self.email = dto.email
+        self.droit = droit
+    }
+}

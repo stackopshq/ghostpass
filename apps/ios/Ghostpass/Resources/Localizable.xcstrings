@@ -1,3834 +1,4090 @@
 {
-  "sourceLanguage" : "fr",
-  "strings" : {
-    "" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
+  "sourceLanguage": "fr",
+  "strings": {
+    "": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
           }
         }
       }
     },
-    " — effacé dans %lld s" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " — cleared in %lld s"
+    " — effacé dans %lld s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " — cleared in %lld s"
           }
         }
       }
     },
-    "« %@ » disparaîtra de la liste. Aucun élément n'est supprimé." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“%@” will disappear from the list. No item is deleted."
+    "%1$@ n'a pas pu être activé (code %2$d).": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ could not be enabled (code %2$d)."
           }
         }
       }
     },
-    "« %@ » sera perdu, sans possibilité de retour." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“%@” will be lost, with no way back."
+    "%1$d membres · %2$d collections": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d members · %2$d collections"
           }
         }
       }
     },
-    "« Système » suit le réglage de l'appareil, y compris son passage automatique à la nuit." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“System” follows the device setting, including its automatic switch to night."
+    "%@ n'a pas permis d'ouvrir le coffre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ could not open the vault."
           }
         }
       }
     },
-    "(sans nom)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "(no name)"
-          }
-        }
-      }
-    },
-    "%@ n'a pas permis d'ouvrir le coffre." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ could not open the vault."
-          }
-        }
-      }
-    },
-    "%@ n'a pas pu être activé (code %d)." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ could not be enabled (code %d)."
+    "%@ n'a pas pu être activé (code %d).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ could not be enabled (code %d)."
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ n'a pas pu être activé (code %2$d)."
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ n'a pas pu être activé (code %2$d)."
           }
         }
       }
     },
-    "%@ ne pourra plus ouvrir son coffre." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ will no longer be able to open their vault."
+    "%@ ne pourra plus ouvrir son coffre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ will no longer be able to open their vault."
           }
         }
       }
     },
-    "%1$@ n'a pas pu être activé (code %2$d)." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ could not be enabled (code %2$d)."
+    "%d consultation(s)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d view(s)"
           }
         }
       }
     },
-    "%1$d membres · %2$d collections" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$d members · %2$d collections"
+    "%d jours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d days"
           }
         }
       }
     },
-    "%d consultation(s)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d view(s)"
+    "%d membre(s)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d membre(s)"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d member(s)"
+          }
+        }
+      }
+    },
+    "%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
+    "%lld entrées importées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld entries imported."
+          }
+        }
+      }
+    },
+    "%lld mots de passe à revoir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld passwords to review"
+          }
+        }
+      }
+    },
+    "%lld s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld s"
+          }
+        }
+      }
+    },
+    "%lld éléments examinés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld items examined"
+          }
+        }
+      }
+    },
+    "(sans nom)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(no name)"
+          }
+        }
+      }
+    },
+    "1 heure": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 hour"
+          }
+        }
+      }
+    },
+    "1 jour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 day"
+          }
+        }
+      }
+    },
+    "1 semaine": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 week"
+          }
+        }
+      }
+    },
+    "123456": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "123456"
+          }
+        }
+      }
+    },
+    "30 jours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 days"
+          }
+        }
+      }
+    },
+    "AAAA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YYYY"
+          }
+        }
+      }
+    },
+    "Accepter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept"
+          }
+        }
+      }
+    },
+    "Accepter vous donnera accès aux coffres que l'équipe partage avec vous.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accepting will give you access to the vaults the team shares with you."
+          }
+        }
+      }
+    },
+    "Accorder à un membre": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accorder à un membre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grant to a member"
+          }
+        }
+      }
+    },
+    "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Granted to a specific person. These are the only ones this screen can remove."
+          }
+        }
+      }
+    },
+    "Accès accordé à une collection": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access granted to a collection"
+          }
         }
       }
     },
-    "%d jours" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d days"
+    "Accès automatique le %@ si vous ne faites rien.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access opens automatically on %@ unless you act."
           }
         }
       }
     },
-    "%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
+    "Accès d'urgence": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emergency access"
           }
         }
       }
     },
-    "%lld éléments examinés" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld items examined"
+    "Accès d'urgence accordé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emergency access approved"
           }
         }
       }
     },
-    "%lld entrées importées." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld entries imported."
+    "Accès d'urgence confié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emergency access granted to a contact"
           }
         }
       }
     },
-    "%lld mots de passe à revoir" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld passwords to review"
+    "Accès d'urgence demandé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emergency access requested"
           }
         }
       }
     },
-    "%lld s" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld s"
+    "Accès demandé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access requested"
           }
         }
       }
     },
-    "≈ %lld bits" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "≈ %lld bits"
+    "Accès nommés": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accès nommés"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Named access"
+          }
+        }
+      }
+    },
+    "Accès ouvert": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access open"
+          }
         }
       }
     },
-    "1 heure" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 hour"
+    "Accès possible à partir du %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access available from %@."
           }
         }
       }
     },
-    "1 jour" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 day"
+    "Accès retiré à une collection": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access revoked from a collection"
           }
         }
       }
     },
-    "1 semaine" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 week"
+    "Accès révoqué": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access revoked"
           }
         }
       }
     },
-    "30 jours" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30 days"
+    "Accès révoqués": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revoked access"
           }
         }
       }
     },
-    "123456" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "123456"
+    "Actions sensibles": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sensitive actions"
           }
         }
       }
     },
-    "À enregistrer dans votre application d'authentification" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "To store in your authenticator app"
+    "Activer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on"
           }
         }
       }
     },
-    "À importer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "To import"
+    "Activer %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on %@"
           }
         }
       }
     },
-    "AAAA" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "YYYY"
+    "Administrateur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administrator"
           }
         }
       }
     },
-    "Accepter" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accept"
+    "Administration": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administration"
           }
         }
       }
     },
-    "Accepter vous donnera accès aux coffres que l'équipe partage avec vous." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accepting will give you access to the vaults the team shares with you."
+    "Adresse copiée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address copied"
           }
         }
       }
     },
-    "Accès accordé à une collection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Access granted to a collection"
+    "Adresse de serveur invalide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid server address."
           }
         }
       }
     },
-    "Accès automatique le %@ si vous ne faites rien." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Access opens automatically on %@ unless you act."
+    "Adresse du site": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website address"
           }
         }
       }
     },
-    "Accès d'urgence" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emergency access"
+    "Adresse e-mail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email address"
           }
         }
       }
     },
-    "Accès d'urgence accordé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emergency access approved"
+    "Adresses": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Addresses"
           }
         }
       }
     },
-    "Accès d'urgence confié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emergency access granted to a contact"
+    "Afficher les logos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show logos"
           }
         }
       }
     },
-    "Accès d'urgence demandé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emergency access requested"
+    "Ajoutez un identifiant avec le bouton +.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a login with the + button."
           }
         }
       }
     },
-    "Accès demandé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Access requested"
+    "Ancien mot de passe copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous password copied"
           }
         }
       }
     },
-    "Accès ouvert" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Access open"
+    "Anciens mots de passe (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous passwords (%lld)"
           }
         }
       }
     },
-    "Accès possible à partir du %@." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Access available from %@."
+    "Annuler": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
           }
         }
       }
     },
-    "Accès retiré à une collection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Access revoked from a collection"
+    "Aperçu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview"
           }
         }
       }
     },
-    "Accès révoqué" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Access revoked"
+    "Apparence": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
           }
         }
       }
     },
-    "Accès révoqués" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revoked access"
+    "Après 1 minute": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 1 minute"
           }
         }
       }
     },
-    "Actions sensibles" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sensitive actions"
+    "Après 15 minutes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 15 minutes"
           }
         }
       }
     },
-    "Activer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turn on"
+    "Après 5 minutes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 5 minutes"
           }
         }
       }
     },
-    "Activer %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turn on %@"
+    "Aucun accès": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No access"
           }
         }
       }
     },
-    "Administrateur" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Administrator"
+    "Aucun dossier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No folders"
           }
         }
       }
     },
-    "Administration" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Administration"
+    "Aucun identifiant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No logins"
           }
         }
       }
     },
-    "Adresse copiée" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Address copied"
+    "Aucun mot de passe connu des fuites publiques.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No password known to public breaches."
           }
         }
       }
     },
-    "Adresse de serveur invalide." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invalid server address."
+    "Aucune action enregistrée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No action recorded."
           }
         }
       }
     },
-    "Adresse du site" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Website address"
+    "Aucune clé ne vous a encore été remise pour ce coffre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No key has been handed to you for this vault yet."
           }
         }
       }
     },
-    "Adresse e-mail" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Email address"
+    "Aucune collection ne vous est ouverte dans cette équipe. Un administrateur doit vous y donner accès.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No collection is open to you in this team. An administrator must grant you access."
           }
         }
       }
     },
-    "adresse@exemple.com" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "address@example.com"
+    "Aucune collection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No collection."
           }
         }
       }
     },
-    "Adresses" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Addresses"
+    "Aucune connexion enregistrée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sign-in recorded."
           }
         }
       }
     },
-    "Afficher les logos" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show logos"
+    "Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont pas reconnues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No entry found: the file is empty, or its columns are not recognised."
           }
         }
       }
     },
-    "Ajoutez un identifiant avec le bouton +." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add a login with the + button."
+    "Aucune session enregistrée sur cet appareil.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No session saved on this device."
           }
         }
       }
     },
-    "Ancien mot de passe copié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Previous password copied"
+    "Autres identifiants": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other logins"
           }
         }
       }
     },
-    "Anciens mots de passe (%lld)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Previous passwords (%lld)"
+    "Bon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Good"
           }
         }
       }
     },
-    "Annuler" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel"
+    "Caractères": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Characters"
           }
         }
       }
     },
-    "Aperçu" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preview"
+    "Carte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Card"
           }
         }
       }
     },
-    "Apparence" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appearance"
+    "Ce coffre est vide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This vault is empty."
           }
         }
       }
     },
-    "Après 1 minute" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After 1 minute"
+    "Ce qu'il pourra faire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What they will be able to do"
           }
         }
       }
     },
-    "Après 5 minutes" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After 5 minutes"
+    "Ce que d'autres vous ont laissé, et ce que vous pouvez en faire.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What others have left you, and what you can do with it."
           }
         }
       }
     },
-    "Après 15 minutes" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After 15 minutes"
+    "Ce que le groupe ouvre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What the group opens"
           }
         }
       }
     },
-    "Aucun accès" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No access"
+    "Ce qui retire une protection ou ouvre le coffre à quelqu'un d'autre. Une ligne que vous ne reconnaissez pas mérite de changer votre mot de passe maître.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anything that removes a protection or opens the vault to someone else. A line you do not recognise is worth changing your master password over."
           }
         }
       }
     },
-    "Aucun dossier" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No folders"
+    "Ce secret ne sera plus affiché. Sans lui et sans votre application, la connexion deviendra impossible — gardez un moyen de secours.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This secret will not be shown again. Without it and without your app, signing in becomes impossible — keep a backup."
           }
         }
       }
     },
-    "Aucun identifiant" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No logins"
+    "Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These cannot be removed here: they come from the group, and that is where they are set."
           }
         }
       }
     },
-    "Aucun mot de passe connu des fuites publiques." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No password known to public breaches."
+    "Ces coffres ne s'ouvrent plus. Après une rotation de clé, ce que vous en aviez vu reste connu de vous — les mots de passe concernés doivent être changés par l'équipe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These vaults no longer open. After a key rotation, what you already saw remains known to you — the passwords involved must be changed by the team."
           }
         }
       }
     },
-    "Aucune action enregistrée." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No action recorded."
+    "Cette collection est vide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This collection is empty."
           }
         }
       }
     },
-    "Aucune clé ne vous a encore été remise pour ce coffre." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No key has been handed to you for this vault yet."
+    "Cette personne gardera l'accès : elle administre l'équipe, ce qui lui donne la gestion de toutes les collections.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette personne gardera l'accès : elle administre l'équipe, ce qui lui donne la gestion de toutes les collections."
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person will keep access: they administer the team, which grants them management of every collection."
+          }
         }
       }
     },
-    "Aucune collection ne vous est ouverte dans cette équipe. Un administrateur doit vous y donner accès." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No collection is open to you in this team. An administrator must grant you access."
+    "Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person will keep access: the “%@” group grants it too. To remove it entirely, take them out of that group."
           }
         }
       }
     },
-    "Aucune collection." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No collection."
+    "Cette personne perdra l'accès à cette collection.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette personne perdra l'accès à cette collection."
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person will lose access to this collection."
+          }
         }
       }
     },
-    "Aucune connexion enregistrée." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No sign-in recorded."
+    "Chiffres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digits"
           }
         }
       }
     },
-    "Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont pas reconnues." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No entry found: the file is empty, or its columns are not recognised."
+    "Choisir un fichier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a file"
           }
         }
       }
     },
-    "Aucune session enregistrée sur cet appareil." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No session saved on this device."
+    "Choisir un nouveau mot de passe maître rendra le coffre inaccessible à son propriétaire actuel. À ne faire que s'il ne peut plus s'en servir lui-même.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setting a new master password will lock the current owner out of the vault. Only do this if they can no longer use it themselves."
           }
         }
       }
     },
-    "Autres identifiants" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Other logins"
+    "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, 1Password, LastPass et Chrome sont reconnues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the CSV file exported by your current manager. Bitwarden, 1Password, LastPass and Chrome column names are recognised."
           }
         }
       }
     },
-    "Bon" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Good"
+    "Clair": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
           }
         }
       }
     },
-    "Caractères" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Characters"
+    "Classement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organisation"
           }
         }
       }
     },
-    "Carte" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Card"
+    "Clé d'équipe renouvelée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team key rotated"
           }
         }
       }
     },
-    "Ce coffre est vide." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This vault is empty."
+    "Clé de récupération": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery key"
           }
         }
       }
     },
-    "Ce qu'il pourra faire" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What they will be able to do"
+    "Clé de récupération refusée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery key refused."
           }
         }
       }
     },
-    "Ce que d'autres vous ont laissé, et ce que vous pouvez en faire." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What others have left you, and what you can do with it."
+    "Clé de sécurité ajoutée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Security key added"
           }
         }
       }
     },
-    "Ce que le groupe ouvre" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What the group opens"
+    "Clé de sécurité retirée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Security key removed"
           }
         }
       }
     },
-    "Ce qui retire une protection ou ouvre le coffre à quelqu'un d'autre. Une ligne que vous ne reconnaissez pas mérite de changer votre mot de passe maître." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anything that removes a protection or opens the vault to someone else. A line you do not recognise is worth changing your master password over."
+    "Clé de vérification illisible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unreadable verification key."
           }
         }
       }
     },
-    "Ce secret ne sera plus affiché. Sans lui et sans votre application, la connexion deviendra impossible — gardez un moyen de secours." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This secret will not be shown again. Without it and without your app, signing in becomes impossible — keep a backup."
+    "Clé ou URI otpauth://": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key or otpauth:// URI"
           }
         }
       }
     },
-    "Ces coffres ne s'ouvrent plus. Après une rotation de clé, ce que vous en aviez vu reste connu de vous — les mots de passe concernés doivent être changés par l'équipe." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "These vaults no longer open. After a key rotation, what you already saw remains known to you — the passwords involved must be changed by the team."
+    "Code copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code copied"
           }
         }
       }
     },
-    "Cette collection est vide." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This collection is empty."
+    "Code à six chiffres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Six-digit code"
           }
         }
       }
     },
-    "Chiffres" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Digits"
+    "Code à usage unique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One-time code"
           }
         }
       }
     },
-    "Choisir un fichier" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose a file"
+    "Coffre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault"
           }
         }
       }
     },
-    "Choisir un nouveau mot de passe maître rendra le coffre inaccessible à son propriétaire actuel. À ne faire que s'il ne peut plus s'en servir lui-même." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Setting a new master password will lock the current owner out of the vault. Only do this if they can no longer use it themselves."
+    "Coffre chiffré de bout en bout": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End-to-end encrypted vault"
           }
         }
       }
     },
-    "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, 1Password, LastPass et Chrome sont reconnues." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose the CSV file exported by your current manager. Bitwarden, 1Password, LastPass and Chrome column names are recognised."
+    "Coffre enregistré sur cet appareil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault saved on this device"
           }
         }
       }
     },
-    "Clair" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Light"
+    "Coffre indisponible": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault unavailable"
           }
         }
       }
     },
-    "Classement" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Organisation"
+    "Coffre vide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty vault"
           }
         }
       }
     },
-    "Clé d'équipe renouvelée" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Team key rotated"
+    "Coffres partagés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared vaults"
           }
         }
       }
     },
-    "Clé de récupération" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recovery key"
+    "Coffres qui me sont confiés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vaults entrusted to me"
           }
         }
       }
     },
-    "Clé de récupération refusée." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recovery key refused."
+    "Collection": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collection"
           }
         }
       }
     },
-    "Clé de sécurité ajoutée" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Security key added"
+    "Collections": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collections"
           }
         }
       }
     },
-    "Clé de sécurité retirée" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Security key removed"
+    "Compte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
           }
         }
       }
     },
-    "Clé de vérification illisible." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unreadable verification key."
+    "Confier l'accès": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grant access"
           }
         }
       }
     },
-    "Clé ou URI otpauth://" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Key or otpauth:// URI"
+    "Configurer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set up"
           }
         }
       }
     },
-    "Code à six chiffres" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Six-digit code"
+    "Confirmer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm"
           }
         }
       }
     },
-    "Code à usage unique" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "One-time code"
+    "Connexion par SSO": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in with SSO"
           }
         }
       }
     },
-    "Code copié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Code copied"
+    "Connexion par mot de passe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in with password"
           }
         }
       }
     },
-    "Coffre" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vault"
+    "Connexion par passkey": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in with a passkey"
           }
         }
       }
     },
-    "Coffre chiffré de bout en bout" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End-to-end encrypted vault"
+    "Connexions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign-ins"
           }
         }
       }
     },
-    "Coffre enregistré sur cet appareil" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vault saved on this device"
+    "Consultations": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Views"
           }
         }
       }
     },
-    "Coffre indisponible" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vault unavailable"
+    "Contact accepté": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact accepted"
           }
         }
       }
     },
-    "Coffre vide" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empty vault"
+    "Contenu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content"
           }
         }
       }
     },
-    "Coffres partagés" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shared vaults"
+    "Copier la clé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy key"
           }
         }
       }
     },
-    "Coffres qui me sont confiés" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vaults entrusted to me"
+    "Copier le code": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy code"
           }
         }
       }
     },
-    "Collection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collection"
+    "Copier le lien": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the link"
           }
         }
       }
     },
-    "Collections" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collections"
+    "Copier le mot de passe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy password"
           }
         }
       }
     },
-    "Compte" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account"
+    "Copier le nom d'utilisateur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy username"
           }
         }
       }
     },
-    "Confier l'accès" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Grant access"
+    "Copier le secret": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the secret"
           }
         }
       }
     },
-    "Configurer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set up"
+    "Copiée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
           }
         }
       }
     },
-    "Confirmer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirm"
+    "Corbeille": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trash"
           }
         }
       }
     },
-    "Connexion par mot de passe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Signed in with password"
+    "Corbeille vide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trash is empty"
           }
         }
       }
     },
-    "Connexion par passkey" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Signed in with a passkey"
+    "Correct": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fair"
           }
         }
       }
     },
-    "Connexion par SSO" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Signed in with SSO"
+    "Cryptogramme": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Security code"
           }
         }
       }
     },
-    "Connexions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign-ins"
+    "Créer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create"
           }
         }
       }
     },
-    "Consultations" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Views"
+    "Créer le lien": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create the link"
           }
         }
       }
     },
-    "Contact accepté" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Contact accepted"
+    "Créer une clé de récupération": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a recovery key"
           }
         }
       }
     },
-    "Contenu" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Content"
+    "Créez-en un, ou renseignez un dossier sur un élément.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create one, or set a folder on an item."
           }
         }
       }
     },
-    "Copiée" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copied"
+    "Créez-en une, ou attendez qu'on vous invite : les équipes dont vous ferez partie apparaîtront ici.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create one, or wait to be invited: the teams you belong to will appear here."
           }
         }
       }
     },
-    "Copier la clé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy key"
+    "Demande refusée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Request denied"
           }
         }
       }
     },
-    "Copier le code" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy code"
+    "Demander l'accès": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Request access"
           }
         }
       }
     },
-    "Copier le lien" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy the link"
+    "Demander l'accès préviendra %1$@, qui aura %2$d jours pour refuser.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requesting access will notify %1$@, who will have %2$d days to deny it."
           }
         }
       }
     },
-    "Copier le mot de passe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy password"
+    "Dossier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder"
           }
         }
       }
     },
-    "Copier le nom d'utilisateur" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy username"
+    "Dossier — Travail/Serveurs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder — Work/Servers"
           }
         }
       }
     },
-    "Copier le secret" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy the secret"
+    "Dossiers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folders"
           }
         }
       }
     },
-    "Corbeille" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trash"
+    "Douze caractères au minimum. Il remplacera celui du propriétaire.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Twelve characters minimum. It will replace the owner's."
           }
         }
       }
     },
-    "Corbeille vide" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trash is empty"
+    "Durée de vie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifetime"
           }
         }
       }
     },
-    "Correct" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fair"
+    "Déconnexion": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed out"
           }
         }
       }
     },
-    "Créer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create"
+    "Désactiver %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off %@"
           }
         }
       }
     },
-    "Créer le lien" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create the link"
+    "Désactiver le second facteur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off two-factor"
           }
         }
       }
     },
-    "Créer une clé de récupération" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create a recovery key"
+    "Déverrouiller": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock"
           }
         }
       }
     },
-    "Créez-en un, ou renseignez un dossier sur un élément." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create one, or set a folder on an item."
+    "Déverrouiller avec %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock with %@"
           }
         }
       }
     },
-    "Créez-en une, ou attendez qu'on vous invite : les équipes dont vous ferez partie apparaîtront ici." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create one, or wait to be invited: the teams you belong to will appear here."
+    "Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They must already have a GhostPass account: it is their public key that protects the team's."
           }
         }
       }
     },
-    "Cryptogramme" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Security code"
+    "Elle ne sera plus affichée. Sans elle, un mot de passe maître oublié rend le coffre définitivement illisible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It will not be shown again. Without it, a forgotten master password makes the vault permanently unreadable."
           }
         }
       }
     },
-    "Déconnexion" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Signed out"
+    "Enregistrer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
           }
         }
       }
     },
-    "Demande refusée" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Request denied"
+    "Entrées trouvées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entries found"
           }
         }
       }
     },
-    "Demander l'accès" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Request access"
+    "Erreur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
           }
         }
       }
     },
-    "Demander l'accès préviendra %1$@, qui aura %2$d jours pour refuser." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Requesting access will notify %1$@, who will have %2$d days to deny it."
+    "Excellent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excellent"
           }
         }
       }
     },
-    "Désactiver %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turn off %@"
+    "Expiration": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expiry"
           }
         }
       }
     },
-    "Désactiver le second facteur" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turn off two-factor"
+    "Exporter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export"
           }
         }
       }
     },
-    "Déverrouiller" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlock"
+    "Exporter le coffre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export the vault"
           }
         }
       }
     },
-    "Déverrouiller avec %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlock with %@"
+    "Faible": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weak"
           }
         }
       }
     },
-    "Dossier" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Folder"
+    "Favoris": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favourites"
           }
         }
       }
     },
-    "Dossier — Travail/Serveurs" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Folder — Work/Servers"
+    "Fermer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
           }
         }
       }
     },
-    "Dossiers" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Folders"
+    "Fichier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File"
           }
         }
       }
     },
-    "Douze caractères au minimum. Il remplacera celui du propriétaire." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Twelve characters minimum. It will replace the owner's."
+    "Fichier enregistré.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File saved."
           }
         }
       }
     },
-    "Durée de vie" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lifetime"
+    "Force": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strength"
           }
         }
       }
     },
-    "Écriture" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Write"
+    "Fuites connues": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Known breaches"
           }
         }
       }
     },
-    "Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "They must already have a GhostPass account: it is their public key that protects the team's."
+    "Gestion": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage"
           }
         }
       }
     },
-    "Elle ne sera plus affichée. Sans elle, un mot de passe maître oublié rend le coffre définitivement illisible." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "It will not be shown again. Without it, a forgotten master password makes the vault permanently unreadable."
+    "GhostPass": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GhostPass"
           }
         }
       }
     },
-    "Enregistrer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save"
+    "GitHub, Amazon…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub, Amazon…"
           }
         }
       }
     },
-    "Entrées trouvées" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Entries found"
+    "Groupe créé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group created"
           }
         }
       }
     },
-    "Erreur" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Error"
+    "Groupe supprimé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group deleted"
           }
         }
       }
     },
-    "et %lld autres" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "and %lld more"
+    "Groupes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groups"
           }
         }
       }
     },
-    "Excellent" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Excellent"
+    "Générer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generate"
           }
         }
       }
     },
-    "Expiration" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Expiry"
+    "Hors ligne — coffre affiché depuis cet appareil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline — vault shown from this device"
           }
         }
       }
     },
-    "Exporter" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Export"
+    "Huit caractères au minimum.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eight characters minimum."
           }
         }
       }
     },
-    "Exporter le coffre" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Export the vault"
+    "Icônes des sites": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site icons"
           }
         }
       }
     },
-    "Faible" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Weak"
+    "Identifiant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Login"
           }
         }
       }
     },
-    "Favoris" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Favourites"
+    "Identifiants": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credentials"
           }
         }
       }
     },
-    "Fermer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close"
+    "Il doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège la vôtre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They must already have a GhostPass account: it is their public key that protects yours."
           }
         }
       }
     },
-    "Fichier" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File"
+    "Il est chiffré sur cet appareil. Le serveur n'en reçoit que le chiffre, jamais la clé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It is encrypted on this device. The server only receives the ciphertext, never the key."
           }
         }
       }
     },
-    "Fichier enregistré." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File saved."
+    "Il est vérifié sur cet appareil et n'en sort pas : le serveur n'en reçoit qu'une empreinte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It is verified on this device and does not leave it: the server only receives a hash."
           }
         }
       }
     },
-    "Force" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strength"
+    "Ils pourront ouvrir votre coffre si vous ne le pouvez plus. Vous gardez la main tant que vous répondez.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They can open your vault if you no longer can. You stay in control as long as you answer."
           }
         }
       }
     },
-    "Fuites connues" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Known breaches"
+    "Immédiatement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immediately"
           }
         }
       }
     },
-    "Générer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Generate"
+    "Importer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
           }
         }
       }
     },
-    "Gestion" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Manage"
+    "Importer %lld entrées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import %lld entries"
           }
         }
       }
     },
-    "GhostPass" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GhostPass"
+    "Importer un CSV": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import a CSV"
           }
         }
       }
     },
-    "GitHub, Amazon…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GitHub, Amazon…"
+    "Impossible d'obtenir la clé publique de %@ : rotation annulée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not obtain %@'s public key: rotation cancelled."
           }
         }
       }
     },
-    "Groupe créé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Group created"
+    "Invitation envoyée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitation sent"
           }
         }
       }
     },
-    "Groupe supprimé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Group deleted"
+    "Invitation reçue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitation received"
           }
         }
       }
     },
-    "Groupes" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Groups"
+    "Invitations": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitations"
           }
         }
       }
     },
-    "Hors ligne — coffre affiché depuis cet appareil" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Offline — vault shown from this device"
+    "Inviter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite"
           }
         }
       }
     },
-    "https://ghostpass.stackops.ch" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "https://ghostpass.stackops.ch"
+    "Inviter quelqu'un": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite someone"
           }
         }
       }
     },
-    "Huit caractères au minimum." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eight characters minimum."
+    "Inviter quelqu'un lui scelle la clé de l'équipe vers sa clé publique. Le serveur ne transporte qu'un blob qu'il ne peut pas ouvrir.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inviting someone seals the team key to their public key. The server only carries a blob it cannot open."
           }
         }
       }
     },
-    "Icônes des sites" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Site icons"
+    "Journal du compte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account log"
           }
         }
       }
     },
-    "Identifiant" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Login"
+    "La clé de l'équipe sera changée et redistribuée aux autres membres. Ce que cette personne a déjà vu reste connu d'elle : les mots de passe concernés doivent être changés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The team key will be changed and redistributed to the other members. What this person already saw remains known to them: the passwords involved must be changed."
           }
         }
       }
     },
-    "Identifiants" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Credentials"
+    "La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recovery key is the only way out. Write it down and keep it somewhere other than this vault."
           }
         }
       }
     },
-    "Il doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège la vôtre." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "They must already have a GhostPass account: it is their public key that protects yours."
+    "La clé du coffre est créée sur cet appareil et scellée pour vous seul. Le serveur n'en connaîtra jamais le contenu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The vault key is created on this device and sealed for you alone. The server will never know its contents."
           }
         }
       }
     },
-    "Il est chiffré sur cet appareil. Le serveur n'en reçoit que le chiffre, jamais la clé." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "It is encrypted on this device. The server only receives the ciphertext, never the key."
+    "La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The key stays encrypted in the item; codes are computed on the device."
           }
         }
       }
     },
-    "Il est vérifié sur cet appareil et n'en sort pas : le serveur n'en reçoit qu'une empreinte." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "It is verified on this device and does not leave it: the server only receives a hash."
+    "La clé se trouve après le # du lien. Elle n'a jamais été envoyée au serveur, et ne peut plus être retrouvée si vous perdez le lien.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The key sits after the # in the link. It was never sent to the server, and cannot be recovered if you lose the link."
           }
         }
       }
     },
-    "Ils pourront ouvrir votre coffre si vous ne le pouvez plus. Vous gardez la main tant que vous répondez." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "They can open your vault if you no longer can. You stay in control as long as you answer."
+    "La personne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The person"
           }
         }
       }
     },
-    "Immédiatement" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Immediately"
+    "Langue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
           }
         }
       }
     },
-    "Importer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import"
+    "Le changement s'applique aussitôt, sans redémarrer l'application.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The change takes effect immediately, without restarting the app."
           }
         }
       }
     },
-    "Importer %lld entrées" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import %lld entries"
+    "Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun tiers n'est sollicité.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The vault is end-to-end encrypted: the server does not know its contents. Asking for an icon, however, names a domain to it. No third party is involved."
           }
         }
       }
     },
-    "Importer un CSV" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import a CSV"
+    "Le coffre local ne contient rien.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The local vault is empty."
           }
         }
       }
     },
-    "Impossible d'obtenir la clé publique de %@ : rotation annulée." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not obtain %@'s public key: rotation cancelled."
+    "Le contact": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The contact"
           }
         }
       }
     },
-    "Invitation envoyée" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invitation sent"
+    "Le contact ne pourra plus ouvrir votre coffre. La clé qui lui avait été scellée devient inutilisable.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The contact will no longer be able to open your vault. The key sealed for them becomes unusable."
           }
         }
       }
     },
-    "Invitation reçue" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invitation received"
+    "Le contact pourra en plus choisir un nouveau mot de passe maître — ce qui vous exclura de votre propre coffre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The contact can also set a new master password — which will lock you out of your own vault."
           }
         }
       }
     },
-    "Invitations" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invitations"
+    "Le contact pourra lire vos identifiants, sans rien y changer ni vous en priver.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The contact can read your credentials, without changing them or locking you out."
           }
         }
       }
     },
-    "Inviter" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invite"
+    "Le délai avant ouverture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The delay before access opens"
           }
         }
       }
     },
-    "Inviter quelqu'un" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invite someone"
+    "Le fichier contiendra vos %lld entrées, mots de passe compris, en clair. Il se relit dans n'importe quel gestionnaire — et par n'importe qui.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file will hold your %lld entries, passwords included, in the clear. Any manager can read it — and so can anyone."
           }
         }
       }
     },
-    "Inviter quelqu'un lui scelle la clé de l'équipe vers sa clé publique. Le serveur ne transporte qu'un blob qu'il ne peut pas ouvrir." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inviting someone seals the team key to their public key. The server only carries a blob it cannot open."
+    "Le fichier est lu sur l'appareil et rien d'autre n'en sort : chaque entrée est chiffrée avant d'être déposée. Pensez à l'effacer ensuite — un export CSV contient vos mots de passe en clair.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is read on the device and nothing else leaves it: each entry is encrypted before being uploaded. Remember to delete it afterwards — a CSV export holds your passwords in the clear."
           }
         }
       }
     },
-    "Journal du compte" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account log"
+    "Le fichier n'a pas pu être lu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be read."
           }
         }
       }
     },
-    "La clé de l'équipe sera changée et redistribuée aux autres membres. Ce que cette personne a déjà vu reste connu d'elle : les mots de passe concernés doivent être changés." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The team key will be changed and redistributed to the other members. What this person already saw remains known to them: the passwords involved must be changed."
+    "Le fichier n'a pas pu être ouvert.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be opened."
           }
         }
       }
     },
-    "La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The recovery key is the only way out. Write it down and keep it somewhere other than this vault."
+    "Le lien": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link"
           }
         }
       }
     },
-    "La clé du coffre est créée sur cet appareil et scellée pour vous seul. Le serveur n'en connaîtra jamais le contenu." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The vault key is created on this device and sealed for you alone. The server will never know its contents."
+    "Le lien s'efface une fois ce nombre atteint. Une seule consultation vous dit aussi que quelqu'un d'autre l'a lu avant vous.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link is erased once this count is reached. A single view also tells you if someone else read it before you."
           }
         }
       }
     },
-    "La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The key stays encrypted in the item; codes are computed on the device."
+    "Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste intact : rien n'est perdu, rien n'est déchiffré côté serveur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The new password re-encrypts the vault key. Its contents stay intact: nothing is lost, nothing is decrypted on the server."
           }
         }
       }
     },
-    "La clé se trouve après le # du lien. Elle n'a jamais été envoyée au serveur, et ne peut plus être retrouvée si vous perdez le lien." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The key sits after the # in the link. It was never sent to the server, and cannot be recovered if you lose the link."
+    "Le propriétaire a refusé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The owner denied the request."
           }
         }
       }
     },
-    "La personne" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The person"
+    "Le retirer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn it off"
           }
         }
       }
     },
-    "Langue" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Language"
+    "Le second facteur est actif sur ce compte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-factor is on for this account."
           }
         }
       }
     },
-    "Le changement s'applique aussitôt, sans redémarrer l'application." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The change takes effect immediately, without restarting the app."
+    "Le second facteur est actif.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-factor is on."
           }
         }
       }
     },
-    "Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun tiers n'est sollicité." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The vault is end-to-end encrypted: the server does not know its contents. Asking for an icon, however, names a domain to it. No third party is involved."
+    "Le second facteur protège même un mot de passe connu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A second factor protects even a known password."
           }
         }
       }
     },
-    "Le coffre local ne contient rien." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The local vault is empty."
+    "Le secret": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The secret"
           }
         }
       }
     },
-    "Le contact" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The contact"
+    "Le service de vérification n'a pas répondu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The checking service did not respond."
           }
         }
       }
     },
-    "Le contact ne pourra plus ouvrir votre coffre. La clé qui lui avait été scellée devient inutilisable." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The contact will no longer be able to open your vault. The key sealed for them becomes unusable."
+    "Lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read"
           }
         }
       }
     },
-    "Le contact pourra en plus choisir un nouveau mot de passe maître — ce qui vous exclura de votre propre coffre." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The contact can also set a new master password — which will lock you out of your own vault."
+    "Lecture pour consulter, écriture pour modifier, gestion pour régler les accès de la collection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read to consult, write to modify, manage to set the collection's access."
           }
         }
       }
     },
-    "Le contact pourra lire vos identifiants, sans rien y changer ni vous en priver." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The contact can read your credentials, without changing them or locking you out."
+    "Lecture seule": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View only"
           }
         }
       }
     },
-    "Le délai avant ouverture" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The delay before access opens"
+    "Les coffres partagés se créent depuis l'application web ; ils apparaîtront ici dès qu'on vous y aura invité.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared vaults are created from the web app; they will appear here once you are invited."
           }
         }
       }
     },
-    "Le fichier contiendra vos %lld entrées, mots de passe compris, en clair. Il se relit dans n'importe quel gestionnaire — et par n'importe qui." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The file will hold your %lld entries, passwords included, in the clear. Any manager can read it — and so can anyone."
+    "Les deux saisies diffèrent.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The two entries differ."
           }
         }
       }
     },
-    "Le fichier est lu sur l'appareil et rien d'autre n'en sort : chaque entrée est chiffrée avant d'être déposée. Pensez à l'effacer ensuite — un export CSV contient vos mots de passe en clair." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The file is read on the device and nothing else leaves it: each entry is encrypted before being uploaded. Remember to delete it afterwards — a CSV export holds your passwords in the clear."
+    "Les deux sont exigés : le mot de passe maître et un code valide. Un téléphone déverrouillé trouvé sur une table ne doit pas suffire à retirer la protection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both are required: the master password and a valid code. An unlocked phone left on a table must not be enough to remove the protection."
           }
         }
       }
     },
-    "Le fichier n'a pas pu être lu." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The file could not be read."
+    "Les données ne sont pas perdues : elles restent chiffrées par la même clé, seule la façon de l'ouvrir change. Mais elle ne s'ouvrira plus qu'avec le mot de passe que vous choisissez ici.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The data is not lost: it stays encrypted under the same key, only the way to unlock it changes. But it will only unlock with the password you choose here."
           }
         }
       }
     },
-    "Le fichier n'a pas pu être ouvert." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The file could not be opened."
+    "Les éléments supprimés atterrissent ici.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted items land here."
           }
         }
       }
     },
-    "Le lien" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The link"
+    "Lien copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link copied"
           }
         }
       }
     },
-    "Le lien s'efface une fois ce nombre atteint. Une seule consultation vous dit aussi que quelqu'un d'autre l'a lu avant vous." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The link is erased once this count is reached. A single view also tells you if someone else read it before you."
+    "Longueur — %lld caractères": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Length — %lld characters"
           }
         }
       }
     },
-    "Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste intact : rien n'est perdu, rien n'est déchiffré côté serveur." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The new password re-encrypts the vault key. Its contents stay intact: nothing is lost, nothing is decrypted on the server."
+    "MM": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MM"
           }
         }
       }
     },
-    "Le propriétaire a refusé." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The owner denied the request."
+    "Majuscules": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uppercase"
           }
         }
       }
     },
-    "Le retirer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turn it off"
+    "Membre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Member"
           }
         }
       }
     },
-    "Le second facteur est actif sur ce compte." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Two-factor is on for this account."
+    "Membre actif": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active member"
           }
         }
       }
     },
-    "Le second facteur est actif." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Two-factor is on."
+    "Membre ajouté à un groupe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Member added to a group"
           }
         }
       }
     },
-    "Le second facteur protège même un mot de passe connu." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A second factor protects even a known password."
+    "Membre ajouté à une équipe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Member added to a team"
           }
         }
       }
     },
-    "Le secret" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The secret"
+    "Membre retiré d'un groupe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Member removed from a group"
           }
         }
       }
     },
-    "Le service de vérification n'a pas répondu." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The checking service did not respond."
+    "Membres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Members"
           }
         }
       }
     },
-    "Lecture" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Read"
+    "Membres du groupe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group members"
           }
         }
       }
     },
-    "Lecture pour consulter, écriture pour modifier, gestion pour régler les accès de la collection." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Read to consult, write to modify, manage to set the collection's access."
+    "Mes contacts de confiance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My trusted contacts"
           }
         }
       }
     },
-    "Lecture seule" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View only"
+    "Mes équipes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My teams"
           }
         }
       }
     },
-    "Les coffres partagés se créent depuis l'application web ; ils apparaîtront ici dès qu'on vous y aura invité." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shared vaults are created from the web app; they will appear here once you are invited."
+    "Mettez-le à l'abri, puis effacez-le : tant qu'il existe, vos mots de passe sont lisibles par qui met la main dessus.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Put it somewhere safe, then delete it: as long as it exists, your passwords are readable by whoever gets hold of it."
           }
         }
       }
     },
-    "Les deux saisies diffèrent." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The two entries differ."
+    "Mettre en favori": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to favourites"
           }
         }
       }
     },
-    "Les deux sont exigés : le mot de passe maître et un code valide. Un téléphone déverrouillé trouvé sur une table ne doit pas suffire à retirer la protection." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Both are required: the master password and a valid code. An unlocked phone left on a table must not be enough to remove the protection."
+    "Minuscules": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lowercase"
           }
         }
       }
     },
-    "Les données ne sont pas perdues : elles restent chiffrées par la même clé, seule la façon de l'ouvrir change. Mais elle ne s'ouvrira plus qu'avec le mot de passe que vous choisissez ici." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The data is not lost: it stays encrypted under the same key, only the way to unlock it changes. But it will only unlock with the password you choose here."
+    "Modifier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
           }
         }
       }
     },
-    "Les éléments supprimés atterrissent ici." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deleted items land here."
+    "Modifier ce membre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit this member"
           }
         }
       }
     },
-    "Lien copié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Link copied"
+    "Mot de passe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
           }
         }
       }
     },
-    "Longueur — %lld caractères" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Length — %lld characters"
+    "Mot de passe copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password copied"
           }
         }
       }
     },
-    "Majuscules" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Uppercase"
+    "Mot de passe maître": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Master password"
           }
         }
       }
     },
-    "Membre" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Member"
+    "Mot de passe maître incorrect.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incorrect master password."
           }
         }
       }
     },
-    "Membre actif" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Active member"
+    "Mot de passe maître oublié ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forgotten master password?"
           }
         }
       }
     },
-    "Membre ajouté à un groupe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Member added to a group"
+    "Mot de passe oublié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forgotten password"
           }
         }
       }
     },
-    "Membre ajouté à une équipe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Member added to a team"
+    "Mot de passe réinitialisé par clé de récupération": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password reset with the recovery key"
           }
         }
       }
     },
-    "Membre retiré d'un groupe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Member removed from a group"
+    "Mot de passe réinitialisé. Connectez-vous avec le nouveau.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password reset. Sign in with the new one."
           }
         }
       }
     },
-    "Membres" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Members"
+    "Mots de passe faibles": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weak passwords"
           }
         }
       }
     },
-    "Membres du groupe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Group members"
+    "Mots de passe réutilisés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reused passwords"
           }
         }
       }
     },
-    "Mes contacts de confiance" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "My trusted contacts"
+    "Moyen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medium"
           }
         }
       }
     },
-    "Mes équipes" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "My teams"
+    "N'oubliez pas d'effacer le fichier CSV : il contient vos mots de passe en clair.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do not forget to delete the CSV file: it holds your passwords in the clear."
           }
         }
       }
     },
-    "Mettez-le à l'abri, puis effacez-le : tant qu'il existe, vos mots de passe sont lisibles par qui met la main dessus." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Put it somewhere safe, then delete it: as long as it exists, your passwords are readable by whoever gets hold of it."
+    "Nom": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
           }
         }
       }
     },
-    "Mettre en favori" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add to favourites"
+    "Nom d'utilisateur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Username"
           }
         }
       }
     },
-    "Minuscules" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lowercase"
+    "Nom d'utilisateur copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Username copied"
           }
         }
       }
     },
-    "MM" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MM"
+    "Nom de l'équipe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team name"
           }
         }
       }
     },
-    "Modifier" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit"
+    "Note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note"
           }
         }
       }
     },
-    "Modifier ce membre" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit this member"
+    "Notes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes"
           }
         }
       }
     },
-    "Mot de passe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Password"
+    "Nouveau groupe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New group"
           }
         }
       }
     },
-    "Mot de passe copié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Password copied"
+    "Nouveau mot de passe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New password"
           }
         }
       }
     },
-    "Mot de passe maître" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Master password"
+    "Nouveau mot de passe maître": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New master password"
           }
         }
       }
     },
-    "Mot de passe maître incorrect." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Incorrect master password."
+    "Nouvel appareil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New device"
           }
         }
       }
     },
-    "Mot de passe maître oublié ?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forgotten master password?"
+    "Nouvel élément": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New item"
           }
         }
       }
     },
-    "Mot de passe oublié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forgotten password"
+    "Nouvelle collection": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New collection"
           }
         }
       }
     },
-    "Mot de passe réinitialisé par clé de récupération" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Password reset with the recovery key"
+    "Nouvelle équipe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New team"
           }
         }
       }
     },
-    "Mot de passe réinitialisé. Connectez-vous avec le nouveau." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Password reset. Sign in with the new one."
+    "Numéro": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number"
           }
         }
       }
     },
-    "Mots de passe faibles" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Weak passwords"
+    "Numéro copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number copied"
           }
         }
       }
     },
-    "Mots de passe réutilisés" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reused passwords"
+    "OK": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
           }
         }
       }
     },
-    "Moyen" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Medium"
+    "Ouvrez GhostPass et connectez-vous une fois.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open GhostPass and sign in once."
           }
         }
       }
     },
-    "N'oubliez pas d'effacer le fichier CSV : il contient vos mots de passe en clair." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Do not forget to delete the CSV file: it holds your passwords in the clear."
+    "Ouvrez GhostPass une fois pour activer le remplissage.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open GhostPass once to enable autofill."
           }
         }
       }
     },
-    "Nom" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Name"
+    "Ouvrir le coffre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the vault"
           }
         }
       }
     },
-    "Nom d'utilisateur" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Username"
+    "Ouvrir maintenant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open now"
           }
         }
       }
     },
-    "Nom d'utilisateur copié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Username copied"
+    "Par les groupes": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par les groupes"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Via groups"
+          }
         }
       }
     },
-    "Nom de l'équipe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Team name"
+    "Par leur rôle": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par leur rôle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By their role"
           }
         }
       }
     },
-    "Note" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Note"
+    "Partager un secret": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share a secret"
           }
         }
       }
     },
-    "Notes" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notes"
+    "Partager…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share…"
           }
         }
       }
     },
-    "Nouveau groupe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New group"
+    "Passkey ajoutée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey added"
           }
         }
       }
     },
-    "Nouveau mot de passe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New password"
+    "Passkey retirée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey removed"
           }
         }
       }
     },
-    "Nouveau mot de passe maître" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New master password"
+    "Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d'applications.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "During this delay the vault stays open in memory — never on disk — and its contents are hidden in the app switcher."
           }
         }
       }
     },
-    "Nouvel appareil" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New device"
+    "Personne n'a d'accès nommé sur cette collection.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personne n'a d'accès nommé sur cette collection."
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nobody has named access to this collection."
+          }
         }
       }
     },
-    "Nouvel élément" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New item"
+    "Personne ne vous a désigné.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No one has named you."
           }
         }
       }
     },
-    "Nouvelle collection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New collection"
+    "Personne pour l'instant.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No one yet."
           }
         }
       }
     },
-    "Nouvelle équipe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New team"
+    "Peut inviter, révoquer et gérer les droits.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can invite, revoke and manage permissions."
           }
         }
       }
     },
-    "Numéro" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Number"
+    "Peut lire et modifier les identifiants partagés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can read and edit the shared credentials."
           }
         }
       }
     },
-    "Numéro copié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Number copied"
+    "Peut lire, sans rien modifier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can read, without modifying anything."
           }
         }
       }
     },
-    "OK" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OK"
+    "Plus tard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
           }
         }
       }
     },
-    "Ouvrez GhostPass et connectez-vous une fois." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open GhostPass and sign in once."
+    "Pour ce site": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For this site"
           }
         }
       }
     },
-    "Ouvrez GhostPass une fois pour activer le remplissage." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open GhostPass once to enable autofill."
+    "Pour confirmer que c'est bien vous": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To confirm it is really you"
           }
         }
       }
     },
-    "Ouvrir le coffre" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open the vault"
+    "Préparer le fichier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prepare the file"
           }
         }
       }
     },
-    "Ouvrir maintenant" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open now"
+    "Quand le contact demandera l'accès, vous serez prévenu et pourrez refuser pendant ce temps. Passé ce délai sans réponse de votre part, l'accès s'ouvre — c'est précisément ce qui le rend utile le jour où vous ne pouvez plus répondre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When the contact requests access, you are notified and can deny it during this window. Once it elapses without an answer from you, access opens — which is exactly what makes it useful the day you can no longer answer."
           }
         }
       }
     },
-    "Partager un secret" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share a secret"
+    "Quiconque l'a peut lire le secret. Envoyez-le par un canal différent de celui où vous avez annoncé son existence.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anyone holding it can read the secret. Send it through a different channel than the one where you announced it."
           }
         }
       }
     },
-    "Partager…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share…"
+    "Rechercher": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
           }
         }
       }
     },
-    "Passkey ajoutée" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passkey added"
+    "Refuser": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deny"
           }
         }
       }
     },
-    "Passkey retirée" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passkey removed"
+    "Rejoindre l'équipe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join the team"
           }
         }
       }
     },
-    "Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d'applications." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "During this delay the vault stays open in memory — never on disk — and its contents are hidden in the app switcher."
+    "Remplacé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replaced"
           }
         }
       }
     },
-    "Personne ne vous a désigné." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No one has named you."
+    "Renouvelé toutes les %lld secondes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renewed every %lld seconds."
           }
         }
       }
     },
-    "Personne pour l'instant." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No one yet."
+    "Reprendre le compte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Take over the account"
           }
         }
       }
     },
-    "Peut inviter, révoquer et gérer les droits." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Can invite, revoke and manage permissions."
+    "Reprise du compte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account takeover"
           }
         }
       }
     },
-    "Peut lire et modifier les identifiants partagés." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Can read and edit the shared credentials."
+    "Restaurer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore"
           }
         }
       }
     },
-    "Peut lire, sans rien modifier." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Can read, without modifying anything."
+    "Retirer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
           }
         }
       }
     },
-    "Plus tard" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Later"
+    "Retirer cet accès": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove this access"
           }
         }
       }
     },
-    "Pour ce site" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "For this site"
+    "Retirer cet accès ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove this access?"
           }
         }
       }
     },
-    "Pour confirmer que c'est bien vous" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "To confirm it is really you"
+    "Retirer des favoris": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from favourites"
           }
         }
       }
     },
-    "Préparer le fichier" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prepare the file"
+    "Retirer l'accès": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove access"
           }
         }
       }
     },
-    "Quand le contact demandera l'accès, vous serez prévenu et pourrez refuser pendant ce temps. Passé ce délai sans réponse de votre part, l'accès s'ouvre — c'est précisément ce qui le rend utile le jour où vous ne pouvez plus répondre." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When the contact requests access, you are notified and can deny it during this window. Once it elapses without an answer from you, access opens — which is exactly what makes it useful the day you can no longer answer."
+    "Retirer l'accès ?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer l'accès ?"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove access?"
+          }
         }
       }
     },
-    "Quiconque l'a peut lire le secret. Envoyez-le par un canal différent de celui où vous avez annoncé son existence." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anyone holding it can read the secret. Send it through a different channel than the one where you announced it."
+    "Revenir au coffre enregistré": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to saved vault"
           }
         }
       }
     },
-    "Rechercher" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search"
+    "Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing has been uploaded yet. The entries will join the vault as they are; none overwrites what is already there."
           }
         }
       }
     },
-    "Refuser" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deny"
+    "Rien à signaler": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to report"
           }
         }
       }
     },
-    "Régénérer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Regenerate"
+    "Réglages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
           }
         }
       }
     },
-    "Réglages" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Settings"
+    "Régénérer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regenerate"
           }
         }
       }
     },
-    "Réinitialiser" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset"
+    "Réinitialiser": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
           }
         }
       }
     },
-    "Rejoindre l'équipe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Join the team"
+    "Réponse du serveur incompréhensible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server’s response could not be understood."
           }
         }
       }
     },
-    "Remplacé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Replaced"
+    "Révoquer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revoke"
           }
         }
       }
     },
-    "Renouvelé toutes les %lld secondes." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Renewed every %lld seconds."
+    "Révoquer ce membre ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revoke this member?"
           }
         }
       }
     },
-    "Réponse du serveur incompréhensible." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The server’s response could not be understood."
+    "Rôle d'un membre modifié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A member's role changed"
           }
         }
       }
     },
-    "Reprendre le compte" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Take over the account"
+    "Sans code à usage unique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without a one-time code"
           }
         }
       }
     },
-    "Reprise du compte" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account takeover"
+    "Santé du coffre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault health"
           }
         }
       }
     },
-    "Restaurer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore"
+    "Se connecter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in"
           }
         }
       }
     },
-    "Retirer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove"
+    "Se déconnecter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out"
           }
         }
       }
     },
-    "Retirer cet accès" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove this access"
+    "Second facteur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-factor"
           }
         }
       }
     },
-    "Retirer cet accès ?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove this access?"
+    "Second facteur activé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-factor enabled"
           }
         }
       }
     },
-    "Retirer des favoris" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove from favourites"
+    "Second facteur désactivé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-factor disabled"
           }
         }
       }
     },
-    "Retirer l'accès" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove access"
+    "Secret copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Secret copied"
           }
         }
       }
     },
-    "Revenir au coffre enregistré" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back to saved vault"
+    "Serveur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server"
           }
         }
       }
     },
-    "Révoquer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revoke"
+    "Serveur injoignable : l'import s'est arrêté en chemin.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: the import stopped partway."
           }
         }
       }
     },
-    "Révoquer ce membre ?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revoke this member?"
+    "Serveur injoignable : l'item n'a pas été restauré.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: the item was not restored."
           }
         }
       }
     },
-    "Rien à signaler" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nothing to report"
+    "Serveur injoignable : l'item n'a pas été supprimé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: the item was not deleted."
           }
         }
       }
     },
-    "Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nothing has been uploaded yet. The entries will join the vault as they are; none overwrites what is already there."
+    "Serveur injoignable : la clé de récupération n'a pas été enregistrée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: the recovery key was not saved."
           }
         }
       }
     },
-    "Rôle d'un membre modifié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A member's role changed"
+    "Serveur injoignable : la modification n'a pas été enregistrée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: the change was not saved."
           }
         }
       }
     },
-    "Sans code à usage unique" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Without a one-time code"
+    "Serveur injoignable : la suppression n'a pas été enregistrée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: the deletion was not saved."
           }
         }
       }
     },
-    "Santé du coffre" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vault health"
+    "Serveur injoignable : les dossiers n'ont pas été enregistrés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: folders were not saved."
           }
         }
       }
     },
-    "Se connecter" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in"
+    "Serveur injoignable : les favoris n'ont pas été enregistrés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable: favourites were not saved."
           }
         }
       }
     },
-    "Se déconnecter" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign out"
+    "Serveur injoignable.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server unreachable."
           }
         }
       }
     },
-    "Second facteur" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Two-factor"
+    "Ses membres perdront les accès qu'il leur donnait. Les identifiants, eux, restent dans leurs collections.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its members will lose the access it granted them. The credentials themselves stay in their collections."
           }
         }
       }
     },
-    "Second facteur activé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Two-factor enabled"
+    "Seuls les cinq premiers caractères de l'empreinte du mot de passe sont envoyés : ni le mot de passe ni son empreinte complète ne quittent l'appareil.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the first five characters of the password’s hash are sent: neither the password nor its full hash leaves the device."
           }
         }
       }
     },
-    "Second facteur désactivé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Two-factor disabled"
+    "Solide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strong"
           }
         }
       }
     },
-    "Secret copié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Secret copied"
+    "Sombre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
           }
         }
       }
     },
-    "Serveur" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server"
+    "Son rôle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Their role"
           }
         }
       }
     },
-    "Serveur injoignable : l'import s'est arrêté en chemin." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server unreachable: the import stopped partway."
+    "Supprimer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
           }
         }
       }
     },
-    "Serveur injoignable : l'item n'a pas été restauré." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server unreachable: the item was not restored."
+    "Supprimer ce dossier ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this folder?"
           }
         }
       }
     },
-    "Serveur injoignable : l'item n'a pas été supprimé." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server unreachable: the item was not deleted."
+    "Supprimer ce groupe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this group"
           }
         }
       }
     },
-    "Serveur injoignable : la clé de récupération n'a pas été enregistrée." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server unreachable: the recovery key was not saved."
+    "Supprimer ce groupe ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this group?"
           }
         }
       }
     },
-    "Serveur injoignable : la modification n'a pas été enregistrée." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server unreachable: the change was not saved."
+    "Supprimer définitivement ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete permanently?"
           }
         }
       }
     },
-    "Serveur injoignable : la suppression n'a pas été enregistrée." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server unreachable: the deletion was not saved."
+    "Symboles": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbols"
           }
         }
       }
     },
-    "Serveur injoignable : les dossiers n'ont pas été enregistrés." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server unreachable: folders were not saved."
+    "Système": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
           }
         }
       }
     },
-    "Serveur injoignable : les favoris n'ont pas été enregistrés." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server unreachable: favourites were not saved."
+    "Tant que ce code n'est pas validé, le compte reste accessible sans second facteur. C'est ce qui évite de s'enfermer dehors avec une application mal configurée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Until this code is validated, the account stays reachable without a second factor. That is what keeps you from locking yourself out with a misconfigured app."
           }
         }
       }
     },
-    "Serveur injoignable." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Server unreachable."
+    "Terminé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
           }
         }
       }
     },
-    "Ses membres perdront les accès qu'il leur donnait. Les identifiants, eux, restent dans leurs collections." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Its members will lose the access it granted them. The credentials themselves stay in their collections."
+    "Titulaire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cardholder"
           }
         }
       }
     },
-    "Seuls les cinq premiers caractères de l'empreinte du mot de passe sont envoyés : ni le mot de passe ni son empreinte complète ne quittent l'appareil." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Only the first five characters of the password’s hash are sent: neither the password nor its full hash leaves the device."
+    "Titulaire copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cardholder copied"
           }
         }
       }
     },
-    "Solide" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strong"
+    "Touchez une collection pour voir qui y a accès.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touchez une collection pour voir qui y a accès."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a collection to see who has access to it."
           }
         }
       }
     },
-    "Sombre" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dark"
+    "Tous les éléments": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All items"
           }
         }
       }
     },
-    "Son rôle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Their role"
+    "Travail/Serveurs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work/Servers"
           }
         }
       }
     },
-    "Supprimer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete"
+    "Trop courts, ou faits d'une seule sorte de caractères.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too short, or made of a single kind of character."
           }
         }
       }
     },
-    "Supprimer ce dossier ?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete this folder?"
+    "Très bon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Very good"
           }
         }
       }
     },
-    "Supprimer ce groupe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete this group"
+    "Très faible": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Very weak"
           }
         }
       }
     },
-    "Supprimer ce groupe ?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete this group?"
+    "Un administrateur de l'équipe gère toutes les collections, y compris celle-ci. Cet accès ne se retire qu'en changeant son rôle.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un administrateur de l'équipe gère toutes les collections, y compris celle-ci. Cet accès ne se retire qu'en changeant son rôle."
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A team administrator manages every collection, including this one. That access can only be removed by changing their role."
+          }
         }
       }
     },
-    "Supprimer définitivement ?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete permanently?"
+    "Un appareil inconnu signalé ici, que vous ne reconnaissez pas, veut dire que quelqu'un connaît votre mot de passe maître.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An unknown device flagged here that you do not recognise means someone knows your master password."
           }
         }
       }
     },
-    "Symboles" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Symbols"
+    "Un code vous sera demandé à chaque connexion. Vos appareils déjà connectés le restent.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A code will be asked at each sign-in. Devices already signed in stay signed in."
           }
         }
       }
     },
-    "Système" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "System"
+    "Un code à six chiffres sera demandé à chaque connexion, en plus du mot de passe maître.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A six-digit code will be required at each sign-in, in addition to the master password."
           }
         }
       }
     },
-    "Tant que ce code n'est pas validé, le compte reste accessible sans second facteur. C'est ce qui évite de s'enfermer dehors avec une application mal configurée." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Until this code is validated, the account stays reachable without a second factor. That is what keeps you from locking yourself out with a misconfigured app."
+    "Un coffre chiffré de bout en bout ne se rouvre pas sans son mot de passe maître : personne, pas même le serveur, ne peut le retrouver à votre place.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An end-to-end encrypted vault does not reopen without its master password: nobody, not even the server, can retrieve it for you."
           }
         }
       }
     },
-    "Terminé" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done"
+    "Un groupe donne accès à des collections. C'est par lui qu'on ouvre un coffre à plusieurs personnes sans les nommer une à une.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A group grants access to collections. It is how you open a vault to several people without naming them one by one."
           }
         }
       }
     },
-    "Titulaire" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cardholder"
+    "Une seule fuite suffit alors à ouvrir plusieurs comptes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A single breach then opens several accounts."
           }
         }
       }
     },
-    "Titulaire copié" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cardholder copied"
+    "Utiliser": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use"
           }
         }
       }
     },
-    "Tous les éléments" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All items"
+    "Utiliser %@ ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use %@?"
           }
         }
       }
     },
-    "Travail/Serveurs" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Work/Servers"
+    "Utiliser un autre compte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use another account"
           }
         }
       }
     },
-    "Très bon" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Very good"
+    "Verrouillage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locking"
           }
         }
       }
     },
-    "Très faible" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Very weak"
+    "Verrouiller": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock"
           }
         }
       }
     },
-    "Trop courts, ou faits d'une seule sorte de caractères." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Too short, or made of a single kind of character."
+    "Votre clé de récupération": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your recovery key"
           }
         }
       }
     },
-    "Un appareil inconnu signalé ici, que vous ne reconnaissez pas, veut dire que quelqu'un connaît votre mot de passe maître." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "An unknown device flagged here that you do not recognise means someone knows your master password."
+    "Votre mot de passe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your password"
           }
         }
       }
     },
-    "Un code à six chiffres sera demandé à chaque connexion, en plus du mot de passe maître." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A six-digit code will be required at each sign-in, in addition to the master password."
+    "Votre mot de passe maître sera conservé dans le trousseau de cet appareil, relisible par %@ seul.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your master password will be kept in this device’s keychain, readable by %@ alone."
           }
         }
       }
     },
-    "Un code vous sera demandé à chaque connexion. Vos appareils déjà connectés le restent." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A code will be asked at each sign-in. Devices already signed in stay signed in."
+    "Votre note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your note"
           }
         }
       }
     },
-    "Un coffre chiffré de bout en bout ne se rouvre pas sans son mot de passe maître : personne, pas même le serveur, ne peut le retrouver à votre place." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "An end-to-end encrypted vault does not reopen without its master password: nobody, not even the server, can retrieve it for you."
+    "Vous consultez le coffre de quelqu'un d'autre. Cet accès est enregistré dans son journal.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are viewing someone else's vault. This access is recorded in their audit log."
           }
         }
       }
     },
-    "Un groupe donne accès à des collections. C'est par lui qu'on ouvre un coffre à plusieurs personnes sans les nommer une à une." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A group grants access to collections. It is how you open a vault to several people without naming them one by one."
+    "Vous n'appartenez à aucune équipe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not belong to any team."
           }
         }
       }
     },
-    "Une seule fuite suffit alors à ouvrir plusieurs comptes." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A single breach then opens several accounts."
+    "Vérification…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking…"
           }
         }
       }
     },
-    "Utiliser" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use"
+    "Vérifier les fuites": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for breaches"
           }
         }
       }
     },
-    "Utiliser %@ ?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use %@?"
+    "adresse@exemple.com": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "address@example.com"
           }
         }
       }
     },
-    "Utiliser un autre compte" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use another account"
+    "et %lld autres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "and %lld more"
           }
         }
       }
     },
-    "Vérification…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Checking…"
+    "https://ghostpass.stackops.ch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://ghostpass.stackops.ch"
           }
         }
       }
     },
-    "Vérifier les fuites" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Check for breaches"
+    "vous@exemple.ch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "you@example.com"
           }
         }
       }
     },
-    "Verrouillage" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Locking"
+    "« %@ » disparaîtra de la liste. Aucun élément n'est supprimé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” will disappear from the list. No item is deleted."
           }
         }
       }
     },
-    "Verrouiller" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lock"
+    "« %@ » sera perdu, sans possibilité de retour.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” will be lost, with no way back."
           }
         }
       }
     },
-    "Votre clé de récupération" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your recovery key"
+    "« Système » suit le réglage de l'appareil, y compris son passage automatique à la nuit.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“System” follows the device setting, including its automatic switch to night."
           }
         }
       }
     },
-    "Votre mot de passe" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your password"
+    "À enregistrer dans votre application d'authentification": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To store in your authenticator app"
           }
         }
       }
     },
-    "Votre mot de passe maître sera conservé dans le trousseau de cet appareil, relisible par %@ seul." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your master password will be kept in this device’s keychain, readable by %@ alone."
+    "À importer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To import"
           }
         }
       }
     },
-    "Votre note" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your note"
+    "Écriture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write"
           }
         }
       }
     },
-    "Vous consultez le coffre de quelqu'un d'autre. Cet accès est enregistré dans son journal." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You are viewing someone else's vault. This access is recorded in their audit log."
+    "Également par le groupe « %@ »": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Également par le groupe « %@ »"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also via the “%@” group"
+          }
         }
       }
     },
-    "Vous n'appartenez à aucune équipe." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You do not belong to any team."
+    "Également par son rôle d'administrateur": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Également par son rôle d'administrateur"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also via their administrator role"
           }
         }
       }
     },
-    "vous@exemple.ch" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "you@example.com"
+    "≈ %lld bits": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈ %lld bits"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

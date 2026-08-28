@@ -162,7 +162,10 @@ struct OrgAdminView: View {
     // ─── Collections ───
 
     private var sectionCollections: some View {
-        GhostSection(titre: "Collections") {
+        GhostSection(
+            titre: "Collections",
+            note: "Touchez une collection pour voir qui y a accès."
+        ) {
             VStack(spacing: 0) {
                 if ouvert.collections.isEmpty {
                     Text("Aucune collection.")
@@ -171,10 +174,7 @@ struct OrgAdminView: View {
                         .padding(14)
                 } else {
                     ForEach(ouvert.collections) { collection in
-                        Text(verbatim: collection.name)
-                            .foregroundStyle(Color.gpInk)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(14)
+                        ligneCollection(collection)
                         Divider().overlay(Color.gpBorder)
                     }
                 }
@@ -188,19 +188,27 @@ struct OrgAdminView: View {
 
     // ─── Groupes ───
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Ce qui manque encore, et pourquoi ce n'est pas ici.
-    //
-    // Un administrateur peut accorder à un membre un accès **nommé** à une collection
-    // (`POST /api/orgs/:id/collections/:cid/access`). Mais le serveur n'expose aucune route
-    // pour lire qui détient quoi, ni pour retirer un accès accordé ainsi : c'est une porte
-    // à sens unique, et aucune interface ne peut la refermer seule. Pour les groupes, la
-    // révocation existe — pour les accès nommés, non.
-    //
-    // Ces deux routes sont en cours d'écriture côté web (août 2026). L'écran « qui a accès
-    // à quoi » viendra ici quand elles existeront ; l'écrire avant ne donnerait qu'une
-    // liste vide et un bouton qui échoue.
-    // ─────────────────────────────────────────────────────────────────────────
+    /// Ouvre « qui a accès à cette collection ». On y passe les groupes en plus des
+    /// membres : l'écran doit pouvoir dire qu'un accès nommé fait doublon avec un groupe,
+    /// sinon sa révocation promet une porte fermée que le groupe garde ouverte.
+    private func ligneCollection(_ collection: OrgCollectionDTO) -> some View {
+        NavigationLink {
+            CollectionAccessView(
+                ouvert: ouvert, collection: collection, membres: membres, groupes: groupes
+            ) {
+                await recharger()
+            }
+            .environmentObject(store)
+        } label: {
+            HStack {
+                Text(verbatim: collection.name).foregroundStyle(Color.gpInk)
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(Color.gpMuted)
+            }
+            .padding(14)
+        }
+        .accessibilityIdentifier("row.collection.\(collection.id)")
+    }
 
     private var sectionGroupes: some View {
         GhostSection(
