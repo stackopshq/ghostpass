@@ -84,18 +84,29 @@ enum CsvImport {
     /// c'est ce que contiennent les exports des gestionnaires concurrents.
     static func items(_ texte: String) -> [VaultItem] {
         enregistrements(texte).map { ligne in
-            let dossier = premier(ligne, "folder", "vault", "group")
-            let totp = premier(ligne, "totp", "login_totp", "otpauth")
-            let adresse = premier(ligne, "url", "login_uri", "website", "uri")
+            // Les noms de colonnes relevés dans les exports réels, et non devinés :
+            //   Bitwarden  folder, name, notes, login_uri, login_username, login_password,
+            //              login_totp
+            //   1Password  Title, Url, Username, Password, OTPAuth, Tags, Notes
+            //   LastPass   url, username, password, totp, extra, name, grouping
+            //   Dashlane   title, username, password, note, url, category, otpSecret
+            //   Chrome     name, url, username, password, note
+            //   KeePass    Group, Title, Username, Password, URL, Notes
+            let dossier = premier(ligne, "folder", "vault", "group", "grouping", "category", "tags")
+            let totp = premier(ligne, "totp", "login_totp", "otpauth", "otpsecret", "otp")
+            let adresse = premier(ligne, "url", "login_uri", "website", "uri", "urls")
+            // `extra` chez LastPass, `note` au singulier chez Dashlane et Chrome. Les
+            // omettre perdait les notes de tout coffre migré — silencieusement.
+            let note = premier(ligne, "notes", "note", "extra", "comments")
             return VaultItem(
                 name: premier(ligne, "name", "title").isEmpty
                     ? NSLocalizedString("(sans nom)", comment: "")
                     : premier(ligne, "name", "title"),
-                notes: nil,
+                notes: note.isEmpty ? nil : note,
                 folder: dossier.isEmpty ? nil : dossier,
                 data: .login(
                     Login(
-                        username: premier(ligne, "username", "login_username", "login"),
+                        username: premier(ligne, "username", "login_username", "login", "user"),
                         password: premier(ligne, "password", "login_password"),
                         uris: adresse.isEmpty ? [] : [adresse],
                         totp: totp.isEmpty ? nil : totp)))

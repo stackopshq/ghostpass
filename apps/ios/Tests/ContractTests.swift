@@ -1360,3 +1360,111 @@ final class AdministrationDEquipeTests: XCTestCase {
         XCTAssertThrowsError(try ancienne.ouvrir(dto))
     }
 }
+
+// ─── Import depuis les gestionnaires concurrents ──────────────────────────────
+
+/// Un export par gestionnaire, avec ses en-têtes réels. Migrer est le premier geste d'un
+/// nouvel utilisateur : ce qui se perd ici se perd pour de bon, et en silence.
+final class ImportDepuisConcurrentsTests: XCTestCase {
+    private func seul(_ csv: String) throws -> VaultItem {
+        let items = CsvImport.items(csv)
+        XCTAssertEqual(items.count, 1, "une seule ligne attendue")
+        return try XCTUnwrap(items.first)
+    }
+
+    /// L'identifiant que porte un item. `login` est une commodité de `VaultEntry`, pas de
+    /// `VaultItem` — ici on n'a que ce dernier, avant tout dépôt.
+    private func identifiant(_ item: VaultItem) throws -> Login {
+        guard case .login(let l) = item.data else {
+            throw XCTSkip("l'item importé n'est pas un identifiant")
+        }
+        return l
+    }
+
+    func testBitwarden() throws {
+        let item = try seul(
+            """
+            folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp
+            Travail,0,login,Forgejo,Compte de service — ne pas partager,,0,https://git.example.ch,clara,s3cr3t,JBSWY3DPEHPK3PXP
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail")
+        XCTAssertEqual(item.notes, "Compte de service — ne pas partager")
+        XCTAssertEqual(try identifiant(item).username, "clara")
+        XCTAssertEqual(try identifiant(item).password, "s3cr3t")
+        XCTAssertEqual(try identifiant(item).uris, ["https://git.example.ch"])
+        XCTAssertEqual(try identifiant(item).totp, "JBSWY3DPEHPK3PXP")
+    }
+
+    func test1Password() throws {
+        let item = try seul(
+            """
+            Title,Url,Username,Password,OTPAuth,Favorite,Archived,Tags,Notes
+            Forgejo,https://git.example.ch,clara,s3cr3t,otpauth://totp/x,false,false,Travail,Note de migration
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail", "Tags sert de dossier")
+        XCTAssertEqual(item.notes, "Note de migration")
+        XCTAssertEqual(try identifiant(item).totp, "otpauth://totp/x")
+    }
+
+    /// LastPass nomme la note `extra` et le dossier `grouping` : deux colonnes qu'aucune
+    /// autre n'emploie, et que l'ancienne table ignorait toutes les deux.
+    func testLastPass() throws {
+        let item = try seul(
+            """
+            url,username,password,totp,extra,name,grouping,fav
+            https://git.example.ch,clara,s3cr3t,JBSWY3DPEHPK3PXP,Ma note LastPass,Forgejo,Travail,0
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail")
+        XCTAssertEqual(item.notes, "Ma note LastPass")
+    }
+
+    func testDashlane() throws {
+        let item = try seul(
+            """
+            username,username2,username3,title,password,note,url,category,otpSecret
+            clara,,,Forgejo,s3cr3t,Note Dashlane,https://git.example.ch,Travail,JBSWY3DPEHPK3PXP
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail")
+        XCTAssertEqual(item.notes, "Note Dashlane")
+        XCTAssertEqual(try identifiant(item).totp, "JBSWY3DPEHPK3PXP")
+    }
+
+    func testChrome() throws {
+        let item = try seul(
+            """
+            name,url,username,password,note
+            git.example.ch,https://git.example.ch,clara,s3cr3t,Note Chrome
+            """)
+        XCTAssertEqual(item.name, "git.example.ch")
+        XCTAssertEqual(item.notes, "Note Chrome")
+    }
+
+    func testKeePass() throws {
+        let item = try seul(
+            """
+            "Group","Title","Username","Password","URL","Notes"
+            "Travail","Forgejo","clara","s3cr3t","https://git.example.ch","Note KeePass"
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail")
+        XCTAssertEqual(item.notes, "Note KeePass")
+    }
+
+    /// Une note contenant une virgule, un saut de ligne et des guillemets doit survivre :
+    /// c'est le cas courant d'une note de plusieurs lignes, et celui qui casse les analyses
+    /// naïves.
+    func testUneNoteMultilignePasseEntiere() throws {
+        let csv = #"""
+        name,username,password,notes
+        Forgejo,clara,s3cr3t,"Première ligne, avec virgule
+        Deuxième ligne avec ""guillemets"""
+        """#
+        let item = try seul(csv)
+        XCTAssertEqual(
+            item.notes, "Première ligne, avec virgule\nDeuxième ligne avec \"guillemets\"")
+    }
+}

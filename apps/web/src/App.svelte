@@ -136,12 +136,19 @@
       for (const r of rows) {
         const enc = encryptItem(account, {
           kind: "login",
+          // Noms relevés dans les exports réels : Bitwarden, 1Password, LastPass,
+          // Dashlane, Chrome, KeePass. `extra` est la note de LastPass, `note` au
+          // singulier celle de Dashlane et Chrome — les omettre perdait les notes de tout
+          // coffre migré, sans rien dire. Cette table doit rester identique à celle de
+          // CsvImport.swift, sans quoi migrer depuis le téléphone et migrer depuis le
+          // navigateur donneraient deux coffres différents.
           name: r.name || r.title || "(sans nom)",
-          username: r.username || r.login_username || r.login || "",
+          username: r.username || r.login_username || r.login || r.user || "",
           password: r.password || r.login_password || "",
-          url: r.url || r.login_uri || r.website || r.uri || "",
-          folder: r.folder || r.vault || r.group || "",
-          totp: r.totp || r.login_totp || r.otpauth || "",
+          url: r.url || r.login_uri || r.website || r.uri || r.urls || "",
+          folder: r.folder || r.vault || r.group || r.grouping || r.category || r.tags || "",
+          totp: r.totp || r.login_totp || r.otpauth || r.otpsecret || r.otp || "",
+          note: r.notes || r.note || r.extra || r.comments || "",
         });
         await api.createItem(token, enc);
         n++;

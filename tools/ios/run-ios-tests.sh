@@ -16,6 +16,14 @@
 #                             d'écran comprises), pour inspecter ce qu'a vu le test.
 set -euo pipefail
 
+# `rustup` et `cargo` vivent dans ~/.cargo/bin, ajouté au PATH par le profil du shell — que
+# ni un daemon lancé par nohup ni certains shells non interactifs ne chargent. Plutôt que de
+# demander à chacun d'exporter le PATH avant d'appeler ce script, on le complète ici.
+if ! command -v rustup >/dev/null && [[ -x "$HOME/.cargo/bin/rustup" ]]; then
+  PATH="$HOME/.cargo/bin:$PATH"
+  export PATH
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IOS="$ROOT/apps/ios"
 # Figé : les tests portent la même valeur par défaut (voir VaultFlowTests).
@@ -301,6 +309,28 @@ fi
 say "Remplissage automatique dans Safari"
 (cd "$ROOT/tools/ios/testpage" && python3 -m http.server 8099 --bind 127.0.0.1 >/dev/null 2>&1) &
 PAGE_PID=$!
+
+# `pluginkit -e use` enregistre l'extension, mais iOS exige en plus qu'elle soit cochée
+# dans Réglages > Général > Saisie automatique — un geste qui ne se scripte pas. Cette
+# pause laisse le faire à la main, simulateur visible, avant que le test ne s'exécute.
+# Une pause *minutée*, et non une attente de touche : cette commande finit souvent en
+# arrière-plan, où `read </dev/tty` échoue aussitôt et la laisse filer sans que personne
+# n'ait eu la main. Le nombre de secondes est la valeur de la variable.
+if [[ "${GHOSTPASS_PAUSE_REMPLISSAGE:-0}" -gt 0 ]]; then
+  say "Pause de ${GHOSTPASS_PAUSE_REMPLISSAGE} s avant le remplissage automatique."
+  echo "  Deux gestes à faire dans le simulateur, dans cet ordre :" >&2
+  echo "" >&2
+  echo "  1. Cliquer dans la fenêtre du simulateur, puis Cmd-K — « Toggle Software" >&2
+  echo "     Keyboard ». C'est le blocage principal : sous automatisation, iOS croit" >&2
+  echo "     qu'un clavier matériel est branché et n'affiche jamais le clavier logiciel." >&2
+  echo "     Or la barre de remplissage vit dans ce clavier." >&2
+  echo "" >&2
+  echo "  2. Réglages > Général > Saisie automatique : activer, et cocher GhostPass." >&2
+  echo "     Ce réglage ne s'écrit pas par script — il vit dans un magasin système que" >&2
+  echo "     \`defaults\` n'atteint pas. Il n'est utile qu'une fois le clavier obtenu :" >&2
+  echo "     le test contrôle le clavier avant le fournisseur." >&2
+  sleep "$GHOSTPASS_PAUSE_REMPLISSAGE"
+fi
 
 if xcrun simctl spawn "$DEVICE" pluginkit -e use -i ch.stackops.ghostpass.autofill 2>/dev/null; then
   if ! run_tests GhostpassUITests/AutoFillSafariTests/test04Remplissage; then
