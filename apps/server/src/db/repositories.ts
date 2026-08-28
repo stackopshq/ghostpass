@@ -598,6 +598,23 @@ export const organizations = {
     return db.selectFrom("organizations").selectAll().where("id", "=", id).executeTakeFirst();
   },
 
+  /// Organisations sans aucune collection : cul-de-sac où rien ne peut être rangé, puisqu'un
+  /// secret partagé s'attache à une collection et non à l'organisation. Lu par le rattrapage.
+  listWithoutCollections(db: DB): Promise<OrgRow[]> {
+    return db
+      .selectFrom("organizations as o")
+      .selectAll("o")
+      .where(({ not, exists, selectFrom }) =>
+        not(
+          exists(
+            selectFrom("collections as c").select("c.id").whereRef("c.org_id", "=", "o.id"),
+          ),
+        ),
+      )
+      .orderBy("o.created_at")
+      .execute();
+  },
+
   /// Supprime l'organisation. Toutes les tables filles (`org_members`, `collections`,
   /// `org_groups`, et par transitivité `org_items` et les tables d'accès) sont en
   /// `ON DELETE CASCADE` : cet appel efface donc les secrets partagés de l'org. La route qui
@@ -707,11 +724,34 @@ export const orgMembers = {
 };
 
 export const collections = {
-  async create(db: DB, c: { id: string; orgId: string; name: string }): Promise<void> {
+  /// `isDefault` marque la collection créée avec l'organisation. Elle est unique par org : la
+  /// création par un utilisateur ne la pose jamais.
+  async create(
+    db: DB,
+    c: { id: string; orgId: string; name: string; isDefault?: boolean },
+  ): Promise<void> {
     await db
       .insertInto("collections")
-      .values({ id: c.id, org_id: c.orgId, name: c.name, created_at: Date.now() })
+      .values({
+        id: c.id,
+        org_id: c.orgId,
+        name: c.name,
+        is_default: c.isDefault ? 1 : 0,
+        created_at: Date.now(),
+      })
       .execute();
+  },
+
+  /// La collection par défaut d'une org, ou `undefined` si elle n'en a pas : c'est le cas des
+  /// organisations qui possédaient déjà des collections quand le rattrapage est passé.
+  findDefault(db: DB, orgId: string): Promise<CollectionRow | undefined> {
+    return db
+      .selectFrom("collections")
+      .selectAll()
+      .where("org_id", "=", orgId)
+      .where("is_default", "=", 1)
+      .orderBy("created_at")
+      .executeTakeFirst();
   },
   listByOrg(db: DB, orgId: string): Promise<CollectionRow[]> {
     return db

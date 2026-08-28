@@ -127,6 +127,10 @@ export interface CollectionRow {
   id: string;
   org_id: string;
   name: string;
+  /// 1 pour la collection créée avec l'organisation (« Coffre partagé »), 0 sinon. Un drapeau
+  /// plutôt que « la plus ancienne » : ce dernier critère désigne une autre collection dès que
+  /// la première est supprimée, et rien ne signale le glissement.
+  is_default: number;
   created_at: number;
 }
 
