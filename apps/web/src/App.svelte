@@ -26,6 +26,7 @@
     type ItemKind,
   } from "./lib/crypto.js";
   import { generateOtp, parseOtp } from "./lib/totp.js";
+  import LanguageSwitcher from "./LanguageSwitcher.svelte";
   import { DEFAULT_GEN_OPTIONS, generatePassword, type GenOptions } from "./lib/generator.js";
   import { parseCsv } from "./lib/csv.js";
   import { pwnedCount } from "./lib/breach.js";
@@ -1324,7 +1325,12 @@
            Sur un produit dont l'argument de vente est qu'il ne peut pas mentir
            sur ce qu'il voit, une conformité revendiquée mais non acquise coûte
            plus cher que l'absence de mention. On ne garde que le vérifiable. -->
-      <div class="auth-brand-foot">Hébergé en France · chiffré de bout en bout</div>
+      <!-- Le selecteur est aussi ici : sans lui, un anglophone devrait se
+           connecter en francais avant de pouvoir changer de langue. -->
+      <div class="auth-brand-foot">
+        Hébergé en France · chiffré de bout en bout
+        <LanguageSwitcher />
+      </div>
     </aside>
 
     <main class="auth-form-wrap">
@@ -1429,6 +1435,7 @@
         <div class="topbar-search"></div>
       {/if}
       <div class="topbar-actions">
+        <LanguageSwitcher />
         {@render themeToggle("")}
         {#if nav === "vault"}
           <button class="btn-primary" onclick={startAdd}>{@render plusIcon()}<span>Nouvel élément</span></button>
