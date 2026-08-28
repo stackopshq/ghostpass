@@ -23,14 +23,37 @@ import { getAllowedOrigins } from "./services/webauthn.js";
 /// Séparé de `index.ts` pour permettre les tests via `app.inject()` sur une DB en mémoire.
 export function buildApp(db: DB): FastifyInstance {
   const app = Fastify({
-    logger: { level: process.env.LOG_LEVEL ?? "warn" },
+    // `info` et non `warn` : à `warn`, Fastify ne journalise NI les requêtes
+    // servies NI les 4xx. Le 2026-08-27, un bouton qui ne faisait rien était
+    // indiagnosticable — le conteneur n'avait produit que ses quatre lignes de
+    // démarrage depuis son lancement. Une requête refusée doit laisser une trace.
+    //
+    // Les sérialiseurs sont restreints à la méthode, au chemin et au statut.
+    // Le sérialiseur par défaut de Fastify journalise `remoteAddress` : sur un
+    // coffre zero-knowledge, consigner l'adresse IP de chaque porteur à chaque
+    // requête reprendrait d'une main ce que le chiffrement donne de l'autre.
+    logger: {
+      level: process.env.LOG_LEVEL ?? "info",
+      serializers: {
+        req: (req) => ({ method: req.method, url: req.url }),
+        res: (res) => ({ statusCode: res.statusCode }),
+      },
+    },
     // Borne la taille des corps : les blobs chiffrés sont petits, on coupe court au DoS mémoire.
     bodyLimit: 256 * 1024,
   });
 
   // Plugins de durcissement (chargés au ready()/inject()).
   app.register(helmet);
-  app.register(cors, { origin: process.env.CORS_ORIGIN ?? false });
+  // `||` et non `??` : `.env.example` documente « vide = désactivé », et `??`
+  // ne se replie que sur `undefined`. Une chaîne vide — ce qu'écrit n'importe
+  // quel gabarit de configuration qui rend une valeur absente — passait donc
+  // jusqu'à @fastify/cors, qui la rejette À CHAQUE REQUÊTE et non au
+  // démarrage. Le serveur démarrait, restait sain aux yeux de systemd, et
+  // rendait 500 sur tout, y compris /health. Le gestionnaire d'erreurs
+  // ci-dessous masque la cause à l'appelant, à raison — mais elle devient
+  // alors introuvable sans le journal du conteneur.
+  app.register(cors, { origin: process.env.CORS_ORIGIN || false });
   // Rate-limiting global par IP (anti brute-force / DoS). Durcissable par route ensuite.
   app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 

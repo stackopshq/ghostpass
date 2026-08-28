@@ -496,6 +496,9 @@
 
   function selectFolder(path: string | null) {
     selectedFolder = path;
+    // Sur téléphone, choisir un dossier est une navigation : le tiroir doit se
+    // refermer, sinon il masque la liste qu'on vient de demander.
+    menuOpen = false;
   }
 
   // Santé des mots de passe (calcul 100 % local).
@@ -560,7 +563,7 @@
 
   // Estimation locale de la force d'un mot de passe (longueur + variété de caractères).
   function passwordStrength(pw: string): { label: string; level: number } {
-    if (!pw) return { label: "—", level: 0 };
+    if (!pw) return { label: "Vide", level: 0 };
     let score = 0;
     if (pw.length >= 8) score++;
     if (pw.length >= 14) score++;
@@ -646,6 +649,10 @@
       error = errMsg(err);
     }
   }
+
+  // Tiroir de navigation — n'existe que sous 760 px (voir app.css). Au-dessus,
+  // la barre latérale est toujours là et cet état n'a aucun effet visible.
+  let menuOpen = $state(false);
 
   // Thème (clair/sombre) — appliqué sur <html data-theme>, persisté en localStorage.
   let theme = $state<"dark" | "light">(
@@ -783,6 +790,7 @@
 
   // ─── Corbeille ───
   async function openTrash() {
+    menuOpen = false;
     nav = "trash";
     if (!token || !account) return;
     try {
@@ -1114,19 +1122,15 @@
 </script>
 
 {#snippet logoMark()}
-  <!-- La silhouette de la charte ghost-suite, variante icône — même tracé que le favicon et
-       que l'icône iOS, produit par tools/brand/ghost_suite.py. Le cadenas générique d'avant
-       ne rattachait GhostPass à rien. -->
-  <svg viewBox="-63.5 0 548 548" fill="none" aria-hidden="true">
-    <defs>
-      <linearGradient id="gp-mark" x1="421" y1="0" x2="0" y2="548" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stop-color="#9CC3FF" />
-        <stop offset="0.5" stop-color="#2E7DFF" />
-        <stop offset="1" stop-color="#143F8F" />
-      </linearGradient>
-    </defs>
-    <path fill="url(#gp-mark)" fill-rule="evenodd" clip-rule="evenodd" d="M 240.0 9.0 C 245.3 9.3 262.5 9.7 272.0 11.0 C 281.5 12.3 288.0 13.8 297.0 17.0 C 306.0 20.2 317.8 25.7 326.0 30.0 C 334.2 34.3 338.5 36.8 346.0 43.0 C 353.5 49.2 365.2 60.8 371.0 67.0 C 376.8 73.2 377.0 73.5 381.0 80.0 C 385.0 86.5 390.8 96.2 395.0 106.0 C 399.2 115.8 403.5 129.0 406.0 139.0 C 408.5 149.0 409.3 154.0 410.0 166.0 C 410.7 178.0 410.8 195.8 410.0 211.0 C 409.2 226.2 407.0 244.0 405.0 257.0 C 403.0 270.0 401.2 277.5 398.0 289.0 C 394.8 300.5 391.0 313.2 386.0 326.0 C 381.0 338.8 374.7 353.0 368.0 366.0 C 361.3 379.0 354.8 390.8 346.0 404.0 C 337.2 417.2 322.2 436.2 315.0 445.0 C 307.8 453.8 308.0 454.0 303.0 457.0 C 298.0 460.0 290.7 462.5 285.0 463.0 C 279.3 463.5 273.7 462.0 269.0 460.0 C 264.3 458.0 259.7 453.8 257.0 451.0 C 254.3 448.2 253.8 446.5 253.0 443.0 C 252.2 439.5 251.5 434.3 252.0 430.0 C 252.5 425.7 253.0 422.3 256.0 417.0 C 259.0 411.7 267.2 403.2 270.0 398.0 C 272.8 392.8 272.7 389.7 273.0 386.0 C 273.3 382.3 272.7 378.8 272.0 376.0 C 271.3 373.2 271.2 371.5 269.0 369.0 C 266.8 366.5 263.7 362.3 259.0 361.0 C 254.3 359.7 244.8 360.5 241.0 361.0 C 237.2 361.5 238.5 361.7 236.0 364.0 C 233.5 366.3 234.0 363.0 226.0 375.0 C 218.0 387.0 199.5 419.3 188.0 436.0 C 176.5 452.7 164.3 466.3 157.0 475.0 C 149.7 483.7 147.8 484.8 144.0 488.0 C 140.2 491.2 137.2 492.7 134.0 494.0 C 130.8 495.3 129.2 495.8 125.0 496.0 C 120.8 496.2 113.2 495.8 109.0 495.0 C 104.8 494.2 102.5 492.7 100.0 491.0 C 97.5 489.3 95.7 487.3 94.0 485.0 C 92.3 482.7 90.7 482.0 90.0 477.0 C 89.3 472.0 88.7 461.0 90.0 455.0 C 91.3 449.0 92.5 447.8 98.0 441.0 C 103.5 434.2 116.5 421.8 123.0 414.0 C 129.5 406.2 134.0 400.2 137.0 394.0 C 140.0 387.8 141.2 382.5 141.0 377.0 C 140.8 371.5 138.3 364.8 136.0 361.0 C 133.7 357.2 131.5 355.2 127.0 354.0 C 122.5 352.8 113.8 352.7 109.0 354.0 C 104.2 355.3 101.8 357.7 98.0 362.0 C 94.2 366.3 89.3 375.7 86.0 380.0 C 82.7 384.3 81.0 385.5 78.0 388.0 C 75.0 390.5 71.8 393.0 68.0 395.0 C 64.2 397.0 60.5 399.0 55.0 400.0 C 49.5 401.0 40.0 401.2 35.0 401.0 C 30.0 400.8 28.5 400.7 25.0 399.0 C 21.5 397.3 16.5 394.0 14.0 391.0 C 11.5 388.0 10.7 384.5 10.0 381.0 C 9.3 377.5 9.3 373.7 10.0 370.0 C 10.7 366.3 11.2 363.0 14.0 359.0 C 16.8 355.0 22.0 351.8 27.0 346.0 C 32.0 340.2 38.8 332.0 44.0 324.0 C 49.2 316.0 54.0 306.5 58.0 298.0 C 62.0 289.5 65.0 282.0 68.0 273.0 C 71.0 264.0 74.0 253.2 76.0 244.0 C 78.0 234.8 78.8 233.3 80.0 218.0 C 81.2 202.7 82.0 165.5 83.0 152.0 C 84.0 138.5 84.5 143.2 86.0 137.0 C 87.5 130.8 88.3 123.8 92.0 115.0 C 95.7 106.2 102.8 92.5 108.0 84.0 C 113.2 75.5 118.2 69.7 123.0 64.0 C 127.8 58.3 130.8 55.2 137.0 50.0 C 143.2 44.8 150.3 38.5 160.0 33.0 C 169.7 27.5 185.0 20.7 195.0 17.0 C 205.0 13.3 212.7 12.2 220.0 11.0 C 227.3 9.8 235.8 10.2 239.0 10.0 Z M 142 196 A 48 48 0 1 0 238 196 A 48 48 0 1 0 142 196 Z M 170 196 A 20 20 0 1 0 210 196 A 20 20 0 1 0 170 196 Z M 243 181 H 325 A 15 15 0 0 1 340 196 V 196 A 15 15 0 0 1 325 211 H 243 A 15 15 0 0 1 228 196 V 196 A 15 15 0 0 1 243 181 Z M 298 205 H 298 A 12 12 0 0 1 310 217 V 235 A 12 12 0 0 1 298 247 H 298 A 12 12 0 0 1 286 235 V 217 A 12 12 0 0 1 298 205 Z M 328 205 H 328 A 12 12 0 0 1 340 217 V 225 A 12 12 0 0 1 328 237 H 328 A 12 12 0 0 1 316 225 V 217 A 12 12 0 0 1 328 205 Z" />
-  </svg>
+  <!-- Le logo de la charte, servi tel quel — même traitement que ghostcal, qui
+       rend `/logo.svg` en 28 px sans rien autour. GhostPass l'enfermait dans une
+       pastille bleue à coins arrondis : la silhouette y perdait ses tirets
+       détachés et ne ressemblait plus à ses frères de la suite.
+
+       C'est une image et non un SVG inline : le fichier est une SORTIE de
+       tools/brand/ghost_suite.py, et le recopier dans le balisage rouvrirait
+       la dérive de teintes qu'on vient de refermer. -->
+  <img src="/logo.svg" alt="" width="28" height="28" />
 {/snippet}
 {#snippet eyeIcon()}
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1194,6 +1198,11 @@
   <button class="icon-btn {extra}" onclick={toggleTheme} title={theme === "dark" ? "Passer en clair" : "Passer en sombre"} aria-label="Basculer le thème">
     {#if theme === "dark"}{@render sunIcon()}{:else}{@render moonIcon()}{/if}
   </button>
+{/snippet}
+{#snippet menuIcon()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
 {/snippet}
 {#snippet trashIcon()}
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1305,12 +1314,20 @@
       <div>
         <h1 class="auth-hero">Le coffre-fort que même nous ne pouvons pas ouvrir.</h1>
         <ul class="auth-points">
-          <li>{@render checkIcon()}<span>Architecture <strong>zero-knowledge</strong> — le serveur ne voit que du chiffré.</span></li>
+          <li>{@render checkIcon()}<span>Architecture <strong>zero-knowledge</strong> : le serveur ne voit que du chiffré.</span></li>
           <li>{@render checkIcon()}<span>Chiffrement <strong>de bout en bout</strong>, sur votre appareil uniquement.</span></li>
           <li>{@render checkIcon()}<span>Récupération <strong>sans backdoor</strong>, par kit de secours.</span></li>
         </ul>
       </div>
-      <div class="auth-brand-foot">Hébergé en Suisse · conforme nLPD</div>
+      <!-- Cette ligne annonçait « Hébergé en Suisse · conforme nLPD ». Les deux
+           affirmations étaient fausses. L'hébergement est en France, et
+           docs/ROADMAP.md range la conformité nLPD/RGPD dans ce qui RESTE à
+           faire, avec l'audit externe et le SOC 2.
+      
+           Sur un produit dont l'argument de vente est qu'il ne peut pas mentir
+           sur ce qu'il voit, une conformité revendiquée mais non acquise coûte
+           plus cher que l'absence de mention. On ne garde que le vérifiable. -->
+      <div class="auth-brand-foot">Hébergé en France · chiffré de bout en bout</div>
     </aside>
 
     <main class="auth-form-wrap">
@@ -1401,6 +1418,13 @@
 {:else}
   <div class="layout">
     <header class="topbar">
+      <button
+        class="icon-btn nav-toggle"
+        onclick={() => (menuOpen = !menuOpen)}
+        aria-label="Ouvrir la navigation"
+        aria-expanded={menuOpen}
+        aria-controls="gp-sidebar"
+      >{@render menuIcon()}</button>
       <span class="brand"><span class="mark">{@render logoMark()}</span><span>GhostPass</span></span>
       {#if nav === "vault"}
         <input class="search topbar-search" placeholder="Rechercher dans le coffre" bind:value={search} />
@@ -1416,14 +1440,24 @@
     </header>
 
     <div class="body">
-      <aside class="sidebar">
-        <button class="nav-item" class:active={nav === "vault"} onclick={() => (nav = "vault")}>
+      <!-- Le voile est un vrai bouton, pas un div décoré : c'est la sortie de
+           secours du tiroir, et elle doit être atteignable au clavier comme au
+           doigt. Il est `display: none` hors téléphone, donc hors du parcours
+           de tabulation le reste du temps. -->
+      <button
+        class="scrim"
+        class:show={menuOpen}
+        onclick={() => (menuOpen = false)}
+        aria-label="Fermer la navigation"
+      ></button>
+      <aside class="sidebar" class:open={menuOpen} id="gp-sidebar">
+        <button class="nav-item" class:active={nav === "vault"} onclick={() => { nav = "vault"; menuOpen = false; }}>
           {@render vaultIcon()}<span>Mon coffre</span>
         </button>
-        <button class="nav-item" class:active={nav === "orgs"} onclick={() => (nav = "orgs")}>
+        <button class="nav-item" class:active={nav === "orgs"} onclick={() => { nav = "orgs"; menuOpen = false; }}>
           {@render orgIcon()}<span>Organisations</span>
         </button>
-        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; loadWebauthn(); loadActivity(); loadEmergency(); loadPasskeys(); }}>
+        <button class="nav-item" class:active={nav === "security"} onclick={() => { nav = "security"; menuOpen = false; loadWebauthn(); loadActivity(); loadEmergency(); loadPasskeys(); }}>
           {@render shieldIcon()}<span>Sécurité</span>
         </button>
         <button class="nav-item" class:active={nav === "trash"} onclick={openTrash}>
@@ -1502,7 +1536,7 @@
               </div>
               <label class="field"><span>Nom</span><input bind:value={itemName} placeholder="GitHub" required /></label>
               <label class="field">
-                <span>Dossier <span class="muted" style="font-weight:400">— optionnel, séparez les niveaux par /</span></span>
+                <span>Dossier <span class="muted" style="font-weight:400">(optionnel, séparez les niveaux par /)</span></span>
                 <input bind:value={itemFolder} placeholder="Travail/Serveurs" list="folder-list" />
               </label>
 
@@ -1532,7 +1566,7 @@
                   {/if}
                 </div>
                 <label class="field">
-                  <span>Clé TOTP <span class="muted" style="font-weight:400">— secret base32 ou otpauth://</span></span>
+                  <span>Clé TOTP <span class="muted" style="font-weight:400">(secret base32 ou otpauth://)</span></span>
                   <input bind:value={itemTotp} placeholder="JBSWY3DPEHPK3PXP" autocomplete="off" />
                 </label>
               {:else if itemKind === "note"}
@@ -1567,7 +1601,7 @@
 
             {#if shareLink}
               <div class="callout info" style="flex-direction:column;align-items:stretch;gap:0.4rem;margin-bottom:1rem">
-                <span>Lien de partage — <strong>1 vue, expire dans 24 h</strong>. La clé est dans l'URL (#), jamais envoyée au serveur.</span>
+                <span>Lien de partage : <strong>1 vue, expire dans 24 h</strong>. La clé est dans l'URL (#), jamais envoyée au serveur.</span>
                 <div class="codeblock-wrap">
                   <code class="codeblock">{shareLink}</code>
                   <button class="icon-btn {copiedKey === 'share' ? 'copied' : ''}" title="Copier" aria-label="Copier le lien" onclick={() => copy(shareLink!, "share")}>
@@ -1592,7 +1626,7 @@
                 {#if selected.folder}<div class="kv-row"><span class="kv-label">Dossier</span><span class="kv-value">{selected.folder}</span></div>{/if}
                 <div class="kv-row">
                   <span class="kv-label">Titulaire</span>
-                  <span class="kv-value">{selected.cardholder || "—"}</span>
+                  <span class="kv-value">{selected.cardholder || "Non renseigné"}</span>
                   {#if selected.cardholder}<span class="kv-actions"><button class="icon-btn {copiedKey === 'd-holder' ? 'copied' : ''}" title="Copier" aria-label="Copier" onclick={() => copy(selected!.cardholder, "d-holder")}>{#if copiedKey === "d-holder"}{@render checkIcon()}{:else}{@render copyIcon()}{/if}</button></span>{/if}
                 </div>
                 <div class="kv-row">
@@ -1631,7 +1665,7 @@
               {/if}
               <div class="kv-row">
                 <span class="kv-label">Identifiant</span>
-                <span class="kv-value">{selected.username || "—"}</span>
+                <span class="kv-value">{selected.username || "Non renseigné"}</span>
                 {#if selected.username}
                   <span class="kv-actions">
                     <button class="icon-btn {copiedKey === 'd-user' ? 'copied' : ''}" title="Copier" aria-label="Copier l'identifiant" onclick={() => copy(selected!.username, "d-user")}>
@@ -1696,7 +1730,7 @@
               </details>
             {/if}
             {/if}
-            <p class="detail-meta">Dernière modification — {formatDate(selected.updatedAt)}</p>
+            <p class="detail-meta">Dernière modification : {formatDate(selected.updatedAt)}</p>
           {:else}
             <div class="detail-empty">
               <div>
@@ -1872,7 +1906,7 @@
 
             {#if emgViewItems}
               <hr class="sep" />
-              <p class="label">Coffre de {emgViewFrom} — lecture d'urgence ({emgViewItems.length})</p>
+              <p class="label">Coffre de {emgViewFrom}, lecture d'urgence ({emgViewItems.length})</p>
               {#if emgViewItems.length === 0}
                 <p class="muted">Aucun secret.</p>
               {:else}
@@ -1904,7 +1938,7 @@
             {#if recoveryKitDisplay}
               <div class="callout warn">
                 {@render alertIcon()}
-                <span>Conservez cette clé en lieu sûr — elle ne sera plus jamais affichée. Sans elle, un mot de passe maître perdu est définitivement perdu.</span>
+                <span>Conservez cette clé en lieu sûr : elle ne sera plus jamais affichée. Sans elle, un mot de passe maître perdu est définitivement perdu.</span>
               </div>
               <div class="codeblock-wrap">
                 <code class="codeblock">{recoveryKitDisplay}</code>
@@ -1913,7 +1947,7 @@
                 </button>
               </div>
             {:else}
-              <p class="muted" style="margin:0 0 0.8rem">Génère une clé de secours qui permet de réinitialiser le mot de passe maître — sans backdoor côté serveur.</p>
+              <p class="muted" style="margin:0 0 0.8rem">Génère une clé de secours qui permet de réinitialiser le mot de passe maître, sans backdoor côté serveur.</p>
               <button class="ghost" onclick={generateRecoveryKit} disabled={busy}>Générer un kit de récupération</button>
             {/if}
           </section>

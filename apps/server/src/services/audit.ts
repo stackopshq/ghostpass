@@ -26,6 +26,7 @@ export type AuditAction =
   | "org.group.access.grant"
   | "org.group.access.revoke"
   | "org.key.rotate"
+  | "org.delete"
   | "emergency.grant"
   | "emergency.request"
   | "emergency.approve";

@@ -173,6 +173,7 @@ CREATE TABLE IF NOT EXISTS collections (
   id          TEXT PRIMARY KEY,
   org_id      TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name        TEXT NOT NULL,
+  is_default  INTEGER NOT NULL DEFAULT 0,
   created_at  INTEGER NOT NULL
 );
 
@@ -288,14 +289,25 @@ export async function createDb(): Promise<DB> {
       dialect: new PostgresDialect({ pool: new pg.Pool({ connectionString: url }) }),
     });
     await sql.raw(POSTGRES_SCHEMA).execute(db);
+    await migratePostgres(db);
     return db;
   }
   return openDatabase(process.env.DB_PATH ?? "ghostpass.db");
 }
 
+/// Migrations idempotentes PostgreSQL. `CREATE TABLE IF NOT EXISTS` ne touche pas une table
+/// déjà présente : sur une base de production, une colonne ajoutée au schéma ci-dessus
+/// n'apparaîtrait jamais sans cet `ALTER`. `IF NOT EXISTS` le rend rejouable.
+async function migratePostgres(db: DB): Promise<void> {
+  await sql
+    .raw("ALTER TABLE collections ADD COLUMN IF NOT EXISTS is_default BIGINT NOT NULL DEFAULT 0")
+    .execute(db);
+}
+
 /// Migrations idempotentes SQLite (bases créées avant l'ajout d'une colonne).
 function migrateSqlite(handle: BetterSqlite3.Database): void {
   ensureColumn(handle, "vault_items", "deleted_at", "INTEGER");
+  ensureColumn(handle, "collections", "is_default", "INTEGER NOT NULL DEFAULT 0");
 }
 
 function ensureColumn(

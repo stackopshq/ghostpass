@@ -71,8 +71,18 @@ function makeApp() {
   return buildApp(openDatabase(":memory:"));
 }
 
-async function idTokenFor(opts: { email: string; nonce: string; emailVerified?: boolean; aud?: string }) {
-  return new SignJWT({ email: opts.email, email_verified: opts.emailVerified ?? true, nonce: opts.nonce })
+async function idTokenFor(opts: {
+  email: string;
+  nonce: string;
+  emailVerified?: boolean;
+  /// Omet complètement `email_verified` — le cas des émetteurs qui n'émettent
+  /// aucun claim applicatif. Distinct de `emailVerified: false`, qui NIE.
+  sansClaimVerifie?: boolean;
+  aud?: string;
+}) {
+  const claims: Record<string, unknown> = { email: opts.email, nonce: opts.nonce };
+  if (!opts.sansClaimVerifie) claims.email_verified = opts.emailVerified ?? true;
+  return new SignJWT(claims)
     .setProtectedHeader({ alg: "RS256", kid: "test-key" })
     .setIssuer(base)
     .setAudience(opts.aud ?? CLIENT_ID)
@@ -169,4 +179,62 @@ test("callback: email non vérifié → 401", async () => {
   const res = await app.inject({ method: "GET", url: `/api/auth/sso/callback?code=xyz&state=${state}` });
   assert.equal(res.statusCode, 401);
   await app.close();
+});
+
+// ─── OIDC_TRUST_ISSUER_EMAIL ────────────────────────────────────────────────
+//
+// Un émetteur peut n'émettre AUCUN claim applicatif. Cloudflare Access est de
+// ceux-là : son document de découverte ne déclare pas un seul `claims_supported`
+// (mesuré le 2026-08-27). Sans échappatoire, le brancher ne produit pas un refus
+// lisible — il produit un SSO dont aucune connexion n'aboutit, pour personne, et
+// dont l'échec est indiscernable d'un SSO volontairement éteint.
+//
+// Les trois cas ci-dessous fixent la frontière : se taire n'est pas nier.
+
+async function avecDrapeau<T>(valeur: string | undefined, f: () => Promise<T>): Promise<T> {
+  const avant = process.env.OIDC_TRUST_ISSUER_EMAIL;
+  if (valeur === undefined) delete process.env.OIDC_TRUST_ISSUER_EMAIL;
+  else process.env.OIDC_TRUST_ISSUER_EMAIL = valeur;
+  try {
+    return await f();
+  } finally {
+    if (avant === undefined) delete process.env.OIDC_TRUST_ISSUER_EMAIL;
+    else process.env.OIDC_TRUST_ISSUER_EMAIL = avant;
+  }
+}
+
+async function connexionAvecClaimAbsent(drapeau: string | undefined) {
+  return avecDrapeau(drapeau, async () => {
+    const app = makeApp();
+    await app.inject({ method: "POST", url: "/api/auth/register", payload: USER });
+    const { state, nonce } = await startLogin(app);
+    currentIdToken = await idTokenFor({ email: USER.email, nonce, sansClaimVerifie: true });
+    const res = await app.inject({ method: "GET", url: `/api/auth/sso/callback?code=xyz&state=${state}` });
+    await app.close();
+    return res.statusCode;
+  });
+}
+
+test("callback: claim email_verified ABSENT et drapeau éteint → 401", async () => {
+  assert.equal(await connexionAvecClaimAbsent(undefined), 401);
+});
+
+test("callback: claim email_verified ABSENT et drapeau allumé → connexion acceptée", async () => {
+  assert.equal(await connexionAvecClaimAbsent("true"), 200);
+});
+
+test("callback: email_verified explicitement FALSE reste refusé, drapeau allumé", async () => {
+  // La frontière du drapeau, et la seule qui compte : il couvre le silence de
+  // l'émetteur, jamais sa négation. Un émetteur qui prend la peine de dire
+  // « cette adresse n'est pas prouvée » n'est pas un émetteur qui se tait.
+  const code = await avecDrapeau("true", async () => {
+    const app = makeApp();
+    await app.inject({ method: "POST", url: "/api/auth/register", payload: USER });
+    const { state, nonce } = await startLogin(app);
+    currentIdToken = await idTokenFor({ email: USER.email, nonce, emailVerified: false });
+    const res = await app.inject({ method: "GET", url: `/api/auth/sso/callback?code=xyz&state=${state}` });
+    await app.close();
+    return res.statusCode;
+  });
+  assert.equal(code, 401);
 });

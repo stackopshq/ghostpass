@@ -162,7 +162,7 @@ Secrets Manager / Infisical / Doppler.
 > **Décisions arrêtées :**
 > - **Périmètre complet** visé : KV statique (E2E), secrets dynamiques, PKI, Transit.
 > - **Modèle hybride** : KV en zero-knowledge ; moteurs actifs (dynamique/PKI/Transit) dans un
->   composant séparé **auto-hébergeable par le client** (préserve l'argument souveraineté CH).
+>   composant séparé **auto-hébergeable par le client** (le client garde ses données chez lui).
 > - **Phase ultérieure** : on livre d'abord le coffre humain (extension → backend → SSO),
 >   puis le Secrets Manager. Mais le **modèle d'identité** prévoit les *service accounts* dès
 >   le départ pour éviter un refactor.
@@ -178,7 +178,7 @@ Secrets Manager / Infisical / Doppler.
 
 ### Pistes de réconciliation
 - **E2E par défaut** pour le KV ; les moteurs actifs (dynamique/PKI/transit) tournent dans un
-  composant séparé, **auto-hébergeable par le client** (souveraineté CH) — analogue au
+  composant séparé, **auto-hébergeable par le client** — analogue au
   Key Connector côté SSO.
 - Auth **machine** distincte de l'auth humaine : jetons à durée de vie courte, AppRole-like,
   OIDC/JWT, intégration CI/CD & Kubernetes.
@@ -339,7 +339,7 @@ Ordre de priorité (décidé) :
 | Récupération de compte (perte master pw) | Kit de récupération, pas de backdoor |
 | Tension SSO ↔ zero-knowledge | Patterns Key Connector / trusted device |
 | Responsabilité en cas de fuite | Assurance cyber, conformité, transparence |
-| Concurrence établie (Bitwarden, 1Password) | Différenciation : Suisse, niche, intégrations |
+| Concurrence établie (Bitwarden, 1Password) | Différenciation : zero-knowledge vérifiable, niche, intégrations |
 
 ---
 
@@ -348,7 +348,16 @@ Ordre de priorité (décidé) :
 - [x] **Backend** : TypeScript + Fastify (un seul langage front/back, itération rapide).
 - [x] **Front** : SvelteKit (léger, WebCrypto natif).
 - [x] **1er IdP SSO** : Entra ID via **OIDC** (portable ensuite vers Google Workspace / Keycloak).
-- [x] **Différenciation** : souveraineté suisse (hébergement CH, nLPD) + simplicité pour les PME.
+- [x] **Différenciation** : architecture **zero-knowledge** + simplicité pour les
+  PME. **Réécrite le 2026-08-27**, décision de Clara : tout l'hébergement passe en
+  France. La souveraineté suisse cesse donc d'être l'axe de différenciation.
+  Ce n'est pas une perte : la localisation est une promesse que le client doit
+  croire, là où le zero-knowledge est une propriété qu'il peut vérifier dans le
+  code. Le serveur ne voit que du chiffré, et c'est démontrable.
+  L'ancienne formulation — « souveraineté suisse (hébergement CH, nLPD) », cochée
+  comme acquise — est ce qui avait fait écrire « Hébergé en Suisse · conforme
+  nLPD » sur l'écran de connexion, où des clients la lisaient. Les deux moitiés
+  étaient fausses.
 
 ## Décisions encore ouvertes
 

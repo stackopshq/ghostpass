@@ -1,68 +1,76 @@
-/* GhostPass — design system "app à trois zones" (sidebar · liste · détail),
-   inspiré 1Password : clair, sobre, dense, accent bleu ardoise. Aucune logique ici. */
+@import "./fonts.css";
+
+/* GhostPass — design system "app à trois zones" (sidebar · liste · détail).
+   Même grammaire que ghostcal, avec les teintes de GhostPass : un accent
+   électrique, une aurore qui saigne du haut-droit, du verre fumé sur les
+   surfaces. Aucune logique ici.
+
+   LES TROIS TEINTES FONT AUTORITÉ. Elles sont déclarées une fois pour toute la
+   suite dans tools/brand/ghost_suite.py (dépôt apollo-platform) :
+     claire #9CC3FF · primaire #2E7DFF · profonde #143F8F
+   Cette feuille portait #5394f5 et #2e5cc5 — deux bleus délavés qui
+   n'appartiennent à aucune palette de la suite, et que rien ne dérivait de la
+   charte. Ne pas les réintroduire : un accent qui dérive, c'est un produit qui
+   cesse d'être reconnaissable comme un frère des sept autres. */
 
 :root {
   /* Typographies */
-  /* Les polices de la suite, à l'identique de ghostbit et ghostmon. Aucune n'est
-     téléchargée : un coffre zero-knowledge qui appelle Google Fonts à chaque ouverture
-     livrerait l'adresse IP de ses utilisateurs à un tiers, à chaque déverrouillage. */
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  /* Le serif de l'ancienne charte n'existe plus dans la suite ; les titres prennent la
-     police d'interface. Le jeton reste, pour ne pas casser ce qui le référence. */
-  --font-serif: var(--font-sans);
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: "Spectral", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Rayons (partagés) */
   --radius: 12px;
   --radius-sm: 8px;
   --radius-pill: 999px;
 
-  /* ── Thème SOMBRE (défaut) ──
-     Base Dracula, commune à toute la suite ; seule la teinte de marque distingue les
-     produits. Pour GhostPass c'est le bleu #2E7DFF, celui du logo — le seul créneau
-     froid encore libre : ghostbit est violet, ghostmon lime, ghostboard orange,
-     ghostauth menthe, ghostcal cyan, ghostmail jaune. */
-  --canvas: #21222c;
-  --surface: #282a36;
-  --surface-2: #323445;
-  --ink: #f8f8f2;
-  --ink-2: #8b9cc8;
-  --ink-3: #6b7a9e;
-  --line: #44475a;
-  --line-2: #565a70;
+  /* ── Thème SOMBRE (défaut) ── */
+  /* Le fond de nuit est celui de ghostcal : les deux produits doivent pouvoir
+     être ouverts côte à côte sans que l'un paraisse plus clair que l'autre. */
+  --canvas: #0b0f19;
+  --surface: #151c2b;
+  --surface-2: #1d2637;
+  --ink: #e6ecf7;
+  --ink-2: #a4b1c6;
+  --ink-3: #74839a;
+  /* Filets en alpha, pas en teinte pleine : posés sur du verre fumé, une
+     couleur opaque se verrait comme un trait plus clair que sa surface. */
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.14);
 
-  /* Marque : bleu néon */
-  --brand-primary: #2e7dff;
-  --brand-light: #7fb2ff;
-  --brand-deep: #1a4fcc;
-  --brand-ghost: #d6e6ff;
-  --brand-bg: #080d18;
-  --brand-gradient: linear-gradient(135deg, #2e7dff 0%, #1a4fcc 100%);
-  /* Le néon de la suite : un noyau serré et vif, une aura large et discrète. Les deux
-     comptent — un seul halo fait une tache molle, la superposition fait une source. */
-  --brand-glow: drop-shadow(0 0 8px rgba(46, 125, 255, 0.6))
-    drop-shadow(0 0 20px rgba(46, 125, 255, 0.35));
-  /* Le même halo en `box-shadow`, pour ce qui a un fond : `filter` s'applique au rendu
-     entier de l'élément et mangerait son propre remplissage. */
-  --glow-shadow: 0 0 10px rgba(46, 125, 255, 0.55), 0 0 28px rgba(46, 125, 255, 0.32);
-  --glow-shadow-faible: 0 0 12px rgba(46, 125, 255, 0.25);
-  /* Voiles de survol. Sur la nuit ils éclaircissent, en plein jour ils assombrissent : un
-     voile sombre posé sur du sombre ne se voit pas, et le survol cesse de répondre. */
-  --voile: rgba(255, 255, 255, 0.06);
-  --voile-fort: rgba(255, 255, 255, 0.10);
-  --bg-gradient: linear-gradient(150deg, #080d18 0%, #0a1220 45%, #080f1a 75%, #090a10 100%);
+  /* Les trois teintes de la charte, telles quelles. Le thème sombre les emploie
+     toutes les trois — aucun bleu inventé ici. */
+  --accent: #2e7dff; /* primaire — remplis (boutons, pastilles) */
+  --accent-2: #9cc3ff; /* claire — survol : le rempli s'allume */
+  --accent-deep: #143f8f; /* profonde — fonds de marque */
+  /* L'accent PLEIN ne tient pas le contraste quand il sert de TEXTE sur fond
+     sombre : 3,2:1 sur le fond doux, sous le seuil AA. La teinte claire, elle,
+     y est à 6,8:1. D'où deux jetons : celui-ci pour le texte et les icônes,
+     `--accent` pour les remplis. Les confondre, c'est écrire en bleu illisible
+     sur du bleu foncé. */
+  --accent-text: #9cc3ff;
+  --accent-ink: #04122b; /* texte POSÉ SUR l'accent — 5,0:1 sur #2e7dff */
+  --accent-soft: rgba(46, 125, 255, 0.14);
+  --ring: rgba(46, 125, 255, 0.45);
+  --glow: rgba(46, 125, 255, 0.45); /* la lueur des boutons d'action */
+  --aurora: rgba(46, 125, 255, 0.1); /* la nappe du fond */
 
-  --accent: var(--brand-primary);
-  --accent-2: var(--brand-light);
-  --accent-soft: rgba(46, 125, 255, 0.15);
-  --ring: rgba(46, 125, 255, 0.35);
+  /* Ce bloc redéclarait --accent, --accent-2, --accent-soft et --ring, déjà
+     posés ci-dessus, et le faisait à partir de --brand-primary/--brand-light
+     qui ne sont définis NULLE PART dans le produit : un var() sans repli rend
+     la déclaration invalide, donc l'accent serait tombé sur toute l'interface,
+     sans qu'aucun contrôle ne le signale. Les jetons ci-dessus font foi — ce
+     sont ceux dont les contrastes sont mesurés.
 
-  /* Sémantiques : celles de la base Dracula partagée. */
-  --danger: #ff5555;
+     Les sémantiques reviennent aussi à celles de la charte plutôt qu'au
+     Dracula brut (#ff5555 / #50fa7b) : elles sont accordées à l'ensemble de la
+     suite pour que deux produits ouverts côte à côte ne paraissent pas venir
+     de deux maisons. */
+  --danger: #ef6b72;
   --danger-soft: #3a2123;
-  --success: #50fa7b;
+  --success: #4fc28a;
   --success-soft: #1d3a2c;
-  --warn: #ffb86c;
+  --warn: #e0a23c;
   --warn-soft: #3a2f1a;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -76,26 +84,29 @@
 
 /* ── Thème CLAIR (override) ── */
 :root[data-theme="light"] {
-  --canvas: #f3f4f6;
+  --canvas: #f2f5fa;
   --surface: #ffffff;
-  --surface-2: #f6f7f9;
-  --ink: #14171c;
-  --ink-2: #49515d;
-  --ink-3: #8a93a1;
-  --line: #e4e7ec;
-  --line-2: #d3d8e0;
+  --surface-2: #eef3fa;
+  --ink: #0f1b2d;
+  --ink-2: #4a566a;
+  --ink-3: #6f7d92;
+  --line: rgba(15, 23, 42, 0.1);
+  --line-2: rgba(15, 23, 42, 0.16);
 
-  --accent: var(--brand-deep);
-  --accent-2: #244a9e;
-  --accent-soft: #eaf0fb;
-  --ring: rgba(26, 79, 204, 0.26);
-  /* En plein jour, le néon devient une bavure : on le réduit sans le supprimer. */
-  --brand-glow: drop-shadow(0 0 6px rgba(46, 125, 255, 0.3));
-  --glow-shadow: none;
-  --glow-shadow-faible: none;
-  --voile: rgba(15, 23, 42, 0.05);
-  --voile-fort: rgba(15, 23, 42, 0.09);
-  --bg-gradient: none;
+  /* Sur fond clair, c'est la teinte PROFONDE de la charte qui porte l'accent :
+     la primaire n'a que 3,8:1 sur blanc et échouerait sur du texte de 14 px.
+     Même arbitrage que ghostcal, qui descend son cyan pour le mode clair. */
+  --accent: #143f8f;
+  /* La charte ne déclare pas de quatrième teinte : ce survol est la profonde
+     assombrie d'un cran, et rien d'autre. */
+  --accent-2: #0e2f6d;
+  --accent-deep: #143f8f;
+  --accent-text: #143f8f;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(20, 63, 143, 0.1);
+  --ring: rgba(20, 63, 143, 0.3);
+  --glow: rgba(20, 63, 143, 0.28);
+  --aurora: rgba(46, 125, 255, 0.16);
 
   --danger: #b3261e;
   --danger-soft: #fbece9;
@@ -124,11 +135,25 @@ body {
   color: var(--ink);
   font-size: 15px;
   line-height: 1.5;
-  /* Le dégradé de la suite empêche le noir d'être plat ; en thème clair il n'a pas lieu
-     d'être, et `--canvas` reprend la main. */
-  background: var(--canvas);
-  background-image: var(--bg-gradient, none);
+  background-color: var(--canvas);
+  /* L'aurore : une nappe d'accent qui saigne du coin haut-droit. `fixed` pour
+     qu'elle ne défile pas avec le contenu — c'est ce qui la fait lire comme une
+     lumière posée sur la pièce plutôt que comme une image de fond. Elle n'est
+     visible que parce que les surfaces au-dessus sont translucides (.glass). */
+  background-image: radial-gradient(60rem 40rem at 80% -10%, var(--aurora), transparent 60%);
   background-attachment: fixed;
+  /* Zéro défilement horizontal, quoi qu'il arrive : sur téléphone, un seul
+     enfant trop large transforme toute la page en zone de balayage latéral. */
+  overflow-x: hidden;
+}
+
+/* ─── Verre fumé ───
+   La surface translucide qui laisse passer l'aurore. Utilisable telle quelle
+   (class="glass") ou reprise par les composants qui en ont besoin. */
+.glass {
+  background: color-mix(in srgb, var(--surface) 65%, transparent);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(12px);
 }
 
 /* ─── Typographie ─── */
@@ -182,21 +207,20 @@ code,
   color: var(--ink);
 }
 
+/* Pas de pastille colorée : le logo porte déjà ses trois teintes, et l'enfermer
+   dans un carré bleu écrasait la silhouette qui fait la famille. Même parti que
+   ghostcal, qui rend son `/logo.svg` en 28 px sans rien autour. */
 .brand .mark {
   display: grid;
   place-items: center;
   width: 1.9em;
   height: 1.9em;
-  /* Pas de badge : la silhouette porte elle-même le dégradé de la charte. Le poser aussi en
-     fond aurait rendu le fantôme invisible sur son propre dégradé. */
-  background: none;
-  /* La marque rayonne : c'est elle qui rattache GhostPass au reste de la suite. */
-  filter: var(--brand-glow);
 }
 
-.brand .mark svg {
+.brand .mark img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 
 /* ─── App shell : topbar + (sidebar · liste · détail) ─── */
@@ -204,6 +228,10 @@ code,
   display: flex;
   flex-direction: column;
   height: 100vh;
+  /* Hauteur DYNAMIQUE : sur mobile, 100vh compte la barre d'URL escamotable et
+     fait dépasser la coque du cadre visible. La ligne précédente reste comme
+     repli pour les moteurs qui ignorent dvh. */
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -213,7 +241,10 @@ code,
   gap: 1rem;
   flex: none;
   padding: 0.6rem 1rem;
-  background: var(--canvas);
+  /* Translucide : c'est ce qui laisse voir l'aurore du body au travers. Une
+     barre opaque en var(--canvas) la masquerait entièrement. */
+  background: color-mix(in srgb, var(--canvas) 72%, transparent);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
 }
 
@@ -250,7 +281,8 @@ code,
   flex-direction: column;
   gap: 0.2rem;
   padding: 1rem 0.7rem;
-  background: var(--canvas);
+  background: color-mix(in srgb, var(--canvas) 55%, transparent);
+  backdrop-filter: blur(12px);
   border-right: 1px solid var(--line);
 }
 
@@ -287,13 +319,13 @@ code,
 }
 
 .nav-item.active {
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .nav-item.active svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .sidebar-foot {
@@ -325,7 +357,8 @@ code,
   flex: 1;
   min-width: 0;
   display: flex;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 62%, transparent);
+  backdrop-filter: blur(12px);
 }
 
 /* Colonne liste (master) */
@@ -334,8 +367,11 @@ code,
   flex: none;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   border-right: 1px solid var(--line);
-  background: var(--surface);
+  /* Transparente : le verre est porté par .content, et empiler deux
+     `backdrop-filter` coûte une passe de flou pour rien. */
+  background: transparent;
 }
 
 .master-title {
@@ -374,7 +410,7 @@ code,
 
 .entry.active {
   background: var(--accent-soft);
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent-2);
 }
 
 .avatar {
@@ -384,7 +420,7 @@ code,
   width: 34px;
   height: 34px;
   flex: none;
-  color: var(--accent);
+  color: var(--accent-text);
   font-family: var(--font-serif);
   font-weight: 600;
   font-size: 0.95rem;
@@ -486,12 +522,12 @@ code,
 
 .tree-all.active {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
   border-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .tree-all.active svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .tree-section {
@@ -521,7 +557,7 @@ code,
 
 .tree-folder.active .tree-folder-btn,
 .tree-folder.active .tree-folder-btn > svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .tree-chevron-btn {
@@ -645,7 +681,7 @@ code,
   font-family: var(--font-mono);
   font-size: 1.05rem;
   letter-spacing: 0.12em;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .otp-ring {
@@ -830,6 +866,8 @@ code,
 
 /* Liste clé/valeur du détail */
 .kv {
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
@@ -867,7 +905,7 @@ code,
 }
 
 a.kv-value {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
@@ -970,6 +1008,7 @@ a.kv-value:hover {
 /* ─── Écran d'authentification (split-screen) ─── */
 .auth {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: 1.05fr 1fr;
 }
@@ -982,11 +1021,13 @@ a.kv-value:hover {
   justify-content: space-between;
   gap: 2rem;
   padding: clamp(2rem, 5vw, 3.75rem);
-  color: var(--ink);
-  /* La suite pose du sombre et laisse le néon faire l'accent. Inonder la moitié de l'écran
-     de la couleur de marque écrasait tout le reste — et rendait le halo invisible, faute
-     de nuit pour le porter. */
-  background: var(--bg-gradient, var(--canvas));
+  color: #fff;
+  /* Aurore concentrée : la teinte profonde de la charte comme nuit de fond, la
+     primaire allumée dans un coin. L'ancien dégradé partait de la primaire vers
+     une teinte claire, sur laquelle le texte blanc tombait à 2,3:1. */
+  background:
+    radial-gradient(75% 65% at 12% 8%, color-mix(in srgb, var(--accent) 60%, transparent), transparent 72%),
+    linear-gradient(150deg, var(--accent-deep) 0%, #080d18 100%);
   overflow: hidden;
 }
 
@@ -1025,13 +1066,7 @@ a.kv-value:hover {
   font-size: 1.3rem;
 }
 
-.auth-brand .brand .mark {
-  /* Pas de fond : c'est la silhouette elle-même qui porte le dégradé et le halo. Le badge
-     translucide d'avant aplatissait les deux. */
-  background: none;
-  box-shadow: none;
-  filter: var(--brand-glow);
-}
+
 
 .auth-hero {
   font-family: var(--font-serif);
@@ -1086,7 +1121,7 @@ a.kv-value:hover {
   display: grid;
   place-items: center;
   padding: 2rem 1.25rem;
-  background: var(--surface);
+  background: transparent;
 }
 
 .auth-form {
@@ -1143,7 +1178,8 @@ a.kv-value:hover {
 
 /* ─── Panneaux / cartes ─── */
 .panel {
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 65%, transparent);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
@@ -1281,30 +1317,38 @@ button {
   transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s, box-shadow 0.15s;
 }
 
+/* Anneau de focus « à trou » : un liseré de la couleur du fond, puis l'accent.
+   Le trou est ce qui rend l'anneau visible AUSSI sur un bouton déjà bleu — un
+   simple halo d'accent posé sur un rempli d'accent ne se voit pas. */
 button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--ring), var(--glow-shadow-faible, none);
-  border-color: var(--brand-primary, var(--accent));
+  box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--accent-2);
 }
 
+/* En mode contrastes forcés, les ombres portées sont supprimées par le système :
+   sans cette reprise, le focus deviendrait invisible pour qui en dépend. */
+@media (forced-colors: active) {
+  button:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
+/* Le bouton d'action, en accent saturé et allumé. La lueur est une ombre
+   colorée, pas une animation : elle ne coûte rien à la frappe et survit à
+   `prefers-reduced-motion`. */
 form > button[type="submit"],
 .btn-primary {
   padding: 0.62rem 1rem;
   font-weight: 600;
   font-size: 0.92rem;
-  color: #fff;
-  background: var(--brand-gradient, var(--accent));
-  border-color: var(--accent);
-  /* Le néon de la suite, en ombre portée plutôt qu'en filtre : un `filter` sur un bouton
-     rognerait son propre fond. */
-  box-shadow: var(--shadow-sm), var(--glow-shadow, none);
-}
-
-/* Faire luire ce sur quoi on ne peut pas appuyer appellerait l'œil au mauvais endroit. */
-form > button[type="submit"]:disabled,
-.btn-primary:disabled {
-  box-shadow: var(--shadow-sm);
-  filter: saturate(0.5);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, #fff);
+  box-shadow:
+    0 6px 20px -8px var(--glow),
+    0 0 16px -6px var(--glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .btn-primary {
@@ -1322,11 +1366,25 @@ form > button[type="submit"]:hover:not(:disabled),
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-2);
   border-color: var(--accent-2);
+  box-shadow:
+    0 10px 26px -8px var(--glow),
+    0 0 26px -6px var(--glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+form > button[type="submit"]:focus-visible,
+.btn-primary:focus-visible,
+.icon-add:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--canvas),
+    0 0 0 4px var(--accent-2),
+    0 0 24px -4px var(--glow);
 }
 
 form > button[type="submit"]:active:not(:disabled),
 .btn-primary:active:not(:disabled) {
   transform: translateY(1px);
+  box-shadow: 0 2px 10px -6px var(--glow);
 }
 
 button:disabled {
@@ -1354,7 +1412,7 @@ button:disabled {
 
 .ghost:hover:not(:disabled) {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-soft);
 }
 
@@ -1389,13 +1447,13 @@ button:disabled {
   padding: 0.25rem 0.3rem;
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
   font-size: 0.85rem;
 }
 
 .link:hover {
-  color: var(--accent-2);
+  color: var(--accent);
   text-decoration: underline;
 }
 
@@ -1406,13 +1464,20 @@ button:disabled {
   width: 38px;
   height: 38px;
   flex: none;
-  color: #fff;
+  color: var(--accent-ink);
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, #fff);
+  box-shadow:
+    0 6px 20px -8px var(--glow),
+    0 0 16px -6px var(--glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .icon-add:hover {
   background: var(--accent-2);
+  box-shadow:
+    0 10px 26px -8px var(--glow),
+    0 0 26px -6px var(--glow);
 }
 
 .icon-add svg {
@@ -1449,7 +1514,7 @@ button:disabled {
 }
 
 .segmented button.active {
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
@@ -1483,7 +1548,7 @@ button:disabled {
 
 .pill-role {
   text-transform: capitalize;
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
@@ -1554,7 +1619,7 @@ button:disabled {
 }
 
 .icon-btn:hover {
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-soft);
 }
 
@@ -1585,7 +1650,7 @@ button:disabled {
 }
 
 .callout.info {
-  color: var(--accent-2);
+  color: var(--accent-text);
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 22%, transparent);
 }
@@ -1670,7 +1735,63 @@ button:disabled {
   animation: spin 0.7s linear infinite;
 }
 
+/* ─── Confirmation de suppression d'organisation ─── */
+/* Une ligne dépliée sous l'organisation visée, et non une boîte de dialogue : la saisie du nom
+   demande de relire ce qu'on s'apprête à détruire, ce qu'un « êtes-vous sûr ? » n'obtient pas. */
+.list > li.confirm-delete {
+  display: block;
+  padding: 0.9rem 0.1rem;
+}
+
+.confirm-delete form {
+  max-width: 520px;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line-2));
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+}
+
+.confirm-title {
+  margin: 0 0 0.4rem;
+  font-weight: 650;
+  color: var(--danger);
+}
+
+.confirm-body {
+  margin: 0 0 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* Le refus du serveur, à l'endroit du clic. Le toast global l'affiche aussi, mais il se ferme. */
+.confirm-error {
+  margin: 0 0 0.7rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  background: var(--surface);
+  color: var(--danger);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 /* ─── Toast (erreurs) ─── */
+/* Raison pour laquelle un contrôle est inerte, posée sous ce contrôle. Une
+   bulle de validation native ne convient pas ici : Safari iOS l'escamote, et
+   l'utilisatrice voit un bouton mort sans explication. */
+.hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-3);
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -1762,36 +1883,213 @@ hr.sep {
   }
 }
 
-/* ─── Responsive ─── */
-@media (max-width: 880px) {
+/* ─── Responsive ───
+
+   DEUX RUPTURES, ET UNE SEULE EXIGENCE : RIEN NE DÉBORDE EN LARGEUR.
+
+   ≤ 1040 px (tablette) : la barre latérale se réduit à un rail d'icônes. Le rail
+   masque AUSSI l'arbre de dossiers — sans quoi « Dossiers » se rendait « DOSS »
+   dans 60 px de large, ce qui était le symptôme visible du problème.
+
+   ≤ 760 px (téléphone) : plus de rail du tout. La barre latérale devient un
+   tiroir hors-écran, la liste et le détail s'empilent, l'en-tête passe sur deux
+   lignes. C'est ce dernier point qui règle le bouton « + » coupé par le bord :
+   il ne l'était pas par une largeur fixe mais par la somme des largeurs
+   incompressibles d'une barre à quatre éléments sur une seule ligne. */
+
+/* Le rail de tablette. */
+@media (max-width: 1040px) and (min-width: 761px) {
   .sidebar {
-    width: 60px;
+    width: 62px;
+    padding: 1rem 0.5rem;
   }
   .sidebar .brand span:not(.mark),
   .nav-item span,
-  .sidebar-foot .ghost span {
+  .sidebar-foot .ghost span,
+  .sidebar-foot .pill {
     display: none;
   }
-  .nav-item {
+  /* L'arbre de dossiers n'a pas de forme lisible en 62 px : on le retire du rail
+     plutôt que de le tronquer. Il reste accessible en élargissant la fenêtre. */
+  .sidebar-tree {
+    display: none;
+  }
+  .nav-item,
+  .sidebar-foot .ghost {
     justify-content: center;
   }
   .sidebar .brand {
     justify-content: center;
     padding: 0.4rem 0 1.1rem;
   }
+  .master {
+    width: 280px;
+  }
 }
 
-@media (max-width: 680px) {
+/* Le tiroir : caché sauf sur téléphone. */
+.scrim {
+  display: none;
+}
+
+.nav-toggle {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  /* En-tête sur deux lignes : marque + actions, puis la recherche pleine
+     largeur. `flex-wrap` est ce qui remplace les largeurs fixes. */
+  .topbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+  }
+  .topbar .brand {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+    font-size: 1.05rem;
+  }
+  .topbar .brand > span:not(.mark) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar-search {
+    order: 3;
+    flex: 1 0 100%;
+    max-width: none;
+    margin: 0;
+  }
+  /* Hors du coffre, cet emplacement est un div vide qui sert de cale sur grand
+     écran. Sur téléphone il prendrait une ligne entière pour ne rien montrer.
+     Le sélecteur porte `div` à dessein : `input:empty` matche TOUS les champs,
+     un input étant un élément vide par nature — sans ça on masquerait la
+     recherche elle-même. */
+  div.topbar-search:empty {
+    display: none;
+  }
+  /* Le bouton d'ajout perd son libellé et devient carré : le geste est connu,
+     et c'est le libellé qui poussait la barre au-delà de la largeur d'écran. */
+  .topbar-actions .btn-primary {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .topbar-actions .btn-primary span {
+    display: none;
+  }
+
+  .nav-toggle {
+    display: grid;
+    flex: none;
+  }
+
+  /* Hors-écran par défaut, ramené par .open. `position: fixed` fonctionne parce
+     qu'aucun ancêtre du tiroir ne porte transform/filter/backdrop-filter — s'en
+     ajouter un ferait du tiroir un élément positionné DANS la colonne, et il
+     resterait invisible. */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 60;
+    width: min(84vw, 292px);
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    background: color-mix(in srgb, var(--canvas) 94%, transparent);
+    backdrop-filter: blur(18px);
+    box-shadow: var(--shadow-md);
+    overflow-y: auto;
+  }
+  .sidebar.open {
+    transform: none;
+  }
+  .scrim.show {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    padding: 0;
+    background: rgba(3, 6, 14, 0.55);
+    border: none;
+    border-radius: 0;
+  }
+
+  /* Liste et détail empilés, chacun défilant pour son compte. */
   .content {
     flex-direction: column;
+    min-height: 0;
   }
   .master {
     width: 100%;
-    max-height: 42vh;
+    flex: none;
+    max-height: 44vh;
     border-right: none;
     border-bottom: 1px solid var(--line);
   }
+  .detail,
+  .single {
+    flex: 1;
+    min-height: 0;
+    padding: 1rem 0.9rem 2rem;
+  }
   .grid-2 {
     grid-template-columns: 1fr;
+  }
+
+  /* Les lignes clé/valeur passent sur deux lignes : une étiquette de 116 px + une
+     valeur en mono + deux boutons ne tiennent pas dans 360 px sans déborder. */
+  .kv-row {
+    flex-wrap: wrap;
+    gap: 0.4rem 0.6rem;
+  }
+  .kv-label {
+    width: 100%;
+  }
+  .kv-value {
+    flex: 1 1 60%;
+  }
+  .detail-head {
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+  .detail-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .list > li,
+  .row-actions,
+  .subbar,
+  .gen-toggles {
+    flex-wrap: wrap;
+  }
+
+  /* 16 px : en dessous, Safari iOS zoome à la mise au point du champ — et c'est
+     ce zoom, pas la mise en page, qui produisait le défilement horizontal. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Cibles tactiles : 40 px, le minimum tenable au doigt. Conditionné au pointeur
+   grossier plutôt qu'à la largeur — une tablette au stylet n'en a pas besoin. */
+@media (pointer: coarse) {
+  .icon-btn,
+  .tree-chevron-btn {
+    width: 40px;
+    height: 40px;
+  }
+  /* Sauf la croix de suppression d'un dossier : l'agrandir déformerait la ligne
+     de l'arbre. Au doigt elle reste atteignable, et elle cesse d'être révélée
+     au survol — un survol qui n'existe pas sur un écran tactile. */
+  .tree-remove {
+    width: 32px;
+    height: 32px;
+    opacity: 1;
   }
 }

@@ -72,7 +72,7 @@
           </span>
         </div>
       </div>
-      <p class="muted" style="margin-top:0.8rem">Déchiffré dans votre navigateur — le serveur n'a jamais vu ce contenu en clair. Ce lien est à usage limité.</p>
+      <p class="muted" style="margin-top:0.8rem">Déchiffré dans votre navigateur : le serveur n'a jamais vu ce contenu en clair. Ce lien est à usage limité.</p>
     {/if}
   </div>
 </main>

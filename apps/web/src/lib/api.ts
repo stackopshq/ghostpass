@@ -269,6 +269,12 @@ export const api = {
   createOrg(token: string, body: { name: string; encryptedOrgKey: string }) {
     return http<{ orgId: string }>("/api/orgs", { method: "POST", body, token });
   },
+  // Suppression définitive d'une organisation. Le serveur refuse tant qu'elle contient des
+  // collections, des secrets ou d'autres membres actifs, et rend alors un 409 dont le message
+  // porte le décompte : il doit remonter tel quel jusqu'à l'écran.
+  deleteOrg(token: string, orgId: string) {
+    return http<void>(`/api/orgs/${orgId}`, { method: "DELETE", token });
+  },
   listOrgs(token: string) {
     return http<{
       organizations: Array<{ orgId: string; name: string; role: string; status: string }>;

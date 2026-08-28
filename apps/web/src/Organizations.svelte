@@ -50,6 +50,13 @@
   let grantUserId = $state("");
   let grantPermission = $state("read");
 
+  // Suppression d'organisation : cible en cours de confirmation, nom saisi, et dernier refus
+  // du serveur. `deleteError` est distinct du toast global : un 409 « il reste 3 collections »
+  // doit rester lisible SOUS le contrôle, à l'endroit où on vient de cliquer.
+  let deleteTarget = $state<OrgSummary | null>(null);
+  let deleteConfirmName = $state("");
+  let deleteError = $state<string | null>(null);
+
   // État d'affichage (UI uniquement).
   let revealed = $state<Set<number>>(new Set());
   let copiedKey = $state<string | null>(null);
@@ -95,6 +102,41 @@
       await loadOrgs();
     } catch (err) {
       fail(err);
+    } finally {
+      busy = false;
+    }
+  }
+
+  function askDelete(org: OrgSummary) {
+    deleteTarget = org;
+    deleteConfirmName = "";
+    deleteError = null;
+  }
+
+  function cancelDelete() {
+    deleteTarget = null;
+    deleteConfirmName = "";
+    deleteError = null;
+  }
+
+  async function confirmDelete(e: SubmitEvent) {
+    e.preventDefault();
+    const target = deleteTarget;
+    if (!target || deleteConfirmName.trim() !== target.name) return;
+    busy = true;
+    deleteError = null;
+    try {
+      await api.deleteOrg(token, target.orgId);
+      deleteTarget = null;
+      deleteConfirmName = "";
+      await loadOrgs();
+    } catch (err) {
+      // Le serveur refuse pour une raison précise (403, 404, 409 avec décomptes). On la garde
+      // affichée et le panneau ouvert : avaler ce message ferait passer une garantie pour un
+      // bouton mort. Le toast global double l'information, il ne la remplace pas.
+      const message = err instanceof Error ? err.message : String(err);
+      deleteError = message;
+      onError(message);
     } finally {
       busy = false;
     }
@@ -325,7 +367,7 @@
           <button class="icon-btn {copiedKey === `user-${i}` ? 'copied' : ''}" title="Copier l'identifiant" aria-label="Copier l'identifiant" onclick={() => copy(item.username, `user-${i}`)}>
             {#if copiedKey === `user-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
           </button>
-        {:else}<span class="muted">—</span>{/if}
+        {:else}<span class="muted">Sans identifiant</span>{/if}
       </span>
     </div>
     <span class="mono dots">{revealed.has(i) ? item.password : "••••••••••"}</span>
@@ -363,9 +405,46 @@
                   <button class="ghost sm" onclick={() => accept(o)} disabled={busy}>Accepter l'invitation</button>
                 {:else}
                   <button class="ghost sm" onclick={() => open(o)} disabled={busy}>Ouvrir</button>
+                  {#if o.role === "admin"}
+                    <button class="danger" onclick={() => askDelete(o)} disabled={busy}>Supprimer</button>
+                  {/if}
                 {/if}
               </div>
             </li>
+            {#if deleteTarget?.orgId === o.orgId}
+              <li class="confirm-delete">
+                <form onsubmit={confirmDelete}>
+                  <p class="confirm-title">Supprimer « {o.name} » définitivement ?</p>
+                  <p class="confirm-body">
+                    L'organisation, ses membres et ses groupes disparaissent. Ni GhostPass ni
+                    personne ne peut les rétablir : le serveur ne détient que des blobs chiffrés.
+                    La suppression est refusée tant qu'il reste des collections, des secrets
+                    partagés ou d'autres membres actifs. Le coffre partagé créé avec
+                    l'organisation ne compte pas tant qu'il est vide : sinon aucune organisation
+                    neuve ne serait supprimable.
+                  </p>
+                  <label class="field">
+                    <span>Saisissez le nom de l'organisation pour confirmer</span>
+                    <input bind:value={deleteConfirmName} placeholder={o.name} autocomplete="off" />
+                  </label>
+                  <!-- Le refus du serveur s'affiche ici, sous le bouton qui l'a provoqué, et
+                       le panneau reste ouvert. Un 409 « il reste 3 collections » est une
+                       information exploitable ; l'escamoter ferait passer la garde pour une panne. -->
+                  {#if deleteError}
+                    <p class="confirm-error" role="alert">{deleteError}</p>
+                  {/if}
+                  <div class="confirm-actions">
+                    <button type="submit" class="danger" disabled={busy || deleteConfirmName.trim() !== o.name}>
+                      {busy ? "Suppression…" : "Supprimer définitivement"}
+                    </button>
+                    <button type="button" class="ghost sm" onclick={cancelDelete} disabled={busy}>Annuler</button>
+                  </div>
+                  {#if deleteConfirmName.trim() !== o.name}
+                    <p class="hint">Le bouton s'active quand le nom saisi correspond exactement à « {o.name} ».</p>
+                  {/if}
+                </form>
+              </li>
+            {/if}
           {/each}
         </ul>
       {/if}
@@ -375,7 +454,17 @@
       <div class="panel-head"><h2>Créer une organisation</h2></div>
       <form onsubmit={submitCreateOrg}>
         <label class="field"><span>Nom de l'organisation</span><input bind:value={newOrgName} placeholder="StackOps Team" required /></label>
-        <button type="submit" disabled={busy}>Créer l'organisation</button>
+        <!-- Le bouton porte lui-même la raison de son inaction. `required` seul
+             laissait le navigateur bloquer l'envoi en affichant une bulle
+             native : sur Safari iOS elle est fugace, et le geste ressemblait
+             alors à un bouton mort. Un contrôle doit dire pourquoi il ne fait
+             rien, au moment où on le regarde. -->
+        <button type="submit" disabled={busy || !newOrgName.trim()}>
+          {busy ? "Création…" : "Créer l'organisation"}
+        </button>
+        {#if !newOrgName.trim()}
+          <p class="hint">Donnez un nom à l'organisation pour pouvoir la créer.</p>
+        {/if}
       </form>
     </section>
   </div>
@@ -425,7 +514,7 @@
           <li>
             <span class="avatar">{(m.email ?? "?").charAt(0).toUpperCase()}</span>
             <div class="row-main">
-              <span class="row-title">{m.email ?? "—"}</span>
+              <span class="row-title">{m.email ?? "Adresse inconnue"}</span>
               <span class="row-sub"><span class="pill pill-role">{m.role}</span><span class="pill pill-muted">{m.status}</span></span>
             </div>
             <div class="row-actions"><button class="danger" onclick={() => revoke(m)} disabled={busy}>Révoquer</button></div>
