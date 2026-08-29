@@ -836,6 +836,22 @@
         }
       }
     },
+    "Ce coffre d'équipe n'est plus accessible.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce coffre d'équipe n'est plus accessible."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This team vault is no longer accessible."
+          }
+        }
+      }
+    },
     "Ce coffre est vide.": {
       "localizations": {
         "en": {
@@ -912,6 +928,22 @@
         }
       }
     },
+    "Ce serveur ne propose pas encore le second facteur.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce serveur ne propose pas encore le second facteur."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This server does not offer two-factor authentication yet."
+          }
+        }
+      }
+    },
     "Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent.": {
       "localizations": {
         "fr": {
@@ -976,6 +1008,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "This person will keep access: the “%@” group grants it too. To remove it entirely, take them out of that group."
+          }
+        }
+      }
+    },
+    "Cette personne perdra l'accès qu'un octroi direct lui donnait.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette personne perdra l'accès qu'un octroi direct lui donnait."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person will lose the access a direct grant gave them."
           }
         }
       }
@@ -2108,6 +2156,22 @@
         }
       }
     },
+    "L'accès effectif : rôle, octroi direct et groupes réunis. Seul un octroi direct se retire ici.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'accès effectif : rôle, octroi direct et groupes réunis. Seul un octroi direct se retire ici."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effective access: role, direct grant and groups combined. Only a direct grant can be removed here."
+          }
+        }
+      }
+    },
     "La clé de l'équipe sera changée et redistribuée aux autres membres. Ce que cette personne a déjà vu reste connu d'elle : les mots de passe concernés doivent être changés.": {
       "localizations": {
         "en": {
@@ -2400,6 +2464,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "The secret"
+          }
+        }
+      }
+    },
+    "Le serveur n'a pas répondu.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le serveur n'a pas répondu."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server did not respond."
           }
         }
       }
@@ -3047,6 +3127,22 @@
         }
       }
     },
+    "Partagé": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partagé"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared"
+          }
+        }
+      }
+    },
     "Passkey ajoutée": {
       "localizations": {
         "en": {
@@ -3073,6 +3169,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "During this delay the vault stays open in memory — never on disk — and its contents are hidden in the app switcher."
+          }
+        }
+      }
+    },
+    "Personne n'a accès à cette collection.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personne n'a accès à cette collection."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nobody has access to this collection."
           }
         }
       }
@@ -3189,6 +3301,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "When the contact requests access, you are notified and can deny it during this window. Once it elapses without an answer from you, access opens — which is exactly what makes it useful the day you can no longer answer."
+          }
+        }
+      }
+    },
+    "Qui a accès": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qui a accès"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who has access"
           }
         }
       }
@@ -3531,6 +3659,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Two-factor disabled"
+          }
+        }
+      }
+    },
+    "Second facteur indisponible": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Second facteur indisponible"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-factor unavailable"
           }
         }
       }

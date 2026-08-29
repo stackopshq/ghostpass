@@ -5,24 +5,21 @@ import SwiftUI
 /// L'écran répond à une question que l'application posait sans y répondre : on pouvait
 /// accorder un accès nommé sans jamais revoir à qui, ni le retirer.
 ///
-/// Il montre les **trois** chemins d'accès, et c'est le point important :
+/// Il montre l'accès **effectif**, tel que le serveur le calcule — rôle d'administrateur,
+/// octroi direct et appartenance à un groupe additionnés, le maximum retenu. Chaque ligne
+/// dit d'où l'accès vient.
 ///
-/// - l'accès **nommé**, accordé à une personne — le seul qui se retire ici ;
-/// - celui qu'un **groupe** confère — il se retire dans le groupe ;
-/// - celui que le **rôle d'administrateur** donne : le serveur accorde la gestion de toute
-///   collection à tout administrateur de l'équipe (`permissionFor`), sans que cela laisse
-///   la moindre trace dans la liste des accès.
-///
-/// N'afficher que le premier laisserait croire qu'un retrait ferme la porte, alors qu'un
-/// groupe peut la rouvrir aussitôt — et afficher « personne n'a accès » sur une collection
-/// que chaque administrateur peut lire. Chaque ligne dit donc d'où l'accès vient.
+/// Cette vue recomposait d'abord ces trois sources de son côté, faute que la route ne
+/// rende que les octrois directs. Elle ne le fait plus : le serveur seul connaît les
+/// groupes de chacun, et deux calculs concurrents auraient fini par diverger. Le bouton de
+/// retrait, en particulier, ne s'affiche que sur ce que le serveur déclare révocable — un
+/// rôle se change, une appartenance à un groupe se retire dans le groupe.
 struct CollectionAccessView: View {
     @EnvironmentObject private var store: VaultStore
 
     let ouvert: CoffrePartageOuvert
     let collection: OrgCollectionDTO
     let membres: [MembreDEquipe]
-    let groupes: [OrgGroupDTO]
     let apres: () async -> Void
 
     @State private var acces: [AccesNomme] = []
@@ -32,20 +29,16 @@ struct CollectionAccessView: View {
     var body: some View {
         GhostScreen {
             VStack(alignment: .leading, spacing: 16) {
-                sectionNommes
-                if !groupesQuiOuvrent.isEmpty { sectionGroupes }
-                if !administrateurs.isEmpty { sectionAdministrateurs }
+                sectionAcces
             }
         }
         .navigationTitle(Text(verbatim: collection.name))
         .navigationBarTitleDisplayMode(.inline)
         .task { await recharger() }
         .alert(item: $aRevoquer) { cible in
-            // Le message dépend de ce qui subsiste après le retrait : promettre une porte
-            // fermée quand un groupe la garde ouverte serait le pire des mensonges ici.
             Alert(
                 title: Text("Retirer l'accès ?"),
-                message: Text(consequenceDuRetrait(cible)),
+                message: Text("Cette personne perdra l'accès qu'un octroi direct lui donnait."),
                 primaryButton: .destructive(Text("Retirer")) {
                     Task { await revoquer(cible) }
                 },
@@ -53,19 +46,17 @@ struct CollectionAccessView: View {
         }
     }
 
-    // ─── Accès nommés ───
-
-    private var sectionNommes: some View {
+    private var sectionAcces: some View {
         GhostSection(
-            titre: "Accès nommés",
+            titre: "Qui a accès",
             note:
-                "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran."
+                "L'accès effectif : rôle, octroi direct et groupes réunis. Seul un octroi direct se retire ici."
         ) {
             VStack(spacing: 0) {
                 if chargement {
                     ProgressView().padding(14).frame(maxWidth: .infinity)
                 } else if acces.isEmpty {
-                    Text("Personne n'a d'accès nommé sur cette collection.")
+                    Text("Personne n'a accès à cette collection.")
                         .foregroundStyle(Color.gpMuted)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
@@ -83,31 +74,40 @@ struct CollectionAccessView: View {
     private func ligneDAcces(_ ligne: AccesNomme) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: nom(ligne.id, secours: ligne.email))
+                Text(verbatim: ligne.email ?? ligne.id)
                     .foregroundStyle(Color.gpInk)
-                // Signalé sur la ligne, pas seulement au moment de retirer : on doit
-                // pouvoir constater d'un coup d'œil que cet accès est redondant.
-                if let origine = autreOrigine(ligne.id) {
-                    Text(verbatim: origine)
+                // Les origines viennent du serveur, en clair : « administratrice de
+                // l'organisation », « groupe Ops ». Les afficher évite de croire qu'un
+                // retrait fermera une porte que le rôle ou un groupe garde ouverte.
+                if !ligne.origines.isEmpty {
+                    Text(verbatim: ligne.origines.joined(separator: " · "))
                         .font(.caption)
                         .foregroundStyle(Color.gpMuted)
                 }
             }
             Spacer()
-            Menu {
-                ForEach(DroitSurCollection.allCases) { droit in
-                    Button(LocalizedStringKey(droit.intitule)) {
-                        Task { await accorder(ligne.id, droit) }
+            if ligne.revocable {
+                Menu {
+                    ForEach(DroitSurCollection.allCases) { droit in
+                        Button(LocalizedStringKey(droit.intitule)) {
+                            Task { await accorder(ligne.id, droit) }
+                        }
                     }
+                    Divider()
+                    Button("Retirer l'accès", role: .destructive) { aRevoquer = ligne }
+                } label: {
+                    Text(LocalizedStringKey(ligne.droit.intitule))
+                        .font(.footnote)
+                        .foregroundStyle(Color.gpAccentText)
                 }
-                Divider()
-                Button("Retirer l'accès", role: .destructive) { aRevoquer = ligne }
-            } label: {
+                .accessibilityIdentifier("menu.access.\(ligne.id)")
+            } else {
+                // Rien à proposer : ce droit ne vient pas d'ici. Un menu grisé ferait
+                // croire à une action momentanément indisponible.
                 Text(LocalizedStringKey(ligne.droit.intitule))
                     .font(.footnote)
-                    .foregroundStyle(Color.gpAccentText)
+                    .foregroundStyle(Color.gpMuted)
             }
-            .accessibilityIdentifier("menu.access.\(ligne.id)")
         }
         .padding(14)
     }
@@ -120,7 +120,7 @@ struct CollectionAccessView: View {
         } else {
             Menu {
                 ForEach(candidats) { membre in
-                    Menu(nom(membre.id, secours: membre.email)) {
+                    Menu(membre.email ?? membre.id) {
                         ForEach(DroitSurCollection.allCases) { droit in
                             Button(LocalizedStringKey(droit.intitule)) {
                                 Task { await accorder(membre.id, droit) }
@@ -129,127 +129,12 @@ struct CollectionAccessView: View {
                     }
                 }
             } label: {
-                Text("Accorder à un membre")
-                    .frame(maxWidth: .infinity)
+                Text("Accorder à un membre").frame(maxWidth: .infinity)
             }
             .buttonStyle(SecondaryButtonStyle())
             .padding(14)
             .accessibilityIdentifier("button.grantAccess")
         }
-    }
-
-    // ─── Accès hérités d'un groupe ───
-
-    private var sectionGroupes: some View {
-        GhostSection(
-            titre: "Par les groupes",
-            note:
-                "Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent."
-        ) {
-            VStack(spacing: 0) {
-                ForEach(groupesQuiOuvrent, id: \.groupe.id) { entree in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: entree.groupe.name).foregroundStyle(Color.gpInk)
-                            Text(
-                                String(
-                                    format: tr("%d membre(s)"), entree.groupe.members.count)
-                            )
-                            .font(.caption)
-                            .foregroundStyle(Color.gpMuted)
-                        }
-                        Spacer()
-                        Text(LocalizedStringKey(entree.droit.intitule))
-                            .font(.footnote)
-                            .foregroundStyle(Color.gpMuted)
-                    }
-                    .padding(14)
-                    if entree.groupe.id != groupesQuiOuvrent.last?.groupe.id {
-                        Divider().overlay(Color.gpBorder)
-                    }
-                }
-            }
-        }
-    }
-
-    // ─── Accès venant du rôle ───
-
-    private var sectionAdministrateurs: some View {
-        GhostSection(
-            titre: "Par leur rôle",
-            note:
-                "Un administrateur de l'équipe gère toutes les collections, y compris celle-ci. Cet accès ne se retire qu'en changeant son rôle."
-        ) {
-            VStack(spacing: 0) {
-                ForEach(administrateurs) { membre in
-                    HStack {
-                        Text(verbatim: nom(membre.id, secours: membre.email))
-                            .foregroundStyle(Color.gpInk)
-                        Spacer()
-                        Text("Administrateur")
-                            .font(.footnote)
-                            .foregroundStyle(Color.gpMuted)
-                    }
-                    .padding(14)
-                    if membre.id != administrateurs.last?.id {
-                        Divider().overlay(Color.gpBorder)
-                    }
-                }
-            }
-        }
-    }
-
-    // ─── Ce que le serveur dit, mis en français ───
-
-    private var administrateurs: [MembreDEquipe] {
-        membres.filter { $0.role == .admin && $0.etat == .active }
-    }
-
-    private var groupesQuiOuvrent: [(groupe: OrgGroupDTO, droit: DroitSurCollection)] {
-        groupes.compactMap { groupe in
-            guard
-                let acces = groupe.collections.first(where: { $0.collectionId == collection.id }),
-                let droit = DroitSurCollection(rawValue: acces.permission)
-            else { return nil }
-            return (groupe, droit)
-        }
-    }
-
-    /// D'où cette personne tiendrait encore la collection si on retirait son accès nommé.
-    /// Affiché sur la ligne, pas seulement au moment de retirer : on doit pouvoir constater
-    /// d'un coup d'œil qu'un accès fait doublon.
-    private func autreOrigine(_ membre: String) -> String? {
-        if administrateurs.contains(where: { $0.id == membre }) {
-            return tr("Également par son rôle d'administrateur")
-        }
-        if let groupe = groupeQuiDonneAussi(membre) {
-            return String(format: tr("Également par le groupe « %@ »"), groupe.name)
-        }
-        return nil
-    }
-
-    /// Le premier groupe qui donne aussi la collection à cette personne, s'il y en a un.
-    private func groupeQuiDonneAussi(_ membre: String) -> OrgGroupDTO? {
-        groupesQuiOuvrent.first { $0.groupe.members.contains { $0.userId == membre } }?.groupe
-    }
-
-    private func nom(_ identifiant: String, secours: String?) -> String {
-        secours ?? membres.first { $0.id == identifiant }?.email ?? identifiant
-    }
-
-    private func consequenceDuRetrait(_ cible: AccesNomme) -> String {
-        if administrateurs.contains(where: { $0.id == cible.id }) {
-            return tr(
-                "Cette personne gardera l'accès : elle administre l'équipe, ce qui lui donne la gestion de toutes les collections."
-            )
-        }
-        if let groupe = groupeQuiDonneAussi(cible.id) {
-            return String(
-                format: tr(
-                    "Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe."
-                ), groupe.name)
-        }
-        return tr("Cette personne perdra l'accès à cette collection.")
     }
 
     // ─── Actions ───

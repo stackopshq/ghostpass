@@ -129,7 +129,25 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
         for (const c of [...direct, ...viaGroups]) byId.set(c.id, c);
         rows = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
       }
-      return { collections: rows.map((c) => ({ id: c.id, name: c.name })) };
+      // La permission **effective**, celle que `permissionFor` calcule : rôle
+      // d'administrateur, octroi direct et accès de groupe additionnés, maximum retenu.
+      //
+      // Sans elle, un client ne pouvait que deviner. iOS se rabattait sur le rôle dans
+      // l'organisation — un membre ordinaire se voyait donc proposer « Modifier » sur une
+      // collection où il n'a que la lecture, et le serveur refusait ensuite. Le web, lui,
+      // retirait le bouton pour tout le monde, privant un gestionnaire de son droit. Deux
+      // approximations, aucune bonne, alors que le serveur avait la réponse sous la main.
+      //
+      // C'est bien l'effective qui est renvoyée, pas le rôle : un administrateur reçoit
+      // `manage` sur toute collection de son organisation, ce que `permissionFor` établit.
+      const avecPermission = await Promise.all(
+        rows.map(async (c) => ({
+          id: c.id,
+          name: c.name,
+          permission: await permissionFor(db, c.id, member),
+        })),
+      );
+      return { collections: avecPermission };
     },
   );
 

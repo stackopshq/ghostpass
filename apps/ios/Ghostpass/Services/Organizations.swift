@@ -126,16 +126,20 @@ enum RotationImpossible: Error {
     }
 }
 
-/// Un accès nommé sur une collection.
-///
-/// La distinction avec l'accès qu'un groupe confère compte au moment de retirer : révoquer
-/// ici ne retire que cet accès-là. Si un groupe donne par ailleurs la collection à la même
-/// personne, elle la garde — et l'écran doit le dire, plutôt que de laisser croire à un
-/// retrait complet.
+/// L'accès effectif de quelqu'un sur une collection, tel que le serveur le calcule.
 struct AccesNomme: Identifiable {
     let id: String
     let email: String?
     let droit: DroitSurCollection
+    /// D'où vient cet accès, en clair. Les libellés viennent du serveur : lui seul sait
+    /// de quel groupe il s'agit.
+    let origines: [String]
+    /// Cette ligne se retire-t-elle depuis cet écran ?
+    ///
+    /// Faux pour un accès qui vient du rôle ou d'un groupe : le bouton n'a alors rien à
+    /// faire là. Le serveur tranche, plutôt que la vue devine — c'est ce qui évite de
+    /// promettre une révocation qui ne ferme rien.
+    let revocable: Bool
 
     /// Un droit que cette version ne connaît pas fait écarter la ligne : mieux vaut une
     /// entrée absente qu'une entrée dont le libellé mentirait sur ce qu'elle autorise.
@@ -144,5 +148,7 @@ struct AccesNomme: Identifiable {
         self.id = dto.userId
         self.email = dto.email
         self.droit = droit
+        self.origines = dto.sources.map(\.label)
+        self.revocable = dto.revocable
     }
 }

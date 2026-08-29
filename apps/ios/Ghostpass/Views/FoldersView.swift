@@ -6,7 +6,7 @@ import SwiftUI
 /// app tiendrait mal, et le filtre ne sert que par intermittence. Les chemins hiérarchiques
 /// (`Travail/Serveurs`) restent lisibles tels quels, sans arbre à déplier.
 struct FoldersView: View {
-    @Binding var selection: String?
+    @Binding var selection: FiltreDuCoffre
 
     @EnvironmentObject private var store: VaultStore
     @Environment(\.dismiss) private var dismiss
@@ -30,7 +30,7 @@ struct FoldersView: View {
 
                     ligne(
                         titre: Text("Tous les éléments"), icone: "tray.full",
-                        compte: store.entries.count, chemin: nil)
+                        compte: store.entries.count, filtre: .tout)
 
                     if !store.folderPaths.isEmpty {
                         Section {
@@ -39,7 +39,8 @@ struct FoldersView: View {
                                     // Un nom de dossier appartient à l'utilisateur : il
                                     // s'affiche tel quel, jamais traduit.
                                     titre: Text(verbatim: chemin), icone: "folder",
-                                    compte: store.itemCount(in: chemin), chemin: chemin
+                                    compte: store.itemCount(in: chemin),
+                                    filtre: .dossier(chemin)
                                 )
                                 .swipeActions {
                                     // Seuls les dossiers vides s'effacent du registre : les
@@ -53,6 +54,25 @@ struct FoldersView: View {
                             }
                         } header: {
                             Text("Dossiers").sectionLabel().padding(.leading, 2)
+                        }
+                    }
+
+                    // Une section par équipe. Les collections y sont des frontières de
+                    // partage, pas des rangements : les mêler aux dossiers personnels
+                    // laisserait croire qu'on peut y ranger ce qu'on veut.
+                    ForEach(store.collectionsVisibles) { equipe in
+                        Section {
+                            ForEach(equipe.collections) { collection in
+                                ligne(
+                                    titre: Text(verbatim: collection.nom),
+                                    icone: "person.2",
+                                    compte: collection.compte,
+                                    filtre: .collection(
+                                        organisation: collection.organisation,
+                                        collection: collection.id, nom: collection.nom))
+                            }
+                        } header: {
+                            Text(verbatim: equipe.nom).sectionLabel().padding(.leading, 2)
                         }
                     }
                 }
@@ -94,7 +114,7 @@ struct FoldersView: View {
                 actions: { chemin in
                     Button("Supprimer", role: .destructive) {
                         Task { await store.removeFolder(chemin) }
-                        if selection == chemin { selection = nil }
+                        if selection == .dossier(chemin) { selection = .tout }
                         aSupprimer = nil
                     }
                     Button("Annuler", role: .cancel) { aSupprimer = nil }
@@ -148,9 +168,11 @@ struct FoldersView: View {
         Task { await store.createFolder(chemin) }
     }
 
-    private func ligne(titre: Text, icone: String, compte: Int, chemin: String?) -> some View {
+    private func ligne(titre: Text, icone: String, compte: Int, filtre: FiltreDuCoffre)
+        -> some View
+    {
         Button {
-            selection = chemin
+            selection = filtre
             dismiss()
         } label: {
             HStack(spacing: 14) {
@@ -171,7 +193,7 @@ struct FoldersView: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(Color.gpMuted)
 
-                if selection == chemin {
+                if selection == filtre {
                     Image(systemName: "checkmark")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.gpAccentText)
@@ -183,8 +205,8 @@ struct FoldersView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: GP.radius)
                     .strokeBorder(
-                        selection == chemin ? Color.gpAccent : Color.gpBorder,
-                        lineWidth: selection == chemin ? 1.5 : 1))
+                        selection == filtre ? Color.gpAccent : Color.gpBorder,
+                        lineWidth: selection == filtre ? 1.5 : 1))
         }
         .buttonStyle(.plain)
         .listRowInsets(.init(top: 4, leading: 16, bottom: 4, trailing: 16))
