@@ -33,9 +33,31 @@ say() { printf "\n\033[1m▸ %s\033[0m\n" "$*" >&2; }
 
 # ── L'appareil ────────────────────────────────────────────────────────────────
 # Découvert, pas codé en dur : le script doit servir à quelqu'un d'autre, avec un autre
-# téléphone.
-DEVICE="$(xcrun devicectl list devices 2>/dev/null |
-  awk '/connected/ && !/no DDI/ {print $3; exit}')"
+# appareil.
+#
+# `GHOSTPASS_APPAREIL` choisit par le nom quand plusieurs sont branchés. Sans lui, le
+# script prenait le premier venu **en silence** — on croyait poser sur l'iPhone et l'on
+# posait sur l'iPad. Il affiche donc le nom de celui qu'il retient, et refuse de choisir
+# seul quand il y a plusieurs candidats.
+CANDIDATS="$(xcrun devicectl list devices 2>/dev/null |
+  awk '$0 ~ /connected/ && $0 !~ /no DDI/ && $0 !~ /unavailable/ {
+         nom = $1; for (i = 2; $i !~ /coredevice\.local/; i++) nom = nom " " $i
+         print nom "\t" $(i+1) }')"
+
+if [[ -n "${GHOSTPASS_APPAREIL:-}" ]]; then
+  CANDIDATS="$(printf '%s\n' "$CANDIDATS" | grep -i -- "$GHOSTPASS_APPAREIL" || true)"
+fi
+
+NOMBRE="$(printf '%s' "$CANDIDATS" | grep -c . || true)"
+if [[ "$NOMBRE" -gt 1 ]]; then
+  echo "Plusieurs appareils sont branchés — précisez lequel :" >&2
+  printf '%s\n' "$CANDIDATS" | cut -f1 | sed 's/^/  /' >&2
+  echo >&2
+  echo "  GHOSTPASS_APPAREIL=\"iPad\" $0" >&2
+  exit 1
+fi
+NOM="$(printf '%s' "$CANDIDATS" | cut -f1)"
+DEVICE="$(printf '%s' "$CANDIDATS" | cut -f2)"
 if [[ -z "$DEVICE" ]]; then
   echo "Aucun iPhone utilisable n'est branché." >&2
   echo >&2
@@ -48,7 +70,7 @@ if [[ -z "$DEVICE" ]]; then
   xcrun devicectl list devices 2>&1 | sed -n '1,6p' >&2
   exit 1
 fi
-say "Appareil : $DEVICE"
+say "Appareil : ${NOM:-inconnu} ($DEVICE)"
 
 # ── L'équipe ──────────────────────────────────────────────────────────────────
 # Lue depuis le certificat de développement, dont le champ OU porte l'identifiant

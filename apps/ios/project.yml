@@ -79,7 +79,16 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: GhostPass
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # Le portrait seul se défendait tant que l'application était un téléphone. Sur
+        # iPad, refuser le paysage est un choix qu'on remarque : la tablette se pose sur
+        # un clavier, se tient dans une housse, et son orientation naturelle n'est pas
+        # celle d'un téléphone.
+        #
+        # Les deux familles sont réglées séparément — `UISupportedInterfaceOrientations`
+        # vaut pour l'iPhone, sa variante `_iPad` pour la tablette. Sans la seconde, iOS
+        # applique la première aux deux.
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         # Sans cette clé, iOS tue l'app à la première demande biométrique.
         INFOPLIST_KEY_NSFaceIDUsageDescription: >-
           Face ID déverrouille votre coffre sans ressaisir le mot de passe maître.
