@@ -69,6 +69,11 @@
   /// listes tenues en parallèle finissent par diverger, et c'est celle-ci qui
   /// garde les secrets d'équipe hors de l'export.
   const personalItems = $derived(items.filter((i) => !i.shared));
+  // Le nom d'organisation n'apporte rien quand il n'y en a qu'une : il occupe
+  // alors la place qui manque au nom de collection.
+  const plusieursOrgs = $derived(
+    new Set(items.filter((i) => i.shared).map((i) => i.shared!.orgId)).size > 1,
+  );
   let nav = $state<"vault" | "orgs" | "security" | "trash">("vault");
   let trashItems = $state<VaultEntry[]>([]);
 
@@ -1437,7 +1442,27 @@
          seule vois ça » et « toute l'équipe voit ça » est la confusion qui
          coûte cher dans un coffre, et elle se produit en survolant une liste. -->
     {#if item.shared}
-      <span class="pill pill-shared">{item.shared.orgName} · {item.shared.collectionName}</span>
+      <!-- La collection d'abord, l'organisation ensuite et seulement si le
+           coffre en contient plusieurs.
+           Avant, la pastille disait « <org> · <collection> » et se faisait
+           couper à droite : chaque ligne commençait donc par le même nom
+           d'organisation et c'est le nom de collection — le seul qui distingue
+           les lignes entre elles — qui disparaissait. Tronquer par la droite
+           n'est bon que si l'information décroît de gauche à droite. -->
+      <!-- L'icône d'organisation est le SEUL signe qui dit « ce secret est
+           partagé ». Le correctif du 2026-08-29 a mis la collection devant et
+           masqué le nom d'org quand il n'y en a qu'une — ce qui règle la
+           troncature mais efface la provenance : « Credentials Loutre » se lit
+           alors exactement comme un dossier personnel du même nom. Le titre
+           complet reste au survol, mais un survol ne se voit pas.
+
+           `aria-label` porte l'information pour qui n'a pas l'image : une icône
+           décorative laisserait la ligne muette sur ce qui la distingue. -->
+      <span class="pill pill-shared" title={t("app.sharedOrigin", { org: item.shared.orgName, collection: item.shared.collectionName })}>
+        <span class="pill-icon" aria-label={t("app.sharedItem")} role="img">{@render orgIcon()}</span>
+        <span class="pill-text">{item.shared.collectionName}</span>
+        {#if plusieursOrgs}<span class="pill-org">{item.shared.orgName}</span>{/if}
+      </span>
     {/if}
   </button>
 {/snippet}

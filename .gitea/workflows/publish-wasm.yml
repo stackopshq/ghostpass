@@ -2,19 +2,24 @@ name: Publish WASM
 
 # Publie le cœur crypto compilé (`ghostpass-crypto-wasm`) sur le registre npm de Gitea, sous
 # `@stackops/ghostpass-crypto-wasm`, pour que l'extension (et autres clients) en dépendent par
-# version plutôt qu'en `file:` cross-repo. Déclenchement manuel avec une version.
+# version plutôt qu'en `file:` cross-repo. Déclenchement manuel, sans paramètre.
 #
 # Consommation côté client (.npmrc du dépôt qui dépend du paquet) :
 #   @stackops:registry=https://git.stackops.ch/api/packages/stackops/npm/
 #   //git.stackops.ch/api/packages/stackops/npm/:_authToken=${NODE_AUTH_TOKEN}
 #
 # Le registre npm de Gitea refuse d'écraser une version déjà publiée : incrémenter la version.
+#
+# LA VERSION NE SE SAISIT PAS ICI. Elle est lue dans `crates/ghostpass-crypto-wasm/Cargo.toml`,
+# que `wasm-pack` recopie dans le `pkg/package.json` qu'on publie. Tant qu'elle était demandée
+# en entrée manuelle, le numéro en ligne n'était écrit nulle part dans l'arbre : `0.0.1` a été
+# publiée depuis un crate qui affichait `0.0.0`, et rien ne permettait de retrouver quel commit
+# avait produit l'artefact que l'extension réclame en `^0.0.1`.
+#
+# Pour publier : incrémenter `version` dans le Cargo.toml du crate, faire relire la PR, puis
+# lancer ce workflow sur `main`. Le job refuse de tourner si la version est déjà en ligne.
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version npm à publier (ex. 0.0.1)"
-        required: true
 
 permissions:
   contents: read
@@ -43,12 +48,26 @@ jobs:
           node-version: "24"
           registry-url: https://git.stackops.ch/api/packages/stackops/npm/
           scope: "@stackops"
-      - name: Scope + version du paquet généré
+      - name: Scope du paquet généré, et lecture de la version du crate
+        id: pkg
         working-directory: crates/ghostpass-crypto-wasm/pkg
+        # `wasm-pack` a déjà écrit `version` dans ce package.json en recopiant le Cargo.toml :
+        # on ne fait que la lire. Aucun `npm version` ici — ce serait rouvrir la porte à un
+        # numéro qui ne correspond à rien dans l'arbre.
         run: |
           npm pkg set name="@stackops/ghostpass-crypto-wasm"
-          npm version "${{ inputs.version }}" --no-git-tag-version --allow-same-version
           npm pkg set publishConfig.registry="${NPM_REGISTRY}"
+          version="$(npm pkg get version | tr -d '"')"
+          if [[ -z "${version}" || "${version}" == "undefined" ]]; then
+            echo "::error::Version absente du pkg/package.json généré par wasm-pack."
+            exit 1
+          fi
+          if [[ "${version}" == "0.0.0" ]]; then
+            echo "::error::Le crate est encore en 0.0.0 : donner une vraie version dans crates/ghostpass-crypto-wasm/Cargo.toml avant de publier."
+            exit 1
+          fi
+          echo "version à publier (lue dans le crate) : ${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
       - name: Préflight du jeton de publication
         # Gitea répond 401 aussi bien pour un jeton invalide que pour un jeton valide sans le
         # scope `write:package` : `npm publish` seul ne permet pas de distinguer les deux. Ces
@@ -76,8 +95,20 @@ jobs:
             exit 1
           fi
           echo "Préflight OK : le jeton est accepté en lecture par le registre."
+
+          # La version du crate est-elle déjà en ligne ? Le registre refuserait la publication
+          # de toute façon, mais il le fait à la toute fin, après la compilation Rust — et avec
+          # un message qui ressemble à un problème de droits. Autant le dire ici, et nommer le
+          # geste qui débloque : incrémenter le crate.
+          if npm view "@stackops/ghostpass-crypto-wasm@${VERSION}" version >/dev/null 2>&1; then
+            echo "::error::La version ${VERSION} est déjà publiée. Incrémenter le champ version dans crates/ghostpass-crypto-wasm/Cargo.toml, puis relancer."
+            exit 1
+          fi
+          echo "La version ${VERSION} n'est pas encore publiée : la voie est libre."
         env:
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+          VERSION: ${{ steps.pkg.outputs.version }}
+          NODE_AUTH_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Publish
         working-directory: crates/ghostpass-crypto-wasm/pkg

@@ -329,6 +329,18 @@ export const api = {
   ) {
     return http<{ ok: boolean }>(`/api/orgs/${orgId}/rotate`, { method: "POST", body, token });
   },
+  /// Supprimer une collection.
+  ///
+  /// Le serveur refuse tant qu'elle contient un secret (409 avec le compte) et
+  /// refuse la collection par defaut (409, `reason: "default"`). On laisse donc
+  /// remonter le message : c'est lui qui dit quoi faire, pas le code d'erreur.
+  deleteCollection(token: string, orgId: string, collectionId: string) {
+    return http<void>(`/api/orgs/${orgId}/collections/${collectionId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
   createCollection(token: string, orgId: string, body: { name: string }) {
     return http<{ id: string; name: string }>(`/api/orgs/${orgId}/collections`, {
       method: "POST",
@@ -374,6 +386,20 @@ export const api = {
   /// depuis l'origine ; c'est l'interface qui n'avait aucun moyen de l'appeler,
   /// donc un mot de passe entre dans une collection ne pouvait plus etre
   /// corrige -- il fallait le supprimer et le ressaisir.
+  /// Supprimer un element partage.
+  ///
+  /// La route existait cote serveur depuis l'origine (permission `write`), mais
+  /// aucun appelant ne s'en servait : l'interface offrait « Modifier » et rien
+  /// pour retirer. Une entree d'equipe creee par erreur restait donc pour
+  /// toujours, et la liste personnelle renvoyait vers un ecran qui ne savait pas
+  /// le faire non plus.
+  deleteOrgItem(token: string, orgId: string, collectionId: string, itemId: string) {
+    return http<void>(`/api/orgs/${orgId}/collections/${collectionId}/items/${itemId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
   updateOrgItem(
     token: string,
     orgId: string,

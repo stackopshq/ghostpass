@@ -764,6 +764,22 @@ export const collections = {
   findById(db: DB, id: string): Promise<CollectionRow | undefined> {
     return db.selectFrom("collections").selectAll().where("id", "=", id).executeTakeFirst();
   },
+  /// Retire une collection. Les cascades du schéma emportent avec elle ses
+  /// items et ses lignes d'accès — c'est précisément pourquoi la route qui
+  /// appelle ceci refuse tant qu'il reste un secret : ici, plus rien ne
+  /// protège.
+  ///
+  /// `org_id` est dans la clause à dessein, alors que `id` suffirait : une
+  /// erreur d'appelant supprimerait sinon une collection d'une autre
+  /// organisation sans que rien ne l'arrête.
+  async remove(db: DB, args: { id: string; orgId: string }): Promise<boolean> {
+    const r = await db
+      .deleteFrom("collections")
+      .where("id", "=", args.id)
+      .where("org_id", "=", args.orgId)
+      .executeTakeFirst();
+    return (r.numDeletedRows ?? 0n) > 0n;
+  },
 };
 
 export const orgItems = {

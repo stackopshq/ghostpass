@@ -413,3 +413,142 @@ test("la liste des collections porte la permission effective, pas le rôle", asy
   assert.equal(vue.permission, "read", "la permission effective, pas le rôle « member »");
   await app.close();
 });
+
+test("un accès en lecture seule ne peut pas supprimer un élément partagé", async () => {
+  // L'interface cache désormais « Supprimer » quand la permission effective
+  // n'est pas `write`/`manage`. Ce test dit que la garde n'est pas seulement
+  // cosmétique : un appel direct est refusé de la même façon, et le refus est
+  // un 403 — pas un 404 qui laisserait croire que l'élément n'existe plus.
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json();
+
+  const created = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items`,
+    headers: auth(adminToken),
+    payload: ITEM,
+  });
+  assert.equal(created.statusCode, 201);
+  const itemId = created.json().id as string;
+
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
+  await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+    payload: { userId: memberId, permission: "read" },
+  });
+
+  const refus = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items/${itemId}`,
+    headers: auth(memberToken),
+  });
+  assert.equal(refus.statusCode, 403);
+
+  // Et l'élément est toujours là : un refus ne doit rien avoir emporté.
+  const encore = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items`,
+    headers: auth(adminToken),
+  });
+  assert.equal(encore.json().items.length, 1);
+  await app.close();
+});
+
+test("supprimer une collection : le gestionnaire peut, le membre simple non", async () => {
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json();
+
+  // Un étranger à l'organisation reçoit 404 : lui répondre « réservé au
+  // gestionnaire » confirmerait qu'une collection porte cet identifiant.
+  const outsiderToken = await registerUser(app, "outsider-del@stackops.ch");
+  let res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}`,
+    headers: auth(outsiderToken),
+  });
+  assert.equal(res.statusCode, 404);
+
+  // Un membre de l'organisation, lui, reçoit 403 — avec ou sans accès en
+  // lecture. C'est la règle déjà en vigueur sur la route de lecture des items,
+  // et deux gestes voisins ne doivent pas se comporter différemment.
+  res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}`,
+    headers: auth(memberToken),
+  });
+  assert.equal(res.statusCode, 403);
+
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
+  await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+    payload: { userId: memberId, permission: "read" },
+  });
+  res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}`,
+    headers: auth(memberToken),
+  });
+  assert.equal(res.statusCode, 403);
+
+  res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(res.statusCode, 204, "un admin d'organisation a `manage` d'office");
+
+  // Vérifié par ce que l'appelant observe, pas en fouillant la base : la
+  // collection ne doit plus figurer dans la liste.
+  const restantes = (await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections`,
+    headers: auth(adminToken),
+  })).json().collections;
+  assert.equal(restantes.filter((c: { id: string }) => c.id === col.id).length, 0);
+  await app.close();
+});
+
+test("une collection qui contient encore un secret refuse d'être supprimée", async () => {
+  const { app, adminToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json();
+  await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items`,
+    headers: auth(adminToken),
+    payload: ITEM,
+  });
+
+  const res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}`,
+    headers: auth(adminToken),
+  });
+  // Le schéma cascade sur `org_items` : sans ce garde, le clic effacerait des
+  // secrets d'équipe sans jamais les nommer.
+  assert.equal(res.statusCode, 409);
+  assert.equal(res.json().items, 1);
+  assert.match(res.json().error, /1 secret partagé/);
+  await app.close();
+});
+
+test("la collection par défaut ne se supprime pas", async () => {
+  const { app, adminToken, orgId } = await setupOrg();
+  const parDefaut = (await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections`,
+    headers: auth(adminToken),
+  })).json().collections[0];
+
+  const res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${parDefaut.id}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(res.statusCode, 409);
+  assert.equal(res.json().reason, "default");
+  await app.close();
+});

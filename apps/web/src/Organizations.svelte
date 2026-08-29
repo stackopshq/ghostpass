@@ -26,7 +26,19 @@
     role: string;
     status: string;
   };
-  type Collection = { id: string; name: string };
+  /// La permission EFFECTIVE sur la collection, telle que le serveur la calcule
+  /// (appartenance directe + heritage de role). Elle etait renvoyee par
+  /// `listCollections` et jetee ici, ce qui obligeait l'interface a offrir les
+  /// memes boutons a tout le monde et a laisser le serveur refuser en 403.
+  ///
+  /// Optionnelle a dessein : un serveur anterieur au 2026-08-29 ne l'envoie pas,
+  /// et son absence vaut refus — mieux vaut cacher une action permise que d'en
+  /// proposer une qui echouera.
+  type Collection = { id: string; name: string; permission?: "read" | "write" | "manage" };
+
+  function peutEcrire(c: Collection | null): boolean {
+    return c?.permission === "write" || c?.permission === "manage";
+  }
 
   let orgs = $state<OrgSummary[]>([]);
   let busy = $state(false);
@@ -370,6 +382,54 @@
     }
   }
 
+  /// Supprimer la collection ouverte.
+  ///
+  /// Clara, admin de son organisation, ne pouvait pas le faire : ce n'etait pas
+  /// une question de permission, la capacite n'existait nulle part — ni route,
+  /// ni methode cliente, ni fonction de depot.
+  ///
+  /// Le refus du serveur est garde SOUS le bouton, comme pour la suppression
+  /// d'organisation : un 409 « elle contient encore 3 secrets » doit se lire la
+  /// ou l'on vient de cliquer. Il dit quoi faire ; le code d'erreur, non.
+  let collDeleteError = $state<string | null>(null);
+
+  async function deleteCollection() {
+    if (!current || !selectedCollection) return;
+    if (!confirm(t("org.confirmDeleteCollection", { name: selectedCollection.name }))) return;
+    busy = true;
+    collDeleteError = null;
+    try {
+      await api.deleteCollection(token, current.orgId, selectedCollection.id);
+      selectedCollection = null;
+      pane = null;
+      items = [];
+      collections = (await api.listCollections(token, current.orgId)).collections;
+    } catch (err) {
+      collDeleteError = err instanceof Error ? err.message : String(err);
+    } finally {
+      busy = false;
+    }
+  }
+
+  /// Retirer un element partage de la collection ouverte.
+  ///
+  /// Confirmation demandee parce que le geste est definitif : contrairement au
+  /// coffre personnel, un element d'equipe n'a pas de corbeille cote serveur.
+  /// Le dire dans la question plutot que de laisser croire a un filet.
+  async function deleteItem(item: DecryptedItem & { itemId: string }) {
+    if (!current || !selectedCollection) return;
+    if (!confirm(t("org.confirmDeleteItem", { name: item.name }))) return;
+    busy = true;
+    try {
+      await api.deleteOrgItem(token, current.orgId, selectedCollection.id, item.itemId);
+      await selectCollection(selectedCollection);
+    } catch (err) {
+      fail(err);
+    } finally {
+      busy = false;
+    }
+  }
+
   /// Qui a acces a la collection ouverte. Reserve aux administrateurs cote
   /// serveur : on avale le refus plutot que d'alarmer un membre simple.
   async function loadAccess() {
@@ -482,7 +542,10 @@
       <button class="icon-btn {copiedKey === `pw-${i}` ? 'copied' : ''}" title={t("org.copyPassword")} aria-label={t("org.copyPassword")} onclick={() => copy(item.password, `pw-${i}`)}>
         {#if copiedKey === `pw-${i}`}{@render checkIcon()}{:else}{@render copyIcon()}{/if}
       </button>
-      <button class="ghost sm" onclick={() => startEditItem(item)}>{t("org.edit")}</button>
+      {#if peutEcrire(selectedCollection)}
+        <button class="ghost sm" onclick={() => startEditItem(item)}>{t("org.edit")}</button>
+        <button class="danger" onclick={() => deleteItem(item)} disabled={busy}>{t("org.delete")}</button>
+      {/if}
     </div>
   </li>
 {/snippet}
@@ -646,7 +709,18 @@
       <div class="detail-head">
         <span class="avatar lg">{@render folderIcon()}</span>
         <div><h2>{selectedCollection.name}</h2><div class="sub">{t("org.secretsCount", { n: items.length })}</div></div>
+        <!-- Reserve au gestionnaire : le serveur exige `manage`, et un admin
+             d'organisation l'a d'office. Offrir le bouton plus largement
+             donnerait un 403 a qui vient de le voir apparaitre. -->
+        {#if selectedCollection.permission === "manage"}
+          <div class="detail-actions">
+            <button class="danger" onclick={deleteCollection} disabled={busy}>{t("org.deleteCollection")}</button>
+          </div>
+        {/if}
       </div>
+      {#if collDeleteError}
+        <div class="callout warn" style="margin-bottom:1rem">{collDeleteError}</div>
+      {/if}
       {#if items.length === 0}
         <div class="empty">{@render folderIcon()}<p>{t("org.emptyCollection")}</p></div>
       {:else}
