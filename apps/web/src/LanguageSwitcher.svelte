@@ -23,7 +23,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.15rem;
-    font-size: 0.75rem;
+    font-size: var(--text-2xs);
   }
   .lang-btn {
     background: none;

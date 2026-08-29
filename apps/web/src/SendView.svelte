@@ -35,7 +35,7 @@
 
 <main style="min-height:100vh;display:grid;place-items:center;padding:2rem 1rem">
   <div class="panel" style="width:100%;max-width:440px">
-    <span class="brand" style="font-size:1.3rem">
+    <span class="brand" style="font-size:var(--text-xl)">
       <span class="mark">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="4" y="10.5" width="16" height="10.5" rx="2" /><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />

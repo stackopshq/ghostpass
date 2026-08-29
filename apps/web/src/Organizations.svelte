@@ -576,7 +576,7 @@
 {:else}
   <div class="master">
     <div class="subbar">
-      <span class="brand" style="font-size:1.02rem"><span class="mark">{@render orgIcon()}</span>{current.name}</span>
+      <span class="brand" style="font-size:var(--text-base)"><span class="mark">{@render orgIcon()}</span>{current.name}</span>
     </div>
     <div class="master-list">
       {#if current.role === "admin"}
