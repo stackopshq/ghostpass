@@ -135,10 +135,11 @@ aussi côté remplissage. Sans lui, l'extension demandera le mot de passe maîtr
 - **Modifications hors ligne** : lecture oui, écriture non. Le coffre s'ouvre et se lit sans
   réseau, mais toute écriture suppose le serveur — il n'y a pas de file d'attente qui
   rejouerait les changements au retour de la connexion.
-- **iPad** : l'application est volontairement restreinte à l'iPhone
-  (`TARGETED_DEVICE_FAMILY: "1"`). Elle fonctionne sur iPad, mais n'y est pas dessinée :
-  listes étirées sur toute la largeur, feuilles de hauteur fixe dont le contenu se coupe.
-  Voir `docs/appstore.md`.
+- **iPad soigné** : l'application y tourne et s'y déclare (`TARGETED_DEVICE_FAMILY: "1,2"`),
+  mais ses listes s'étirent sur toute la largeur — 2 064 points pour deux lignes de texte.
+  Rien n'est cassé ; rien n'est dessiné pour cet écran non plus. Voir `docs/appstore.md`,
+  qui corrige au passage une affirmation fausse : le contenu des feuilles ne se coupe pas,
+  il défile.
 
 Quatre entrées ont quitté cette liste, livrées depuis : les **organisations** et les
 **accès d'urgence**, la **corbeille**, la **santé du coffre** (mots de passe faibles,

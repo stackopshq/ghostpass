@@ -50,7 +50,7 @@ settings:
     # pas déduit du fichier de projet.
     #
     # Le jour où l'iPad sera soigné, ces valeurs passeront à "1,2".
-    TARGETED_DEVICE_FAMILY: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
 
 targets:
   Ghostpass:
@@ -70,7 +70,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_ENTITLEMENTS: Ghostpass/Ghostpass.entitlements
         GENERATE_INFOPLIST_FILE: YES
         # Icône : la déclinaison GhostPass de la charte ghost-suite, variante « remplie »
@@ -115,7 +115,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass.autofill
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_FILE: GhostpassAutoFill/Info.plist
         CODE_SIGN_ENTITLEMENTS: GhostpassAutoFill/GhostpassAutoFill.entitlements
         INFOPLIST_KEY_CFBundleDisplayName: GhostPass
@@ -134,7 +134,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass.tests
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Ghostpass.app/Ghostpass
         BUNDLE_LOADER: $(TEST_HOST)
@@ -150,7 +150,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass.uitests
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: Ghostpass
 

@@ -67,35 +67,41 @@ publication, pas parce que ce document sait y répondre.
   `apps/ios/AppStore/captures/`. Il reste à les coller et à trancher les mentions entre
   crochets — prix, URL d'assistance, raison sociale.
 
-### iPhone seulement — tranché
+### iPad : soutenu, à soigner
 
-`TARGETED_DEVICE_FAMILY` n'était fixé nulle part. Xcode retenait alors iPhone *et* iPad :
-le binaire sortait avec `UIDeviceFamily = [1, 2]`, ce qui se lisait dans son Info.plist.
-On aurait donc vendu une plateforme que rien n'avait éprouvée, et App Store Connect aurait
-réclamé son propre jeu de captures.
+`TARGETED_DEVICE_FAMILY` vaut `"1,2"` : l'application se déclare iPhone **et** iPad, et son
+Info.plist le confirme.
 
-L'application a été ouverte sur un iPad Pro 13 pouces avant de décider. Elle fonctionnait —
-connexion, liste, navigation — mais montrait sa nature : listes étirées sur 2 064 points
-pour deux lignes de texte, feuilles de hauteur fixe dont le contenu se coupe net. Rien de
-cassé, mais rien de soigné non plus.
+**Une correction, parce que ce document a affirmé l'inverse.** Il y était écrit que sur
+iPad « les feuilles deviennent des cartes de hauteur fixe dont le contenu se coupe », et
+qu'on lisait sur « Santé du coffre » une dernière ligne coupée net. **C'est faux.**
+`GhostScreen` enveloppe son contenu dans un `ScrollView` : ce qui paraissait tronqué était
+sous la ligne de flottaison. Vérifié en photographiant la même feuille après un
+glissement — la ligne prétendument coupée apparaît en entier, suivie de celle d'après.
 
-**Décision : iPhone seulement.** `TARGETED_DEVICE_FAMILY: "1"`, et les binaires déclarent
-désormais `UIDeviceFamily = [1]` — application comme extension.
+L'erreur venait de la méthode : une capture fixe ne distingue pas un contenu coupé d'un
+contenu qui défile. Juger une mise en page sur une image immobile, c'est se condamner à
+confondre les deux.
 
-Un détail à retenir pour le jour où l'iPad reviendra sur la table : poser la clef dans les
-réglages *de projet* ne suffit pas. xcodegen écrit sa propre valeur `1,2` au niveau de
-chaque cible, et celle-ci l'emporte. Il faut la poser sur les quatre cibles — ce que fait
-`project.yml` — et le vérifier dans l'Info.plist du produit construit, jamais dans le
-fichier de projet :
+**Ce qui reste vrai**, et qui mérite du soin sans rien empêcher :
+
+- les lignes de la liste s'étirent sur toute la largeur — 2 064 points pour deux lignes de
+  texte. Ce n'est pas cassé, c'est vide ;
+- la grille annuelle et la vue semaine sont conçues pour de larges écrans, elles y
+  gagneront plutôt qu'elles n'y perdront ;
+- App Store Connect réclame un jeu de captures iPad, produit par
+  `GHOSTPASS_APPAREIL="iPad Pro 13-inch (M5)" ./tools/ios/captures-appstore.sh` et rangé
+  dans `apps/ios/AppStore/captures-ipad/`.
+
+Un détail à retenir si la famille d'appareils change à nouveau : poser la clef dans les
+réglages *de projet* ne suffit pas. xcodegen écrit sa propre valeur au niveau de chaque
+cible, et celle-ci l'emporte. Il faut la poser sur les quatre cibles, et le vérifier dans
+l'Info.plist du produit construit :
 
 ```sh
 /usr/libexec/PlistBuddy -c "Print :UIDeviceFamily" \
   apps/ios/.build/Build/Products/Debug-iphonesimulator/Ghostpass.app/Info.plist
 ```
-
-Le script de prise de vue sait photographier n'importe quel appareil
-(`GHOSTPASS_APPAREIL="iPad Pro 13-inch (M5)"`) et relève la taille attendue sur l'appareil
-lui-même : il resservira tel quel si l'iPad est un jour soigné.
 
 ## Essayer sur un appareil avant la validation du compte
 
