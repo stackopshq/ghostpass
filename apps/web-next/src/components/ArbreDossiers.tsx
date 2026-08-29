@@ -36,8 +36,8 @@ function Noeud({
   return (
     <>
       <div
-        className={`group flex items-center gap-1 rounded py-1 pr-1 text-sm ${actif ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"}`}
-        style={{ paddingLeft: profondeur * 14 + 8 }}
+        className={`group flex items-center gap-1.5 rounded-lg py-2 pr-2 text-sm transition-colors ${actif ? "bg-accent/12 text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}
+        style={{ paddingLeft: profondeur * 14 + 10 }}
       >
         {node.children.length > 0 ? (
           <button
@@ -124,15 +124,15 @@ export function ArbreDossiers({
       <button
         type="button"
         onClick={() => onChoisir(null)}
-        className={`flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-sm ${choisi === null ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"}`}
+        className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${choisi === null ? "bg-accent/12 font-medium text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}
       >
         <Coffre className="size-4 shrink-0" />
         <span className="flex-1 text-left">{t("app.allItems")}</span>
         <span className="text-2xs tabular-nums">{total}</span>
       </button>
 
-      <div className="mt-3 flex items-center justify-between px-2">
-        <span className="text-2xs uppercase tracking-wide text-muted">{t("app.folders")}</span>
+      <div className="mt-5 mb-1 flex items-center justify-between px-3">
+        <span className="text-2xs uppercase tracking-widest text-muted">{t("app.folders")}</span>
         <NouveauDossier chemins={chemins} onCreer={onCreer} />
       </div>
 

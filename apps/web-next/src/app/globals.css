@@ -71,7 +71,61 @@
 }
 
 body {
-  background: var(--color-base);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+
+  /* L'aurore : une nappe de la couleur d'accent, en haut à droite, qui donne
+   * sa profondeur au fond. C'est elle qui rend le verre fumé visible — une
+   * surface translucide posée sur un aplat uni ne montre rien, et le portage
+   * en était là : les jetons disaient « translucide », le rendu était plat.
+   *
+   * `--aurora` vient du thème généré, donc de la couleur du logo : chaque
+   * produit de la suite a la même matière et sa propre teinte. C'est le sens
+   * de « ça doit ressembler à ghostcal » — même lumière, pas même couleur.
+   *
+   * `fixed` pour que la nappe ne défile pas avec le contenu : c'est un fond de
+   * scène, pas un élément de la page. */
+  background-color: var(--color-base);
+  background-image: radial-gradient(60rem 40rem at 80% -10%, var(--aurora), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Le verre fumé, en un seul endroit.
+ *
+ * L'interface en service le pose à huit endroits ; l'écrire huit fois, c'est
+ * huit valeurs de flou qui divergeront. `color-mix` sur `--color-base` garde
+ * la teinte du fond plutôt qu'un gris arbitraire, donc le verre suit le thème
+ * du produit sans être réglé produit par produit. */
+@utility verre {
+  background-color: color-mix(in srgb, var(--color-base) 72%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+/* Une variante plus dense pour les colonnes, qui portent du texte à lire : le
+ * même flou avec plus de fond, sinon la nappe traverse et fatigue la lecture. */
+@utility verre-dense {
+  background-color: color-mix(in srgb, var(--color-base) 86%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+/* Le néon de l'action principale.
+ *
+ * Une seule par écran : c'est ce qui en fait une action principale. La lueur
+ * est la couleur d'accent diffusée sous le bouton, pas une ombre grise —
+ * elle vient donc du thème du produit et change avec lui. */
+@utility neon {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 40%, transparent),
+    0 6px 28px -6px color-mix(in srgb, var(--color-accent) 65%, transparent);
+}
+
+/* Une surface qui se détache du fond sans trait.
+ *
+ * L'interface séparait tout par des bordures de 1 px, ce qui lui donnait
+ * l'allure d'un tableur ; ghostcal sépare par des surfaces et des espaces. Le
+ * liseré reste, très faible, pour tenir la carte sur les fonds clairs. */
+@utility carte {
+  background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
 }

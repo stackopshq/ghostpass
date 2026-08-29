@@ -169,8 +169,8 @@ export function VaultScreen() {
   };
 
   return (
-    <div className="flex h-dvh flex-col bg-base text-foreground">
-      <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2.5">
+    <div className="flex h-dvh flex-col text-foreground">
+      <header className="verre flex shrink-0 items-center gap-3 border-b border-border px-5 py-3">
         <span className="flex items-center gap-2 font-semibold">
           <Coffre className="size-5 text-accent" />
           GhostPass
@@ -181,7 +181,7 @@ export function VaultScreen() {
           onChange={(e) => setRecherche(e.target.value)}
           placeholder={t("app.searchVault")}
           aria-label={t("app.searchVault")}
-          className="ml-auto w-full max-w-xs rounded border border-border bg-surface-2 px-3 py-1.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none"
+          className="ml-auto w-full max-w-md rounded-pill border border-border bg-surface-2 px-4 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
         />
         <Bouton
           onClick={() => {
@@ -212,7 +212,7 @@ export function VaultScreen() {
       )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[15rem_20rem_1fr]">
-        <nav className="hidden min-h-0 overflow-y-auto border-r border-border p-2 md:block">
+        <nav className="verre-dense hidden min-h-0 flex-col overflow-y-auto border-r border-border p-3 md:flex">
           <ArbreDossiers
             tree={tree}
             total={items.length}
@@ -225,9 +225,17 @@ export function VaultScreen() {
             onCreer={creerDossier}
             onSupprimer={supprimerDossier}
           />
+          {/* Le pied de la colonne dit l'état du coffre. C'est la seule chose
+              qui rappelle, à tout moment, que les clés sont en mémoire. */}
+          <div className="mt-auto pt-4">
+            <span className="flex items-center gap-2 rounded-pill bg-success/10 px-3 py-2 text-xs text-success">
+              <span className="size-1.5 rounded-pill bg-success" />
+              {t("app.unlocked")}
+            </span>
+          </div>
         </nav>
 
-        <div className="min-h-0 border-r border-border">
+        <div className="verre-dense min-h-0 border-r border-border">
           {chargement ? (
             <p className="p-4 text-sm text-muted">{t("app.loadingCrypto")}</p>
           ) : (
@@ -273,8 +281,11 @@ export function VaultScreen() {
               occupe={occupe}
             />
           ) : (
-            <div className="grid h-full place-items-center px-6 text-center text-sm text-muted">
-              <Coffre className="size-10 opacity-30" />
+            <div className="grid h-full place-items-center px-6 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <Coffre className="size-7 text-muted opacity-30" />
+                <p className="max-w-xs text-sm text-muted">{t("app.pickOrCreate")}</p>
+              </div>
             </div>
           )}
         </div>

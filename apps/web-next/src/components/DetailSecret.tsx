@@ -41,7 +41,7 @@ function Ligne({
   const affiche = secret && !devoile ? masque : valeur;
   const copiee = cle !== undefined && copie === cle;
   return (
-    <div className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0">
+    <div className="flex items-center gap-3 px-4 py-3 not-last:border-b not-last:border-border/60">
       <span className="w-28 shrink-0 text-xs text-muted">{label}</span>
       <span className={`min-w-0 flex-1 truncate text-sm ${valeur ? "text-foreground" : "text-muted"} ${secret && !devoile ? "tracking-widest" : ""}`}>
         {enfant ?? (affiche || t("app.notSet"))}
@@ -102,7 +102,7 @@ export function DetailSecret({
 
   return (
     <div className="flex min-h-0 flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+      <div className="flex items-center gap-3.5 px-5 pb-4 pt-5">
         <Avatar nom={item.name} url={item.url} grand />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-base font-semibold text-foreground">{item.name}</h2>
@@ -118,7 +118,10 @@ export function DetailSecret({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* Les champs vivent dans une carte : une surface posée sur l'aurore, pas
+          une suite de lignes séparées par des traits. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
+        <div className="carte overflow-hidden">
         {item.folder && <Ligne label={t("app.folder")} valeur={item.folder} />}
 
         {item.kind === "note" ? (
@@ -192,7 +195,8 @@ export function DetailSecret({
           </>
         )}
 
-        <p className="px-4 py-3 text-2xs text-muted">{formatDate(item.updatedAt, locale)}</p>
+        </div>
+        <p className="px-1 pt-3 text-2xs text-muted">{formatDate(item.updatedAt, locale)}</p>
       </div>
     </div>
   );

@@ -38,8 +38,8 @@ export function Champ({ label, children }: { label: string; children: ReactNode 
 }
 
 const saisie =
-  "w-full rounded border border-border bg-surface-2 px-3 py-2 text-sm text-foreground " +
-  "placeholder:text-muted focus:border-accent focus:outline-none";
+  "w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm text-foreground " +
+  "placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25";
 
 export function Saisie(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${saisie} ${props.className ?? ""}`} />;
@@ -59,8 +59,12 @@ type BoutonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export function Bouton({ variante = "principal", className = "", ...reste }: BoutonProps) {
   const styles = {
-    principal: "bg-accent text-accent-ink hover:opacity-90",
-    discret: "border border-border text-foreground hover:border-border-strong",
+    // L'action principale porte le néon : la lueur d'accent la détache du fond
+    // sans qu'il faille l'entourer d'un trait. Une par écran.
+    principal: "neon bg-accent text-accent-ink hover:opacity-90",
+    // Le discret n'a pas de fond : il se lit par son contour, et se remplit au
+    // survol. Un second bouton plein ferait deux actions principales.
+    discret: "border border-border text-foreground hover:border-border-strong hover:bg-surface",
     // Rouge, et pas la couleur d'accent : une action destructrice doit se lire
     // comme telle AVANT le clic. La variante empruntait l'accent, si bien que
     // « Supprimer » avait exactement l'allure de « Modifier » — c'est le premier
@@ -71,7 +75,9 @@ export function Bouton({ variante = "principal", className = "", ...reste }: Bou
   return (
     <button
       {...reste}
-      className={`cursor-pointer rounded px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${className}`}
+      // `rounded-pill` et une hauteur généreuse : c'est la forme de la suite,
+      // et une cible tactile de 40 px de haut plutôt que 30.
+      className={`cursor-pointer rounded-pill px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${className}`}
     />
   );
 }

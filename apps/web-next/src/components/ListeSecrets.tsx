@@ -39,15 +39,18 @@ export function ListeSecrets({
 
   return (
     <div className="flex min-h-0 flex-col">
-      <div className="flex items-baseline gap-2 border-b border-border px-4 py-3">
-        <h2 className="truncate text-sm font-semibold text-foreground">{titre}</h2>
-        <span className="text-2xs tabular-nums text-muted">{items.length}</span>
+      {/* Un vrai en-tête de page : un titre à sa taille, et le compte en
+          sous-titre. L'ancienne version alignait les deux sur la même ligne en
+          petit, ce qui ne hiérarchisait rien. */}
+      <div className="px-4 pb-3 pt-5">
+        <h2 className="truncate text-lg font-semibold text-foreground">{titre}</h2>
+        <p className="text-xs text-muted">{t("app.itemCount", { n: items.length })}</p>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-3">
         {items.length === 0 ? (
-          <div className="grid place-items-center gap-2 px-6 py-16 text-center text-sm text-muted">
-            <Coffre className="size-8 opacity-40" />
+          <div className="grid place-items-center gap-3 px-6 py-16 text-center text-sm text-muted">
+            <Coffre className="size-7 opacity-30" />
             <p>
               {/* Trois vides différents, trois phrases : « aucun résultat » sur un
                   coffre vide enverrait chercher un défaut de recherche. */}
@@ -74,11 +77,13 @@ export function ListeSecrets({
                 type="button"
                 onClick={() => onChoisir(item)}
                 aria-current={actif ? "true" : undefined}
-                className={`flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors ${actif ? "bg-surface-2" : "hover:bg-surface-2/60"}`}
+                // Séparation par surface et par espace, pas par un trait : c'est
+                // ce qui distingue une liste d'un tableur.
+                className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors ${actif ? "bg-accent/12 text-accent" : "hover:bg-surface"}`}
               >
                 <Avatar nom={item.name} url={item.url} />
                 <span className="flex min-w-0 flex-col">
-                  <span className="truncate text-sm text-foreground">{item.name}</span>
+                  <span className={`truncate text-sm ${actif ? "text-accent" : "text-foreground"}`}>{item.name}</span>
                   {sous && <span className="truncate text-xs text-muted">{sous}</span>}
                 </span>
               </button>
