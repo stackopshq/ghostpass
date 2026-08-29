@@ -219,7 +219,7 @@ export function VaultScreen() {
           url: lien,
           deleteToken: cree.deleteToken,
           name: item.name,
-          createdAt: Date.now(),
+          createdAt: Math.floor(Date.now() / 1000),
           expiresAt: cree.expiresAt,
         },
         ...partages,

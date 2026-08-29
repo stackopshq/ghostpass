@@ -44,7 +44,16 @@ export function Partages({
               <li key={p.id} className="carte flex items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-foreground">{p.name}</p>
+                  {/* La date de création n'est pas décorative : elle est ce
+                      qui DISTINGUE deux lignes. Un partage créé depuis iOS
+                      s'appelle « Secret partagé » — l'écran y partage un texte
+                      libre, pas une fiche, donc il n'a aucun nom d'entrée à
+                      donner. Sans cette date, une liste de partages venus du
+                      téléphone serait une suite de lignes identiques, et
+                      révoquer la bonne relèverait du hasard. */}
                   <p className="truncate text-2xs text-muted">
+                    {t("app.sharedOn", { date: formatDate(p.createdAt * 1000, locale) })}
+                    {" · "}
                     {p.expiresAt
                       ? t("app.expiresOn", { date: formatDate(p.expiresAt * 1000, locale) })
                       : t("app.noExpiry")}
