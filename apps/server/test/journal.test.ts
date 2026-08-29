@@ -25,7 +25,8 @@ test("le journal retient le gabarit de route, jamais le jeton du chemin", async 
   let journal = "";
   try {
     const { buildApp } = await import("../src/app.js");
-    const app = await buildApp();
+    const { openDatabase } = await import("../src/db/database.js");
+    const app = buildApp(openDatabase(":memory:"));
     try {
       await app.inject({ method: "GET", url: `/api/send/${SECRET}` });
     } finally {
