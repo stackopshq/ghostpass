@@ -376,6 +376,19 @@ export const api = {
       token,
     });
   },
+  /// Supprime un identifiant d'organisation.
+  ///
+  /// La route existait côté serveur depuis l'origine ; c'est l'interface qui
+  /// n'avait aucun moyen de l'appeler. Sans elle, « Supprimer » restait masqué
+  /// sur les éléments d'équipe — non pas parce qu'on n'en avait pas le droit,
+  /// mais parce que rien ne savait le faire. Un bouton absent ressemble à un
+  /// droit refusé, et c'est le pire des deux malentendus.
+  deleteOrgItem(token: string, orgId: string, collectionId: string, itemId: string) {
+    return http<void>(`/api/orgs/${orgId}/collections/${collectionId}/items/${itemId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
   /// Qui a acces a une collection, et retrait de cet acces.
   listCollectionAccess(token: string, orgId: string, collectionId: string) {
     // L'accès EFFECTIF : le rôle d'admin et l'appartenance à un groupe donnent

@@ -59,3 +59,25 @@ export const Coche = ({ className }: Props) => (
     <path d="M20 6 9 17l-5-5" />
   </svg>
 );
+
+export const Organisation = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M3 21h18" />
+    <path d="M5 21V7l7-4 7 4v14" />
+    <path d="M9 21v-6h6v6" />
+  </svg>
+);
+
+export const Dossier = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+  </svg>
+);
+
+export const Membres = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+  </svg>
+);
