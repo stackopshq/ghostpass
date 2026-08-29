@@ -13,6 +13,16 @@
 @import "./ghost-theme.css";
 @import "tailwindcss";
 
+/* Les valeurs sémantiques, reprises telles quelles de l'interface en service
+ * pour que le portage ne change pas ce que Clara voit. Le thème généré est
+ * sombre et unique ; si la charte gagne un jour un mode clair, ces trois-là
+ * devront le suivre au même endroit qu'elle. */
+:root {
+  --danger: #ef6b72;
+  --warn: #e0a23c;
+  --success: #4fc28a;
+}
+
 /* Le pont entre les jetons de la suite et les classes Tailwind. Aucune valeur
  * n'est répétée : `text-sm` rend la marche `--text-sm`, `bg-surface` le fond
  * `--color-surface`. Changer une valeur se fait dans PRODUITS, pas ici. */
@@ -39,6 +49,20 @@
   --color-accent-light: var(--color-accent-light);
   --color-accent-deep: var(--color-accent-deep);
   --color-accent-ink: var(--color-accent-ink);
+
+  /* Les trois teintes sémantiques, définies plus bas puis pontées ici.
+   *
+   * Elles ne viennent PAS de `ghost-theme.css` : la charte ne produit
+   * aujourd'hui qu'un accent et des neutres. Leur place est là-bas — un état
+   * « danger » doit être le même dans les huit produits — et c'est le sujet de
+   * la convergence Tailwind en cours. En attendant, elles vivent dans ce
+   * fichier plutôt que d'être écrites en dur au fil des composants.
+   *
+   * Un état n'est pas une marque : ces trois-là restent séparées de l'accent,
+   * sinon « supprimer » et « enregistrer » se ressemblent. */
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --color-success: var(--success);
 
   --radius-sm: var(--radius-sm);
   --radius: var(--radius);

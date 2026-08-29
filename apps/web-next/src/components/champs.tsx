@@ -61,7 +61,12 @@ export function Bouton({ variante = "principal", className = "", ...reste }: Bou
   const styles = {
     principal: "bg-accent text-accent-ink hover:opacity-90",
     discret: "border border-border text-foreground hover:border-border-strong",
-    danger: "border border-border text-foreground hover:text-accent",
+    // Rouge, et pas la couleur d'accent : une action destructrice doit se lire
+    // comme telle AVANT le clic. La variante empruntait l'accent, si bien que
+    // « Supprimer » avait exactement l'allure de « Modifier » — c'est le premier
+    // reproche de Clara sur cet écran, et il vaut pour les deux plateformes.
+    danger:
+      "border border-danger/40 text-danger hover:bg-danger hover:text-white hover:border-danger",
   }[variante];
   return (
     <button

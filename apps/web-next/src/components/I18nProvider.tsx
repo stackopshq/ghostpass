@@ -6,7 +6,12 @@
 // montage, sous peine de discordance d'hydratation.
 
 import { I18nContext, useI18nValue } from "@/lib/i18n";
+import { SessionContext, useSessionValue } from "@/lib/session";
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  return <I18nContext.Provider value={useI18nValue()}>{children}</I18nContext.Provider>;
+  return (
+    <I18nContext.Provider value={useI18nValue()}>
+      <SessionContext.Provider value={useSessionValue()}>{children}</SessionContext.Provider>
+    </I18nContext.Provider>
+  );
 }
