@@ -18,6 +18,12 @@
  * sombre et unique ; si la charte gagne un jour un mode clair, ces trois-là
  * devront le suivre au même endroit qu'elle. */
 :root {
+  /* L'aurore du thème généré est à 8 %, calibrée sur les accents clairs de la
+     suite. Sur le bleu de ghostpass — 3,1 fois moins lumineux que le cyan de
+     ghostcal — elle ne se voit pas. On la renforce ici plutôt que dans le
+     fichier généré, qu'une régénération écraserait. */
+  --aurora: color-mix(in srgb, var(--color-accent) 16%, transparent);
+
   --danger: #ef6b72;
   --warn: #e0a23c;
   --success: #4fc28a;
@@ -116,7 +122,13 @@ body {
    * `fixed` pour que la nappe ne défile pas avec le contenu : c'est un fond de
    * scène, pas un élément de la page. */
   background-color: var(--color-base);
-  background-image: radial-gradient(60rem 40rem at 80% -10%, var(--aurora), transparent 60%);
+  /* Deux nappes plutôt qu'une : la seconde, plus resserrée en bas à gauche,
+     empêche le bas de l'écran d'être un aplat mort une fois la première
+     dissipée. Même raison que pour le néon — sur une teinte peu lumineuse, une
+     seule nappe à 8 % ne se voit pas. */
+  background-image:
+    radial-gradient(60rem 40rem at 80% -10%, var(--aurora), transparent 60%),
+    radial-gradient(45rem 32rem at 0% 100%, var(--aurora), transparent 65%);
   background-attachment: fixed;
 }
 
@@ -140,13 +152,25 @@ body {
 
 /* Le néon de l'action principale.
  *
- * Une seule par écran : c'est ce qui en fait une action principale. La lueur
- * est la couleur d'accent diffusée sous le bouton, pas une ombre grise —
- * elle vient donc du thème du produit et change avec lui. */
+ * Une seule par écran : c'est ce qui en fait une action principale. La lueur est
+ * la couleur d'accent diffusée sous le bouton, pas une ombre grise — elle vient
+ * donc du thème du produit et change avec lui.
+ *
+ * **Trois couches, et le réglage est mesuré.** Le premier essai reprenait celui
+ * de ghostcal ; Clara l'a trouvé absent. Il ne l'était pas — les styles calculés
+ * montraient bien l'ombre — mais le cyan de ghostcal (#00f0ff) a une luminance
+ * relative de 0,695 contre 0,225 pour le bleu de ghostpass (#2E7DFF), soit
+ * **3,1 fois plus lumineux**. Un halo calibré sur le premier disparaît sous le
+ * second. D'où : un liseré plus franc, une lueur rapprochée, et une nappe large.
+ *
+ * Le jour où ceci monte dans la charte, cette intensité devra être un jeton par
+ * produit plutôt qu'une constante — un accent sombre a besoin de plus de halo
+ * qu'un accent clair pour dire la même chose. */
 @utility neon {
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-accent) 40%, transparent),
-    0 6px 28px -6px color-mix(in srgb, var(--color-accent) 65%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 70%, transparent),
+    0 2px 10px -2px color-mix(in srgb, var(--color-accent) 55%, transparent),
+    0 8px 34px -6px color-mix(in srgb, var(--color-accent) 85%, transparent);
 }
 
 /* Une surface qui se détache du fond sans trait.
