@@ -996,6 +996,22 @@
         }
       }
     },
+    "Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This build of the app has no app group: AutoFill cannot read the vault."
+          }
+        }
+      }
+    },
     "Chiffres": {
       "localizations": {
         "en": {
@@ -2228,6 +2244,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "The contact can read your credentials, without changing them or locking you out."
+          }
+        }
+      }
+    },
+    "Le conteneur partagé n'est pas accessible : cette version de l'application n'a pas le groupe d'applications. Le remplissage ne peut pas lire le coffre.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le conteneur partagé n'est pas accessible : cette version de l'application n'a pas le groupe d'applications. Le remplissage ne peut pas lire le coffre."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The shared container is unavailable: this build of the app has no app group. AutoFill cannot read the vault."
           }
         }
       }

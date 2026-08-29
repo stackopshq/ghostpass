@@ -129,14 +129,21 @@ aussi côté remplissage. Sans lui, l'extension demandera le mot de passe maîtr
 
 ## Ce qui n'y est pas encore
 
-- **Passkey (WebAuthn PRF)** : le binding l'expose (`Account.withPasskey`), l'app ne
-  l'utilise pas encore. À ne pas confondre avec Face ID ci-dessous : la passkey déverrouille
-  *sans* mot de passe maître, Face ID ne fait qu'en autoriser la relecture.
-- **Organisations et accès d'urgence** : absents du binding tant qu'aucun écran n'en a besoin.
-- **Corbeille** : la suppression est douce côté serveur, mais l'app n'affiche pas la corbeille.
-- **Modifications hors ligne** : lecture oui, écriture non — pas de file de synchronisation.
-- **Santé du coffre** (mots de passe faibles, réutilisés, compromis) : le web a `breach.ts`, pas l'iOS.
-- **Localisation** : l'interface est en français, sans catalogue de traductions.
+- **Passkey (WebAuthn PRF)** : le binding l'expose (`Account.withPasskey`), l'application
+  ne l'utilise pas. À ne pas confondre avec Face ID : la passkey déverrouille *sans* mot de
+  passe maître, Face ID ne fait qu'en autoriser la relecture.
+- **Modifications hors ligne** : lecture oui, écriture non. Le coffre s'ouvre et se lit sans
+  réseau, mais toute écriture suppose le serveur — il n'y a pas de file d'attente qui
+  rejouerait les changements au retour de la connexion.
+- **iPad** : l'application est volontairement restreinte à l'iPhone
+  (`TARGETED_DEVICE_FAMILY: "1"`). Elle fonctionne sur iPad, mais n'y est pas dessinée :
+  listes étirées sur toute la largeur, feuilles de hauteur fixe dont le contenu se coupe.
+  Voir `docs/appstore.md`.
+
+Quatre entrées ont quitté cette liste, livrées depuis : les **organisations** et les
+**accès d'urgence**, la **corbeille**, la **santé du coffre** (mots de passe faibles,
+réutilisés, fuites connues, absence de second facteur) et la **localisation** — le
+catalogue porte 406 chaînes en français et en anglais, le français servant de clef.
 
 ## Apparence
 

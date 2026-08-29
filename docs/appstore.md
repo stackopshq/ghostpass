@@ -97,6 +97,34 @@ Le script de prise de vue sait photographier n'importe quel appareil
 (`GHOSTPASS_APPAREIL="iPad Pro 13-inch (M5)"`) et relève la taille attendue sur l'appareil
 lui-même : il resservira tel quel si l'iPad est un jour soigné.
 
+## Essayer sur un appareil avant la validation du compte
+
+Xcode sait installer sur *votre* iPhone avec un simple identifiant Apple, sans adhésion
+payante : c'est le « Personal Team » du sélecteur d'équipe. La signature est valable sept
+jours, après quoi l'application cesse de se lancer et il faut la réinstaller.
+
+Ce qui est certain, parce que c'est dans le code : **l'application fonctionne sans le
+groupe d'applications.** `SharedStore.container` retombe sur le conteneur privé quand le
+groupe n'est pas accordé. Sont donc éprouvables dès aujourd'hui, sur matériel réel :
+
+- Face ID ou Touch ID — la vraie biométrie, que le simulateur ne fait qu'imiter ;
+- la réouverture hors ligne, en coupant le réseau pour de bon ;
+- la mise en page à la taille réelle, et la lisibilité au soleil ;
+- l'import et l'export sur de vrais fichiers ;
+- le comportement sous mémoire contrainte, que rien n'a jamais exercé.
+
+Ce qui ne l'est pas : **le remplissage automatique**. Il réclame les deux habilitations
+déclarées dans `Ghostpass.entitlements` — le groupe d'applications et le fournisseur
+d'identifiants — et celles-ci passent par le provisionnement. Si un profil personnel ne
+peut pas les accorder, Xcode le dit à la compilation, en nommant l'habilitation fautive.
+C'est la façon la plus courte de le savoir : brancher le téléphone, choisir le Personal
+Team, compiler.
+
+Sans le groupe, l'extension ne verra rien — et le dit désormais. Elle affichait jusqu'ici
+« ouvrez GhostPass et connectez-vous une fois », ce qui envoyait refaire ce qui avait déjà
+été fait : lisant son propre conteneur privé, vide, elle concluait à l'absence de session.
+Elle distingue maintenant les deux cas.
+
 ## À éprouver avant d'envoyer
 
 **Le remplissage automatique, sur un appareil réel.** C'est la fonctionnalité qui justifie

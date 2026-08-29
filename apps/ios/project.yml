@@ -16,9 +16,20 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    # Vide en local : Xcode signe alors avec un profil de développement automatique.
-    # La CI et les builds TestFlight l'injectent.
-    DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+    # `DEVELOPMENT_TEAM` n'est délibérément pas fixé ici.
+    #
+    # Il l'était, sous la forme `${DEVELOPMENT_TEAM}` — une substitution que xcodegen
+    # opère au moment de *générer* le projet, et non de le compiler. Variable absente de
+    # l'environnement, xcodegen laissait le littéral `${DEVELOPMENT_TEAM}` à six endroits
+    # du .xcodeproj : Xcode y lisait une équipe portant ce nom et refusait de signer sur
+    # un message qui ne désignait pas sa cause.
+    #
+    # Sans la clef, Xcode signe avec l'équipe du compte connecté — ce qu'on veut en local.
+    # Pour une compilation scriptée ou une montée TestFlight, l'équipe se passe à
+    # xcodebuild, qui la surcharge proprement :
+    #
+    #   xcodebuild ... DEVELOPMENT_TEAM=XXXXXXXXXX
+    #
     CODE_SIGN_STYLE: Automatic
     # Sans cela, la compilation ne relève pas les chaînes du code et le catalogue reste
     # vide : on croirait l'application traduite alors que rien n'aurait été extrait.

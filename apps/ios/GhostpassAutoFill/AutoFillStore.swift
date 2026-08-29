@@ -35,6 +35,18 @@ final class AutoFillStore: ObservableObject {
 
     var account: String { SharedStore.load()?.email ?? "" }
     var hasSession: Bool { SharedStore.load() != nil }
+
+    /// Le conteneur partagé est-il réellement accessible ?
+    ///
+    /// Sans lui, l'extension lit son propre conteneur privé — vide — et conclut qu'aucune
+    /// session n'existe. Le message « ouvrez GhostPass une fois » serait alors un
+    /// contresens : l'application a été ouverte, c'est le groupe qui manque.
+    ///
+    /// Le cas se produit sur une compilation signée avec un profil qui n'accorde pas le
+    /// groupe d'applications — un compte de développement personnel, typiquement, avant
+    /// qu'un compte payant ne permette de l'enregistrer. L'application, elle, continue de
+    /// fonctionner : `SharedStore` retombe sur son conteneur privé.
+    var partageActif: Bool { SharedStore.isShared }
     var canUseBiometrics: Bool {
         Biometrics.isAvailable && Keychain.get(Keychain.Key.biometricsEnabled) == "1"
     }
@@ -70,7 +82,12 @@ final class AutoFillStore: ObservableObject {
 
     func unlock(password: String) async {
         guard let session = SharedStore.load() else {
-            errorMessage = tr("Ouvrez GhostPass une fois pour activer le remplissage.")
+            errorMessage =
+                partageActif
+                ? tr("Ouvrez GhostPass une fois pour activer le remplissage.")
+                : tr(
+                    "Le conteneur partagé n'est pas accessible : cette version de l'application n'a pas le groupe d'applications. Le remplissage ne peut pas lire le coffre."
+                )
             return
         }
         isBusy = true

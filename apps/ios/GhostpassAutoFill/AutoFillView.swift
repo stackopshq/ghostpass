@@ -88,10 +88,21 @@ struct AutoFillView: View {
                 } else {
                     // Sans session déposée, l'extension n'a rien à offrir : le dire vaut
                     // mieux que d'afficher un formulaire qui ne mènera nulle part.
+                    //
+                    // Encore faut-il dire la *bonne* raison. Quand le groupe d'applications
+                    // manque, l'extension lit son propre conteneur, vide, et conclut à
+                    // l'absence de session : inviter à ouvrir GhostPass enverrait alors
+                    // refaire ce qui a déjà été fait.
                     ContentUnavailableView {
                         Label("Coffre indisponible", systemImage: "lock")
                     } description: {
-                        Text("Ouvrez GhostPass et connectez-vous une fois.")
+                        if store.partageActif {
+                            Text("Ouvrez GhostPass et connectez-vous une fois.")
+                        } else {
+                            Text(
+                                "Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre."
+                            )
+                        }
                     }
                     .foregroundStyle(Color.gpMuted)
                 }
