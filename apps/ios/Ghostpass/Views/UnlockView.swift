@@ -5,6 +5,7 @@ import SwiftUI
 /// mot de passe, ou une connexion complète à décliner.
 struct UnlockView: View {
     @EnvironmentObject private var store: VaultStore
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var server = ""
     @State private var email = ""
@@ -63,10 +64,26 @@ struct UnlockView: View {
 
     private var enseigne: some View {
         VStack(spacing: 10) {
+            // La marque est sur fond transparent : posée à même l'écran, elle flottait.
+            // Une plaque franchement noire ou franchement blanche la détache — pas une
+            // surface du thème, qui la ferait se fondre à nouveau.
+            //
+            // `colorScheme` reflète le thème *effectif*, celui qu'imposent les préférences
+            // de l'application le cas échéant, et non celui du système : c'est bien ce
+            // qu'on veut, sans quoi la plaque jurerait pour qui force un thème.
             Image("LogoMark")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 64, height: 64)
+                .padding(14)
+                .background(
+                    colorScheme == .dark ? Color.black : Color.white,
+                    in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(Color.gpBorder, lineWidth: 1)
+                )
                 // La marque rayonne : c'est le seul néon de cet écran, et c'est ce qui
                 // rattache GhostPass au reste de la suite.
                 .neon()

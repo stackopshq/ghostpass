@@ -8,7 +8,7 @@ struct VaultListView: View {
     /// marchent dessus, et c'est la première déclarée qui cesse de s'ouvrir.
     @State private var sheet: VaultSheet?
     /// Dossier affiché ; `nil` pour tout le coffre.
-    @State private var folder: String?
+    @State private var filtre: FiltreDuCoffre = .tout
     /// Le chemin de navigation, tenu à la main : c'est ce qui permet à l'écran de santé
     /// d'envoyer directement sur l'élément qu'il signale.
     @State private var chemin: [VaultEntry] = []
@@ -19,15 +19,14 @@ struct VaultListView: View {
 
     private var visible: [VaultEntry] {
         store.entries.filter { entry in
-            // Un dossier contient aussi ce que rangent ses sous-dossiers.
-            if let folder {
-                let range = entry.item.folder ?? ""
-                guard range == folder || range.hasPrefix(folder + "/") else { return false }
-            }
+            guard filtre.retient(entry) else { return false }
             guard !search.isEmpty else { return true }
             return entry.item.name.localizedCaseInsensitiveContains(search)
                 || (entry.login?.username.localizedCaseInsensitiveContains(search) ?? false)
                 || (entry.login?.uris.contains { $0.localizedCaseInsensitiveContains(search) }
+                    ?? false)
+                // Chercher le nom de l'équipe rassemble tout ce qu'elle partage.
+                || (entry.origine.nomDeLEquipe?.localizedCaseInsensitiveContains(search)
                     ?? false)
         }
     }
@@ -90,7 +89,14 @@ struct VaultListView: View {
                 // On repart de l'entrée telle qu'elle est dans le coffre, pas de la copie
                 // capturée à la navigation : sinon une seconde modification rouvrirait
                 // le formulaire avec le contenu d'avant la première.
-                ItemDetailView(entry: entry) {
+                // Un élément d'équipe ouvert depuis la liste doit respecter le rôle : sans
+                // cela, un membre en lecture seule se voyait proposer « Modifier » et
+                // « Supprimer », que le serveur refusait ensuite. L'écran d'équipe le
+                // faisait déjà ; la liste, non, parce qu'elle ignorait ces éléments.
+                ItemDetailView(
+                    entry: entry,
+                    lectureSeule: entry.origine.appartenance.map { !$0.peutEcrire } ?? false
+                ) {
                     sheet = .editItem(store.entries.first { $0.id == entry.id } ?? entry)
                 }
             }
@@ -196,7 +202,7 @@ struct VaultListView: View {
                 case .trash:
                     TrashView().environmentObject(store)
                 case .folders:
-                    FoldersView(selection: $folder).environmentObject(store)
+                    FoldersView(selection: $filtre).environmentObject(store)
                 case .settings:
                     SettingsView().environmentObject(Preferences.shared)
                 case .biometricOffer:
@@ -262,7 +268,7 @@ struct VaultListView: View {
 
     /// Les favoris, tant qu'aucun filtre ne restreint déjà la liste.
     private var favoris: [VaultEntry] {
-        guard folder == nil, search.isEmpty else { return [] }
+        guard filtre.estTout, search.isEmpty else { return [] }
         return store.favoriteEntries
     }
 
@@ -331,20 +337,28 @@ struct VaultListView: View {
         sheet = .biometricOffer
     }
 
-    /// Le filtre courant, toujours visible : un dossier sélectionné qu'on aurait oublié
-    /// donnerait l'impression d'un coffre amputé.
+    private var iconeDuFiltre: String {
+        switch filtre {
+        case .tout: return "tray.full"
+        case .dossier: return "folder.fill"
+        case .collection: return "person.2.fill"
+        }
+    }
+
+    /// Le filtre courant, toujours visible : un dossier ou une collection sélectionnés
+    /// qu'on aurait oubliés donneraient l'impression d'un coffre amputé.
     private var filtreDeDossier: some View {
         Button {
             sheet = .folders
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: folder == nil ? "tray.full" : "folder.fill")
+                Image(systemName: iconeDuFiltre)
                     .font(.system(size: 13, weight: .medium))
                 Group {
-                    if let folder {
-                        Text(verbatim: folder)
-                    } else {
-                        Text("Tous les éléments")
+                    switch filtre {
+                    case .tout: Text("Tous les éléments")
+                    case .dossier(let chemin): Text(verbatim: chemin)
+                    case .collection(_, _, let nom): Text(verbatim: nom)
                     }
                 }
                 .font(.subheadline.weight(.medium))
@@ -356,16 +370,17 @@ struct VaultListView: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(Color.gpMuted)
             }
-            .foregroundStyle(folder == nil ? Color.gpMuted : Color.gpAccentText)
+            .foregroundStyle(filtre.estTout ? Color.gpMuted : Color.gpAccentText)
             .padding(.horizontal, 12)
             .padding(.vertical, 9)
             .background(
-                folder == nil ? Color.gpSurface2 : Color.gpAccent.opacity(0.16),
+                filtre.estTout ? Color.gpSurface2 : Color.gpAccent.opacity(0.16),
                 in: RoundedRectangle(cornerRadius: GP.radius)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: GP.radius)
-                    .strokeBorder(folder == nil ? Color.gpBorder : Color.gpAccent, lineWidth: 1))
+                    .strokeBorder(
+                        filtre.estTout ? Color.gpBorder : Color.gpAccent, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("button.folderFilter")
@@ -487,6 +502,24 @@ private struct VaultRow: View {
             }
 
             Spacer(minLength: 8)
+
+            // Un élément d'équipe se distingue de ce qui n'appartient qu'à soi : le
+            // modifier touche tout le monde, le supprimer aussi. La pastille porte le nom
+            // de l'équipe plutôt qu'une icône seule — savoir *laquelle* compte dès qu'on
+            // appartient à deux.
+            if let etiquette = entry.origine.etiquette {
+                Label {
+                    Text(verbatim: etiquette).lineLimit(1)
+                } icon: {
+                    Image(systemName: "person.2.fill")
+                }
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Color.gpAccentText)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(Color.gpAccent.opacity(0.16), in: Capsule())
+                .layoutPriority(-1)
+            }
 
             if favori {
                 Image(systemName: "star.fill")

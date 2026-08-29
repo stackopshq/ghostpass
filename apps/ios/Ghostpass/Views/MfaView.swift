@@ -16,11 +16,23 @@ struct MfaView: View {
     @State private var code = ""
     @State private var confirme = false
     @State private var copie = false
+    /// Pourquoi l'état n'a pas pu être lu. Distinct de « pas encore lu ».
+    @State private var echec: String?
 
     var body: some View {
         NavigationStack {
             GhostScreen {
                 switch (actif, configuration, confirme) {
+                case (nil, _, _) where echec != nil:
+                    // `actif` valant `nil` disait deux choses à la fois : « je charge » et
+                    // « j'ai échoué ». La roue tournait donc indéfiniment dès que le
+                    // serveur refusait la route. Les deux cas se distinguent maintenant.
+                    ContentUnavailableView {
+                        Label("Second facteur indisponible", systemImage: "lock.slash")
+                    } description: {
+                        Text(verbatim: echec ?? "")
+                    }
+                    .foregroundStyle(Color.gpMuted)
                 case (nil, _, _):
                     ProgressView().tint(Color.gpAccentText)
                         .frame(maxWidth: .infinity, minHeight: 120)
@@ -45,7 +57,16 @@ struct MfaView: View {
             }
         }
         .tint(Color.gpAccentText)
-        .task { actif = await store.secondFacteurActif() }
+        .task {
+            actif = await store.secondFacteurActif()
+            // Le magasin range la cause dans `errorMessage` ; on la reprend ici, où elle
+            // sera vue. L'alerte de la liste, elle, est masquée tant qu'une feuille est
+            // ouverte — ce message n'aurait atteint personne.
+            if actif == nil {
+                echec = store.errorMessage ?? tr("Le serveur n'a pas répondu.")
+                store.errorMessage = nil
+            }
+        }
     }
 
     // ─── Activer ───

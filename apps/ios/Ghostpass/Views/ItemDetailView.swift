@@ -45,6 +45,21 @@ struct ItemDetailView: View {
                         .padding(14)
                 }
             }
+            // Avant le dossier : savoir qu'un secret est partagé prime sur savoir où il
+            // est rangé. Modifier celui-ci touche toute l'équipe, le supprimer aussi —
+            // c'est la première chose à lire, pas une mention en bas de page.
+            if let ou = live.origine.appartenance {
+                GhostSection(titre: "Partagé") {
+                    Label {
+                        Text(verbatim: "\(ou.nomEquipe) › \(ou.nomCollection)")
+                    } icon: {
+                        Image(systemName: "person.2.fill")
+                    }
+                    .foregroundStyle(Color.gpAccentText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                }
+            }
             if let folder = live.item.folder, !folder.isEmpty {
                 GhostSection(titre: "Dossier") {
                     // Le nom du dossier est celui qu'a choisi l'utilisateur : il se

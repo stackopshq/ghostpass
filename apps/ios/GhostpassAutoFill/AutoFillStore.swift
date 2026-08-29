@@ -107,15 +107,20 @@ final class AutoFillStore: ObservableObject {
         guard canUseBiometrics else { return }
         isBusy = true
         let prompt = tr("Remplir depuis votre coffre GhostPass")
-        let password = await Task.detached {
+        let lecture = await Task.detached {
             Keychain.getBiometric(Keychain.Key.masterPassword, prompt: prompt)
         }.value
         isBusy = false
-        guard let password else {
+        switch lecture {
+        case .succes(let password):
+            await unlock(password: password)
+        case .interrompue, .indisponible:
+            // Même règle que dans l'application : ne rien reprocher à une protection qui
+            // ne s'est pas présentée. Le champ du mot de passe maître reste là.
+            break
+        case .echec:
             errorMessage = tr("\(Biometrics.label) n'a pas permis d'ouvrir le coffre.")
-            return
         }
-        await unlock(password: password)
     }
 
     /// Déchiffre la copie locale. Pas d'appel réseau : le remplissage doit aboutir même

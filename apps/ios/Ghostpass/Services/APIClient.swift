@@ -144,6 +144,13 @@ struct OrgMembershipDTO: Decodable {
 struct OrgCollectionDTO: Decodable, Identifiable {
     let id: String
     let name: String
+    /// La permission **effective** sur cette collection, telle que le serveur l'établit —
+    /// rôle d'administrateur, octroi direct et accès de groupe additionnés.
+    ///
+    /// Optionnelle : un serveur antérieur au 2026-08-29 ne la renvoie pas, et l'exiger
+    /// ferait échouer le décodage de la liste entière. Absente, on retombe sur le rôle
+    /// dans l'organisation — moins juste, mais lisible.
+    let permission: String?
 }
 
 private struct OrgCollectionsDTO: Decodable {
@@ -305,14 +312,31 @@ private struct AuditEventsDTO: Decodable {
     let events: [AuditEventDTO]
 }
 
-/// Un accès **nommé** sur une collection : accordé à quelqu'un en particulier, par
-/// opposition à celui qu'un groupe confère. Le serveur ne renvoie ici que les premiers.
+/// D'où vient l'accès d'une personne : son rôle, un octroi direct, ou un groupe.
+struct OrgAccessSourceDTO: Decodable, Hashable {
+    let kind: String
+    let label: String
+    let permission: String
+}
+
+/// L'accès **effectif** de quelqu'un sur une collection.
+///
+/// Le serveur additionne les trois sources — rôle d'administrateur, octroi direct, accès
+/// de groupe — et rend le maximum, avec le détail. Il n'en a pas toujours été ainsi : la
+/// route ne rendait d'abord que les octrois directs, si bien qu'une collection lue et
+/// écrite par deux administrateurs affichait « personne ». Cette vue reconstituait alors
+/// les deux autres sources de son côté ; elle ne le fait plus, et c'est mieux — le serveur
+/// est seul à connaître les groupes de chacun.
 ///
 /// `email` peut être absent — le serveur renvoie `null` s'il ne retrouve pas le compte.
+/// `revocable` ne vaut `true` que pour un octroi direct : un rôle se change, une
+/// appartenance à un groupe se retire dans le groupe.
 struct OrgCollectionAccessDTO: Decodable {
     let userId: String
     let email: String?
     let permission: String
+    let sources: [OrgAccessSourceDTO]
+    let revocable: Bool
 }
 
 private struct OrgCollectionAccessListDTO: Decodable {

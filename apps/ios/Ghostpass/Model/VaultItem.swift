@@ -85,11 +85,93 @@ extension ItemData: Codable {
 }
 
 /// Un item tel qu'il vit dans l'app : le contenu déchiffré, plus l'identité serveur.
+/// D'où vient un élément : du coffre personnel, ou d'une collection d'équipe.
+///
+/// Ce n'est pas une décoration. Les deux coffres ne se chiffrent pas avec la même clé et
+/// ne s'écrivent pas par les mêmes routes : enregistrer un élément d'équipe par l'API
+/// personnelle en créerait une copie privée au lieu de mettre à jour l'original, et
+/// l'équipe ne verrait jamais la modification. L'origine voyage donc avec l'élément,
+/// depuis son déchiffrement jusqu'au bouton qui l'enregistre.
+/// Où vit un élément partagé, et ce qu'on a le droit d'y faire.
+struct Appartenance: Hashable {
+    let organisation: String
+    let collection: String
+    let nomEquipe: String
+    let nomCollection: String
+    /// Peut-on écrire dans cette collection ?
+    ///
+    /// Renseigné depuis la permission *effective* que le serveur calcule et renvoie avec
+    /// chaque collection. Ce fut d'abord une approximation par le rôle d'organisation,
+    /// faute que la route expose autre chose : un membre ordinaire se voyait alors
+    /// proposer « Modifier » sur une collection où il n'a que la lecture. Le champ existe
+    /// depuis le 2026-08-29 ; le rôle ne sert plus que de repli pour un serveur plus
+    /// ancien.
+    let peutEcrire: Bool
+}
+
+enum OrigineDuCoffre: Hashable {
+    case personnel
+    case equipe(Appartenance)
+
+    var estPartage: Bool {
+        if case .equipe = self { return true }
+        return false
+    }
+
+    /// Ce que la pastille affiche : « équipe · collection ». Les deux, parce que savoir
+    /// *laquelle* compte dès qu'on appartient à plusieurs équipes, et qu'une collection
+    /// n'a de sens qu'associée à la sienne.
+    var etiquette: String? {
+        guard case .equipe(let ou) = self else { return nil }
+        return "\(ou.nomEquipe) · \(ou.nomCollection)"
+    }
+
+    /// L'appartenance, quand il y en a une.
+    var appartenance: Appartenance? {
+        if case .equipe(let ou) = self { return ou }
+        return nil
+    }
+
+    /// Le nom de l'équipe seul, pour la recherche.
+    var nomDeLEquipe: String? { appartenance?.nomEquipe }
+}
+
+/// Ce que la liste affiche : tout, un dossier personnel, ou une collection d'équipe.
+///
+/// Les dossiers et les collections se ressemblent à l'écran mais ne sont pas de même
+/// nature : un dossier est un rangement privé, une collection est une frontière de
+/// partage. Les distinguer dans le type évite de traiter l'un comme l'autre.
+enum FiltreDuCoffre: Hashable {
+    case tout
+    case dossier(String)
+    case collection(organisation: String, collection: String, nom: String)
+
+    var estTout: Bool {
+        if case .tout = self { return true }
+        return false
+    }
+
+    /// Cette entrée entre-t-elle dans le filtre ?
+    func retient(_ entry: VaultEntry) -> Bool {
+        switch self {
+        case .tout:
+            return true
+        case .dossier(let chemin):
+            // Un dossier contient aussi ce que rangent ses sous-dossiers.
+            let range = entry.item.folder ?? ""
+            return range == chemin || range.hasPrefix(chemin + "/")
+        case .collection(_, let collection, _):
+            return entry.origine.appartenance?.collection == collection
+        }
+    }
+}
+
 struct VaultEntry: Identifiable, Hashable {
     let id: String
     var item: VaultItem
     /// Millisecondes depuis l'epoch, telles que renvoyées par le serveur.
     var updatedAt: Int?
+    var origine: OrigineDuCoffre = .personnel
 
     var login: Login? {
         if case .login(let l) = item.data { return l }

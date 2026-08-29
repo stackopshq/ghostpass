@@ -66,7 +66,24 @@ enum Keychain {
 
     /// Relit une valeur biométrique. L'appel **déclenche** l'authentification : il bloque
     /// le temps que l'utilisateur se présente, d'où l'exécution hors du fil principal.
-    static func getBiometric(_ key: String, prompt: String) -> String? {
+    /// Ce qu'une lecture biométrique peut donner.
+    ///
+    /// Distinguer ces cas n'est pas du zèle. En ne rendant qu'un optionnel, on confondait
+    /// « l'utilisateur a échoué » avec « le système a repris la main » — et l'application
+    /// affichait « Face ID n'a pas permis d'ouvrir le coffre » au retour d'arrière-plan,
+    /// alors que Face ID ne s'était pas même présenté. Accuser une protection qui n'a rien
+    /// fait est le plus sûr moyen qu'on la désactive.
+    enum LectureBiometrique {
+        case succes(String)
+        /// Refus explicite, ou reprise en main par le système : rien à signaler.
+        case interrompue
+        /// L'entrée n'est pas lisible maintenant — application pas au premier plan,
+        /// enrôlement modifié. Silencieux aussi : le mot de passe maître reste offert.
+        case indisponible
+        case echec(OSStatus)
+    }
+
+    static func getBiometric(_ key: String, prompt: String) -> LectureBiometrique {
         let context = LAContext()
         context.localizedReason = prompt
         let query: [String: Any] = [
@@ -78,10 +95,21 @@ enum Keychain {
             kSecUseAuthenticationContext as String: context,
         ]
         var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-            let data = result as? Data
-        else { return nil }
-        return String(data: data, encoding: .utf8)
+        let statut = SecItemCopyMatching(query as CFDictionary, &result)
+        switch statut {
+        case errSecSuccess:
+            guard let data = result as? Data, let valeur = String(data: data, encoding: .utf8)
+            else { return .echec(errSecDecode) }
+            return .succes(valeur)
+        case errSecUserCanceled:
+            return .interrompue
+        // `interactionNotAllowed` est ce que rend le trousseau quand l'application n'est
+        // pas au premier plan : c'est le cas exact du retour d'arrière-plan.
+        case errSecInteractionNotAllowed, errSecAuthFailed, errSecItemNotFound:
+            return .indisponible
+        default:
+            return .echec(statut)
+        }
     }
 
     static func remove(_ key: String) {

@@ -216,18 +216,23 @@ final class VaultStore: ObservableObject {
         isBusy = true
         let prompt = "Déverrouiller votre coffre GhostPass"
         // La demande biométrique bloque le fil sur lequel elle est faite.
-        let password = await Task.detached {
+        let lecture = await Task.detached {
             Keychain.getBiometric(Keychain.Key.masterPassword, prompt: prompt)
         }.value
         isBusy = false
-        NSLog("GP-BIO relecture=%@", password == nil ? "échec" : "ok")
-        guard let password else {
-            // Refus, échec, ou entrée invalidée par un nouvel enrôlement : on ne
-            // reste pas coincé, le mot de passe maître marche toujours.
+        switch lecture {
+        case .succes(let password):
+            NSLog("GP-BIO relecture=ok")
+            await unlockOffline(password: password)
+        case .interrompue, .indisponible:
+            // Rien n'a échoué : l'utilisateur a refusé, ou le système n'était pas en état
+            // de présenter la demande. Le mot de passe maître reste offert, et le silence
+            // vaut mieux qu'une accusation portée contre une protection qui n'a rien fait.
+            NSLog("GP-BIO relecture=interrompue")
+        case .echec(let statut):
+            NSLog("GP-BIO relecture=échec statut=%d", Int(statut))
             errorMessage = tr("\(Biometrics.label) n'a pas permis d'ouvrir le coffre.")
-            return
         }
-        await unlockOffline(password: password)
     }
 
     /// Retient le mot de passe le temps de poser la question, si elle a lieu d'être.
@@ -314,12 +319,86 @@ final class VaultStore: ObservableObject {
             appliquer(Self.lecture(dtos, account))
             isOffline = false
             errorMessage = nil
+            await chargerLesCoffresDEquipe()
             await CredentialIdentities.sync(entries)
         } catch {
             // Avec une copie locale sous la main, l'absence de réseau se signale sans
             // rien interrompre. Sans elle, il n'y a rien à montrer : c'est une erreur.
             isOffline = true
             errorMessage = entries.isEmpty ? error.localizedDescription : nil
+        }
+    }
+
+    /// Peut-on écrire dans cette collection ?
+    ///
+    /// La permission effective quand le serveur la donne, le rôle d'organisation sinon.
+    /// Le rôle était une approximation : un membre ordinaire se voyait proposer
+    /// « Modifier » sur une collection où il n'a que la lecture, et le serveur refusait
+    /// ensuite. Elle ne sert plus que de repli pour un serveur antérieur au champ.
+    private static func peutEcrire(_ collection: OrgCollectionDTO, role: RoleDOrganisation)
+        -> Bool
+    {
+        guard let brute = collection.permission else { return role.peutEcrire }
+        guard let droit = DroitSurCollection(rawValue: brute) else { return false }
+        return droit == .write || droit == .manage
+    }
+
+    /// Le coffre personnel seul, sans ce qu'ouvrent les équipes.
+    ///
+    /// L'export s'en sert, et c'est délibéré : verser les secrets d'une équipe dans un
+    /// fichier en clair déposé sur l'appareil de l'un de ses membres est une décision qui
+    /// appartient à l'équipe, pas à celui qui exporte. Bitwarden fait la même distinction.
+    /// Le jour où l'export d'équipe se justifiera, il devra être choisi explicitement.
+    var personnelles: [VaultEntry] {
+        entries.filter { !$0.origine.estPartage }
+    }
+
+    /// Ajoute à la liste les éléments des collections d'équipe auxquelles on a accès.
+    ///
+    /// Sans eux, quelqu'un dont tout le contenu vit dans une organisation voyait « aucun
+    /// élément » et une recherche sans résultat, alors que son coffre n'était pas vide :
+    /// il était ailleurs. Les deux coffres n'en font plus qu'un à l'écran, comme chez les
+    /// gestionnaires établis, chaque ligne disant à quelle équipe elle appartient.
+    ///
+    /// Aucun échec n'interrompt la liste. Une organisation dont la clé n'a pas encore été
+    /// remise, une collection devenue inaccessible : on passe. Le coffre personnel reste
+    /// affiché — mieux vaut une liste incomplète qu'un écran vide.
+    ///
+    /// Ces éléments ne sont **pas** mis en cache : `VaultCache` ne conserve que le coffre
+    /// personnel. Hors ligne, ils disparaissent donc de la liste, et c'est honnête —
+    /// prétendre les avoir sans pouvoir les déchiffrer serait pire.
+    private func chargerLesCoffresDEquipe() async {
+        // La sauvegarde englobe *aussi* la liste des organisations. Placée après, elle
+        // laissait passer l'erreur de `organisations()` : une panne du listing des équipes
+        // s'affichait alors comme une panne du coffre, et l'alerte qui en résultait bloque
+        // toutes les feuilles — plus moyen de créer un élément. Le commentaire disait déjà
+        // l'intention ; elle était appliquée une ligne trop tard.
+        let messageAvant = errorMessage
+        defer { errorMessage = messageAvant }
+
+        let equipes = await organisations()
+        guard !equipes.isEmpty else { return }
+
+        var partages: [VaultEntry] = []
+        for equipe in equipes where equipe.etat == .active {
+            guard let ouvert = await ouvrirLOrganisation(equipe) else { continue }
+            for collection in ouvert.collections {
+                let entrees = await itemsPartages(ouvert, collection: collection.id)
+                partages += entrees.map { entree in
+                    var marquee = entree
+                    marquee.origine = .equipe(
+                        Appartenance(
+                            organisation: equipe.id, collection: collection.id,
+                            nomEquipe: equipe.nom, nomCollection: collection.name,
+                            peutEcrire: Self.peutEcrire(collection, role: equipe.role)))
+                    return marquee
+                }
+            }
+        }
+
+        guard !partages.isEmpty else { return }
+        entries = (entries + partages).sorted {
+            $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending
         }
     }
 
@@ -380,6 +459,17 @@ final class VaultStore: ObservableObject {
     }
 
     func save(_ item: VaultItem, id: String?) async {
+        // Modifier un élément d'équipe par la route personnelle en créerait une copie
+        // privée : l'utilisateur croirait avoir corrigé le mot de passe partagé, l'équipe
+        // continuerait d'utiliser l'ancien. On route donc sur l'origine de l'élément.
+        let origine = id.flatMap { identifiant in
+            entries.first { $0.id == identifiant }?.origine
+        }
+        if let id, let ou = origine?.appartenance {
+            await enregistrerUnElementDEquipe(
+                organisation: ou.organisation, collection: ou.collection, item: item, id: id)
+            return
+        }
         guard let api, let token, let account else { return }
         isBusy = true
         defer { isBusy = false }
@@ -402,6 +492,14 @@ final class VaultStore: ObservableObject {
     }
 
     func delete(_ entry: VaultEntry) async {
+        // Un élément d'équipe ne se supprime pas par la route personnelle : elle ne le
+        // connaît pas, et la demande échouerait sans que la ligne disparaisse pour les
+        // autres membres.
+        if let ou = entry.origine.appartenance {
+            await supprimerUnElementDEquipe(
+                organisation: ou.organisation, collection: ou.collection, id: entry.id)
+            return
+        }
         guard let api, let token else { return }
         do {
             try await api.deleteItem(token: token, id: entry.id)
@@ -413,6 +511,42 @@ final class VaultStore: ObservableObject {
             errorMessage = tr("Serveur injoignable : la suppression n'a pas été enregistrée.")
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Enregistre un élément dans sa collection d'équipe, sous l'Org Key.
+    private func enregistrerUnElementDEquipe(
+        organisation: String, collection: String, item: VaultItem, id: String
+    ) async {
+        guard let equipe = await organisations().first(where: { $0.id == organisation }),
+            let ouvert = await ouvrirLOrganisation(equipe)
+        else {
+            errorMessage = tr("Ce coffre d'équipe n'est plus accessible.")
+            return
+        }
+        if await enregistrerDansLaCollection(
+            ouvert, collection: collection, item: item, remplace: id)
+        {
+            await refresh()
+        }
+    }
+
+    /// Supprime un élément vivant dans une collection d'équipe.
+    ///
+    /// Rouvre l'organisation pour retrouver la clé : la liste ne conserve que les éléments
+    /// déchiffrés, pas l'`Org` qui les a ouverts. C'est un aller-retour de plus, mais garder
+    /// des clés d'équipe en mémoire pour la durée d'une session serait un mauvais échange.
+    private func supprimerUnElementDEquipe(
+        organisation: String, collection: String, id: String
+    ) async {
+        guard let equipe = await organisations().first(where: { $0.id == organisation }),
+            let ouvert = await ouvrirLOrganisation(equipe)
+        else {
+            errorMessage = tr("Ce coffre d'équipe n'est plus accessible.")
+            return
+        }
+        if await supprimerDeLaCollection(ouvert, collection: collection, id: id) {
+            entries.removeAll { $0.id == id }
         }
     }
 
@@ -428,15 +562,63 @@ final class VaultStore: ObservableObject {
     /// Tous les chemins de dossiers : ceux qu'habitent des éléments, et ceux que le
     /// registre garde en mémoire faute d'occupant.
     var folderPaths: [String] {
-        let occupes = entries.compactMap { $0.item.folder }.filter { !$0.isEmpty }
+        // `personnelles`, pas `entries` : un élément d'équipe peut porter un dossier, et
+        // le laisser peupler cette liste ferait naître un dossier personnel qui n'existe
+        // pas — au mauvais endroit, sous le bon nom.
+        let occupes = personnelles.compactMap { $0.item.folder }.filter { !$0.isEmpty }
         return Array(Set(occupes).union(emptyFolders))
             .sorted { $0.localizedCompare($1) == .orderedAscending }
     }
 
+    /// Une collection d'équipe telle que le filtre l'affiche.
+    ///
+    /// Un type nommé plutôt qu'un tuple : SwiftUI type-checke mal les tableaux de tuples
+    /// imbriqués, et le compilateur y renonçait en signalant une expression trop longue —
+    /// une erreur qui ne désigne jamais sa cause.
+    struct CollectionDEquipe: Identifiable, Hashable {
+        let id: String
+        let nom: String
+        let compte: Int
+        let organisation: String
+    }
+
+    struct EquipeDuFiltre: Identifiable, Hashable {
+        var id: String { nom }
+        let nom: String
+        let collections: [CollectionDEquipe]
+    }
+
+    /// Les collections d'équipe représentées dans la liste, groupées par équipe.
+    ///
+    /// Déduites des éléments déjà chargés plutôt que redemandées au serveur : une
+    /// collection dont rien n'est visible n'a pas à figurer dans un filtre, et un
+    /// aller-retour réseau pour ouvrir un menu se remarque.
+    var collectionsVisibles: [EquipeDuFiltre] {
+        var parEquipe: [String: [String: CollectionDEquipe]] = [:]
+        for entree in entries {
+            guard let ou = entree.origine.appartenance else { continue }
+            var collections = parEquipe[ou.nomEquipe] ?? [:]
+            let dejaLa = collections[ou.collection]?.compte ?? 0
+            collections[ou.collection] = CollectionDEquipe(
+                id: ou.collection, nom: ou.nomCollection, compte: dejaLa + 1,
+                organisation: ou.organisation)
+            parEquipe[ou.nomEquipe] = collections
+        }
+        return parEquipe.keys.sorted().map { equipe in
+            EquipeDuFiltre(
+                nom: equipe,
+                collections: (parEquipe[equipe] ?? [:]).values.sorted {
+                    $0.nom.localizedCaseInsensitiveCompare($1.nom) == .orderedAscending
+                })
+        }
+    }
+
     /// Combien d'éléments habitent ce dossier — ses sous-dossiers compris, sans quoi un
     /// dossier parent paraîtrait vide alors qu'il ne l'est pas.
+    ///
+    /// Le coffre personnel seul, pour la même raison que `folderPaths`.
     func itemCount(in path: String) -> Int {
-        entries.filter { entry in
+        personnelles.filter { entry in
             guard let folder = entry.item.folder else { return false }
             return folder == path || folder.hasPrefix(path + "/")
         }
@@ -1250,6 +1432,12 @@ final class VaultStore: ObservableObject {
         guard let api, let token else { return nil }
         do {
             return try await api.mfaStatus(token: token)
+        } catch let APIError.http(status, _) where status == 404 {
+            // Le serveur ne connaît pas la route : la fonctionnalité n'y est pas déployée.
+            // Ce n'est pas une panne, et le dire ainsi évite d'envoyer chercher un
+            // problème de réseau qui n'existe pas.
+            errorMessage = tr("Ce serveur ne propose pas encore le second facteur.")
+            return nil
         } catch {
             errorMessage = error.localizedDescription
             return nil

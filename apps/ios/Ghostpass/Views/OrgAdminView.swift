@@ -195,7 +195,7 @@ struct OrgAdminView: View {
     private func ligneCollection(_ collection: OrgCollectionDTO) -> some View {
         NavigationLink {
             CollectionAccessView(
-                ouvert: ouvert, collection: collection, membres: membres, groupes: groupes
+                ouvert: ouvert, collection: collection, membres: membres
             ) {
                 await recharger()
             }
