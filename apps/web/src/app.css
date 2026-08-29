@@ -1521,6 +1521,21 @@ button:disabled {
   background: currentColor;
 }
 
+/* Secret d'équipe. Volontairement plus sobre que `.pill-role` : ce marqueur est
+   présent sur chaque ligne partagée, donc il doit se lire d'un coup d'œil sans
+   attirer l'œil plus que le nom du secret. La teinte d'accent est réservée aux
+   choses sur lesquelles on clique. */
+.pill-shared {
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
+  border-color: color-mix(in srgb, var(--muted) 18%, transparent);
+}
+
 .pill-role {
   text-transform: capitalize;
   color: var(--accent-text);
