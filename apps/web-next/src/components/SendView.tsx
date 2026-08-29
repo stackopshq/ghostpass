@@ -6,6 +6,13 @@
 // FRAGMENT de l'URL, que le navigateur n'envoie jamais au serveur. C'est ce qui
 // fait que le serveur ne peut pas lire ce qu'il stocke, et c'est pourquoi ce
 // composant lit `location.hash` plutôt qu'un paramètre de route.
+//
+// L'IDENTIFIANT AUSSI VIENT DE L'URL, ET NON D'UN PARAMÈTRE DE ROUTE
+// ------------------------------------------------------------------
+// L'interface est exportée en fichiers statiques : la route `/s/[id]` ne
+// produit qu'un seul fichier, servi pour tous les identifiants. Le paramètre
+// de route vaudrait donc partout la même valeur de gabarit. On lit le chemin
+// réel du navigateur, qui est la seule source juste.
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -15,18 +22,24 @@ import { Alerte, Cadenas, Coche, Copier, Oeil, OeilBarre } from "@/components/Ic
 
 type Etat = "chargement" | "ouvert" | "echec";
 
-export function SendView({ id }: { id: string }) {
+export function SendView() {
   const { t } = useI18n();
+  const [id, setId] = useState("");
   const [etat, setEtat] = useState<Etat>("chargement");
   const [secret, setSecret] = useState("");
   const [devoile, setDevoile] = useState(false);
   const [copie, setCopie] = useState(false);
 
   useEffect(() => {
+    setId(decodeURIComponent(location.pathname.replace(/^\/s\//, "").replace(/\/$/, "")));
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
     (async () => {
       try {
         const fragment = location.hash.replace(/^#/, "");
-        if (!id || !fragment) throw new Error("lien incomplet");
+        if (!fragment) throw new Error("lien incomplet");
         const { ciphertext, iv } = await api.getSend(id);
         setSecret(await openSend(ciphertext, iv, fragment));
         setEtat("ouvert");
