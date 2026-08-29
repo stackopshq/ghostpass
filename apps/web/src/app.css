@@ -1596,6 +1596,22 @@ button:disabled {
   content: "· ";
 }
 
+/* L'icône de provenance : elle ne rétrécit jamais et ne se tronque pas. Si la
+   place manque, c'est le texte qui cède — le nom de collection se devine au
+   survol, la nature partagée du secret ne se devine pas. */
+.pill-icon {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  opacity: 0.75;
+}
+
+.pill-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 .pill-shared {
   /* `text-overflow: ellipsis` ne s'applique QU'AUX conteneurs de bloc. `.pill`
      est en `inline-flex`, donc le texte y devient un élément flex anonyme et la
