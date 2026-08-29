@@ -16,7 +16,6 @@
 :root {
   /* Typographies */
   --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-serif: "Spectral", Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Rayons (partagés) */
@@ -211,7 +210,7 @@ code,
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--ink);
@@ -461,7 +460,7 @@ code,
   height: 34px;
   flex: none;
   color: var(--accent-text);
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-weight: 600;
   font-size: var(--text-base);
   background: var(--accent-soft);
@@ -1096,7 +1095,7 @@ a.kv-value:hover {
 
 
 .auth-hero {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-weight: 600;
   font-size: clamp(1.85rem, 3.2vw, 2.7rem);
   line-height: 1.13;
@@ -1163,7 +1162,7 @@ a.kv-value:hover {
 }
 
 .auth-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: var(--text-2xl);
 }
 
