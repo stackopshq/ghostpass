@@ -1,6 +1,13 @@
 [package]
 name = "ghostpass-crypto-wasm"
-version = "0.0.0"
+# Source unique de la version publiée sur le registre npm de la forge : `wasm-pack`
+# recopie ce champ dans `pkg/package.json`, et `publish-wasm.yml` publie ce paquet tel
+# quel. Publier une nouvelle version, c'est incrémenter ici — dans une PR, et nulle part
+# ailleurs. Le registre refuse d'écraser une version : republier sans incrémenter échoue.
+#
+# 0.0.1 est déjà en ligne (publiée le 2026-08-26). Le contenu de `crates/` n'a pas bougé
+# depuis le 2026-07-01, donc cet arbre décrit bien l'artefact servi sous ce numéro.
+version = "0.0.1"
 edition.workspace = true
 # Explicit string (not inherited from the workspace): some wasm-pack versions don't resolve
 # `license.workspace = true` and reject the manifest ("expected a string").
