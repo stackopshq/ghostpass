@@ -67,43 +67,35 @@ publication, pas parce que ce document sait y répondre.
   `apps/ios/AppStore/captures/`. Il reste à les coller et à trancher les mentions entre
   crochets — prix, URL d'assistance, raison sociale.
 
-### iPhone seulement, ou iPad aussi ? — à trancher
+### iPhone seulement — tranché
 
-L'application se déclare **universelle**. `TARGETED_DEVICE_FAMILY` n'est fixé nulle part,
-et Xcode retient alors iPhone *et* iPad : le binaire construit porte bien
-`UIDeviceFamily = [1, 2]`, ce qui n'est pas une supposition mais ce qu'on lit dans son
-Info.plist.
+`TARGETED_DEVICE_FAMILY` n'était fixé nulle part. Xcode retenait alors iPhone *et* iPad :
+le binaire sortait avec `UIDeviceFamily = [1, 2]`, ce qui se lisait dans son Info.plist.
+On aurait donc vendu une plateforme que rien n'avait éprouvée, et App Store Connect aurait
+réclamé son propre jeu de captures.
 
-Deux conséquences, l'une administrative et l'autre plus sérieuse :
+L'application a été ouverte sur un iPad Pro 13 pouces avant de décider. Elle fonctionnait —
+connexion, liste, navigation — mais montrait sa nature : listes étirées sur 2 064 points
+pour deux lignes de texte, feuilles de hauteur fixe dont le contenu se coupe net. Rien de
+cassé, mais rien de soigné non plus.
 
-- App Store Connect **réclamera un second jeu de captures**, au format iPad 13 pouces.
-- On publierait une plateforme sur laquelle **rien n'a jamais été éprouvé** : ni la suite
-  de tests, ni le remplissage automatique, ni la mise en page.
+**Décision : iPhone seulement.** `TARGETED_DEVICE_FAMILY: "1"`, et les binaires déclarent
+désormais `UIDeviceFamily = [1]` — application comme extension.
 
-L'application a été ouverte sur un iPad Pro 13 pouces pour en avoir le cœur net, et les
-captures sont dans `apps/ios/AppStore/captures-ipad/`. Le verdict est nuancé : **elle
-fonctionne**, la connexion, la liste et la navigation répondent. Mais elle n'est
-visiblement pas dessinée pour cet écran :
+Un détail à retenir pour le jour où l'iPad reviendra sur la table : poser la clef dans les
+réglages *de projet* ne suffit pas. xcodegen écrit sa propre valeur `1,2` au niveau de
+chaque cible, et celle-ci l'emporte. Il faut la poser sur les quatre cibles — ce que fait
+`project.yml` — et le vérifier dans l'Info.plist du produit construit, jamais dans le
+fichier de projet :
 
-- la liste s'étire sur toute la largeur, une ligne de 2 064 points pour deux lignes de
-  texte ;
-- les feuilles deviennent des cartes centrées de hauteur fixe, et **le contenu y est
-  tronqué** : sur « Santé du coffre », la dernière ligne est coupée net par le bord de la
-  carte.
+```sh
+/usr/libexec/PlistBuddy -c "Print :UIDeviceFamily" \
+  apps/ios/.build/Build/Products/Debug-iphonesimulator/Ghostpass.app/Info.plist
+```
 
-Ce n'est pas rédhibitoire — rien n'est cassé — mais cela se verra, et un examinateur
-d'Apple regarde les captures iPad avec les mêmes yeux que le reste.
-
-Deux issues, au choix :
-
-1. **S'en tenir à l'iPhone** — poser `TARGETED_DEVICE_FAMILY = 1` dans `project.yml`. Un
-   seul jeu de captures, rien d'invérifié à la vente. C'est le choix prudent tant que
-   personne n'a ouvert l'application sur un iPad.
-2. **Assumer l'iPad** — le vérifier écran par écran, puis produire son jeu :
-   `GHOSTPASS_APPAREIL="iPad Pro 13-inch (M5)" ./tools/ios/captures-appstore.sh`, qui range
-   ses images dans `apps/ios/AppStore/captures-ipad/`.
-
-Ce choix appartient au produit, pas au dépôt. Il conditionne l'envoi.
+Le script de prise de vue sait photographier n'importe quel appareil
+(`GHOSTPASS_APPAREIL="iPad Pro 13-inch (M5)"`) et relève la taille attendue sur l'appareil
+lui-même : il resservira tel quel si l'iPad est un jour soigné.
 
 ## À éprouver avant d'envoyer
 

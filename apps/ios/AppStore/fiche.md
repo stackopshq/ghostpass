@@ -15,6 +15,7 @@ que le code ne tiendrait pas** : chaque affirmation renvoie à une fonctionnalit
 | Catégorie principale | Utilitaires |
 | Catégorie secondaire | Productivité |
 | Classification d'âge | 4+ |
+| Appareils | iPhone seulement (`UIDeviceFamily = [1]`) |
 | Prix | [à trancher] |
 
 Le sous-titre fait 27 caractères. Deux variantes de repli, si celle-ci déplaît :
