@@ -487,7 +487,17 @@
     /// enregistré par l'API personnelle ne met pas à jour l'original, il en
     /// crée une COPIE PRIVÉE — et l'équipe ne voit jamais la modification.
     /// Signalé par la session iOS le 2026-08-29, qui a rencontré le même piège.
-    shared?: { orgId: string; orgName: string; collectionId: string; collectionName: string };
+    shared?: {
+      orgId: string;
+      orgName: string;
+      collectionId: string;
+      collectionName: string;
+      // La permission EFFECTIVE sur la collection, telle que le serveur la
+      // calcule — rôle d'administrateur, octroi direct et appartenance à un
+      // groupe confondus. Absente si le serveur est antérieur au champ : on
+      // traite alors l'élément comme lisible seulement.
+      permission?: "read" | "write" | "manage";
+    };
   }
 
   // ─── Arborescence des dossiers (déduite des chemins chiffrés "A/B/C") ───
@@ -847,10 +857,27 @@
     adding = true;
   }
 
+  /// Un élément d'équipe est-il modifiable par cette personne ?
+  ///
+  /// Jusqu'au 2026-08-29 la réponse était « jamais », faute que la liste des
+  /// collections porte la permission : je retirais « Modifier » et « Supprimer »
+  /// sur TOUT élément partagé, y compris pour un gestionnaire. C'était sûr — on
+  /// ne promettait jamais rien à tort — mais c'était une simplification par
+  /// manque d'information, pas une décision de conception.
+  ///
+  /// Le repli reste le refus quand la permission est absente : mieux vaut cacher
+  /// une action permise que d'en offrir une que le serveur refusera.
+  function canWriteShared(it: VaultEntry): boolean {
+    const p = it.shared?.permission;
+    return p === "write" || p === "manage";
+  }
+
   /// Refuser une écriture sur un élément d'équipe, en disant où la faire.
   /// Un refus muet ressemblerait à une panne ; un bouton inerte serait pire.
-  function refuseWriteOnShared() {
-    error = t("app.sharedReadOnly");
+  function refuseWriteOnShared(it: VaultEntry) {
+    error = canWriteShared(it)
+      ? t("app.sharedEditElsewhere")
+      : t("app.sharedReadOnlyHere");
     busy = false;
   }
 
@@ -861,7 +888,7 @@
     // pour l'écriture, `updateItem` créerait une copie privée au lieu de mettre
     // à jour l'original — l'équipe ne verrait jamais la modification, et
     // personne n'aurait d'erreur pour le dire.
-    if (selected.shared) return refuseWriteOnShared();
+    if (selected.shared) return refuseWriteOnShared(selected);
     if (!confirm(`Déplacer « ${selected.name} » vers la corbeille ?`)) return;
     busy = true;
     error = null;
@@ -1054,6 +1081,7 @@
                   orgName: org.name,
                   collectionId: col.id,
                   collectionName: col.name,
+                  permission: col.permission,
                 },
               });
             }
@@ -1165,8 +1193,9 @@
         cardExp: itemCardExp,
         cardCode: itemCardCode,
       });
-      if (editingId && items.find((i) => i.id === editingId)?.shared) {
-        refuseWriteOnShared();
+      const enCours = editingId ? items.find((i) => i.id === editingId) : undefined;
+      if (enCours?.shared) {
+        refuseWriteOnShared(enCours);
         return;
       }
       const savedId = editingId
@@ -1785,7 +1814,20 @@
                      de toucher l'original ; on les retire plutôt que d'offrir
                      un bouton qui ment sur ce qu'il fait. -->
                 {#if selected.shared}
-                  <span class="muted">{t("org.accessNotRevocable")}</span>
+                  <!-- Deux raisons distinctes de ne pas offrir de bouton, et
+                       elles ne se disent pas pareil. Sans droit d'écrire, c'est
+                       un refus définitif. Avec le droit, c'est cet ÉCRAN qui ne
+                       sait pas écrire vers une organisation : il n'a ni le
+                       chiffrement sous la clé d'org ni la route de suppression,
+                       et sauver par l'API personnelle créerait une copie privée
+                       que l'équipe ne verrait jamais. Dire « pas d'accès » à un
+                       gestionnaire serait faux ; lui offrir le bouton serait
+                       pire. On le renvoie là où l'écriture marche. -->
+                  <span class="muted">
+                    {canWriteShared(selected)
+                      ? t("app.sharedEditElsewhere")
+                      : t("app.sharedReadOnlyHere")}
+                  </span>
                 {:else}
                   <button class="ghost sm" onclick={shareEntry} disabled={shareBusy}>{shareBusy ? "…" : "Partager"}</button>
                   <button class="ghost sm" onclick={startEdit}>{t("app.edit")}</button>

@@ -337,7 +337,18 @@ export const api = {
     });
   },
   listCollections(token: string, orgId: string) {
-    return http<{ collections: Array<{ id: string; name: string }> }>(
+    // `permission` est OPTIONNEL, et c'est un choix : un serveur antérieur au
+    // 2026-08-29 ne le renvoie pas, et l'exiger ferait échouer le décodage de la
+    // liste entière — l'utilisateur perdrait ses organisations au lieu de perdre
+    // seulement la finesse des boutons. Absent, on retombe sur le comportement
+    // prudent : aucune écriture sur un élément d'équipe.
+    return http<{
+      collections: Array<{
+        id: string;
+        name: string;
+        permission?: "read" | "write" | "manage";
+      }>;
+    }>(
       `/api/orgs/${orgId}/collections`,
       { token },
     );
