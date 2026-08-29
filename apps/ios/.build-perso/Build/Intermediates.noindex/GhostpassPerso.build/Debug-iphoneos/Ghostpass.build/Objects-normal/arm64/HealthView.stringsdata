@@ -1,0 +1,144 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/HealthView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Santé du coffre",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mots de passe faibles",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trop courts, ou faits d'une seule sorte de caractères.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 36
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mots de passe réutilisés",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "Une seule fuite suffit alors à ouvrir plusieurs comptes.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sans code à usage unique",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le second facteur protège même un mot de passe connu.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fuites connues",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Seuls les cinq premiers caractères de l'empreinte du mot de passe sont envoyés : ni le mot de passe ni son empreinte complète ne quittent l'appareil.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fermer",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld éléments examinés",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rien à signaler",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld mots de passe à revoir",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "Vérification…",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucun mot de passe connu des fuites publiques.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 137
+        }
+      },
+      {
+        "comment": "",
+        "key": "Vérifier les fuites",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le service de vérification n'a pas répondu.",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 115
+        }
+      }
+    ]
+  },
+  "version": 1
+}

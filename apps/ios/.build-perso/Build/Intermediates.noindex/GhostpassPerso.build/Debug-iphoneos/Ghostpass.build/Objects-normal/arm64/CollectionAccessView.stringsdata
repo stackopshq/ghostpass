@@ -1,0 +1,160 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/CollectionAccessView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Accès nommés",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "Par les groupes",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 145
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 147
+        }
+      },
+      {
+        "comment": "",
+        "key": "Par leur rôle",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 179
+        }
+      },
+      {
+        "comment": "",
+        "key": "Un administrateur de l'équipe gère toutes les collections, y compris celle-ci. Cet accès ne se retire qu'en changeant son rôle.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 181
+        }
+      },
+      {
+        "comment": "",
+        "key": "Retirer l'accès ?",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "Retirer",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cette personne gardera l'accès : elle administre l'équipe, ce qui lui donne la gestion de toutes les collections.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 243
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe.",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cette personne perdra l'accès à cette collection.",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 252
+        }
+      },
+      {
+        "comment": "",
+        "key": "Personne n'a d'accès nommé sur cette collection.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Également par son rôle d'administrateur",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 223
+        }
+      },
+      {
+        "comment": "",
+        "key": "Également par le groupe « %@ »",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 226
+        }
+      },
+      {
+        "comment": "",
+        "key": "Retirer l'accès",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accorder à un membre",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 132
+        }
+      },
+      {
+        "comment": "",
+        "key": "%d membre(s)",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 156
+        }
+      },
+      {
+        "comment": "",
+        "key": "Administrateur",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 189
+        }
+      }
+    ]
+  },
+  "version": 1
+}

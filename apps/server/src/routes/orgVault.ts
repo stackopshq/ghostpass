@@ -6,6 +6,8 @@ import {
   collectionAccess,
   collections,
   groupCollectionAccess,
+  orgGroupMembers,
+  orgGroups,
   orgItems,
   orgMembers,
   users,
@@ -277,14 +279,66 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
       if (await permissionFor(db, req.params.cid, member) !== "manage") {
         return reply.code(403).send({ error: "gestion de la collection requise" });
       }
-      const rows = await collectionAccess.listForCollection(db, req.params.cid);
+      // On ne liste PAS `collection_access`. Cette table ne porte qu'UNE des
+      // trois sources d'accès que `permissionFor` additionne : l'admin d'org a
+      // `manage` implicite sans aucune ligne, et un groupe donne l'accès à tous
+      // ses membres sans ligne non plus.
+      //
+      // Le symptôme, signalé le 2026-08-29 : dans l'org `stackops`, l'écran
+      // n'affichait personne sur la collection `providers` — alors que ses deux
+      // admins y lisaient et y écrivaient, l'un venant d'y déposer un mot de
+      // passe. Une liste d'accès qui affiche « personne » là où deux personnes
+      // entrent ne se trompe pas dans le sens anodin : elle invite à donner un
+      // accès déjà donné, et fait croire qu'une révocation ferme une porte qui
+      // reste ouverte.
+      //
+      // On rend donc l'accès EFFECTIF, membre par membre, avec sa provenance —
+      // et seul l'octroi direct est révocable, parce que lui seul est une ligne.
+      const membres = await orgMembers.listByOrg(db, req.params.id);
+      const directs = new Map(
+        (await collectionAccess.listForCollection(db, req.params.cid))
+          .map((r) => [r.user_id, r.permission]),
+      );
+
+      // Les groupes qui ont un accès sur cette collection, et qui est dedans.
+      const parGroupe = new Map<string, Array<{ nom: string; permission: string }>>();
+      for (const groupe of await orgGroups.listByOrg(db, req.params.id)) {
+        const acces = (await groupCollectionAccess.listByGroup(db, groupe.id))
+          .find((a) => a.collection_id === req.params.cid);
+        if (!acces) continue;
+        for (const m of await orgGroupMembers.listByGroup(db, groupe.id)) {
+          const liste = parGroupe.get(m.user_id) ?? [];
+          liste.push({ nom: groupe.name, permission: acces.permission });
+          parGroupe.set(m.user_id, liste);
+        }
+      }
+
       const access = await Promise.all(
-        rows.map(async (r) => {
-          const u = await users.findById(db, r.user_id);
-          return { userId: r.user_id, email: u?.email ?? null, permission: r.permission };
+        membres.map(async (m) => {
+          const sources: Array<{ kind: string; label: string; permission: string }> = [];
+          if (m.role === "admin") {
+            sources.push({ kind: "admin", label: "administratrice de l'organisation", permission: "manage" });
+          }
+          const direct = directs.get(m.user_id);
+          if (direct) sources.push({ kind: "direct", label: "accès direct", permission: direct });
+          for (const g of parGroupe.get(m.user_id) ?? []) {
+            sources.push({ kind: "group", label: `groupe ${g.nom}`, permission: g.permission });
+          }
+          if (sources.length === 0) return null;
+          const u = await users.findById(db, m.user_id);
+          return {
+            userId: m.user_id,
+            email: u?.email ?? null,
+            permission: maxPermission(sources.map((x) => x.permission as CollectionPermission)),
+            sources,
+            // Ce qui est révocable ici est la ligne, pas l'accès. Retirer un
+            // admin d'une collection se fait en changeant son rôle ; le sortir
+            // d'un groupe, en le sortant du groupe.
+            revocable: Boolean(direct),
+          };
         }),
       );
-      return { access };
+      return { access: access.filter((a) => a !== null) };
     },
   );
 

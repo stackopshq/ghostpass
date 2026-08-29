@@ -1,0 +1,224 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/OrgAdminView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Nouvelle collection",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nouveau groupe",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Révoquer ce membre ?",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "Administration",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "Membres",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "Inviter quelqu'un lui scelle la clé de l'équipe vers sa clé publique. Le serveur ne transporte qu'un blob qu'il ne peut pas ouvrir.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "Collections",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 167
+        }
+      },
+      {
+        "comment": "",
+        "key": "Touchez une collection pour voir qui y a accès.",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 168
+        }
+      },
+      {
+        "comment": "",
+        "key": "Groupes",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 216
+        }
+      },
+      {
+        "comment": "",
+        "key": "Un groupe donne accès à des collections. C'est par lui qu'on ouvre un coffre à plusieurs personnes sans les nommer une à une.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 218
+        }
+      },
+      {
+        "comment": "",
+        "key": "Terminé",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nom",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "Créer",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nom",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Créer",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 84
+        }
+      },
+      {
+        "comment": "",
+        "key": "Révoquer",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "La clé de l'équipe sera changée et redistribuée aux autres membres. Ce que cette personne a déjà vu reste connu d'elle : les mots de passe concernés doivent être changés.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "Inviter quelqu'un",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Modifier ce membre",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 143
+        }
+      },
+      {
+        "comment": "",
+        "key": "Révoquer",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 139
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucune collection.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 172
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nouvelle collection",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 182
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nouveau groupe",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 225
+        }
+      },
+      {
+        "comment": "",
+        "key": "%1$d membres · %2$d collections",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 245
+        }
+      }
+    ]
+  },
+  "version": 1
+}

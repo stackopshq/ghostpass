@@ -1,0 +1,200 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Services/VaultStore.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Aucune session enregistrée sur cet appareil.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe maître incorrect.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ n'a pas permis d'ouvrir le coffre.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 227
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ n'a pas pu être activé (code %d).",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 276
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucune session enregistrée sur cet appareil.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 257
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe maître incorrect.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 266
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucune clé ne vous a encore été remise pour ce coffre.",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 1063
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur injoignable : la modification n'a pas été enregistrée.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 463
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ce coffre d'équipe n'est plus accessible.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 499
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur injoignable : la suppression n'a pas été enregistrée.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 486
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ce coffre d'équipe n'est plus accessible.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 520
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur injoignable : les dossiers n'ont pas été enregistrés.",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 626
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur injoignable : les favoris n'ont pas été enregistrés.",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 652
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucune session enregistrée sur cet appareil.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 665
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe maître incorrect.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 676
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur injoignable : l'import s'est arrêté en chemin.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 702
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur injoignable : la clé de récupération n'a pas été enregistrée.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 730
+        }
+      },
+      {
+        "comment": "",
+        "key": "Adresse de serveur invalide.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 746
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur injoignable.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 769
+        }
+      },
+      {
+        "comment": "",
+        "key": "Réponse du serveur incompréhensible.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 771
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clé de récupération refusée.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 775
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur injoignable : l'item n'a pas été restauré.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 859
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur injoignable : l'item n'a pas été supprimé.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 872
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ce serveur ne propose pas encore le second facteur.",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 1412
+        }
+      }
+    ]
+  },
+  "version": 1
+}

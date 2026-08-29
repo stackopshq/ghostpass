@@ -1,0 +1,152 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/GhostpassAutoFill/AutoFillView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "GhostPass",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Compte",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe maître",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "Votre mot de passe",
+        "location": {
+          "startingColumn": 77,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "Déverrouiller",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 65
+        }
+      },
+      {
+        "comment": "",
+        "key": "Déverrouiller avec %@",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coffre indisponible",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ouvrez GhostPass et connectez-vous une fois.",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre.",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 103
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pour ce site",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coffre",
+        "location": {
+          "startingColumn": 52,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "Autres comptes",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 209
+        }
+      },
+      {
+        "comment": "",
+        "key": "Autres identifiants",
+        "location": {
+          "startingColumn": 65,
+          "startingLine": 209
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucun code",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucun identifiant",
+        "location": {
+          "startingColumn": 61,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le coffre local ne contient rien.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 142
+        }
+      }
+    ]
+  },
+  "version": 1
+}

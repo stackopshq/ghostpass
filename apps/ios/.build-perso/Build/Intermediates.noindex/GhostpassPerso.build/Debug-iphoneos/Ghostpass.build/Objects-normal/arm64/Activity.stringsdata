@@ -1,0 +1,192 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Services/Activity.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Connexion par mot de passe",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connexion par passkey",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connexion par SSO",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 54
+        }
+      },
+      {
+        "comment": "",
+        "key": "Déconnexion",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "Second facteur activé",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Second facteur désactivé",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe réinitialisé par clé de récupération",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "Passkey ajoutée",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "Passkey retirée",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clé de sécurité ajoutée",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clé de sécurité retirée",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accès d'urgence confié",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accès d'urgence demandé",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accès d'urgence accordé",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 65
+        }
+      },
+      {
+        "comment": "",
+        "key": "Membre ajouté à une équipe",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rôle d'un membre modifié",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clé d'équipe renouvelée",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Groupe créé",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Groupe supprimé",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "Membre ajouté à un groupe",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "Membre retiré d'un groupe",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accès accordé à une collection",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 73
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accès retiré à une collection",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 74
+        }
+      }
+    ]
+  },
+  "version": 1
+}

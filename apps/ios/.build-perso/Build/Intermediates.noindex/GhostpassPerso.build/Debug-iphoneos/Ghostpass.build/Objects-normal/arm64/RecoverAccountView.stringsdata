@@ -1,0 +1,96 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/RecoverAccountView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Mot de passe oublié",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "Huit caractères au minimum.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste intact : rien n'est perdu, rien n'est déchiffré côté serveur.",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "Réinitialiser",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Adresse e-mail",
+        "location": {
+          "startingColumn": 74,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clé de récupération",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nouveau mot de passe maître",
+        "location": {
+          "startingColumn": 68,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 90
+        }
+      }
+    ]
+  },
+  "version": 1
+}

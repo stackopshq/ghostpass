@@ -1,0 +1,1049 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0213BE36ED207C388A288890 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3296DDA956118E580E0A77A4 /* SettingsView.swift */; };
+		05F15EEC58F78C3D917D1928 /* RecoverAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCE7483282FAA06CB494EA21 /* RecoverAccountView.swift */; };
+		0A974A07AF2D71ED1C206B3B /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED58572C0724619BF08D4CD2 /* Preferences.swift */; };
+		0AF84832E77228966EB29FBF /* EmergencyTakeoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CD9111B9932467099C69770 /* EmergencyTakeoverView.swift */; };
+		110496E28E20386471578F78 /* OrgAdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D27A09A42DB328BE06090CF /* OrgAdminView.swift */; };
+		14D11CA4B47B1D215C1375D7 /* ItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 401A6A020BD7FC486F3318D5 /* ItemDetailView.swift */; };
+		1A56AAAD52B35EF80195CB8C /* EmergencyVaultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400710E8FD4D7D65E85B83F9 /* EmergencyVaultView.swift */; };
+		1B893CE6FC5EE6A0886A63ED /* GhostpassCrypto.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCAE024FF9E7EFDB63A8675C /* GhostpassCrypto.xcframework */; };
+		1E7C2DF59597E7E779E1740D /* SiteMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5ED3410AA23711E811DA9F3 /* SiteMatching.swift */; };
+		1F0499E91A4283751FEA737C /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = BBCC62346CCD411821AB5AD8 /* InfoPlist.xcstrings */; };
+		1FDA2FB99979956BFD004AED /* Clipboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7580C0CF12816E1880FF08D /* Clipboard.swift */; };
+		23B9E035D49E306730A480AA /* CsvImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F13E40AFC1813954AB50BFC /* CsvImport.swift */; };
+		2538D9ADF9A1397A53532CA5 /* AppStoreShots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85136D710CD094A1416CDC39 /* AppStoreShots.swift */; };
+		27B3759FF0A694C743CD7ED5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = EC663D861E19595A54824E6D /* PrivacyInfo.xcprivacy */; };
+		2E3FB5B2A2219982EB17E330 /* Favicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934FE1EF21B6814F8DB7ABA2 /* Favicon.swift */; };
+		301939628EB33EF2EC2BDD02 /* FoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA1C94530B0F727C62D9B33 /* FoldersView.swift */; };
+		3ECCC5827771276219A3AB76 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B651CE2BF084A3CB6A6409A2 /* SharedStore.swift */; };
+		415072582618DE80C822272F /* BiometricSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A2F45D4A9841964C533FCC7 /* BiometricSetupView.swift */; };
+		44274040A0CDEFC78FB095E9 /* GhostpassCrypto.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCAE024FF9E7EFDB63A8675C /* GhostpassCrypto.xcframework */; };
+		44727A0BD58B496D6EA38E74 /* EmergencyInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F15C52838BC9503E711552C /* EmergencyInviteView.swift */; };
+		45CF3E8C959AB968AC89576C /* AutoFillSafariTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2663EBB5A03CDD0D5FC4A675 /* AutoFillSafariTests.swift */; };
+		45F565F9088628AE75225DAA /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B651CE2BF084A3CB6A6409A2 /* SharedStore.swift */; };
+		47BE61A504349CD94012022D /* PasswordGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C2C4EF61A6039446E12AB11 /* PasswordGenerator.swift */; };
+		481597BF769E20514FE17352 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A3683FD6B31B8EAE1CF0441 /* Theme.swift */; };
+		4D0158762C0951F13E3B982E /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78BFD3DB135EF2DC973EDE8C /* Keychain.swift */; };
+		51A7D6E8D1538C2BD0ECB956 /* VaultCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A48D8C72467E09FE893C47 /* VaultCache.swift */; };
+		5469467BA3FF879E73F9A5DE /* OrganizationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A293CD1A0427C351297E9D26 /* OrganizationsView.swift */; };
+		5609DF66227FD76C43D1FBB0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1270C70D842EBCEDA866A94E /* Assets.xcassets */; };
+		58491EE2BE6AB4D381BF7C24 /* VaultFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75EF1D6C5F7EC79E58517695 /* VaultFlowTests.swift */; };
+		5D2B2191AAC9B6077E02D7AF /* PasswordGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C2C4EF61A6039446E12AB11 /* PasswordGenerator.swift */; };
+		6505A4AE55B173953A8551F6 /* CredentialIdentities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C81E681BEE526814C348EF3 /* CredentialIdentities.swift */; };
+		660E1F61003121F40FB06381 /* VaultStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD464FB7581507E5D97CC5C /* VaultStore.swift */; };
+		66D7BBB92DADE9CDED8B4F15 /* ServerAddress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4964779BCBD27839580F469B /* ServerAddress.swift */; };
+		696317289B2631B13674EE09 /* BiometricOfferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB897A123B169DD6AF402E6 /* BiometricOfferView.swift */; };
+		70F41D050CAB4C2054181665 /* RecoveryKeyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35968DD69609A36D9F27B16A /* RecoveryKeyView.swift */; };
+		727C8C295660F2C00798902E /* PasswordHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5CBD22D85A07AE622C8AA2F /* PasswordHealth.swift */; };
+		7537B1E0AEFAC933AEB35E33 /* OrgGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E09782B8FBE6FE18D851CBFA /* OrgGroupView.swift */; };
+		753CBDCB0D61215FC6FFD33D /* EmergencyAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04007EA75306A80197D12D12 /* EmergencyAccess.swift */; };
+		75748BD4EBD63EE351179FCD /* VaultItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = C819B2926C24F6DEF1DC3F37 /* VaultItem.swift */; };
+		75EEB00E21B2D00075C3C2E0 /* CsvExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC7AB1F179D288B1F4A80745 /* CsvExport.swift */; };
+		76090D7E95A4D60BE6D5005A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4542B78ED95F253E0604B5AC /* Localizable.xcstrings */; };
+		787D64F4DC17B8CD6AB6B09F /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B02083460AF44B8536B06F /* ActivityView.swift */; };
+		7AA5089918B2825EBBC9043B /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED58572C0724619BF08D4CD2 /* Preferences.swift */; };
+		7FA038F8D55650D8A6B5DD0B /* ItemEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9C9A418610E170A1C4D97A /* ItemEditView.swift */; };
+		8094D987F03E9C4FBA4C78DB /* Clipboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7580C0CF12816E1880FF08D /* Clipboard.swift */; };
+		81257245F57B32C947C6D101 /* SiteMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5ED3410AA23711E811DA9F3 /* SiteMatching.swift */; };
+		8B1BFEF86FD46D7DE06BAD69 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E741AD7E6F565DF69A1F0D /* ImportView.swift */; };
+		8BA26F7011B2E672395BAE3C /* PasswordHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5CBD22D85A07AE622C8AA2F /* PasswordHealth.swift */; };
+		8C2C786E36137F6CC3F02286 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4542B78ED95F253E0604B5AC /* Localizable.xcstrings */; };
+		8F53E23C9E766079CE9178E0 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78BFD3DB135EF2DC973EDE8C /* Keychain.swift */; };
+		910EC71BDD5B16F6B6130F53 /* AutoFillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB1FE3751F4822BA61AEA2E8 /* AutoFillView.swift */; };
+		91DB0F022FA60866DB325897 /* ghostpass_crypto_ffi.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F58440FAF147789E38D33D /* ghostpass_crypto_ffi.swift */; };
+		938A1B93E4CB1D14A9AEA1F4 /* VaultStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD464FB7581507E5D97CC5C /* VaultStore.swift */; };
+		99EC420A6075320C264F90F6 /* Totp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9781E53F3582403D24056E99 /* Totp.swift */; };
+		9B751E6660D3E54CD7C6AEF2 /* ServerAddress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4964779BCBD27839580F469B /* ServerAddress.swift */; };
+		A40DC51D1955C6FF3F3E9A01 /* Activity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E7987B45FF913AD83FDB94 /* Activity.swift */; };
+		A5567A2A2DB602B4F3B892BB /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA16EC95C4C4D640DE82E046 /* APIClient.swift */; };
+		AD1100742865C15DC91D3A69 /* Activity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E7987B45FF913AD83FDB94 /* Activity.swift */; };
+		AFD788BA28AB404C65CD2BFD /* PasswordGeneratorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ABDAB7FBA7708007AC94A02 /* PasswordGeneratorView.swift */; };
+		B425CB0BE93716A6A297A052 /* CollectionAccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2784B92116A2B67010B9CDF1 /* CollectionAccessView.swift */; };
+		B995D6F7544F2DEFCC0CC604 /* EmergencyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125CC75CC15EDC1366255034 /* EmergencyView.swift */; };
+		BA2C7A361852165CEEF21EB7 /* MfaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA1BC26D45DF2FA50F47CD2 /* MfaView.swift */; };
+		BF07404E0CF9CF2CD3FF907D /* Breach.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB248916673EED3D0A644764 /* Breach.swift */; };
+		C4824EB06A4A28A781DEC36B /* ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF3B79F02883D27E2CD432DC /* ExportView.swift */; };
+		C5A9ABAE3C61DCA7FB624D81 /* CredentialIdentities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C81E681BEE526814C348EF3 /* CredentialIdentities.swift */; };
+		C6A12AF8B45603CAFEC61F94 /* Biometrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A798202602078C4A218675D9 /* Biometrics.swift */; };
+		CAEE5C8C8BC4B6DA4212FF7D /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A3683FD6B31B8EAE1CF0441 /* Theme.swift */; };
+		CB88EC80E50125000FED0B97 /* ghostpass_crypto_ffi.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F58440FAF147789E38D33D /* ghostpass_crypto_ffi.swift */; };
+		CC9BB89403F53FE1F38FC641 /* AutoFillStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3EC4DF04B1DF3179576A2C2 /* AutoFillStore.swift */; };
+		CE213FA5585D541B2A77B61A /* UnlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA43791DE4E8D88E7112F23B /* UnlockView.swift */; };
+		CE7FEADBEB6A6528438D2056 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0487A211CA452AC0CF235FEB /* TrashView.swift */; };
+		D0FA027BCBA76DA2B46C78CE /* Favicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934FE1EF21B6814F8DB7ABA2 /* Favicon.swift */; };
+		D1EB785F73C8FB6802614878 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 1A684C9D752216299E1F288B /* InfoPlist.xcstrings */; };
+		D22DBBA288B8BF4B7BC163E0 /* Organizations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 935C5D2808860CA712F4F8FE /* Organizations.swift */; };
+		D715A05B64C81CA38D913F34 /* VaultItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = C819B2926C24F6DEF1DC3F37 /* VaultItem.swift */; };
+		D872D81CFA475E0893474022 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA16EC95C4C4D640DE82E046 /* APIClient.swift */; };
+		DC3A171920CD1CCDA02D3AD2 /* ContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9545FB691E40EB524A213A /* ContractTests.swift */; };
+		DCD4344CBDBDE5DA45B06485 /* OrgInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4146CDC4F2B6BAA2A957C9AF /* OrgInviteView.swift */; };
+		DE4DA11C075265D3524A08CD /* Organizations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 935C5D2808860CA712F4F8FE /* Organizations.swift */; };
+		DECD05B5148D79C37D1521FB /* GhostpassApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BC26AFC82E3885572F300BE /* GhostpassApp.swift */; };
+		E124C9641D6A71ED9EABDC60 /* CsvImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F13E40AFC1813954AB50BFC /* CsvImport.swift */; };
+		E24CC5E119093CF01E0121B7 /* VaultCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A48D8C72467E09FE893C47 /* VaultCache.swift */; };
+		E2755F60A79FD3327C9230F5 /* OrgVaultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA991B173D945CECB350A2CB /* OrgVaultView.swift */; };
+		E8FB8ADA1FDEA6963A6BAC3E /* VaultListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C8AFCDA3C497688551CBF8 /* VaultListView.swift */; };
+		E92D633CD0B85B70ECA1A22F /* Biometrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A798202602078C4A218675D9 /* Biometrics.swift */; };
+		ED5FD75C96B6BBF1F78CB014 /* GhostpassAutoFill.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C592BE7C3CC1091CA13B10FB /* GhostpassAutoFill.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EE194CFC0BE6A0375DDB3A4E /* CsvExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC7AB1F179D288B1F4A80745 /* CsvExport.swift */; };
+		EF9D9AAEEFD7302EA078029D /* SendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 027F36D46BC3927F9B2483E4 /* SendView.swift */; };
+		F50DF3AC4059D53FE11240BC /* CredentialProviderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79383E96BE4117F532DD444 /* CredentialProviderViewController.swift */; };
+		F5A7CB5E7916EA0BB65F679F /* EmergencyAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04007EA75306A80197D12D12 /* EmergencyAccess.swift */; };
+		F7EAE89729EEF440C1245590 /* HealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C07228461254789CE76251 /* HealthView.swift */; };
+		F86A31936D45B575ABED9A0C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 808BA2FB017A549994C4286E /* PrivacyInfo.xcprivacy */; };
+		F89292E4D464F05DD380F4C7 /* Breach.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB248916673EED3D0A644764 /* Breach.swift */; };
+		FCABC0EBB06DB4200591F4FC /* Totp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9781E53F3582403D24056E99 /* Totp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		20509EF6CAF2CB4E04685F1D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BB096527CEB14D9CD490ED0D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EA4B1A7DB598676FBC52EB40;
+			remoteInfo = Ghostpass;
+		};
+		B75715A385D80CD55788976A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BB096527CEB14D9CD490ED0D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EA4B1A7DB598676FBC52EB40;
+			remoteInfo = Ghostpass;
+		};
+		F4415C55C2B00F62530EE035 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BB096527CEB14D9CD490ED0D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A2158EF0748B6675E7F06367;
+			remoteInfo = GhostpassAutoFill;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		CF229B220DBB945BC8AEEF16 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				ED5FD75C96B6BBF1F78CB014 /* GhostpassAutoFill.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		027F36D46BC3927F9B2483E4 /* SendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendView.swift; sourceTree = "<group>"; };
+		04007EA75306A80197D12D12 /* EmergencyAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmergencyAccess.swift; sourceTree = "<group>"; };
+		0487A211CA452AC0CF235FEB /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
+		0A2F45D4A9841964C533FCC7 /* BiometricSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricSetupView.swift; sourceTree = "<group>"; };
+		0D27A09A42DB328BE06090CF /* OrgAdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrgAdminView.swift; sourceTree = "<group>"; };
+		0DA1BC26D45DF2FA50F47CD2 /* MfaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MfaView.swift; sourceTree = "<group>"; };
+		0FD464FB7581507E5D97CC5C /* VaultStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultStore.swift; sourceTree = "<group>"; };
+		125CC75CC15EDC1366255034 /* EmergencyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmergencyView.swift; sourceTree = "<group>"; };
+		1270C70D842EBCEDA866A94E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1A684C9D752216299E1F288B /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		1C2C4EF61A6039446E12AB11 /* PasswordGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordGenerator.swift; sourceTree = "<group>"; };
+		25E741AD7E6F565DF69A1F0D /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
+		2663EBB5A03CDD0D5FC4A675 /* AutoFillSafariTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoFillSafariTests.swift; sourceTree = "<group>"; };
+		2784B92116A2B67010B9CDF1 /* CollectionAccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionAccessView.swift; sourceTree = "<group>"; };
+		2AA1C94530B0F727C62D9B33 /* FoldersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoldersView.swift; sourceTree = "<group>"; };
+		3296DDA956118E580E0A77A4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		35968DD69609A36D9F27B16A /* RecoveryKeyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryKeyView.swift; sourceTree = "<group>"; };
+		400710E8FD4D7D65E85B83F9 /* EmergencyVaultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmergencyVaultView.swift; sourceTree = "<group>"; };
+		401A6A020BD7FC486F3318D5 /* ItemDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemDetailView.swift; sourceTree = "<group>"; };
+		4146CDC4F2B6BAA2A957C9AF /* OrgInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrgInviteView.swift; sourceTree = "<group>"; };
+		44A48D8C72467E09FE893C47 /* VaultCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultCache.swift; sourceTree = "<group>"; };
+		4542B78ED95F253E0604B5AC /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		45B04FF28F0B34D0D0F6149C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		47C8AFCDA3C497688551CBF8 /* VaultListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultListView.swift; sourceTree = "<group>"; };
+		4964779BCBD27839580F469B /* ServerAddress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerAddress.swift; sourceTree = "<group>"; };
+		56C07228461254789CE76251 /* HealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthView.swift; sourceTree = "<group>"; };
+		5ABDAB7FBA7708007AC94A02 /* PasswordGeneratorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordGeneratorView.swift; sourceTree = "<group>"; };
+		5F15C52838BC9503E711552C /* EmergencyInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmergencyInviteView.swift; sourceTree = "<group>"; };
+		66F4E0236E5C4D1555832B53 /* Ghostpass.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Ghostpass.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F13E40AFC1813954AB50BFC /* CsvImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CsvImport.swift; sourceTree = "<group>"; };
+		75EF1D6C5F7EC79E58517695 /* VaultFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultFlowTests.swift; sourceTree = "<group>"; };
+		7688EB702228A4FF69D45A52 /* GhostpassUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GhostpassUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		78BFD3DB135EF2DC973EDE8C /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		7B9545FB691E40EB524A213A /* ContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractTests.swift; sourceTree = "<group>"; };
+		808BA2FB017A549994C4286E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		85136D710CD094A1416CDC39 /* AppStoreShots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreShots.swift; sourceTree = "<group>"; };
+		8A3683FD6B31B8EAE1CF0441 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		8BC26AFC82E3885572F300BE /* GhostpassApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostpassApp.swift; sourceTree = "<group>"; };
+		8BFC9323CD01EECA1D868523 /* GhostpassAutoFill.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GhostpassAutoFill.entitlements; sourceTree = "<group>"; };
+		8CD9111B9932467099C69770 /* EmergencyTakeoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmergencyTakeoverView.swift; sourceTree = "<group>"; };
+		8FA7BC18DFD0649D670A8C44 /* Ghostpass.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ghostpass.entitlements; sourceTree = "<group>"; };
+		934FE1EF21B6814F8DB7ABA2 /* Favicon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Favicon.swift; sourceTree = "<group>"; };
+		935C5D2808860CA712F4F8FE /* Organizations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Organizations.swift; sourceTree = "<group>"; };
+		96D9DAABD719DE408AD75833 /* GhostpassTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GhostpassTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9781E53F3582403D24056E99 /* Totp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Totp.swift; sourceTree = "<group>"; };
+		9C81E681BEE526814C348EF3 /* CredentialIdentities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialIdentities.swift; sourceTree = "<group>"; };
+		A293CD1A0427C351297E9D26 /* OrganizationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrganizationsView.swift; sourceTree = "<group>"; };
+		A798202602078C4A218675D9 /* Biometrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Biometrics.swift; sourceTree = "<group>"; };
+		B3EC4DF04B1DF3179576A2C2 /* AutoFillStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoFillStore.swift; sourceTree = "<group>"; };
+		B651CE2BF084A3CB6A6409A2 /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
+		B7580C0CF12816E1880FF08D /* Clipboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clipboard.swift; sourceTree = "<group>"; };
+		BBCC62346CCD411821AB5AD8 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		BC9C9A418610E170A1C4D97A /* ItemEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemEditView.swift; sourceTree = "<group>"; };
+		BEB897A123B169DD6AF402E6 /* BiometricOfferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricOfferView.swift; sourceTree = "<group>"; };
+		C1E7987B45FF913AD83FDB94 /* Activity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Activity.swift; sourceTree = "<group>"; };
+		C1F58440FAF147789E38D33D /* ghostpass_crypto_ffi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ghostpass_crypto_ffi.swift; sourceTree = "<group>"; };
+		C592BE7C3CC1091CA13B10FB /* GhostpassAutoFill.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GhostpassAutoFill.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C819B2926C24F6DEF1DC3F37 /* VaultItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultItem.swift; sourceTree = "<group>"; };
+		D5CBD22D85A07AE622C8AA2F /* PasswordHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordHealth.swift; sourceTree = "<group>"; };
+		DA16EC95C4C4D640DE82E046 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		DA991B173D945CECB350A2CB /* OrgVaultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrgVaultView.swift; sourceTree = "<group>"; };
+		DB248916673EED3D0A644764 /* Breach.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Breach.swift; sourceTree = "<group>"; };
+		DCE7483282FAA06CB494EA21 /* RecoverAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoverAccountView.swift; sourceTree = "<group>"; };
+		E09782B8FBE6FE18D851CBFA /* OrgGroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrgGroupView.swift; sourceTree = "<group>"; };
+		E79383E96BE4117F532DD444 /* CredentialProviderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialProviderViewController.swift; sourceTree = "<group>"; };
+		EA43791DE4E8D88E7112F23B /* UnlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockView.swift; sourceTree = "<group>"; };
+		EB1FE3751F4822BA61AEA2E8 /* AutoFillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoFillView.swift; sourceTree = "<group>"; };
+		EC663D861E19595A54824E6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		EC7AB1F179D288B1F4A80745 /* CsvExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CsvExport.swift; sourceTree = "<group>"; };
+		ED58572C0724619BF08D4CD2 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
+		EF3B79F02883D27E2CD432DC /* ExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportView.swift; sourceTree = "<group>"; };
+		F0B02083460AF44B8536B06F /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		F5ED3410AA23711E811DA9F3 /* SiteMatching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiteMatching.swift; sourceTree = "<group>"; };
+		FCAE024FF9E7EFDB63A8675C /* GhostpassCrypto.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = GhostpassCrypto.xcframework; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2A291B0E9E5B5CD79E839A51 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				44274040A0CDEFC78FB095E9 /* GhostpassCrypto.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA1B1A6A5A0E9437352A3787 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1B893CE6FC5EE6A0886A63ED /* GhostpassCrypto.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2233142104FF2D1EF6FD5CEB /* Generated */ = {
+			isa = PBXGroup;
+			children = (
+				C1F58440FAF147789E38D33D /* ghostpass_crypto_ffi.swift */,
+			);
+			path = Generated;
+			sourceTree = "<group>";
+		};
+		2871CC6B968621EA8EAF3B97 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				8A3683FD6B31B8EAE1CF0441 /* Theme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		424A5FA9BADBF2FBDCB80FC6 /* GhostpassAutoFill */ = {
+			isa = PBXGroup;
+			children = (
+				B3EC4DF04B1DF3179576A2C2 /* AutoFillStore.swift */,
+				EB1FE3751F4822BA61AEA2E8 /* AutoFillView.swift */,
+				E79383E96BE4117F532DD444 /* CredentialProviderViewController.swift */,
+				8BFC9323CD01EECA1D868523 /* GhostpassAutoFill.entitlements */,
+				45B04FF28F0B34D0D0F6149C /* Info.plist */,
+				BBCC62346CCD411821AB5AD8 /* InfoPlist.xcstrings */,
+				EC663D861E19595A54824E6D /* PrivacyInfo.xcprivacy */,
+			);
+			path = GhostpassAutoFill;
+			sourceTree = "<group>";
+		};
+		6336E8B051462A0959576BA6 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				C819B2926C24F6DEF1DC3F37 /* VaultItem.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		B47D3A1A1E97DC750AECD927 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				7B9545FB691E40EB524A213A /* ContractTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		B595554FB3A5381297564485 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				4542B78ED95F253E0604B5AC /* Localizable.xcstrings */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		B9E22D19ABE9FF1BCDDF6FB0 = {
+			isa = PBXGroup;
+			children = (
+				2233142104FF2D1EF6FD5CEB /* Generated */,
+				DF1B19F49D81A82DB34A1483 /* Ghostpass */,
+				424A5FA9BADBF2FBDCB80FC6 /* GhostpassAutoFill */,
+				B47D3A1A1E97DC750AECD927 /* Tests */,
+				BB06E7E6F593339C0B0040CF /* UITests */,
+				E5D51B821CD0C868E830B584 /* Frameworks */,
+				DD982EADF137E3A3A86A50AF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BB06E7E6F593339C0B0040CF /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				85136D710CD094A1416CDC39 /* AppStoreShots.swift */,
+				2663EBB5A03CDD0D5FC4A675 /* AutoFillSafariTests.swift */,
+				75EF1D6C5F7EC79E58517695 /* VaultFlowTests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+		BDBA947F6D0EC7654D75CECC /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F0B02083460AF44B8536B06F /* ActivityView.swift */,
+				BEB897A123B169DD6AF402E6 /* BiometricOfferView.swift */,
+				0A2F45D4A9841964C533FCC7 /* BiometricSetupView.swift */,
+				2784B92116A2B67010B9CDF1 /* CollectionAccessView.swift */,
+				5F15C52838BC9503E711552C /* EmergencyInviteView.swift */,
+				8CD9111B9932467099C69770 /* EmergencyTakeoverView.swift */,
+				400710E8FD4D7D65E85B83F9 /* EmergencyVaultView.swift */,
+				125CC75CC15EDC1366255034 /* EmergencyView.swift */,
+				EF3B79F02883D27E2CD432DC /* ExportView.swift */,
+				2AA1C94530B0F727C62D9B33 /* FoldersView.swift */,
+				56C07228461254789CE76251 /* HealthView.swift */,
+				25E741AD7E6F565DF69A1F0D /* ImportView.swift */,
+				401A6A020BD7FC486F3318D5 /* ItemDetailView.swift */,
+				BC9C9A418610E170A1C4D97A /* ItemEditView.swift */,
+				0DA1BC26D45DF2FA50F47CD2 /* MfaView.swift */,
+				0D27A09A42DB328BE06090CF /* OrgAdminView.swift */,
+				A293CD1A0427C351297E9D26 /* OrganizationsView.swift */,
+				E09782B8FBE6FE18D851CBFA /* OrgGroupView.swift */,
+				4146CDC4F2B6BAA2A957C9AF /* OrgInviteView.swift */,
+				DA991B173D945CECB350A2CB /* OrgVaultView.swift */,
+				5ABDAB7FBA7708007AC94A02 /* PasswordGeneratorView.swift */,
+				DCE7483282FAA06CB494EA21 /* RecoverAccountView.swift */,
+				35968DD69609A36D9F27B16A /* RecoveryKeyView.swift */,
+				027F36D46BC3927F9B2483E4 /* SendView.swift */,
+				3296DDA956118E580E0A77A4 /* SettingsView.swift */,
+				0487A211CA452AC0CF235FEB /* TrashView.swift */,
+				EA43791DE4E8D88E7112F23B /* UnlockView.swift */,
+				47C8AFCDA3C497688551CBF8 /* VaultListView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		DD982EADF137E3A3A86A50AF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				66F4E0236E5C4D1555832B53 /* Ghostpass.app */,
+				C592BE7C3CC1091CA13B10FB /* GhostpassAutoFill.appex */,
+				96D9DAABD719DE408AD75833 /* GhostpassTests.xctest */,
+				7688EB702228A4FF69D45A52 /* GhostpassUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DF1B19F49D81A82DB34A1483 /* Ghostpass */ = {
+			isa = PBXGroup;
+			children = (
+				1270C70D842EBCEDA866A94E /* Assets.xcassets */,
+				8FA7BC18DFD0649D670A8C44 /* Ghostpass.entitlements */,
+				8BC26AFC82E3885572F300BE /* GhostpassApp.swift */,
+				1A684C9D752216299E1F288B /* InfoPlist.xcstrings */,
+				808BA2FB017A549994C4286E /* PrivacyInfo.xcprivacy */,
+				6336E8B051462A0959576BA6 /* Model */,
+				B595554FB3A5381297564485 /* Resources */,
+				F78AFCB26B8605E4401BBAB2 /* Services */,
+				2871CC6B968621EA8EAF3B97 /* Theme */,
+				BDBA947F6D0EC7654D75CECC /* Views */,
+			);
+			path = Ghostpass;
+			sourceTree = "<group>";
+		};
+		E5D51B821CD0C868E830B584 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FCAE024FF9E7EFDB63A8675C /* GhostpassCrypto.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F78AFCB26B8605E4401BBAB2 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				C1E7987B45FF913AD83FDB94 /* Activity.swift */,
+				DA16EC95C4C4D640DE82E046 /* APIClient.swift */,
+				A798202602078C4A218675D9 /* Biometrics.swift */,
+				DB248916673EED3D0A644764 /* Breach.swift */,
+				B7580C0CF12816E1880FF08D /* Clipboard.swift */,
+				9C81E681BEE526814C348EF3 /* CredentialIdentities.swift */,
+				EC7AB1F179D288B1F4A80745 /* CsvExport.swift */,
+				6F13E40AFC1813954AB50BFC /* CsvImport.swift */,
+				04007EA75306A80197D12D12 /* EmergencyAccess.swift */,
+				934FE1EF21B6814F8DB7ABA2 /* Favicon.swift */,
+				78BFD3DB135EF2DC973EDE8C /* Keychain.swift */,
+				935C5D2808860CA712F4F8FE /* Organizations.swift */,
+				1C2C4EF61A6039446E12AB11 /* PasswordGenerator.swift */,
+				D5CBD22D85A07AE622C8AA2F /* PasswordHealth.swift */,
+				ED58572C0724619BF08D4CD2 /* Preferences.swift */,
+				4964779BCBD27839580F469B /* ServerAddress.swift */,
+				B651CE2BF084A3CB6A6409A2 /* SharedStore.swift */,
+				F5ED3410AA23711E811DA9F3 /* SiteMatching.swift */,
+				9781E53F3582403D24056E99 /* Totp.swift */,
+				44A48D8C72467E09FE893C47 /* VaultCache.swift */,
+				0FD464FB7581507E5D97CC5C /* VaultStore.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0EF89ADC814753AE94AD50A1 /* GhostpassTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 466974699931F73037DDE011 /* Build configuration list for PBXNativeTarget "GhostpassTests" */;
+			buildPhases = (
+				B0F41395B58739CC1DB6772F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C1E360B9179F9087EABEAFA5 /* PBXTargetDependency */,
+			);
+			name = GhostpassTests;
+			packageProductDependencies = (
+			);
+			productName = GhostpassTests;
+			productReference = 96D9DAABD719DE408AD75833 /* GhostpassTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		38DF9DF0AFDC206BA85D138F /* GhostpassUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7F23D24AC082FE1A59DAB5CF /* Build configuration list for PBXNativeTarget "GhostpassUITests" */;
+			buildPhases = (
+				8A50F6249FB4979DEA047AC0 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B54BA22916F94896410108A3 /* PBXTargetDependency */,
+			);
+			name = GhostpassUITests;
+			packageProductDependencies = (
+			);
+			productName = GhostpassUITests;
+			productReference = 7688EB702228A4FF69D45A52 /* GhostpassUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		A2158EF0748B6675E7F06367 /* GhostpassAutoFill */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6D4B4586ED13B25EB8F57C84 /* Build configuration list for PBXNativeTarget "GhostpassAutoFill" */;
+			buildPhases = (
+				CFF25F806398D2FA0D1825D1 /* Sources */,
+				A17BF7EB503492F653503EAB /* Resources */,
+				2A291B0E9E5B5CD79E839A51 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GhostpassAutoFill;
+			packageProductDependencies = (
+			);
+			productName = GhostpassAutoFill;
+			productReference = C592BE7C3CC1091CA13B10FB /* GhostpassAutoFill.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		EA4B1A7DB598676FBC52EB40 /* Ghostpass */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6CD4B5D754844EDA82A1903A /* Build configuration list for PBXNativeTarget "Ghostpass" */;
+			buildPhases = (
+				9155E84D58BE6297D167A419 /* Sources */,
+				451D4D73AF6589FAB33CF30E /* Resources */,
+				DA1B1A6A5A0E9437352A3787 /* Frameworks */,
+				CF229B220DBB945BC8AEEF16 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				09292148ABCEE1630E7C3457 /* PBXTargetDependency */,
+			);
+			name = Ghostpass;
+			packageProductDependencies = (
+			);
+			productName = Ghostpass;
+			productReference = 66F4E0236E5C4D1555832B53 /* Ghostpass.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BB096527CEB14D9CD490ED0D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					0EF89ADC814753AE94AD50A1 = {
+						ProvisioningStyle = Automatic;
+					};
+					38DF9DF0AFDC206BA85D138F = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = EA4B1A7DB598676FBC52EB40;
+					};
+					A2158EF0748B6675E7F06367 = {
+						ProvisioningStyle = Automatic;
+					};
+					EA4B1A7DB598676FBC52EB40 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 658A6DB144813350CF6BD392 /* Build configuration list for PBXProject "GhostpassPerso" */;
+			developmentRegion = fr;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+				fr,
+			);
+			mainGroup = B9E22D19ABE9FF1BCDDF6FB0;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = DD982EADF137E3A3A86A50AF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EA4B1A7DB598676FBC52EB40 /* Ghostpass */,
+				A2158EF0748B6675E7F06367 /* GhostpassAutoFill */,
+				0EF89ADC814753AE94AD50A1 /* GhostpassTests */,
+				38DF9DF0AFDC206BA85D138F /* GhostpassUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		451D4D73AF6589FAB33CF30E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5609DF66227FD76C43D1FBB0 /* Assets.xcassets in Resources */,
+				D1EB785F73C8FB6802614878 /* InfoPlist.xcstrings in Resources */,
+				76090D7E95A4D60BE6D5005A /* Localizable.xcstrings in Resources */,
+				F86A31936D45B575ABED9A0C /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A17BF7EB503492F653503EAB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1F0499E91A4283751FEA737C /* InfoPlist.xcstrings in Resources */,
+				8C2C786E36137F6CC3F02286 /* Localizable.xcstrings in Resources */,
+				27B3759FF0A694C743CD7ED5 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8A50F6249FB4979DEA047AC0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2538D9ADF9A1397A53532CA5 /* AppStoreShots.swift in Sources */,
+				45CF3E8C959AB968AC89576C /* AutoFillSafariTests.swift in Sources */,
+				58491EE2BE6AB4D381BF7C24 /* VaultFlowTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9155E84D58BE6297D167A419 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D872D81CFA475E0893474022 /* APIClient.swift in Sources */,
+				A40DC51D1955C6FF3F3E9A01 /* Activity.swift in Sources */,
+				787D64F4DC17B8CD6AB6B09F /* ActivityView.swift in Sources */,
+				696317289B2631B13674EE09 /* BiometricOfferView.swift in Sources */,
+				415072582618DE80C822272F /* BiometricSetupView.swift in Sources */,
+				E92D633CD0B85B70ECA1A22F /* Biometrics.swift in Sources */,
+				BF07404E0CF9CF2CD3FF907D /* Breach.swift in Sources */,
+				8094D987F03E9C4FBA4C78DB /* Clipboard.swift in Sources */,
+				B425CB0BE93716A6A297A052 /* CollectionAccessView.swift in Sources */,
+				C5A9ABAE3C61DCA7FB624D81 /* CredentialIdentities.swift in Sources */,
+				75EEB00E21B2D00075C3C2E0 /* CsvExport.swift in Sources */,
+				E124C9641D6A71ED9EABDC60 /* CsvImport.swift in Sources */,
+				F5A7CB5E7916EA0BB65F679F /* EmergencyAccess.swift in Sources */,
+				44727A0BD58B496D6EA38E74 /* EmergencyInviteView.swift in Sources */,
+				0AF84832E77228966EB29FBF /* EmergencyTakeoverView.swift in Sources */,
+				1A56AAAD52B35EF80195CB8C /* EmergencyVaultView.swift in Sources */,
+				B995D6F7544F2DEFCC0CC604 /* EmergencyView.swift in Sources */,
+				C4824EB06A4A28A781DEC36B /* ExportView.swift in Sources */,
+				2E3FB5B2A2219982EB17E330 /* Favicon.swift in Sources */,
+				301939628EB33EF2EC2BDD02 /* FoldersView.swift in Sources */,
+				DECD05B5148D79C37D1521FB /* GhostpassApp.swift in Sources */,
+				F7EAE89729EEF440C1245590 /* HealthView.swift in Sources */,
+				8B1BFEF86FD46D7DE06BAD69 /* ImportView.swift in Sources */,
+				14D11CA4B47B1D215C1375D7 /* ItemDetailView.swift in Sources */,
+				7FA038F8D55650D8A6B5DD0B /* ItemEditView.swift in Sources */,
+				4D0158762C0951F13E3B982E /* Keychain.swift in Sources */,
+				BA2C7A361852165CEEF21EB7 /* MfaView.swift in Sources */,
+				110496E28E20386471578F78 /* OrgAdminView.swift in Sources */,
+				7537B1E0AEFAC933AEB35E33 /* OrgGroupView.swift in Sources */,
+				DCD4344CBDBDE5DA45B06485 /* OrgInviteView.swift in Sources */,
+				E2755F60A79FD3327C9230F5 /* OrgVaultView.swift in Sources */,
+				D22DBBA288B8BF4B7BC163E0 /* Organizations.swift in Sources */,
+				5469467BA3FF879E73F9A5DE /* OrganizationsView.swift in Sources */,
+				5D2B2191AAC9B6077E02D7AF /* PasswordGenerator.swift in Sources */,
+				AFD788BA28AB404C65CD2BFD /* PasswordGeneratorView.swift in Sources */,
+				8BA26F7011B2E672395BAE3C /* PasswordHealth.swift in Sources */,
+				0A974A07AF2D71ED1C206B3B /* Preferences.swift in Sources */,
+				05F15EEC58F78C3D917D1928 /* RecoverAccountView.swift in Sources */,
+				70F41D050CAB4C2054181665 /* RecoveryKeyView.swift in Sources */,
+				EF9D9AAEEFD7302EA078029D /* SendView.swift in Sources */,
+				9B751E6660D3E54CD7C6AEF2 /* ServerAddress.swift in Sources */,
+				0213BE36ED207C388A288890 /* SettingsView.swift in Sources */,
+				45F565F9088628AE75225DAA /* SharedStore.swift in Sources */,
+				81257245F57B32C947C6D101 /* SiteMatching.swift in Sources */,
+				481597BF769E20514FE17352 /* Theme.swift in Sources */,
+				FCABC0EBB06DB4200591F4FC /* Totp.swift in Sources */,
+				CE7FEADBEB6A6528438D2056 /* TrashView.swift in Sources */,
+				CE213FA5585D541B2A77B61A /* UnlockView.swift in Sources */,
+				E24CC5E119093CF01E0121B7 /* VaultCache.swift in Sources */,
+				75748BD4EBD63EE351179FCD /* VaultItem.swift in Sources */,
+				E8FB8ADA1FDEA6963A6BAC3E /* VaultListView.swift in Sources */,
+				938A1B93E4CB1D14A9AEA1F4 /* VaultStore.swift in Sources */,
+				91DB0F022FA60866DB325897 /* ghostpass_crypto_ffi.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B0F41395B58739CC1DB6772F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DC3A171920CD1CCDA02D3AD2 /* ContractTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CFF25F806398D2FA0D1825D1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A5567A2A2DB602B4F3B892BB /* APIClient.swift in Sources */,
+				AD1100742865C15DC91D3A69 /* Activity.swift in Sources */,
+				CC9BB89403F53FE1F38FC641 /* AutoFillStore.swift in Sources */,
+				910EC71BDD5B16F6B6130F53 /* AutoFillView.swift in Sources */,
+				C6A12AF8B45603CAFEC61F94 /* Biometrics.swift in Sources */,
+				F89292E4D464F05DD380F4C7 /* Breach.swift in Sources */,
+				1FDA2FB99979956BFD004AED /* Clipboard.swift in Sources */,
+				6505A4AE55B173953A8551F6 /* CredentialIdentities.swift in Sources */,
+				F50DF3AC4059D53FE11240BC /* CredentialProviderViewController.swift in Sources */,
+				EE194CFC0BE6A0375DDB3A4E /* CsvExport.swift in Sources */,
+				23B9E035D49E306730A480AA /* CsvImport.swift in Sources */,
+				753CBDCB0D61215FC6FFD33D /* EmergencyAccess.swift in Sources */,
+				D0FA027BCBA76DA2B46C78CE /* Favicon.swift in Sources */,
+				8F53E23C9E766079CE9178E0 /* Keychain.swift in Sources */,
+				DE4DA11C075265D3524A08CD /* Organizations.swift in Sources */,
+				47BE61A504349CD94012022D /* PasswordGenerator.swift in Sources */,
+				727C8C295660F2C00798902E /* PasswordHealth.swift in Sources */,
+				7AA5089918B2825EBBC9043B /* Preferences.swift in Sources */,
+				66D7BBB92DADE9CDED8B4F15 /* ServerAddress.swift in Sources */,
+				3ECCC5827771276219A3AB76 /* SharedStore.swift in Sources */,
+				1E7C2DF59597E7E779E1740D /* SiteMatching.swift in Sources */,
+				CAEE5C8C8BC4B6DA4212FF7D /* Theme.swift in Sources */,
+				99EC420A6075320C264F90F6 /* Totp.swift in Sources */,
+				51A7D6E8D1538C2BD0ECB956 /* VaultCache.swift in Sources */,
+				D715A05B64C81CA38D913F34 /* VaultItem.swift in Sources */,
+				660E1F61003121F40FB06381 /* VaultStore.swift in Sources */,
+				CB88EC80E50125000FED0B97 /* ghostpass_crypto_ffi.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		09292148ABCEE1630E7C3457 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A2158EF0748B6675E7F06367 /* GhostpassAutoFill */;
+			targetProxy = F4415C55C2B00F62530EE035 /* PBXContainerItemProxy */;
+		};
+		B54BA22916F94896410108A3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EA4B1A7DB598676FBC52EB40 /* Ghostpass */;
+			targetProxy = B75715A385D80CD55788976A /* PBXContainerItemProxy */;
+		};
+		C1E360B9179F9087EABEAFA5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EA4B1A7DB598676FBC52EB40 /* Ghostpass */;
+			targetProxy = 20509EF6CAF2CB4E04685F1D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0A0767131B81E7819D8D49D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = GhostpassAutoFill/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GhostPass;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID déverrouille votre coffre pour remplir vos identifiants.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				OTHER_LDFLAGS = "-lc++";
+				PRODUCT_BUNDLE_IDENTIFIER = ch.stackops.ghostpass.essai.autofill;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		1E2D4056084322F7CFDCF047 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		49DD3389BDD137D4A8CC52FE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		54E47BE694868FC64277A728 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ch.stackops.ghostpass.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Ghostpass;
+			};
+			name = Debug;
+		};
+		6268DF232826D1DE327E88F3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = GhostPass;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = YES;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID déverrouille votre coffre sans ressaisir le mot de passe maître.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = "-lc++";
+				PRODUCT_BUNDLE_IDENTIFIER = ch.stackops.ghostpass.essai;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		799F634F9A37E75657A384DE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ch.stackops.ghostpass.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ghostpass.app/Ghostpass";
+			};
+			name = Release;
+		};
+		B2B50B3B8B7344F70037B451 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ch.stackops.ghostpass.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Ghostpass;
+			};
+			name = Release;
+		};
+		D12238D46AEECE543065ED58 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ch.stackops.ghostpass.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ghostpass.app/Ghostpass";
+			};
+			name = Debug;
+		};
+		D5DD0B4605679BC1523C72F9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = GhostPass;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = YES;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID déverrouille votre coffre sans ressaisir le mot de passe maître.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = "-lc++";
+				PRODUCT_BUNDLE_IDENTIFIER = ch.stackops.ghostpass.essai;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		DFB82D0308354D7265D382CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = GhostpassAutoFill/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GhostPass;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID déverrouille votre coffre pour remplir vos identifiants.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				OTHER_LDFLAGS = "-lc++";
+				PRODUCT_BUNDLE_IDENTIFIER = ch.stackops.ghostpass.essai.autofill;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		466974699931F73037DDE011 /* Build configuration list for PBXNativeTarget "GhostpassTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D12238D46AEECE543065ED58 /* Debug */,
+				799F634F9A37E75657A384DE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		658A6DB144813350CF6BD392 /* Build configuration list for PBXProject "GhostpassPerso" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E2D4056084322F7CFDCF047 /* Debug */,
+				49DD3389BDD137D4A8CC52FE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6CD4B5D754844EDA82A1903A /* Build configuration list for PBXNativeTarget "Ghostpass" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6268DF232826D1DE327E88F3 /* Debug */,
+				D5DD0B4605679BC1523C72F9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6D4B4586ED13B25EB8F57C84 /* Build configuration list for PBXNativeTarget "GhostpassAutoFill" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0A0767131B81E7819D8D49D3 /* Debug */,
+				DFB82D0308354D7265D382CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7F23D24AC082FE1A59DAB5CF /* Build configuration list for PBXNativeTarget "GhostpassUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				54E47BE694868FC64277A728 /* Debug */,
+				B2B50B3B8B7344F70037B451 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BB096527CEB14D9CD490ED0D /* Project object */;
+}

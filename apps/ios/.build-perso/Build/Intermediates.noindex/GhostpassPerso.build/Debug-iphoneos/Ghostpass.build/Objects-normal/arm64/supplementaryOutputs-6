@@ -1,0 +1,23 @@
+{
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/ImportView.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ImportView.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ImportView.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ImportView.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ImportView.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ImportView.swiftdeps"
+  },
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/ItemDetailView.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemDetailView.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemDetailView.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemDetailView.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemDetailView.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemDetailView.swiftdeps"
+  },
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/ItemEditView.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemEditView.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemEditView.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemEditView.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemEditView.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ItemEditView.swiftdeps"
+  }
+}

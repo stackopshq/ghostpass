@@ -1,0 +1,826 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key></key>
+	<string></string>
+	<key> — effacé dans %lld s</key>
+	<string> — cleared in %lld s</string>
+	<key>%1$@ n'a pas pu être activé (code %2$d).</key>
+	<string>%1$@ could not be enabled (code %2$d).</string>
+	<key>%1$d membres · %2$d collections</key>
+	<string>%1$d members · %2$d collections</string>
+	<key>%@ n'a pas permis d'ouvrir le coffre.</key>
+	<string>%@ could not open the vault.</string>
+	<key>%@ n'a pas pu être activé (code %d).</key>
+	<string>%@ could not be enabled (code %d).</string>
+	<key>%@ ne pourra plus ouvrir son coffre.</key>
+	<string>%@ will no longer be able to open their vault.</string>
+	<key>%d consultation(s)</key>
+	<string>%d view(s)</string>
+	<key>%d jours</key>
+	<string>%d days</string>
+	<key>%d membre(s)</key>
+	<string>%d member(s)</string>
+	<key>%lld</key>
+	<string>%lld</string>
+	<key>%lld entrées importées.</key>
+	<string>%lld entries imported.</string>
+	<key>%lld mots de passe à revoir</key>
+	<string>%lld passwords to review</string>
+	<key>%lld s</key>
+	<string>%lld s</string>
+	<key>%lld éléments examinés</key>
+	<string>%lld items examined</string>
+	<key>(sans nom)</key>
+	<string>(no name)</string>
+	<key>1 heure</key>
+	<string>1 hour</string>
+	<key>1 jour</key>
+	<string>1 day</string>
+	<key>1 semaine</key>
+	<string>1 week</string>
+	<key>123456</key>
+	<string>123456</string>
+	<key>30 jours</key>
+	<string>30 days</string>
+	<key>AAAA</key>
+	<string>YYYY</string>
+	<key>Accepter</key>
+	<string>Accept</string>
+	<key>Accepter vous donnera accès aux coffres que l'équipe partage avec vous.</key>
+	<string>Accepting will give you access to the vaults the team shares with you.</string>
+	<key>Accorder à un membre</key>
+	<string>Grant to a member</string>
+	<key>Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran.</key>
+	<string>Granted to a specific person. These are the only ones this screen can remove.</string>
+	<key>Accès accordé à une collection</key>
+	<string>Access granted to a collection</string>
+	<key>Accès automatique le %@ si vous ne faites rien.</key>
+	<string>Access opens automatically on %@ unless you act.</string>
+	<key>Accès d'urgence</key>
+	<string>Emergency access</string>
+	<key>Accès d'urgence accordé</key>
+	<string>Emergency access approved</string>
+	<key>Accès d'urgence confié</key>
+	<string>Emergency access granted to a contact</string>
+	<key>Accès d'urgence demandé</key>
+	<string>Emergency access requested</string>
+	<key>Accès demandé</key>
+	<string>Access requested</string>
+	<key>Accès nommés</key>
+	<string>Named access</string>
+	<key>Accès ouvert</key>
+	<string>Access open</string>
+	<key>Accès possible à partir du %@.</key>
+	<string>Access available from %@.</string>
+	<key>Accès retiré à une collection</key>
+	<string>Access revoked from a collection</string>
+	<key>Accès révoqué</key>
+	<string>Access revoked</string>
+	<key>Accès révoqués</key>
+	<string>Revoked access</string>
+	<key>Actions sensibles</key>
+	<string>Sensitive actions</string>
+	<key>Activer</key>
+	<string>Turn on</string>
+	<key>Activer %@</key>
+	<string>Turn on %@</string>
+	<key>Administrateur</key>
+	<string>Administrator</string>
+	<key>Administration</key>
+	<string>Administration</string>
+	<key>Adresse copiée</key>
+	<string>Address copied</string>
+	<key>Adresse de serveur invalide.</key>
+	<string>Invalid server address.</string>
+	<key>Adresse du site</key>
+	<string>Website address</string>
+	<key>Adresse e-mail</key>
+	<string>Email address</string>
+	<key>Adresses</key>
+	<string>Addresses</string>
+	<key>Afficher les logos</key>
+	<string>Show logos</string>
+	<key>Ajoutez un identifiant avec le bouton +.</key>
+	<string>Add a login with the + button.</string>
+	<key>Ancien mot de passe copié</key>
+	<string>Previous password copied</string>
+	<key>Anciens mots de passe (%lld)</key>
+	<string>Previous passwords (%lld)</string>
+	<key>Annuler</key>
+	<string>Cancel</string>
+	<key>Aperçu</key>
+	<string>Preview</string>
+	<key>Apparence</key>
+	<string>Appearance</string>
+	<key>Après 1 minute</key>
+	<string>After 1 minute</string>
+	<key>Après 15 minutes</key>
+	<string>After 15 minutes</string>
+	<key>Après 5 minutes</key>
+	<string>After 5 minutes</string>
+	<key>Aucun accès</key>
+	<string>No access</string>
+	<key>Aucun code</key>
+	<string>No codes</string>
+	<key>Aucun compte du coffre n'a de code à usage unique.</key>
+	<string>No account in your vault has a one-time code.</string>
+	<key>Aucun dossier</key>
+	<string>No folders</string>
+	<key>Aucun identifiant</key>
+	<string>No logins</string>
+	<key>Aucun identifiant dans la copie locale du coffre.</key>
+	<string>No logins in the local copy of your vault.</string>
+	<key>Aucun mot de passe connu des fuites publiques.</key>
+	<string>No password known to public breaches.</string>
+	<key>Aucune action enregistrée.</key>
+	<string>No action recorded.</string>
+	<key>Aucune clé ne vous a encore été remise pour ce coffre.</key>
+	<string>No key has been handed to you for this vault yet.</string>
+	<key>Aucune collection ne vous est ouverte dans cette équipe. Un administrateur doit vous y donner accès.</key>
+	<string>No collection is open to you in this team. An administrator must grant you access.</string>
+	<key>Aucune collection.</key>
+	<string>No collection.</string>
+	<key>Aucune connexion enregistrée.</key>
+	<string>No sign-in recorded.</string>
+	<key>Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont pas reconnues.</key>
+	<string>No entry found: the file is empty, or its columns are not recognised.</string>
+	<key>Aucune session enregistrée sur cet appareil.</key>
+	<string>No session saved on this device.</string>
+	<key>Autres comptes</key>
+	<string>Other accounts</string>
+	<key>Autres identifiants</key>
+	<string>Other logins</string>
+	<key>Bon</key>
+	<string>Good</string>
+	<key>Caractères</key>
+	<string>Characters</string>
+	<key>Carte</key>
+	<string>Card</string>
+	<key>Ce coffre d'équipe n'est plus accessible.</key>
+	<string>This team vault is no longer accessible.</string>
+	<key>Ce coffre est vide.</key>
+	<string>This vault is empty.</string>
+	<key>Ce compte n'a pas de code à usage unique exploitable.</key>
+	<string>This account has no usable one-time code.</string>
+	<key>Ce qu'il pourra faire</key>
+	<string>What they will be able to do</string>
+	<key>Ce que d'autres vous ont laissé, et ce que vous pouvez en faire.</key>
+	<string>What others have left you, and what you can do with it.</string>
+	<key>Ce que le groupe ouvre</key>
+	<string>What the group opens</string>
+	<key>Ce qui retire une protection ou ouvre le coffre à quelqu'un d'autre. Une ligne que vous ne reconnaissez pas mérite de changer votre mot de passe maître.</key>
+	<string>Anything that removes a protection or opens the vault to someone else. A line you do not recognise is worth changing your master password over.</string>
+	<key>Ce secret ne sera plus affiché. Sans lui et sans votre application, la connexion deviendra impossible — gardez un moyen de secours.</key>
+	<string>This secret will not be shown again. Without it and without your app, signing in becomes impossible — keep a backup.</string>
+	<key>Ce serveur ne propose pas encore le second facteur.</key>
+	<string>This server does not offer two-factor authentication yet.</string>
+	<key>Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent.</key>
+	<string>These cannot be removed here: they come from the group, and that is where they are set.</string>
+	<key>Ces coffres ne s'ouvrent plus. Après une rotation de clé, ce que vous en aviez vu reste connu de vous — les mots de passe concernés doivent être changés par l'équipe.</key>
+	<string>These vaults no longer open. After a key rotation, what you already saw remains known to you — the passwords involved must be changed by the team.</string>
+	<key>Cette collection est vide.</key>
+	<string>This collection is empty.</string>
+	<key>Cette personne gardera l'accès : elle administre l'équipe, ce qui lui donne la gestion de toutes les collections.</key>
+	<string>This person will keep access: they administer the team, which grants them management of every collection.</string>
+	<key>Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe.</key>
+	<string>This person will keep access: the “%@” group grants it too. To remove it entirely, take them out of that group.</string>
+	<key>Cette personne perdra l'accès à cette collection.</key>
+	<string>This person will lose access to this collection.</string>
+	<key>Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre.</key>
+	<string>This build of the app has no app group: AutoFill cannot read the vault.</string>
+	<key>Chiffres</key>
+	<string>Digits</string>
+	<key>Choisir un fichier</key>
+	<string>Choose a file</string>
+	<key>Choisir un nouveau mot de passe maître rendra le coffre inaccessible à son propriétaire actuel. À ne faire que s'il ne peut plus s'en servir lui-même.</key>
+	<string>Setting a new master password will lock the current owner out of the vault. Only do this if they can no longer use it themselves.</string>
+	<key>Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues.</key>
+	<string>Choose the CSV file exported by your current manager. Columns from Bitwarden, Dashlane, 1Password, LastPass and Chrome are recognised.</string>
+	<key>Clair</key>
+	<string>Light</string>
+	<key>Classement</key>
+	<string>Organisation</string>
+	<key>Clé d'équipe renouvelée</key>
+	<string>Team key rotated</string>
+	<key>Clé de récupération</key>
+	<string>Recovery key</string>
+	<key>Clé de récupération refusée.</key>
+	<string>Recovery key refused.</string>
+	<key>Clé de sécurité ajoutée</key>
+	<string>Security key added</string>
+	<key>Clé de sécurité retirée</key>
+	<string>Security key removed</string>
+	<key>Clé de vérification illisible.</key>
+	<string>Unreadable verification key.</string>
+	<key>Clé ou URI otpauth://</key>
+	<string>Key or otpauth:// URI</string>
+	<key>Code copié</key>
+	<string>Code copied</string>
+	<key>Code à six chiffres</key>
+	<string>Six-digit code</string>
+	<key>Code à usage unique</key>
+	<string>One-time code</string>
+	<key>Coffre</key>
+	<string>Vault</string>
+	<key>Coffre chiffré de bout en bout</key>
+	<string>End-to-end encrypted vault</string>
+	<key>Coffre enregistré sur cet appareil</key>
+	<string>Vault saved on this device</string>
+	<key>Coffre indisponible</key>
+	<string>Vault unavailable</string>
+	<key>Coffre vide</key>
+	<string>Empty vault</string>
+	<key>Coffres partagés</key>
+	<string>Shared vaults</string>
+	<key>Coffres qui me sont confiés</key>
+	<string>Vaults entrusted to me</string>
+	<key>Collection</key>
+	<string>Collection</string>
+	<key>Collections</key>
+	<string>Collections</string>
+	<key>Compte</key>
+	<string>Account</string>
+	<key>Confier l'accès</key>
+	<string>Grant access</string>
+	<key>Configurer</key>
+	<string>Set up</string>
+	<key>Confirmer</key>
+	<string>Confirm</string>
+	<key>Connexion par SSO</key>
+	<string>Signed in with SSO</string>
+	<key>Connexion par mot de passe</key>
+	<string>Signed in with password</string>
+	<key>Connexion par passkey</key>
+	<string>Signed in with a passkey</string>
+	<key>Connexions</key>
+	<string>Sign-ins</string>
+	<key>Consultations</key>
+	<string>Views</string>
+	<key>Contact accepté</key>
+	<string>Contact accepted</string>
+	<key>Contenu</key>
+	<string>Content</string>
+	<key>Copier la clé</key>
+	<string>Copy key</string>
+	<key>Copier le code</key>
+	<string>Copy code</string>
+	<key>Copier le lien</key>
+	<string>Copy the link</string>
+	<key>Copier le mot de passe</key>
+	<string>Copy password</string>
+	<key>Copier le nom d'utilisateur</key>
+	<string>Copy username</string>
+	<key>Copier le secret</key>
+	<string>Copy the secret</string>
+	<key>Copiée</key>
+	<string>Copied</string>
+	<key>Corbeille</key>
+	<string>Trash</string>
+	<key>Corbeille vide</key>
+	<string>Trash is empty</string>
+	<key>Correct</key>
+	<string>Fair</string>
+	<key>Cryptogramme</key>
+	<string>Security code</string>
+	<key>Créer</key>
+	<string>Create</string>
+	<key>Créer le lien</key>
+	<string>Create the link</string>
+	<key>Créer une clé de récupération</key>
+	<string>Create a recovery key</string>
+	<key>Créez-en un, ou renseignez un dossier sur un élément.</key>
+	<string>Create one, or set a folder on an item.</string>
+	<key>Créez-en une, ou attendez qu'on vous invite : les équipes dont vous ferez partie apparaîtront ici.</key>
+	<string>Create one, or wait to be invited: the teams you belong to will appear here.</string>
+	<key>Demande refusée</key>
+	<string>Request denied</string>
+	<key>Demander l'accès</key>
+	<string>Request access</string>
+	<key>Demander l'accès préviendra %1$@, qui aura %2$d jours pour refuser.</key>
+	<string>Requesting access will notify %1$@, who will have %2$d days to deny it.</string>
+	<key>Dossier</key>
+	<string>Folder</string>
+	<key>Dossier — Travail/Serveurs</key>
+	<string>Folder — Work/Servers</string>
+	<key>Dossiers</key>
+	<string>Folders</string>
+	<key>Douze caractères au minimum. Il remplacera celui du propriétaire.</key>
+	<string>Twelve characters minimum. It will replace the owner's.</string>
+	<key>Durée de vie</key>
+	<string>Lifetime</string>
+	<key>Déconnexion</key>
+	<string>Signed out</string>
+	<key>Désactiver %@</key>
+	<string>Turn off %@</string>
+	<key>Désactiver le second facteur</key>
+	<string>Turn off two-factor</string>
+	<key>Déverrouiller</key>
+	<string>Unlock</string>
+	<key>Déverrouiller avec %@</key>
+	<string>Unlock with %@</string>
+	<key>Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe.</key>
+	<string>They must already have a GhostPass account: it is their public key that protects the team's.</string>
+	<key>Elle ne sera plus affichée. Sans elle, un mot de passe maître oublié rend le coffre définitivement illisible.</key>
+	<string>It will not be shown again. Without it, a forgotten master password makes the vault permanently unreadable.</string>
+	<key>Enregistrer</key>
+	<string>Save</string>
+	<key>Entrées trouvées</key>
+	<string>Entries found</string>
+	<key>Erreur</key>
+	<string>Error</string>
+	<key>Excellent</key>
+	<string>Excellent</string>
+	<key>Expiration</key>
+	<string>Expiry</string>
+	<key>Exporter</key>
+	<string>Export</string>
+	<key>Exporter le coffre</key>
+	<string>Export the vault</string>
+	<key>Faible</key>
+	<string>Weak</string>
+	<key>Favoris</key>
+	<string>Favourites</string>
+	<key>Fermer</key>
+	<string>Close</string>
+	<key>Fichier</key>
+	<string>File</string>
+	<key>Fichier enregistré.</key>
+	<string>File saved.</string>
+	<key>Force</key>
+	<string>Strength</string>
+	<key>Fuites connues</key>
+	<string>Known breaches</string>
+	<key>Gestion</key>
+	<string>Manage</string>
+	<key>GhostPass</key>
+	<string>GhostPass</string>
+	<key>GitHub, Amazon…</key>
+	<string>GitHub, Amazon…</string>
+	<key>Groupe créé</key>
+	<string>Group created</string>
+	<key>Groupe supprimé</key>
+	<string>Group deleted</string>
+	<key>Groupes</key>
+	<string>Groups</string>
+	<key>Générer</key>
+	<string>Generate</string>
+	<key>Hors ligne — coffre affiché depuis cet appareil</key>
+	<string>Offline — vault shown from this device</string>
+	<key>Huit caractères au minimum.</key>
+	<string>Eight characters minimum.</string>
+	<key>Icônes des sites</key>
+	<string>Site icons</string>
+	<key>Identifiant</key>
+	<string>Login</string>
+	<key>Identifiants</key>
+	<string>Credentials</string>
+	<key>Il doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège la vôtre.</key>
+	<string>They must already have a GhostPass account: it is their public key that protects yours.</string>
+	<key>Il est chiffré sur cet appareil. Le serveur n'en reçoit que le chiffre, jamais la clé.</key>
+	<string>It is encrypted on this device. The server only receives the ciphertext, never the key.</string>
+	<key>Il est vérifié sur cet appareil et n'en sort pas : le serveur n'en reçoit qu'une empreinte.</key>
+	<string>It is verified on this device and does not leave it: the server only receives a hash.</string>
+	<key>Ils pourront ouvrir votre coffre si vous ne le pouvez plus. Vous gardez la main tant que vous répondez.</key>
+	<string>They can open your vault if you no longer can. You stay in control as long as you answer.</string>
+	<key>Immédiatement</key>
+	<string>Immediately</string>
+	<key>Importer</key>
+	<string>Import</string>
+	<key>Importer %lld entrées</key>
+	<string>Import %lld entries</string>
+	<key>Importer un CSV</key>
+	<string>Import a CSV</string>
+	<key>Impossible d'obtenir la clé publique de %@ : rotation annulée.</key>
+	<string>Could not obtain %@'s public key: rotation cancelled.</string>
+	<key>Invitation envoyée</key>
+	<string>Invitation sent</string>
+	<key>Invitation reçue</key>
+	<string>Invitation received</string>
+	<key>Invitations</key>
+	<string>Invitations</string>
+	<key>Inviter</key>
+	<string>Invite</string>
+	<key>Inviter quelqu'un</key>
+	<string>Invite someone</string>
+	<key>Inviter quelqu'un lui scelle la clé de l'équipe vers sa clé publique. Le serveur ne transporte qu'un blob qu'il ne peut pas ouvrir.</key>
+	<string>Inviting someone seals the team key to their public key. The server only carries a blob it cannot open.</string>
+	<key>Journal du compte</key>
+	<string>Account log</string>
+	<key>La clé de l'équipe sera changée et redistribuée aux autres membres. Ce que cette personne a déjà vu reste connu d'elle : les mots de passe concernés doivent être changés.</key>
+	<string>The team key will be changed and redistributed to the other members. What this person already saw remains known to them: the passwords involved must be changed.</string>
+	<key>La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre.</key>
+	<string>The recovery key is the only way out. Write it down and keep it somewhere other than this vault.</string>
+	<key>La clé du coffre est créée sur cet appareil et scellée pour vous seul. Le serveur n'en connaîtra jamais le contenu.</key>
+	<string>The vault key is created on this device and sealed for you alone. The server will never know its contents.</string>
+	<key>La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil.</key>
+	<string>The key stays encrypted in the item; codes are computed on the device.</string>
+	<key>La clé se trouve après le # du lien. Elle n'a jamais été envoyée au serveur, et ne peut plus être retrouvée si vous perdez le lien.</key>
+	<string>The key sits after the # in the link. It was never sent to the server, and cannot be recovered if you lose the link.</string>
+	<key>La personne</key>
+	<string>The person</string>
+	<key>Langue</key>
+	<string>Language</string>
+	<key>Le changement s'applique aussitôt, sans redémarrer l'application.</key>
+	<string>The change takes effect immediately, without restarting the app.</string>
+	<key>Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun tiers n'est sollicité.</key>
+	<string>The vault is end-to-end encrypted: the server does not know its contents. Asking for an icon, however, names a domain to it. No third party is involved.</string>
+	<key>Le coffre local ne contient rien.</key>
+	<string>The local vault is empty.</string>
+	<key>Le contact</key>
+	<string>The contact</string>
+	<key>Le contact ne pourra plus ouvrir votre coffre. La clé qui lui avait été scellée devient inutilisable.</key>
+	<string>The contact will no longer be able to open your vault. The key sealed for them becomes unusable.</string>
+	<key>Le contact pourra en plus choisir un nouveau mot de passe maître — ce qui vous exclura de votre propre coffre.</key>
+	<string>The contact can also set a new master password — which will lock you out of your own vault.</string>
+	<key>Le contact pourra lire vos identifiants, sans rien y changer ni vous en priver.</key>
+	<string>The contact can read your credentials, without changing them or locking you out.</string>
+	<key>Le conteneur partagé n'est pas accessible : cette version de l'application n'a pas le groupe d'applications. Le remplissage ne peut pas lire le coffre.</key>
+	<string>The shared container is unavailable: this build of the app has no app group. AutoFill cannot read the vault.</string>
+	<key>Le délai avant ouverture</key>
+	<string>The delay before access opens</string>
+	<key>Le fichier contiendra vos %lld entrées, mots de passe compris, en clair. Il se relit dans n'importe quel gestionnaire — et par n'importe qui.</key>
+	<string>The file will hold your %lld entries, passwords included, in the clear. Any manager can read it — and so can anyone.</string>
+	<key>Le fichier est lu sur l'appareil et rien d'autre n'en sort : chaque entrée est chiffrée avant d'être déposée. Pensez à l'effacer ensuite — un export CSV contient vos mots de passe en clair.</key>
+	<string>The file is read on the device and nothing else leaves it: each entry is encrypted before being uploaded. Remember to delete it afterwards — a CSV export holds your passwords in the clear.</string>
+	<key>Le fichier n'a pas pu être lu.</key>
+	<string>The file could not be read.</string>
+	<key>Le fichier n'a pas pu être ouvert.</key>
+	<string>The file could not be opened.</string>
+	<key>Le lien</key>
+	<string>The link</string>
+	<key>Le lien s'efface une fois ce nombre atteint. Une seule consultation vous dit aussi que quelqu'un d'autre l'a lu avant vous.</key>
+	<string>The link is erased once this count is reached. A single view also tells you if someone else read it before you.</string>
+	<key>Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste intact : rien n'est perdu, rien n'est déchiffré côté serveur.</key>
+	<string>The new password re-encrypts the vault key. Its contents stay intact: nothing is lost, nothing is decrypted on the server.</string>
+	<key>Le propriétaire a refusé.</key>
+	<string>The owner denied the request.</string>
+	<key>Le retirer</key>
+	<string>Turn it off</string>
+	<key>Le second facteur est actif sur ce compte.</key>
+	<string>Two-factor is on for this account.</string>
+	<key>Le second facteur est actif.</key>
+	<string>Two-factor is on.</string>
+	<key>Le second facteur protège même un mot de passe connu.</key>
+	<string>A second factor protects even a known password.</string>
+	<key>Le secret</key>
+	<string>The secret</string>
+	<key>Le serveur n'a pas répondu.</key>
+	<string>The server did not respond.</string>
+	<key>Le service de vérification n'a pas répondu.</key>
+	<string>The checking service did not respond.</string>
+	<key>Lecture</key>
+	<string>Read</string>
+	<key>Lecture pour consulter, écriture pour modifier, gestion pour régler les accès de la collection.</key>
+	<string>Read to consult, write to modify, manage to set the collection's access.</string>
+	<key>Lecture seule</key>
+	<string>View only</string>
+	<key>Les coffres partagés se créent depuis l'application web ; ils apparaîtront ici dès qu'on vous y aura invité.</key>
+	<string>Shared vaults are created from the web app; they will appear here once you are invited.</string>
+	<key>Les deux saisies diffèrent.</key>
+	<string>The two entries differ.</string>
+	<key>Les deux sont exigés : le mot de passe maître et un code valide. Un téléphone déverrouillé trouvé sur une table ne doit pas suffire à retirer la protection.</key>
+	<string>Both are required: the master password and a valid code. An unlocked phone left on a table must not be enough to remove the protection.</string>
+	<key>Les données ne sont pas perdues : elles restent chiffrées par la même clé, seule la façon de l'ouvrir change. Mais elle ne s'ouvrira plus qu'avec le mot de passe que vous choisissez ici.</key>
+	<string>The data is not lost: it stays encrypted under the same key, only the way to unlock it changes. But it will only unlock with the password you choose here.</string>
+	<key>Les éléments supprimés atterrissent ici.</key>
+	<string>Deleted items land here.</string>
+	<key>Lien copié</key>
+	<string>Link copied</string>
+	<key>Longueur — %lld caractères</key>
+	<string>Length — %lld characters</string>
+	<key>MM</key>
+	<string>MM</string>
+	<key>Majuscules</key>
+	<string>Uppercase</string>
+	<key>Membre</key>
+	<string>Member</string>
+	<key>Membre actif</key>
+	<string>Active member</string>
+	<key>Membre ajouté à un groupe</key>
+	<string>Member added to a group</string>
+	<key>Membre ajouté à une équipe</key>
+	<string>Member added to a team</string>
+	<key>Membre retiré d'un groupe</key>
+	<string>Member removed from a group</string>
+	<key>Membres</key>
+	<string>Members</string>
+	<key>Membres du groupe</key>
+	<string>Group members</string>
+	<key>Mes contacts de confiance</key>
+	<string>My trusted contacts</string>
+	<key>Mes équipes</key>
+	<string>My teams</string>
+	<key>Mettez-le à l'abri, puis effacez-le : tant qu'il existe, vos mots de passe sont lisibles par qui met la main dessus.</key>
+	<string>Put it somewhere safe, then delete it: as long as it exists, your passwords are readable by whoever gets hold of it.</string>
+	<key>Mettre en favori</key>
+	<string>Add to favourites</string>
+	<key>Minuscules</key>
+	<string>Lowercase</string>
+	<key>Modifier</key>
+	<string>Edit</string>
+	<key>Modifier ce membre</key>
+	<string>Edit this member</string>
+	<key>Mot de passe</key>
+	<string>Password</string>
+	<key>Mot de passe copié</key>
+	<string>Password copied</string>
+	<key>Mot de passe maître</key>
+	<string>Master password</string>
+	<key>Mot de passe maître incorrect.</key>
+	<string>Incorrect master password.</string>
+	<key>Mot de passe maître oublié ?</key>
+	<string>Forgotten master password?</string>
+	<key>Mot de passe oublié</key>
+	<string>Forgotten password</string>
+	<key>Mot de passe réinitialisé par clé de récupération</key>
+	<string>Password reset with the recovery key</string>
+	<key>Mot de passe réinitialisé. Connectez-vous avec le nouveau.</key>
+	<string>Password reset. Sign in with the new one.</string>
+	<key>Mots de passe faibles</key>
+	<string>Weak passwords</string>
+	<key>Mots de passe réutilisés</key>
+	<string>Reused passwords</string>
+	<key>Moyen</key>
+	<string>Medium</string>
+	<key>N'oubliez pas d'effacer le fichier CSV : il contient vos mots de passe en clair.</key>
+	<string>Do not forget to delete the CSV file: it holds your passwords in the clear.</string>
+	<key>Nom</key>
+	<string>Name</string>
+	<key>Nom d'utilisateur</key>
+	<string>Username</string>
+	<key>Nom d'utilisateur copié</key>
+	<string>Username copied</string>
+	<key>Nom de l'équipe</key>
+	<string>Team name</string>
+	<key>Note</key>
+	<string>Note</string>
+	<key>Notes</key>
+	<string>Notes</string>
+	<key>Nouveau groupe</key>
+	<string>New group</string>
+	<key>Nouveau mot de passe</key>
+	<string>New password</string>
+	<key>Nouveau mot de passe maître</key>
+	<string>New master password</string>
+	<key>Nouvel appareil</key>
+	<string>New device</string>
+	<key>Nouvel élément</key>
+	<string>New item</string>
+	<key>Nouvelle collection</key>
+	<string>New collection</string>
+	<key>Nouvelle équipe</key>
+	<string>New team</string>
+	<key>Numéro</key>
+	<string>Number</string>
+	<key>Numéro copié</key>
+	<string>Number copied</string>
+	<key>OK</key>
+	<string>OK</string>
+	<key>Ouvrez GhostPass et connectez-vous une fois.</key>
+	<string>Open GhostPass and sign in once.</string>
+	<key>Ouvrez GhostPass une fois pour activer le remplissage.</key>
+	<string>Open GhostPass once to enable autofill.</string>
+	<key>Ouvrir le coffre</key>
+	<string>Open the vault</string>
+	<key>Ouvrir maintenant</key>
+	<string>Open now</string>
+	<key>Par les groupes</key>
+	<string>Via groups</string>
+	<key>Par leur rôle</key>
+	<string>By their role</string>
+	<key>Partager un secret</key>
+	<string>Share a secret</string>
+	<key>Partager…</key>
+	<string>Share…</string>
+	<key>Passkey ajoutée</key>
+	<string>Passkey added</string>
+	<key>Passkey retirée</key>
+	<string>Passkey removed</string>
+	<key>Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d'applications.</key>
+	<string>During this delay the vault stays open in memory — never on disk — and its contents are hidden in the app switcher.</string>
+	<key>Personne n'a d'accès nommé sur cette collection.</key>
+	<string>Nobody has named access to this collection.</string>
+	<key>Personne ne vous a désigné.</key>
+	<string>No one has named you.</string>
+	<key>Personne pour l'instant.</key>
+	<string>No one yet.</string>
+	<key>Peut inviter, révoquer et gérer les droits.</key>
+	<string>Can invite, revoke and manage permissions.</string>
+	<key>Peut lire et modifier les identifiants partagés.</key>
+	<string>Can read and edit the shared credentials.</string>
+	<key>Peut lire, sans rien modifier.</key>
+	<string>Can read, without modifying anything.</string>
+	<key>Plus tard</key>
+	<string>Later</string>
+	<key>Pour ce site</key>
+	<string>For this site</string>
+	<key>Pour confirmer que c'est bien vous</key>
+	<string>To confirm it is really you</string>
+	<key>Préparer le fichier</key>
+	<string>Prepare the file</string>
+	<key>Quand le contact demandera l'accès, vous serez prévenu et pourrez refuser pendant ce temps. Passé ce délai sans réponse de votre part, l'accès s'ouvre — c'est précisément ce qui le rend utile le jour où vous ne pouvez plus répondre.</key>
+	<string>When the contact requests access, you are notified and can deny it during this window. Once it elapses without an answer from you, access opens — which is exactly what makes it useful the day you can no longer answer.</string>
+	<key>Quiconque l'a peut lire le secret. Envoyez-le par un canal différent de celui où vous avez annoncé son existence.</key>
+	<string>Anyone holding it can read the secret. Send it through a different channel than the one where you announced it.</string>
+	<key>Rechercher</key>
+	<string>Search</string>
+	<key>Refuser</key>
+	<string>Deny</string>
+	<key>Rejoindre l'équipe</key>
+	<string>Join the team</string>
+	<key>Remplacé</key>
+	<string>Replaced</string>
+	<key>Remplir depuis votre coffre GhostPass</key>
+	<string>Fill from your GhostPass vault</string>
+	<key>Renouvelé toutes les %lld secondes.</key>
+	<string>Renewed every %lld seconds.</string>
+	<key>Reprendre le compte</key>
+	<string>Take over the account</string>
+	<key>Reprise du compte</key>
+	<string>Account takeover</string>
+	<key>Restaurer</key>
+	<string>Restore</string>
+	<key>Retirer</key>
+	<string>Remove</string>
+	<key>Retirer cet accès</key>
+	<string>Remove this access</string>
+	<key>Retirer cet accès ?</key>
+	<string>Remove this access?</string>
+	<key>Retirer des favoris</key>
+	<string>Remove from favourites</string>
+	<key>Retirer l'accès</key>
+	<string>Remove access</string>
+	<key>Retirer l'accès ?</key>
+	<string>Remove access?</string>
+	<key>Revenir au coffre enregistré</key>
+	<string>Back to saved vault</string>
+	<key>Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà.</key>
+	<string>Nothing has been uploaded yet. The entries will join the vault as they are; none overwrites what is already there.</string>
+	<key>Rien à signaler</key>
+	<string>Nothing to report</string>
+	<key>Réglages</key>
+	<string>Settings</string>
+	<key>Régénérer</key>
+	<string>Regenerate</string>
+	<key>Réinitialiser</key>
+	<string>Reset</string>
+	<key>Réponse du serveur incompréhensible.</key>
+	<string>The server’s response could not be understood.</string>
+	<key>Révoquer</key>
+	<string>Revoke</string>
+	<key>Révoquer ce membre ?</key>
+	<string>Revoke this member?</string>
+	<key>Rôle d'un membre modifié</key>
+	<string>A member's role changed</string>
+	<key>Sans code à usage unique</key>
+	<string>Without a one-time code</string>
+	<key>Santé du coffre</key>
+	<string>Vault health</string>
+	<key>Se connecter</key>
+	<string>Sign in</string>
+	<key>Se déconnecter</key>
+	<string>Sign out</string>
+	<key>Second facteur</key>
+	<string>Two-factor</string>
+	<key>Second facteur activé</key>
+	<string>Two-factor enabled</string>
+	<key>Second facteur désactivé</key>
+	<string>Two-factor disabled</string>
+	<key>Second facteur indisponible</key>
+	<string>Two-factor unavailable</string>
+	<key>Secret copié</key>
+	<string>Secret copied</string>
+	<key>Serveur</key>
+	<string>Server</string>
+	<key>Serveur injoignable : l'import s'est arrêté en chemin.</key>
+	<string>Server unreachable: the import stopped partway.</string>
+	<key>Serveur injoignable : l'item n'a pas été restauré.</key>
+	<string>Server unreachable: the item was not restored.</string>
+	<key>Serveur injoignable : l'item n'a pas été supprimé.</key>
+	<string>Server unreachable: the item was not deleted.</string>
+	<key>Serveur injoignable : la clé de récupération n'a pas été enregistrée.</key>
+	<string>Server unreachable: the recovery key was not saved.</string>
+	<key>Serveur injoignable : la modification n'a pas été enregistrée.</key>
+	<string>Server unreachable: the change was not saved.</string>
+	<key>Serveur injoignable : la suppression n'a pas été enregistrée.</key>
+	<string>Server unreachable: the deletion was not saved.</string>
+	<key>Serveur injoignable : les dossiers n'ont pas été enregistrés.</key>
+	<string>Server unreachable: folders were not saved.</string>
+	<key>Serveur injoignable : les favoris n'ont pas été enregistrés.</key>
+	<string>Server unreachable: favourites were not saved.</string>
+	<key>Serveur injoignable.</key>
+	<string>Server unreachable.</string>
+	<key>Ses membres perdront les accès qu'il leur donnait. Les identifiants, eux, restent dans leurs collections.</key>
+	<string>Its members will lose the access it granted them. The credentials themselves stay in their collections.</string>
+	<key>Seuls les cinq premiers caractères de l'empreinte du mot de passe sont envoyés : ni le mot de passe ni son empreinte complète ne quittent l'appareil.</key>
+	<string>Only the first five characters of the password’s hash are sent: neither the password nor its full hash leaves the device.</string>
+	<key>Solide</key>
+	<string>Strong</string>
+	<key>Sombre</key>
+	<string>Dark</string>
+	<key>Son rôle</key>
+	<string>Their role</string>
+	<key>Supprimer</key>
+	<string>Delete</string>
+	<key>Supprimer ce dossier ?</key>
+	<string>Delete this folder?</string>
+	<key>Supprimer ce groupe</key>
+	<string>Delete this group</string>
+	<key>Supprimer ce groupe ?</key>
+	<string>Delete this group?</string>
+	<key>Supprimer définitivement ?</key>
+	<string>Delete permanently?</string>
+	<key>Symboles</key>
+	<string>Symbols</string>
+	<key>Système</key>
+	<string>System</string>
+	<key>Tant que ce code n'est pas validé, le compte reste accessible sans second facteur. C'est ce qui évite de s'enfermer dehors avec une application mal configurée.</key>
+	<string>Until this code is validated, the account stays reachable without a second factor. That is what keeps you from locking yourself out with a misconfigured app.</string>
+	<key>Terminé</key>
+	<string>Done</string>
+	<key>Titulaire</key>
+	<string>Cardholder</string>
+	<key>Titulaire copié</key>
+	<string>Cardholder copied</string>
+	<key>Touchez une collection pour voir qui y a accès.</key>
+	<string>Tap a collection to see who has access to it.</string>
+	<key>Tous les éléments</key>
+	<string>All items</string>
+	<key>Travail/Serveurs</key>
+	<string>Work/Servers</string>
+	<key>Trop courts, ou faits d'une seule sorte de caractères.</key>
+	<string>Too short, or made of a single kind of character.</string>
+	<key>Très bon</key>
+	<string>Very good</string>
+	<key>Très faible</key>
+	<string>Very weak</string>
+	<key>Un administrateur de l'équipe gère toutes les collections, y compris celle-ci. Cet accès ne se retire qu'en changeant son rôle.</key>
+	<string>A team administrator manages every collection, including this one. That access can only be removed by changing their role.</string>
+	<key>Un appareil inconnu signalé ici, que vous ne reconnaissez pas, veut dire que quelqu'un connaît votre mot de passe maître.</key>
+	<string>An unknown device flagged here that you do not recognise means someone knows your master password.</string>
+	<key>Un code vous sera demandé à chaque connexion. Vos appareils déjà connectés le restent.</key>
+	<string>A code will be asked at each sign-in. Devices already signed in stay signed in.</string>
+	<key>Un code à six chiffres sera demandé à chaque connexion, en plus du mot de passe maître.</key>
+	<string>A six-digit code will be required at each sign-in, in addition to the master password.</string>
+	<key>Un coffre chiffré de bout en bout ne se rouvre pas sans son mot de passe maître : personne, pas même le serveur, ne peut le retrouver à votre place.</key>
+	<string>An end-to-end encrypted vault does not reopen without its master password: nobody, not even the server, can retrieve it for you.</string>
+	<key>Un groupe donne accès à des collections. C'est par lui qu'on ouvre un coffre à plusieurs personnes sans les nommer une à une.</key>
+	<string>A group grants access to collections. It is how you open a vault to several people without naming them one by one.</string>
+	<key>Une seule fuite suffit alors à ouvrir plusieurs comptes.</key>
+	<string>A single breach then opens several accounts.</string>
+	<key>Utiliser</key>
+	<string>Use</string>
+	<key>Utiliser %@ ?</key>
+	<string>Use %@?</string>
+	<key>Utiliser un autre compte</key>
+	<string>Use another account</string>
+	<key>Verrouillage</key>
+	<string>Locking</string>
+	<key>Verrouiller</key>
+	<string>Lock</string>
+	<key>Votre clé de récupération</key>
+	<string>Your recovery key</string>
+	<key>Votre mot de passe</key>
+	<string>Your password</string>
+	<key>Votre mot de passe maître sera conservé dans le trousseau de cet appareil, relisible par %@ seul.</key>
+	<string>Your master password will be kept in this device’s keychain, readable by %@ alone.</string>
+	<key>Votre note</key>
+	<string>Your note</string>
+	<key>Vous consultez le coffre de quelqu'un d'autre. Cet accès est enregistré dans son journal.</key>
+	<string>You are viewing someone else's vault. This access is recorded in their audit log.</string>
+	<key>Vous n'appartenez à aucune équipe.</key>
+	<string>You do not belong to any team.</string>
+	<key>Vérification…</key>
+	<string>Checking…</string>
+	<key>Vérifier les fuites</key>
+	<string>Check for breaches</string>
+	<key>adresse@exemple.com</key>
+	<string>address@example.com</string>
+	<key>et %lld autres</key>
+	<string>and %lld more</string>
+	<key>https://ghostpass.stackops.ch</key>
+	<string>https://ghostpass.stackops.ch</string>
+	<key>vous@exemple.ch</key>
+	<string>you@example.com</string>
+	<key>« %@ » disparaîtra de la liste. Aucun élément n'est supprimé.</key>
+	<string>“%@” will disappear from the list. No item is deleted.</string>
+	<key>« %@ » sera perdu, sans possibilité de retour.</key>
+	<string>“%@” will be lost, with no way back.</string>
+	<key>« Système » suit le réglage de l'appareil, y compris son passage automatique à la nuit.</key>
+	<string>“System” follows the device setting, including its automatic switch to night.</string>
+	<key>À enregistrer dans votre application d'authentification</key>
+	<string>To store in your authenticator app</string>
+	<key>À importer</key>
+	<string>To import</string>
+	<key>Écriture</key>
+	<string>Write</string>
+	<key>Également par le groupe « %@ »</key>
+	<string>Also via the “%@” group</string>
+	<key>Également par son rôle d'administrateur</key>
+	<string>Also via their administrator role</string>
+	<key>≈ %lld bits</key>
+	<string>≈ %lld bits</string>
+</dict>
+</plist>

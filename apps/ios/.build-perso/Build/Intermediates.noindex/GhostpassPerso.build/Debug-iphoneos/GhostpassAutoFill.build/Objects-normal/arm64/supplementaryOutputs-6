@@ -1,0 +1,23 @@
+{
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Services/PasswordGenerator.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordGenerator.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordGenerator.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordGenerator.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordGenerator.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordGenerator.swiftdeps"
+  },
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Services/PasswordHealth.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordHealth.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordHealth.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordHealth.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordHealth.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/PasswordHealth.swiftdeps"
+  },
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Services/Preferences.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/Preferences.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/Preferences.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/Preferences.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/Preferences.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/GhostpassAutoFill.build/Objects-normal/arm64/Preferences.swiftdeps"
+  }
+}

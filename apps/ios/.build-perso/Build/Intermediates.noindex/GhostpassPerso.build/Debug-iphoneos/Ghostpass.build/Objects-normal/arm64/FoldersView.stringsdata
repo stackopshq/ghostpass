@@ -1,0 +1,128 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/FoldersView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Dossiers",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 92
+        }
+      },
+      {
+        "comment": "",
+        "key": "Supprimer ce dossier ?",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 112
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tous les éléments",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "Supprimer",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dossiers",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucun dossier",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 84
+        }
+      },
+      {
+        "comment": "",
+        "key": "Créez-en un, ou renseignez un dossier sur un élément.",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fermer",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "Supprimer",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "« %@ » disparaîtra de la liste. Aucun élément n'est supprimé.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "Travail/Serveurs",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 141
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "Créer",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 149
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 192
+        }
+      }
+    ]
+  },
+  "version": 1
+}

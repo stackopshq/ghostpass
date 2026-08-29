@@ -1,0 +1,88 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/RecoveryKeyView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Clé de récupération",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "Terminé",
+        "location": {
+          "startingColumn": 53,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "Un coffre chiffré de bout en bout ne se rouvre pas sans son mot de passe maître : personne, pas même le serveur, ne peut le retrouver à votre place.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Créer une clé de récupération",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "Votre clé de récupération",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "Elle ne sera plus affichée. Sans elle, un mot de passe maître oublié rend le coffre définitivement illisible.",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copiée",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copier la clé",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 104
+        }
+      }
+    ]
+  },
+  "version": 1
+}

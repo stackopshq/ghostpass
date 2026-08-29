@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>%d membre(s)</key>
+	<string>%d membre(s)</string>
+	<key>Accorder à un membre</key>
+	<string>Accorder à un membre</string>
+	<key>Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran.</key>
+	<string>Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran.</string>
+	<key>Accès nommés</key>
+	<string>Accès nommés</string>
+	<key>Aucun code</key>
+	<string>Aucun code</string>
+	<key>Aucun compte du coffre n'a de code à usage unique.</key>
+	<string>Aucun compte du coffre n'a de code à usage unique.</string>
+	<key>Aucun identifiant dans la copie locale du coffre.</key>
+	<string>Aucun identifiant dans la copie locale du coffre.</string>
+	<key>Autres comptes</key>
+	<string>Autres comptes</string>
+	<key>Ce coffre d'équipe n'est plus accessible.</key>
+	<string>Ce coffre d'équipe n'est plus accessible.</string>
+	<key>Ce compte n'a pas de code à usage unique exploitable.</key>
+	<string>Ce compte n'a pas de code à usage unique exploitable.</string>
+	<key>Ce serveur ne propose pas encore le second facteur.</key>
+	<string>Ce serveur ne propose pas encore le second facteur.</string>
+	<key>Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent.</key>
+	<string>Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent.</string>
+	<key>Cette personne gardera l'accès : elle administre l'équipe, ce qui lui donne la gestion de toutes les collections.</key>
+	<string>Cette personne gardera l'accès : elle administre l'équipe, ce qui lui donne la gestion de toutes les collections.</string>
+	<key>Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe.</key>
+	<string>Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe.</string>
+	<key>Cette personne perdra l'accès à cette collection.</key>
+	<string>Cette personne perdra l'accès à cette collection.</string>
+	<key>Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre.</key>
+	<string>Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre.</string>
+	<key>Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues.</key>
+	<string>Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues.</string>
+	<key>Le conteneur partagé n'est pas accessible : cette version de l'application n'a pas le groupe d'applications. Le remplissage ne peut pas lire le coffre.</key>
+	<string>Le conteneur partagé n'est pas accessible : cette version de l'application n'a pas le groupe d'applications. Le remplissage ne peut pas lire le coffre.</string>
+	<key>Le serveur n'a pas répondu.</key>
+	<string>Le serveur n'a pas répondu.</string>
+	<key>Par les groupes</key>
+	<string>Par les groupes</string>
+	<key>Par leur rôle</key>
+	<string>Par leur rôle</string>
+	<key>Personne n'a d'accès nommé sur cette collection.</key>
+	<string>Personne n'a d'accès nommé sur cette collection.</string>
+	<key>Remplir depuis votre coffre GhostPass</key>
+	<string>Remplir depuis votre coffre GhostPass</string>
+	<key>Retirer l'accès ?</key>
+	<string>Retirer l'accès ?</string>
+	<key>Second facteur indisponible</key>
+	<string>Second facteur indisponible</string>
+	<key>Touchez une collection pour voir qui y a accès.</key>
+	<string>Touchez une collection pour voir qui y a accès.</string>
+	<key>Un administrateur de l'équipe gère toutes les collections, y compris celle-ci. Cet accès ne se retire qu'en changeant son rôle.</key>
+	<string>Un administrateur de l'équipe gère toutes les collections, y compris celle-ci. Cet accès ne se retire qu'en changeant son rôle.</string>
+	<key>Également par le groupe « %@ »</key>
+	<string>Également par le groupe « %@ »</string>
+	<key>Également par son rôle d'administrateur</key>
+	<string>Également par son rôle d'administrateur</string>
+</dict>
+</plist>

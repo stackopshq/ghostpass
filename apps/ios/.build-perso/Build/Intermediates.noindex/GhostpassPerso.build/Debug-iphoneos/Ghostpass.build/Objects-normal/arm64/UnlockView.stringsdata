@@ -1,0 +1,216 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/UnlockView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "GhostPass",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 73
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coffre enregistré sur cet appareil",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coffre chiffré de bout en bout",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 82
+        }
+      },
+      {
+        "comment": "",
+        "key": "Compte",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe maître",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "Serveur",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Adresse e-mail",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe maître",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 121
+        }
+      },
+      {
+        "comment": "",
+        "key": "Code à six chiffres",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "Votre mot de passe",
+        "location": {
+          "startingColumn": 69,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "https://ghostpass.stackops.ch",
+        "location": {
+          "startingColumn": 65,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "vous@exemple.ch",
+        "location": {
+          "startingColumn": 64,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Votre mot de passe",
+        "location": {
+          "startingColumn": 69,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "123456",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe réinitialisé. Connectez-vous avec le nouveau.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "Déverrouiller avec %@",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 176
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe maître oublié ?",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 188
+        }
+      },
+      {
+        "comment": "",
+        "key": "Déverrouiller",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 166
+        }
+      },
+      {
+        "comment": "",
+        "key": "Se connecter",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 168
+        }
+      },
+      {
+        "comment": "",
+        "key": "Utiliser un autre compte",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 206
+        }
+      },
+      {
+        "comment": "",
+        "key": "Revenir au coffre enregistré",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 208
+        }
+      }
+    ]
+  },
+  "version": 1
+}

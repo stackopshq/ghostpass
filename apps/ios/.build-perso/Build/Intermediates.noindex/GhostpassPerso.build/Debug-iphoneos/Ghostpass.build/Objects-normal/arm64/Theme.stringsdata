@@ -1,0 +1,16 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Theme/Theme.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "GhostPass",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 378
+        }
+      }
+    ]
+  },
+  "version": 1
+}

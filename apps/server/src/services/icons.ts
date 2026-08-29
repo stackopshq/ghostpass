@@ -131,9 +131,34 @@ function readStreamCapped(res: IncomingMessage): Promise<Buffer | null> {
   });
 }
 
-/// Récupère le favicon en suivant manuellement les redirections (chaque saut revalidé via safeLookup).
-async function fetchFavicon(domain: string): Promise<FaviconResult> {
-  let url = `https://${domain}/favicon.ico`;
+/// Chemins tentés, dans l'ordre. `/favicon.ico` seul ne suffit pas : la plupart
+/// des sites modernes déclarent leur icône par un `<link rel="icon">` et ne
+/// gardent aucun fichier à ce nom, et beaucoup de domaines apex ne servent rien
+/// alors que leur `www.` sert tout. Jusqu'au 2026-08-28 le proxy s'arrêtait au
+/// premier échec, d'où des entrées sans logo sans que rien ne le signale.
+///
+/// On ne lit PAS le HTML pour y chercher le `<link>` : ce serait plus complet,
+/// mais cela veut dire récupérer du HTML arbitraire depuis une cible fournie par
+/// l'utilisateur, sur un chemin dont les défenses sont calibrées pour des images
+/// (content-type imposé, taille bornée). À décider séparément, après avoir mesuré
+/// ce que ces chemins statiques rattrapent déjà.
+export function candidateUrls(domain: string): string[] {
+  const urls = [`https://${domain}/favicon.ico`];
+  if (!domain.startsWith("www.")) urls.push(`https://www.${domain}/favicon.ico`);
+  urls.push(`https://${domain}/apple-touch-icon.png`);
+  urls.push(`https://${domain}/favicon.svg`);
+  return urls;
+}
+
+/// Budget TOTAL de la résolution, tous candidats confondus. Sans lui, quatre
+/// tentatives à FETCH_TIMEOUT_MS feraient attendre 16 s quelqu'un qui est en
+/// train d'ajouter une entrée. On préfère renoncer tôt : un logo manquant est
+/// bénin, une interface qui se fige ne l'est pas.
+const TOTAL_BUDGET_MS = 6000;
+
+/// Récupère une URL en suivant manuellement les redirections (chaque saut revalidé via safeLookup).
+async function fetchOne(startUrl: string): Promise<FaviconResult> {
+  let url = startUrl;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:") return null;
@@ -159,6 +184,25 @@ async function fetchFavicon(domain: string): Promise<FaviconResult> {
     }
     const data = await readStreamCapped(res);
     return data ? { data, contentType } : null;
+  }
+  return null;
+}
+
+/// Essaie les candidats dans l'ordre et rend le premier qui donne une image.
+/// Le cache négatif de l'appelant ne s'applique donc qu'après épuisement de la
+/// liste — sinon un premier échec figerait l'absence pour une heure alors qu'un
+/// autre chemin aurait répondu.
+async function fetchFavicon(domain: string): Promise<FaviconResult> {
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
+  for (const url of candidateUrls(domain)) {
+    if (Date.now() >= deadline) break;
+    try {
+      const found = await fetchOne(url);
+      if (found) return found;
+    } catch {
+      // Un candidat qui échoue n'empêche pas d'essayer le suivant : c'est tout
+      // l'objet du changement.
+    }
   }
   return null;
 }

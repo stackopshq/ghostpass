@@ -261,19 +261,66 @@ test("un non-admin ne peut pas déclencher de rotation", async () => {
   await app.close();
 });
 
-test("lire et reprendre un accès nommé", async () => {
+/// Le défaut signalé le 2026-08-29 : dans l'org `stackops`, l'écran d'accès
+/// d'une collection n'affichait PERSONNE, alors que ses deux admins y lisaient
+/// et y écrivaient — l'un venait d'y déposer un mot de passe.
+///
+/// La liste rendait `collection_access`, une seule des trois sources que
+/// `permissionFor` additionne. Une liste d'accès qui affiche « personne » là où
+/// deux personnes entrent invite à donner un accès déjà donné, et laisse croire
+/// qu'une révocation ferme une porte qui reste ouverte.
+test("la liste d'accès montre l'accès effectif, admin compris, pas seulement les octrois", async () => {
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json();
+
+  // Aucun octroi n'a été fait. L'admin doit pourtant apparaître : son `manage`
+  // est implicite, et c'est exactement le cas qui manquait.
+  const seul = (
+    await app.inject({
+      method: "GET",
+      url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+      headers: auth(adminToken),
+    })
+  ).json().access;
+  assert.equal(seul.length, 1, "l'admin d'org doit apparaître sans aucun octroi");
+  assert.equal(seul[0].email, "admin@stackops.ch");
+  assert.equal(seul[0].permission, "manage");
+  assert.equal(seul[0].sources[0].kind, "admin");
+  assert.equal(seul[0].revocable, false, "on ne révoque pas un rôle depuis cet écran");
+
+  // Un octroi direct s'ajoute, et lui est révocable.
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
+  await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+    payload: { userId: memberId, permission: "read" },
+  });
+  const deux = (
+    await app.inject({
+      method: "GET",
+      url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+      headers: auth(adminToken),
+    })
+  ).json().access;
+  assert.equal(deux.length, 2);
+  const membre = deux.find((a: { email: string }) => a.email === "member@stackops.ch");
+  assert.equal(membre.permission, "read");
+  assert.equal(membre.revocable, true);
+  assert.equal(membre.sources[0].kind, "direct");
+
+  // Et celui qui n'a rien n'apparaît pas : la liste dit qui entre, pas qui existe.
+  assert.equal(
+    deux.some((a: { email: string }) => a.email === "readonly@stackops.ch"),
+    false,
+  );
+  await app.close();
+});
+
+test("révoquer un accès nommé le retire, ôte l'accès effectif, et reste idempotent", async () => {
   const { app, adminToken, memberToken, orgId } = await setupOrg();
   const col = (await makeCollection(app, orgId, adminToken)).json();
   const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
-
-  const vide = await app.inject({
-    method: "GET",
-    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
-    headers: auth(adminToken),
-  });
-  assert.equal(vide.statusCode, 200);
-  // Le créateur n'apparaît pas : sa gestion vient de la création, pas d'un octroi.
-  assert.deepEqual(vide.json().access, []);
 
   await app.inject({
     method: "POST",
@@ -282,18 +329,7 @@ test("lire et reprendre un accès nommé", async () => {
     payload: { userId: memberId, permission: "write" },
   });
 
-  // La forme exacte compte : le client iOS décode ces trois champs, et une clé
-  // renommée le laisserait avec une liste vide plutôt qu'une erreur visible.
-  const liste = await app.inject({
-    method: "GET",
-    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
-    headers: auth(adminToken),
-  });
-  assert.deepEqual(liste.json().access, [
-    { userId: memberId, email: "member@stackops.ch", permission: "write" },
-  ]);
-
-  // Le bénéficiaire lui-même ne peut pas lire la liste : il a `write`, pas `manage`.
+  // Le bénéficiaire ne peut pas lire la liste : il a `write`, pas `manage`.
   const indiscret = await app.inject({
     method: "GET",
     url: `/api/orgs/${orgId}/collections/${col.id}/access`,
@@ -308,13 +344,19 @@ test("lire et reprendre un accès nommé", async () => {
   });
   assert.equal(retrait.statusCode, 204);
 
-  // Retiré de la liste, et l'accès effectivement perdu — pas seulement la ligne.
-  const apres = await app.inject({
-    method: "GET",
-    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
-    headers: auth(adminToken),
-  });
-  assert.deepEqual(apres.json().access, []);
+  // Retiré de la liste — et l'accès effectivement perdu, pas seulement la ligne.
+  const apres = (
+    await app.inject({
+      method: "GET",
+      url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+      headers: auth(adminToken),
+    })
+  ).json().access;
+  assert.equal(
+    apres.some((a: { userId: string }) => a.userId === memberId),
+    false,
+    "le membre ne doit plus figurer dans la liste d'accès",
+  );
   const refuse = await app.inject({
     method: "GET",
     url: `/api/orgs/${orgId}/collections/${col.id}/items`,
@@ -322,8 +364,8 @@ test("lire et reprendre un accès nommé", async () => {
   });
   assert.equal(refuse.statusCode, 403);
 
-  // Idempotent : un second retrait répond comme le premier. Un double appui ne
-  // doit pas ressembler à une panne.
+  // Idempotent : un second retrait répond comme le premier. Un double appui ne doit
+  // pas ressembler à une panne.
   const encore = await app.inject({
     method: "DELETE",
     url: `/api/orgs/${orgId}/collections/${col.id}/access/${memberId}`,

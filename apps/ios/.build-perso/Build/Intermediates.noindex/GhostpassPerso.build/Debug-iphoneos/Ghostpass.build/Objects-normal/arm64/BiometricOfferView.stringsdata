@@ -1,0 +1,40 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/BiometricOfferView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Utiliser %@ ?",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "Votre mot de passe maître sera conservé dans le trousseau de cet appareil, relisible par %@ seul.",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "Activer",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Plus tard",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 51
+        }
+      }
+    ]
+  },
+  "version": 1
+}

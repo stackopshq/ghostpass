@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Manifeste de confidentialité — exigé par Apple depuis mai 2024 ; sans lui, l'envoi à
+  l'App Store est refusé.
+
+  Il se remplit sur des faits vérifiables dans le code, pas sur des intentions :
+
+  · `UserDefaults` — Preferences.swift l'emploie sur le groupe d'applications partagé avec
+    l'extension de remplissage. Raison CA92.1 : accès aux informations de l'application
+    elle-même ou du groupe dont elle est membre.
+
+  · Aucune API d'horodatage de fichier : les appels à FileManager créent et suppriment,
+    ils ne lisent ni date de création ni date de modification.
+
+  · Ni temps de démarrage, ni espace disque, ni claviers actifs.
+
+  Sur les données collectées : le coffre est chiffré de bout en bout et le serveur n'en
+  détient que des blobs illisibles — mais « illisible » n'est pas « non collecté ». Le
+  serveur stocke bien une adresse e-mail (colonne `email`, non nulle) et les données
+  chiffrées du coffre. Les déclarer est la seule réponse exacte ; prétendre ne rien
+  collecter serait faux, quand bien même personne ne peut lire ce qui est stocké.
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeEmailAddress</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

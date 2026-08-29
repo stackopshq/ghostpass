@@ -1,0 +1,88 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/ExportView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Exporter",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "Terminé",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le fichier contiendra vos %lld entrées, mots de passe compris, en clair. Il se relit dans n'importe quel gestionnaire — et par n'importe qui.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "Préparer le fichier",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe maître",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "Votre mot de passe",
+        "location": {
+          "startingColumn": 67,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mettez-le à l'abri, puis effacez-le : tant qu'il existe, vos mots de passe sont lisibles par qui met la main dessus.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fichier enregistré.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 99
+        }
+      }
+    ]
+  },
+  "version": 1
+}

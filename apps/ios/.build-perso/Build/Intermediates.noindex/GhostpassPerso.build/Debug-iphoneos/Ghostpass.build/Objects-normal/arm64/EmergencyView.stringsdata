@@ -1,0 +1,184 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/EmergencyView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Retirer cet accès ?",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accès d'urgence",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mes contacts de confiance",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ils pourront ouvrir votre coffre si vous ne le pouvez plus. Vous gardez la main tant que vous répondez.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coffres qui me sont confiés",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ce que d'autres vous ont laissé, et ce que vous pouvez en faire.",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 166
+        }
+      },
+      {
+        "comment": "",
+        "key": "Terminé",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "Retirer",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le contact ne pourra plus ouvrir votre coffre. La clé qui lui avait été scellée devient inutilisable.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "Personne pour l'instant.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accès automatique le %@ si vous ne faites rien.",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 132
+        }
+      },
+      {
+        "comment": "",
+        "key": "Retirer cet accès",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "Refuser",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ouvrir maintenant",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 147
+        }
+      },
+      {
+        "comment": "",
+        "key": "Personne ne vous a désigné.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 169
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le propriétaire a refusé.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ouvrir le coffre",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accepter",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 199
+        }
+      },
+      {
+        "comment": "",
+        "key": "Demander l'accès préviendra %1$@, qui aura %2$d jours pour refuser.",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "Demander l'accès",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 216
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accès possible à partir du %@.",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 227
+        }
+      }
+    ]
+  },
+  "version": 1
+}

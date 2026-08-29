@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'Ghostpass' in project 'GhostpassPerso'
+➜ Explicit dependency on target 'GhostpassAutoFill' in project 'GhostpassPerso'
+Target 'GhostpassAutoFill' in project 'GhostpassPerso' (no dependencies)

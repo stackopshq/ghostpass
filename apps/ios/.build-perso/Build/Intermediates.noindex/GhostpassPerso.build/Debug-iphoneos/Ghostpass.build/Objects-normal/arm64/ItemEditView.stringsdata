@@ -1,0 +1,328 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/ItemEditView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Identifiant",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Note",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Carte",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nouvel élément",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "Modifier",
+        "location": {
+          "startingColumn": 70,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nom",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "Classement",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "GitHub, Amazon…",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "Contenu",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 199
+        }
+      },
+      {
+        "comment": "",
+        "key": "Carte",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 209
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dossier — Travail/Serveurs",
+        "location": {
+          "startingColumn": 65,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notes",
+        "location": {
+          "startingColumn": 64,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 94
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enregistrer",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "Identifiants",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 156
+        }
+      },
+      {
+        "comment": "",
+        "key": "Code à usage unique",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 184
+        }
+      },
+      {
+        "comment": "",
+        "key": "La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil.",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 186
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nom d'utilisateur",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "Adresse du site",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mot de passe",
+        "location": {
+          "startingColumn": 69,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 188
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clé ou URI otpauth://",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 188
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "Votre note",
+        "location": {
+          "startingColumn": 62,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "Titulaire",
+        "location": {
+          "startingColumn": 61,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 214
+        }
+      },
+      {
+        "comment": "",
+        "key": "Numéro",
+        "location": {
+          "startingColumn": 61,
+          "startingLine": 214
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 220
+        }
+      },
+      {
+        "comment": "",
+        "key": "MM",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 220
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 221
+        }
+      },
+      {
+        "comment": "",
+        "key": "AAAA",
+        "location": {
+          "startingColumn": 62,
+          "startingLine": 221
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 222
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cryptogramme",
+        "location": {
+          "startingColumn": 65,
+          "startingLine": 222
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,44 @@
+{
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Services/APIClient.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/APIClient.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/APIClient.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/APIClient.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/APIClient.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/APIClient.swiftdeps"
+  },
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Services/Activity.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Activity.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Activity.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Activity.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Activity.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Activity.swiftdeps"
+  },
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Services/Biometrics.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Biometrics.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Biometrics.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Biometrics.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Biometrics.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/Biometrics.swiftdeps"
+  },
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/ActivityView.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ActivityView.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ActivityView.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ActivityView.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ActivityView.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/ActivityView.swiftdeps"
+  },
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/BiometricOfferView.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricOfferView.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricOfferView.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricOfferView.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricOfferView.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricOfferView.swiftdeps"
+  },
+  "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/BiometricSetupView.swift" : {
+    "const-values" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricSetupView.swiftconstvalues",
+    "dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricSetupView.d",
+    "diagnostics" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricSetupView.dia",
+    "object" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricSetupView.o",
+    "swift-dependencies" : "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/.build-perso/Build/Intermediates.noindex/GhostpassPerso.build/Debug-iphoneos/Ghostpass.build/Objects-normal/arm64/BiometricSetupView.swiftdeps"
+  }
+}

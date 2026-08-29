@@ -1,0 +1,152 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/ImportView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Importer",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Terminé",
+        "location": {
+          "startingColumn": 57,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont pas reconnues.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 199
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le fichier n'a pas pu être lu.",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 193
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le fichier n'a pas pu être ouvert.",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 184
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "Le fichier est lu sur l'appareil et rien d'autre n'en sort : chaque entrée est chiffrée avant d'être déposée. Pensez à l'effacer ensuite — un export CSV contient vos mots de passe en clair.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choisir un fichier",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "À importer",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà.",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 95
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aperçu",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 102
+        }
+      },
+      {
+        "comment": "",
+        "key": "Importer %lld entrées",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fichier",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "Entrées trouvées",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "et %lld autres",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 111
+        }
+      },
+      {
+        "comment": "",
+        "key": "N'oubliez pas d'effacer le fichier CSV : il contient vos mots de passe en clair.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 149
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld entrées importées.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 134
+        }
+      }
+    ]
+  },
+  "version": 1
+}

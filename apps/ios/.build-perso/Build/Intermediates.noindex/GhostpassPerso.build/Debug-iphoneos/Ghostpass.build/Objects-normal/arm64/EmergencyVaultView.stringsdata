@@ -1,0 +1,72 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/EmergencyVaultView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Rechercher",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ce coffre est vide.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Identifiants",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reprise du compte",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choisir un nouveau mot de passe maître rendra le coffre inaccessible à son propriétaire actuel. À ne faire que s'il ne peut plus s'en servir lui-même.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 103
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fermer",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Vous consultez le coffre de quelqu'un d'autre. Cet accès est enregistré dans son journal.",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reprendre le compte",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 105
+        }
+      }
+    ]
+  },
+  "version": 1
+}

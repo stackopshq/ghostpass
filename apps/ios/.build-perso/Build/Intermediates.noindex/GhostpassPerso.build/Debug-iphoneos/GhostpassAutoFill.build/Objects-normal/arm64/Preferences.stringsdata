@@ -1,0 +1,64 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Services/Preferences.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Immédiatement",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "Après 1 minute",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 121
+        }
+      },
+      {
+        "comment": "",
+        "key": "Après 5 minutes",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Après 15 minutes",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "Système",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 147
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clair",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sombre",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 149
+        }
+      }
+    ]
+  },
+  "version": 1
+}

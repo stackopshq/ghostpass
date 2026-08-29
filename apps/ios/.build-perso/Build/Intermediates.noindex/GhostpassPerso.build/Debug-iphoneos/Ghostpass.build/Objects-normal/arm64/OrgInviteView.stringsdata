@@ -1,0 +1,88 @@
+{
+  "source": "/Users/claravanacker/Projects/ghostsuite/ghostpass/apps/ios/Ghostpass/Views/OrgInviteView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Inviter",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "La personne",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe.",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "Son rôle",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "Inviter",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "adresse@exemple.com",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "Peut inviter, révoquer et gérer les droits.",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "Peut lire et modifier les identifiants partagés.",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "Peut lire, sans rien modifier.",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 103
+        }
+      }
+    ]
+  },
+  "version": 1
+}
