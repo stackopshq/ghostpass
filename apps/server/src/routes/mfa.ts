@@ -18,6 +18,15 @@ const disableSchema = z.object({
 export function registerMfaRoutes(app: FastifyInstance, db: DB): void {
   const authenticate = makeAuthenticate(db);
 
+  // État de la 2FA. Sans lui, un client ne peut pas distinguer « activer » de
+  // « désactiver » — et proposer « activer » à quelqu'un qui l'a déjà remettrait son
+  // secret à zéro sans prévenir, puisque c'est ce que fait `/setup`. La question paraît
+  // anodine ; c'est elle qui empêche de détruire une configuration en place.
+  app.get("/api/mfa", { preHandler: authenticate }, async (req) => {
+    const user = req.currentUser!;
+    return { enabled: user.mfa_enabled === 1 };
+  });
+
   // Démarre la configuration : re-authentification par mot de passe exigée (opération
   // sensible — elle remet la 2FA à zéro), puis génère un secret + l'URI otpauth.
   app.post("/api/mfa/setup", { preHandler: authenticate }, async (req, reply) => {
