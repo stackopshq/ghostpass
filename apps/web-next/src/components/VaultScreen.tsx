@@ -8,7 +8,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import { decryptVaultItem, encryptFolders, encryptItem } from "@/lib/crypto";
+import { sealSend } from "@/lib/send";
+import {
+  decryptVaultItem,
+  encryptFolders,
+  encryptItem,
+  encryptShares,
+  type PartageEnCours,
+} from "@/lib/crypto";
 import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import {
@@ -22,14 +29,15 @@ import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Organisation, Plus } from "@/components/Icones";
+import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Organisation, Partage, Plus } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
 import { Securite } from "@/components/Securite";
+import { Partages } from "@/components/Partages";
 import { ImportExport } from "@/components/ImportExport";
 import { ListeOrgs } from "@/components/orgs/ListeOrgs";
 import { DetailOrg } from "@/components/orgs/DetailOrg";
 import type { OrgSummary } from "@/lib/orgs";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { Reglages } from "@/components/Reglages";
 
 export function VaultScreen() {
   const { t } = useI18n();
@@ -38,6 +46,10 @@ export function VaultScreen() {
   const [items, setItems] = useState<VaultEntry[]>([]);
   const [dossiersVides, setDossiersVides] = useState<string[]>([]);
   const [registreId, setRegistreId] = useState<string | null>(null);
+  // Le registre des partages : les jetons de révocation rendus par ghostbit.
+  // Chiffré comme le reste, jamais confié au serveur.
+  const [registrePartagesId, setRegistrePartagesId] = useState<string | null>(null);
+  const [partages, setPartages] = useState<PartageEnCours[]>([]);
   const [choisi, setChoisi] = useState<VaultEntry | null>(null);
   const [dossier, setDossier] = useState<string | null>(null);
   const [recherche, setRecherche] = useState("");
@@ -45,13 +57,14 @@ export function VaultScreen() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [occupe, setOccupe] = useState(false);
   const [chargement, setChargement] = useState(true);
+  const [message, setMessage] = useState<string | null>(null);
   // `null` = pas de formulaire ouvert ; sinon l'identifiant en cours de
   // modification, ou la chaîne vide pour une création.
   const [edition, setEdition] = useState<string | null>(null);
   // Les sections portées à ce jour. Les organisations et la sécurité
   // arrivent ensuite : tant qu'elles ne sont pas là, elles ne figurent pas
   // dans le rail — un onglet qui mène à « bientôt » est pire que son absence.
-  const [section, setSection] = useState<"coffre" | "orgs" | "securite" | "corbeille">("coffre");
+  const [section, setSection] = useState<"coffre" | "orgs" | "partages" | "securite" | "corbeille">("coffre");
   // L'organisation ouverte. Nulle = la liste. La clé d'org vit dans le
   // composant de détail, pas ici : quitter l'écran doit la laisser partir.
   const [orgOuverte, setOrgOuverte] = useState<OrgSummary | null>(null);
@@ -68,11 +81,16 @@ export function VaultScreen() {
       const entrees: VaultEntry[] = [];
       let regId: string | null = null;
       let regChemins: string[] = [];
+      let regPartagesId: string | null = null;
+      let regPartages: PartageEnCours[] = [];
       for (const d of dtos) {
         const r = decryptVaultItem(account, d.encryptedKey, d.encryptedData);
         if (r.kind === "folders") {
           regId = d.id;
           regChemins = r.paths;
+        } else if (r.kind === "shares") {
+          regPartagesId = d.id;
+          regPartages = r.shares;
         } else {
           entrees.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
         }
@@ -80,6 +98,8 @@ export function VaultScreen() {
       setItems(entrees);
       setRegistreId(regId);
       setDossiersVides(regChemins);
+      setRegistrePartagesId(regPartagesId);
+      setPartages(regPartages);
       setErreur(null);
       return entrees;
     } catch (e) {
@@ -154,6 +174,76 @@ export function VaultScreen() {
       // sélectionné donnerait l'impression que le geste n'a pas abouti.
       const frais = await charger();
       setChoisi(frais.find((i) => i.id === id) ?? null);
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOccupe(false);
+    }
+  };
+
+  /// Enregistre le registre des partages, comme celui des dossiers.
+  const enregistrerPartages = async (liste: PartageEnCours[]) => {
+    if (!token || !account) return;
+    const enc = encryptShares(account, liste);
+    if (registrePartagesId) await api.updateItem(token, registrePartagesId, enc);
+    else setRegistrePartagesId((await api.createItem(token, enc)).id);
+  };
+
+  /// Partager l'entrée affichée.
+  ///
+  /// Le chiffrement a lieu ici, avec une clé jetable ; le serveur relaie vers
+  /// ghostbit et ne voit que du chiffré. Le jeton de révocation revient au
+  /// client et va DANS LE COFFRE — le confier au serveur lui donnerait un
+  /// pouvoir sur des partages qu'il ne peut pas lire.
+  const partager = async (item: VaultEntry) => {
+    if (!token) return;
+    const secret =
+      item.kind === "note" ? item.note : item.kind === "card" ? item.cardNumber : item.password;
+    if (!secret) return;
+    setOccupe(true);
+    try {
+      const scelle = await sealSend(secret);
+      const cree = await api.createSend(token, {
+        ciphertext: scelle.ciphertext,
+        iv: scelle.iv,
+        expiresInHours: 24,
+        maxViews: 1,
+      });
+      // L'URL vient du serveur, le fragment est ajouté ici : la clé ne doit
+      // jamais traverser le réseau, donc le serveur ne peut pas composer le
+      // lien complet lui-même.
+      const lien = `${cree.url}#${scelle.keyFragment}`;
+      const suivant = [
+        {
+          id: cree.id,
+          url: lien,
+          deleteToken: cree.deleteToken,
+          name: item.name,
+          createdAt: Date.now(),
+          expiresAt: cree.expiresAt,
+        },
+        ...partages,
+      ];
+      setPartages(suivant);
+      await enregistrerPartages(suivant);
+      await navigator.clipboard.writeText(lien).catch(() => undefined);
+      setErreur(null);
+      setMessage(t("app.shareCreated"));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOccupe(false);
+    }
+  };
+
+  const revoquerPartage = async (p: PartageEnCours) => {
+    if (!token) return;
+    setOccupe(true);
+    try {
+      await api.revokeSend(token, p.id, p.deleteToken);
+      const suivant = partages.filter((x) => x.id !== p.id);
+      setPartages(suivant);
+      await enregistrerPartages(suivant);
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e));
     } finally {
@@ -238,58 +328,70 @@ export function VaultScreen() {
 
   return (
     <div className="flex h-dvh flex-col text-foreground">
-      <header className="verre flex shrink-0 items-center gap-3 border-b border-border px-5 py-3">
-        <span className="flex items-center gap-2 font-semibold">
-          <Coffre className="size-5 text-accent" />
-          GhostPass
-        </span>
-        {section === "coffre" && (
-        <input
-          type="search"
-          value={recherche}
-          onChange={(e) => setRecherche(e.target.value)}
-          placeholder={t("app.searchVault")}
-          aria-label={t("app.searchVault")}
-          className="ml-auto w-full max-w-md rounded-pill border border-border bg-surface-2 px-4 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
-        />
-        )}
-        {section === "coffre" && (
-        <Bouton
-          onClick={() => {
-            // Le dossier ouvert pré-remplit le champ : on ajoute presque
-            // toujours là où l'on est en train de regarder.
-            setChoisi(null);
-            setEdition("");
-          }}
-        >
-          <span className="flex items-center gap-1.5">
-            <Plus className="size-4" />
-            <span className="min-w-[13ch] text-center">{t("app.newItem")}</span>
-          </span>
-        </Bouton>
-        )}
-        <div className={section === "coffre" ? "" : "ml-auto"} />
-        <LanguageSwitcher />
-        <Bouton variante="discret" onClick={fermer}>
-          <span className="flex items-center gap-1.5">
-            <Cadenas className="size-4" />
-            {t("app.lock")}
-          </span>
-        </Bouton>
-      </header>
 
       {erreur && (
-        <p role="alert" className="shrink-0 border-b border-border bg-danger-soft px-4 py-2 text-sm text-danger">
+        <p role="alert" className="shrink-0 border-b border-border bg-danger/10 px-4 py-2 text-sm text-danger">
           {erreur}
         </p>
       )}
+      {message && (
+        <p className="shrink-0 border-b border-border bg-success/10 px-4 py-2 text-sm text-success">
+          {message}
+        </p>
+      )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[15rem_20rem_1fr]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[16rem_21rem_1fr]">
         <nav className="verre-dense hidden min-h-0 flex-col overflow-y-auto border-r border-border p-3 md:flex">
+          {/* Tout vit dans le rail — marque, action principale, recherche,
+              navigation, identité — comme chez ghostcal. Une barre horizontale
+              en plus coupait l'écran en deux et éloignait l'action principale
+              de la navigation qu'elle sert. */}
+          {/* `text-foreground` explicite : hérité, le mot-marque sortait en
+              `rgb(11,15,25)` — la couleur du FOND. Noir sur noir, invisible, et
+              la capture d'écran ne montrait qu'une icône. Une couleur qui porte
+              du sens se déclare, elle ne s'hérite pas. */}
+          <span className="mb-5 flex items-center gap-2.5 px-2 pt-1 text-base font-semibold text-foreground">
+            {/* Le logo de la charte, servi tel quel — même traitement que
+                ghostcal. C'est une IMAGE et non un SVG recopié dans le
+                balisage : le fichier est une sortie de `tools/brand/`, et le
+                dupliquer ici rouvrirait la dérive de teintes qu'on a refermée. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" width={24} height={24} />
+            GhostPass
+          </span>
+
+          {section === "coffre" && (
+            <>
+              <Bouton
+                className="mb-3 w-full"
+                onClick={() => {
+                  // Le dossier ouvert pré-remplit le champ : on ajoute presque
+                  // toujours là où l'on est en train de regarder.
+                  setChoisi(null);
+                  setEdition("");
+                }}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Plus className="size-4" />
+                  {t("app.newItem")}
+                </span>
+              </Bouton>
+              <input
+                type="search"
+                value={recherche}
+                onChange={(e) => setRecherche(e.target.value)}
+                placeholder={t("app.searchVault")}
+                aria-label={t("app.searchVault")}
+                className="mb-4 w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+              />
+            </>
+          )}
+
           <div className="mb-4 flex flex-col gap-0.5">
             {([
               ["coffre", "app.myVault", Coffre],
               ["orgs", "app.orgs", Organisation],
+              ["partages", "app.shares", Partage],
               ["securite", "app.security", Bouclier],
               ["corbeille", "app.trash", IconeCorbeille],
             ] as const).map(([cle, libelle, Icone]) => (
@@ -334,16 +436,24 @@ export function VaultScreen() {
           )}
           {/* Le pied de la colonne dit l'état du coffre. C'est la seule chose
               qui rappelle, à tout moment, que les clés sont en mémoire. */}
-          <div className="mt-auto pt-4">
+          <div className="mt-auto space-y-2 border-t border-border pt-4">
             <span className="flex items-center gap-2 rounded-pill bg-success/10 px-3 py-2 text-xs text-success">
               <span className="size-1.5 rounded-pill bg-success" />
               {t("app.unlocked")}
             </span>
+            <Bouton variante="discret" className="w-full" onClick={fermer}>
+              <span className="flex items-center justify-center gap-1.5">
+                <Cadenas className="size-4" />
+                {t("app.lock")}
+              </span>
+            </Bouton>
           </div>
         </nav>
 
         <div className={`verre-dense min-h-0 border-r border-border ${section !== "coffre" ? "col-span-2" : ""}`}>
-          {section === "securite" ? (
+          {section === "partages" ? (
+            <Partages partages={partages} occupe={occupe} onRevoquer={revoquerPartage} />
+          ) : section === "securite" ? (
             <Securite />
           ) : section === "orgs" ? (
             orgOuverte ? (
@@ -423,6 +533,7 @@ export function VaultScreen() {
               item={choisi}
               onModifier={() => setEdition(choisi.id)}
               onSupprimer={supprimerEntree}
+              onPartager={() => void partager(choisi)}
               occupe={occupe}
             />
           ) : (
@@ -435,6 +546,7 @@ export function VaultScreen() {
           )}
         </div>
       </div>
+      <Reglages />
     </div>
   );
 }

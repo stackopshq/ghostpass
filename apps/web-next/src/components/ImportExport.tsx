@@ -14,7 +14,7 @@ import { depuisLigneCsv, versCsv } from "@/lib/export";
 import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import type { VaultEntry } from "@/lib/vault";
-import { Bouton } from "@/components/champs";
+import { Televerser } from "@/components/Icones";
 
 export function ImportExport({
   personnels,
@@ -71,13 +71,28 @@ export function ImportExport({
 
   return (
     <div className="mt-4 space-y-2 border-t border-border pt-4">
-      <div className="flex gap-2">
-        <Bouton variante="discret" onClick={exporter} disabled={personnels.length === 0}>
+      {/* Deux actions rares : elles se lisent comme des liens outillés, pas
+          comme des boutons pleins qui rivaliseraient avec l'action principale
+          du rail. Un rail où tout crie ne hiérarchise plus rien. */}
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={exporter}
+          disabled={personnels.length === 0}
+          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-2xs text-muted transition-colors hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Televerser className="size-3.5 rotate-180" />
           {t("app.exportCsv")}
-        </Bouton>
-        <Bouton variante="discret" onClick={() => champ.current?.click()} disabled={occupe}>
+        </button>
+        <button
+          type="button"
+          onClick={() => champ.current?.click()}
+          disabled={occupe}
+          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-2xs text-muted transition-colors hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Televerser className="size-3.5" />
           {t("app.importCsv")}
-        </Bouton>
+        </button>
         <input
           ref={champ}
           type="file"
@@ -90,13 +105,14 @@ export function ImportExport({
           }}
         />
       </div>
-      {/* La portée de l'export, écrite là où on clique. Un fichier qui ne
-          contient pas ce qu'on croyait se découvre trop tard. */}
-      <p className="text-2xs text-muted">{t("app.exportPersonalOnly")}</p>
-      <p className="text-2xs text-muted">{t("app.importCols")}</p>
-      {message && <p className="text-2xs text-success">{message}</p>}
+      {/* La portée de l'export reste visible : c'est une affirmation de
+          sécurité, et un fichier qui ne contient pas ce qu'on croyait se
+          découvre trop tard. */}
+      <p className="px-1 text-2xs leading-snug text-muted">{t("app.exportPersonalOnly")}</p>
+      {occupe && <p className="px-1 text-2xs text-muted">{t("app.importCols")}</p>}
+      {message && <p className="px-1 text-2xs text-success">{message}</p>}
       {erreur && (
-        <p role="alert" className="text-2xs text-danger">
+        <p role="alert" className="px-1 text-2xs text-danger">
           {erreur}
         </p>
       )}

@@ -135,3 +135,32 @@ export const Bouclier = ({ className }: Props) => (
     <path d="m9.2 12 2 2 3.6-3.8" />
   </svg>
 );
+
+export const Partage = ({ className }: Props) => (
+  <svg {...commun} strokeWidth={1.8} className={className} aria-hidden="true">
+    <circle cx="18" cy="5" r="2.5" />
+    <circle cx="6" cy="12" r="2.5" />
+    <circle cx="18" cy="19" r="2.5" />
+    <path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4" />
+  </svg>
+);
+
+export const Soleil = ({ className }: Props) => (
+  <svg {...commun} strokeWidth={1.8} className={className} aria-hidden="true">
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" />
+  </svg>
+);
+
+export const Lune = ({ className }: Props) => (
+  <svg {...commun} strokeWidth={1.8} className={className} aria-hidden="true">
+    <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+  </svg>
+);
+
+export const Televerser = ({ className }: Props) => (
+  <svg {...commun} strokeWidth={1.8} className={className} aria-hidden="true">
+    <path d="M12 15V4M8.5 7.5 12 4l3.5 3.5" />
+    <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+  </svg>
+);

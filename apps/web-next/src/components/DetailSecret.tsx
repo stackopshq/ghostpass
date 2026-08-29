@@ -80,11 +80,13 @@ export function DetailSecret({
   item,
   onModifier,
   onSupprimer,
+  onPartager,
   occupe,
 }: {
   item: VaultEntry;
   onModifier: () => void;
   onSupprimer: () => void;
+  onPartager: () => void;
   occupe: boolean;
 }) {
   const { t, locale } = useI18n();
@@ -109,6 +111,11 @@ export function DetailSecret({
           <p className="text-xs text-muted">{genre}</p>
         </div>
         <div className="flex shrink-0 gap-2">
+          {/* Partager copie le lien dans le presse-papier et range le jeton de
+              révocation dans le coffre : le secret, lui, n'y passe jamais. */}
+          <Bouton variante="discret" onClick={onPartager} disabled={occupe}>
+            {t("app.share")}
+          </Bouton>
           <Bouton variante="discret" onClick={onModifier}>
             {t("app.edit")}
           </Bouton>

@@ -23,6 +23,36 @@
   --success: #4fc28a;
 }
 
+/* Le mode clair.
+ *
+ * Le thème généré par la charte est SOMBRE et unique : il ne porte pas de
+ * variante claire. Ghostcal en a une, et Clara veut la même bascule ici. Elle
+ * vit donc dans ce fichier, sous `data-theme="light"` posé sur <html>, comme
+ * chez ghostcal — et pas dans `ghost-theme.css`, qui est généré et serait
+ * écrasé à la régénération.
+ *
+ * Le jour où le générateur saura produire les deux, ce bloc disparaît : c'est
+ * sa place naturelle, une teinte claire devant être la même dans les huit
+ * produits.
+ *
+ * L'accent fonce : le bleu du logo passe sur fond blanc en dessous du seuil de
+ * contraste, et un accent illisible ne signale plus rien. */
+:root[data-theme="light"] {
+  --color-base: #f5f8fc;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef3f9;
+  --color-foreground: #0f1b2d;
+  --color-muted: #5b6b82;
+  --color-border: rgba(15, 23, 42, 0.1);
+  --color-border-strong: rgba(15, 23, 42, 0.18);
+  --color-accent: #1b5fd9;
+  --color-accent-ink: #ffffff;
+  --aurora: color-mix(in srgb, #1b5fd9 10%, transparent);
+  --danger: #b3261e;
+  --warn: #8a5300;
+  --success: #11663f;
+}
+
 /* Le pont entre les jetons de la suite et les classes Tailwind. Aucune valeur
  * n'est répétée : `text-sm` rend la marche `--text-sm`, `bg-surface` le fond
  * `--color-surface`. Changer une valeur se fait dans PRODUITS, pas ici. */

@@ -12,11 +12,17 @@ export interface ItemDto {
 
 async function http<T>(
   path: string,
-  opts: { method?: string; body?: unknown; token?: string } = {},
+  opts: { method?: string; body?: unknown; token?: string; headers?: Record<string, string> } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers["content-type"] = "application/json";
   if (opts.token) headers["authorization"] = `Bearer ${opts.token}`;
+  // Les en-têtes de l'appelant en DERNIER, mais sans pouvoir écraser
+  // l'autorisation : un appel qui remplacerait le jeton par erreur échouerait
+  // de façon incompréhensible.
+  for (const [k, v] of Object.entries(opts.headers ?? {})) {
+    if (k.toLowerCase() !== "authorization") headers[k] = v;
+  }
 
   const res = await fetch(path, {
     method: opts.method ?? "GET",
@@ -259,7 +265,28 @@ export const api = {
     token: string,
     body: { ciphertext: string; iv: string; expiresInHours: number; maxViews: number },
   ) {
-    return http<{ id: string }>("/api/send", { method: "POST", body, token });
+    // La réponse porte l'URL COMPLÈTE, pas seulement un identifiant : depuis
+    // que le paste vit chez ghostbit, un client qui reconstruirait le lien
+    // depuis l'identifiant et l'adresse de son serveur produirait des liens
+    // morts sans lever d'erreur. Et le `deleteToken`, que seul le client
+    // conserve — c'est lui qui rend la révocation possible.
+    return http<{ id: string; url: string; deleteToken: string; expiresAt: number | null }>(
+      "/api/send",
+      { method: "POST", body, token },
+    );
+  },
+
+  /// Révoquer un partage en présentant le jeton gardé au coffre.
+  ///
+  /// 204 sans distinguer : ghostbit répond 403 pour un jeton faux comme pour un
+  /// paste absent ou expiré, exprès, afin qu'on ne puisse pas énumérer. « C'est
+  /// fait » couvre donc les trois cas, et c'est ce que l'utilisateur voulait.
+  revokeSend(token: string, id: string, deleteToken: string) {
+    return http<void>(`/api/send/${id}`, {
+      method: "DELETE",
+      token,
+      headers: { "x-delete-token": deleteToken },
+    });
   },
   getSend(id: string) {
     return http<{ ciphertext: string; iv: string }>(`/api/send/${id}`);
