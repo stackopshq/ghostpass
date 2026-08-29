@@ -382,6 +382,35 @@
     }
   }
 
+  /// Supprimer la collection ouverte.
+  ///
+  /// Clara, admin de son organisation, ne pouvait pas le faire : ce n'etait pas
+  /// une question de permission, la capacite n'existait nulle part — ni route,
+  /// ni methode cliente, ni fonction de depot.
+  ///
+  /// Le refus du serveur est garde SOUS le bouton, comme pour la suppression
+  /// d'organisation : un 409 « elle contient encore 3 secrets » doit se lire la
+  /// ou l'on vient de cliquer. Il dit quoi faire ; le code d'erreur, non.
+  let collDeleteError = $state<string | null>(null);
+
+  async function deleteCollection() {
+    if (!current || !selectedCollection) return;
+    if (!confirm(t("org.confirmDeleteCollection", { name: selectedCollection.name }))) return;
+    busy = true;
+    collDeleteError = null;
+    try {
+      await api.deleteCollection(token, current.orgId, selectedCollection.id);
+      selectedCollection = null;
+      pane = null;
+      items = [];
+      collections = (await api.listCollections(token, current.orgId)).collections;
+    } catch (err) {
+      collDeleteError = err instanceof Error ? err.message : String(err);
+    } finally {
+      busy = false;
+    }
+  }
+
   /// Retirer un element partage de la collection ouverte.
   ///
   /// Confirmation demandee parce que le geste est definitif : contrairement au
@@ -680,7 +709,18 @@
       <div class="detail-head">
         <span class="avatar lg">{@render folderIcon()}</span>
         <div><h2>{selectedCollection.name}</h2><div class="sub">{t("org.secretsCount", { n: items.length })}</div></div>
+        <!-- Reserve au gestionnaire : le serveur exige `manage`, et un admin
+             d'organisation l'a d'office. Offrir le bouton plus largement
+             donnerait un 403 a qui vient de le voir apparaitre. -->
+        {#if selectedCollection.permission === "manage"}
+          <div class="detail-actions">
+            <button class="danger" onclick={deleteCollection} disabled={busy}>{t("org.deleteCollection")}</button>
+          </div>
+        {/if}
       </div>
+      {#if collDeleteError}
+        <div class="callout warn" style="margin-bottom:1rem">{collDeleteError}</div>
+      {/if}
       {#if items.length === 0}
         <div class="empty">{@render folderIcon()}<p>{t("org.emptyCollection")}</p></div>
       {:else}

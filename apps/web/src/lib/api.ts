@@ -329,6 +329,18 @@ export const api = {
   ) {
     return http<{ ok: boolean }>(`/api/orgs/${orgId}/rotate`, { method: "POST", body, token });
   },
+  /// Supprimer une collection.
+  ///
+  /// Le serveur refuse tant qu'elle contient un secret (409 avec le compte) et
+  /// refuse la collection par defaut (409, `reason: "default"`). On laisse donc
+  /// remonter le message : c'est lui qui dit quoi faire, pas le code d'erreur.
+  deleteCollection(token: string, orgId: string, collectionId: string) {
+    return http<void>(`/api/orgs/${orgId}/collections/${collectionId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
   createCollection(token: string, orgId: string, body: { name: string }) {
     return http<{ id: string; name: string }>(`/api/orgs/${orgId}/collections`, {
       method: "POST",

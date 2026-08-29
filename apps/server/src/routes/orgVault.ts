@@ -252,6 +252,52 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
     },
   );
 
+  // Supprimer une collection (permission `manage` — un admin d'org l'a d'office).
+  //
+  // Clara, admin de son organisation, ne pouvait pas supprimer une collection :
+  // ce n'était pas sa permission, c'est que la capacité n'existait nulle part —
+  // ni route, ni méthode cliente, ni fonction de dépôt.
+  //
+  // La forme des refus suit celle de la suppression d'organisation, pour que
+  // deux gestes voisins ne se comportent pas différemment :
+  //   404 à un non-membre — dire « réservé au gestionnaire » révélerait qu'une
+  //       collection porte cet identifiant ;
+  //   409 si elle contient encore des secrets, avec leur nombre. Le schéma
+  //       cascade sur `org_items` : sans ce garde, un clic dans une barre
+  //       latérale effacerait des secrets d'équipe sans les nommer ;
+  //   409 sur la collection par défaut, que le produit pose lui-même à la
+  //       création et dont `services/defaultCollection.ts` suppose l'existence.
+  app.delete<{ Params: { id: string; cid: string } }>(
+    "/api/orgs/:id/collections/:cid",
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const member = await activeMember(db, req.params.id, req.currentUser!.id);
+      if (!member) return reply.code(404).send({ error: "collection introuvable" });
+      const collection = await collectionInOrg(db, req.params.id, req.params.cid);
+      if (!collection) return reply.code(404).send({ error: "collection introuvable" });
+      if ((await permissionFor(db, req.params.cid, member)) !== "manage") {
+        return reply.code(403).send({ error: "réservé au gestionnaire de la collection" });
+      }
+      if (collection.is_default === 1) {
+        return reply.code(409).send({
+          error: "La collection par défaut ne peut pas être supprimée.",
+          reason: "default",
+        });
+      }
+      const contenu = await orgItems.listByCollection(db, req.params.cid);
+      if (contenu.length > 0) {
+        return reply.code(409).send({
+          error: `La collection contient encore ${contenu.length} secret${contenu.length > 1 ? "s" : ""} partagé${contenu.length > 1 ? "s" : ""}. Videz-la avant de la supprimer.`,
+          items: contenu.length,
+        });
+      }
+      if (!(await collections.remove(db, { id: req.params.cid, orgId: req.params.id }))) {
+        return reply.code(404).send({ error: "collection introuvable" });
+      }
+      return reply.code(204).send();
+    },
+  );
+
   // Accorder/modifier la permission d'un membre sur une collection (permission `manage`).
   app.post<{ Params: { id: string; cid: string } }>(
     "/api/orgs/:id/collections/:cid/access",

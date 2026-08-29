@@ -1449,7 +1449,17 @@
            d'organisation et c'est le nom de collection — le seul qui distingue
            les lignes entre elles — qui disparaissait. Tronquer par la droite
            n'est bon que si l'information décroît de gauche à droite. -->
-      <span class="pill pill-shared" title="{item.shared.orgName} · {item.shared.collectionName}">
+      <!-- L'icône d'organisation est le SEUL signe qui dit « ce secret est
+           partagé ». Le correctif du 2026-08-29 a mis la collection devant et
+           masqué le nom d'org quand il n'y en a qu'une — ce qui règle la
+           troncature mais efface la provenance : « Credentials Loutre » se lit
+           alors exactement comme un dossier personnel du même nom. Le titre
+           complet reste au survol, mais un survol ne se voit pas.
+
+           `aria-label` porte l'information pour qui n'a pas l'image : une icône
+           décorative laisserait la ligne muette sur ce qui la distingue. -->
+      <span class="pill pill-shared" title={t("app.sharedOrigin", { org: item.shared.orgName, collection: item.shared.collectionName })}>
+        <span class="pill-icon" aria-label={t("app.sharedItem")} role="img">{@render orgIcon()}</span>
         <span class="pill-text">{item.shared.collectionName}</span>
         {#if plusieursOrgs}<span class="pill-org">{item.shared.orgName}</span>{/if}
       </span>
