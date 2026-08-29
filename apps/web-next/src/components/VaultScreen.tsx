@@ -22,8 +22,9 @@ import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Cadenas, Coffre, Corbeille as IconeCorbeille, Organisation, Plus } from "@/components/Icones";
+import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Organisation, Plus } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
+import { Securite } from "@/components/Securite";
 import { ListeOrgs } from "@/components/orgs/ListeOrgs";
 import { DetailOrg } from "@/components/orgs/DetailOrg";
 import type { OrgSummary } from "@/lib/orgs";
@@ -49,7 +50,7 @@ export function VaultScreen() {
   // Les sections portées à ce jour. Les organisations et la sécurité
   // arrivent ensuite : tant qu'elles ne sont pas là, elles ne figurent pas
   // dans le rail — un onglet qui mène à « bientôt » est pire que son absence.
-  const [section, setSection] = useState<"coffre" | "orgs" | "corbeille">("coffre");
+  const [section, setSection] = useState<"coffre" | "orgs" | "securite" | "corbeille">("coffre");
   // L'organisation ouverte. Nulle = la liste. La clé d'org vit dans le
   // composant de détail, pas ici : quitter l'écran doit la laisser partir.
   const [orgOuverte, setOrgOuverte] = useState<OrgSummary | null>(null);
@@ -288,6 +289,7 @@ export function VaultScreen() {
             {([
               ["coffre", "app.myVault", Coffre],
               ["orgs", "app.orgs", Organisation],
+              ["securite", "app.security", Bouclier],
               ["corbeille", "app.trash", IconeCorbeille],
             ] as const).map(([cle, libelle, Icone]) => (
               <button
@@ -334,7 +336,9 @@ export function VaultScreen() {
         </nav>
 
         <div className={`verre-dense min-h-0 border-r border-border ${section !== "coffre" ? "col-span-2" : ""}`}>
-          {section === "orgs" ? (
+          {section === "securite" ? (
+            <Securite />
+          ) : section === "orgs" ? (
             orgOuverte ? (
               <DetailOrg org={orgOuverte} onRetour={() => setOrgOuverte(null)} />
             ) : (

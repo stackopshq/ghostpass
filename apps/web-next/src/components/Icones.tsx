@@ -128,3 +128,10 @@ export const Reglages = ({ className }: Props) => (
     <circle cx="8" cy="18" r="2" />
   </svg>
 );
+
+export const Bouclier = ({ className }: Props) => (
+  <svg {...commun} strokeWidth={1.8} className={className} aria-hidden="true">
+    <path d="M12 3.5 5 6v6c0 4 3 7.2 7 8.5 4-1.3 7-4.5 7-8.5V6z" />
+    <path d="m9.2 12 2 2 3.6-3.8" />
+  </svg>
+);
