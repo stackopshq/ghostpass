@@ -413,3 +413,45 @@ test("la liste des collections porte la permission effective, pas le rôle", asy
   assert.equal(vue.permission, "read", "la permission effective, pas le rôle « member »");
   await app.close();
 });
+
+test("un accès en lecture seule ne peut pas supprimer un élément partagé", async () => {
+  // L'interface cache désormais « Supprimer » quand la permission effective
+  // n'est pas `write`/`manage`. Ce test dit que la garde n'est pas seulement
+  // cosmétique : un appel direct est refusé de la même façon, et le refus est
+  // un 403 — pas un 404 qui laisserait croire que l'élément n'existe plus.
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json();
+
+  const created = await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items`,
+    headers: auth(adminToken),
+    payload: ITEM,
+  });
+  assert.equal(created.statusCode, 201);
+  const itemId = created.json().id as string;
+
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
+  await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+    payload: { userId: memberId, permission: "read" },
+  });
+
+  const refus = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items/${itemId}`,
+    headers: auth(memberToken),
+  });
+  assert.equal(refus.statusCode, 403);
+
+  // Et l'élément est toujours là : un refus ne doit rien avoir emporté.
+  const encore = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items`,
+    headers: auth(adminToken),
+  });
+  assert.equal(encore.json().items.length, 1);
+  await app.close();
+});
