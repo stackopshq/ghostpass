@@ -264,10 +264,22 @@ code,
   font-size: var(--text-lg);
 }
 
+/* `margin: 0 auto` centrait la recherche entre une marque a largeur fixe et un
+   bloc d'actions dont la largeur suit le texte traduit. Passer de « New item »
+   a « Nouvel element » elargissait la droite de 52 px et poussait la barre de
+   18 px vers la gauche -- mesure au navigateur avec la police du depot, pas
+   estimee. La barre bougeait en changeant de langue, sans que rien ne la
+   concerne.
+
+   Sans ce centrage, son bord gauche est celui de la marque, donc fixe, et sa
+   largeur reste 560 px tant qu'il y a la place. Une grille a colonnes de bords
+   egales aurait centre la barre dans la fenetre, mais elle ne tient pas : a
+   900 px les actions debordent de leur colonne et la barre gagne 10 px de
+   hauteur. Le centrage exact coute plus qu'il ne rapporte. */
 .topbar-search {
   flex: 1;
   max-width: 560px;
-  margin: 0 auto;
+  margin: 0;
 }
 
 .topbar-actions {
@@ -276,6 +288,24 @@ code,
   align-items: center;
   gap: 0.6rem;
   flex: none;
+}
+
+/* Le libelle du bouton d'ajout reserve la place du plus long des deux libelles,
+   sans quoi le bouton change de taille sous le curseur au moment ou l'on
+   bascule de langue -- signale separement par Clara, et c'est le meme defaut
+   vu de l'autre bout.
+
+   13ch est mesure, pas estime : rendu en Hanken Grotesk, « Nouvel element »
+   occupe 113 px et 1ch en vaut 9. L'unite `ch` suit la police, la ou un nombre
+   de pixels vieillirait au premier changement de fonte. Si une troisieme langue
+   arrive avec un libelle plus long, cette valeur est a remesurer : trop courte,
+   le bouton recommence a bouger ; trop longue, il porte du vide.
+
+   Sous 760 px le libelle disparait (voir plus bas) et cette reserve avec lui. */
+.topbar-actions .btn-primary span {
+  display: inline-block;
+  min-width: 13ch;
+  text-align: center;
 }
 
 .body {
