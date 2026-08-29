@@ -179,6 +179,15 @@ test("cycle de vie d'un item partagé par le gestionnaire de la collection", asy
     headers: auth(memberToken),
   });
   assert.equal(res.statusCode, 204);
+
+  // Rejouée : toujours 204. Un client qui retente après un délai réseau
+  // dépassé ne doit pas voir une erreur pour une suppression qui a réussi.
+  res = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items/${itemId}`,
+    headers: auth(memberToken),
+  });
+  assert.equal(res.statusCode, 204, "la suppression d'un item est idempotente");
   await app.close();
 });
 

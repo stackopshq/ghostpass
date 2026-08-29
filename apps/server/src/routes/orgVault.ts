@@ -245,9 +245,17 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
       if (!canWrite(await permissionFor(db, req.params.cid, member))) {
         return reply.code(403).send({ error: "accès en écriture refusé" });
       }
-      if (!await orgItems.remove(db, { id: req.params.itemId, collectionId: req.params.cid })) {
-        return reply.code(404).send({ error: "item introuvable" });
-      }
+      // Idempotente : 204 que la ligne ait existé ou non.
+      //
+      // Les gardes qui précèdent ont déjà tout dit — non-membre, collection
+      // étrangère, pas le droit d'écrire. Passé eux, il ne reste qu'une
+      // question : l'élément est-il encore là ? Et la réponse « non » n'est pas
+      // une erreur pour qui voulait le retirer.
+      //
+      // Ce qu'un 404 coûtait : un client qui rejoue après un délai réseau
+      // dépassé — l'extension, le web — affichait un échec pour une suppression
+      // qui avait réussi. Personne ne va vérifier après un message d'erreur.
+      await orgItems.remove(db, { id: req.params.itemId, collectionId: req.params.cid });
       return reply.code(204).send();
     },
   );
@@ -291,9 +299,17 @@ export function registerOrgVaultRoutes(app: FastifyInstance, db: DB): void {
           items: contenu.length,
         });
       }
-      if (!(await collections.remove(db, { id: req.params.cid, orgId: req.params.id }))) {
-        return reply.code(404).send({ error: "collection introuvable" });
-      }
+      // Idempotente pour la même raison. La collection déjà partie est
+      // rattrapée plus haut par `collectionInOrg` qui rend 404 — et ce 404-là
+      // reste, parce qu'il porte AUSSI la règle de discrétion envers un
+      // non-membre. On ne peut pas le rendre idempotent sans dire à un
+      // étranger si l'identifiant existe.
+      //
+      // Concrètement : rejouer une suppression réussie rend 404 et non 204,
+      // alors que rejouer une suppression d'ITEM rend 204. L'asymétrie est
+      // assumée — la discrétion prime sur le confort du client — et il vaut
+      // mieux l'écrire que la laisser découvrir.
+      await collections.remove(db, { id: req.params.cid, orgId: req.params.id });
       return reply.code(204).send();
     },
   );
