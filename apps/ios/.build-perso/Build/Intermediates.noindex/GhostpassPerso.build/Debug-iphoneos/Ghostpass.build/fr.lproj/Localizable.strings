@@ -30,12 +30,16 @@
 	<string>Cette personne gardera l'accès : elle administre l'équipe, ce qui lui donne la gestion de toutes les collections.</string>
 	<key>Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe.</key>
 	<string>Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe.</string>
+	<key>Cette personne perdra l'accès qu'un octroi direct lui donnait.</key>
+	<string>Cette personne perdra l'accès qu'un octroi direct lui donnait.</string>
 	<key>Cette personne perdra l'accès à cette collection.</key>
 	<string>Cette personne perdra l'accès à cette collection.</string>
 	<key>Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre.</key>
 	<string>Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre.</string>
 	<key>Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues.</key>
 	<string>Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues.</string>
+	<key>L'accès effectif : rôle, octroi direct et groupes réunis. Seul un octroi direct se retire ici.</key>
+	<string>L'accès effectif : rôle, octroi direct et groupes réunis. Seul un octroi direct se retire ici.</string>
 	<key>Le conteneur partagé n'est pas accessible : cette version de l'application n'a pas le groupe d'applications. Le remplissage ne peut pas lire le coffre.</key>
 	<string>Le conteneur partagé n'est pas accessible : cette version de l'application n'a pas le groupe d'applications. Le remplissage ne peut pas lire le coffre.</string>
 	<key>Le serveur n'a pas répondu.</key>
@@ -44,8 +48,14 @@
 	<string>Par les groupes</string>
 	<key>Par leur rôle</key>
 	<string>Par leur rôle</string>
+	<key>Partagé</key>
+	<string>Partagé</string>
+	<key>Personne n'a accès à cette collection.</key>
+	<string>Personne n'a accès à cette collection.</string>
 	<key>Personne n'a d'accès nommé sur cette collection.</key>
 	<string>Personne n'a d'accès nommé sur cette collection.</string>
+	<key>Qui a accès</key>
+	<string>Qui a accès</string>
 	<key>Remplir depuis votre coffre GhostPass</key>
 	<string>Remplir depuis votre coffre GhostPass</string>
 	<key>Retirer l'accès ?</key>

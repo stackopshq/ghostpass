@@ -31,7 +31,7 @@
         "key": "Aucun compte du coffre n'a de code à usage unique.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 136
+          "startingLine": 141
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Aucun identifiant dans la copie locale du coffre.",
         "location": {
           "startingColumn": 38,
-          "startingLine": 139
+          "startingLine": 144
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "%@ n'a pas permis d'ouvrir le coffre.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 115
+          "startingLine": 122
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "Ce compte n'a pas de code à usage unique exploitable.",
         "location": {
           "startingColumn": 35,
-          "startingLine": 157
+          "startingLine": 162
         }
       }
     ]

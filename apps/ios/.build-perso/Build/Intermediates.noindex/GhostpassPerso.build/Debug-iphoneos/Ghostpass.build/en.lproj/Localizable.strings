@@ -186,6 +186,8 @@
 	<string>This person will keep access: they administer the team, which grants them management of every collection.</string>
 	<key>Cette personne gardera l'accès : le groupe « %@ » le lui donne aussi. Pour le lui retirer entièrement, sortez-la de ce groupe.</key>
 	<string>This person will keep access: the “%@” group grants it too. To remove it entirely, take them out of that group.</string>
+	<key>Cette personne perdra l'accès qu'un octroi direct lui donnait.</key>
+	<string>This person will lose the access a direct grant gave them.</string>
 	<key>Cette personne perdra l'accès à cette collection.</key>
 	<string>This person will lose access to this collection.</string>
 	<key>Cette version de l'application n'a pas le groupe d'applications : le remplissage ne peut pas lire le coffre.</key>
@@ -408,6 +410,8 @@
 	<string>Inviting someone seals the team key to their public key. The server only carries a blob it cannot open.</string>
 	<key>Journal du compte</key>
 	<string>Account log</string>
+	<key>L'accès effectif : rôle, octroi direct et groupes réunis. Seul un octroi direct se retire ici.</key>
+	<string>Effective access: role, direct grant and groups combined. Only a direct grant can be removed here.</string>
 	<key>La clé de l'équipe sera changée et redistribuée aux autres membres. Ce que cette personne a déjà vu reste connu d'elle : les mots de passe concernés doivent être changés.</key>
 	<string>The team key will be changed and redistributed to the other members. What this person already saw remains known to them: the passwords involved must be changed.</string>
 	<key>La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre.</key>
@@ -594,12 +598,16 @@
 	<string>Share a secret</string>
 	<key>Partager…</key>
 	<string>Share…</string>
+	<key>Partagé</key>
+	<string>Shared</string>
 	<key>Passkey ajoutée</key>
 	<string>Passkey added</string>
 	<key>Passkey retirée</key>
 	<string>Passkey removed</string>
 	<key>Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d'applications.</key>
 	<string>During this delay the vault stays open in memory — never on disk — and its contents are hidden in the app switcher.</string>
+	<key>Personne n'a accès à cette collection.</key>
+	<string>Nobody has access to this collection.</string>
 	<key>Personne n'a d'accès nommé sur cette collection.</key>
 	<string>Nobody has named access to this collection.</string>
 	<key>Personne ne vous a désigné.</key>
@@ -622,6 +630,8 @@
 	<string>Prepare the file</string>
 	<key>Quand le contact demandera l'accès, vous serez prévenu et pourrez refuser pendant ce temps. Passé ce délai sans réponse de votre part, l'accès s'ouvre — c'est précisément ce qui le rend utile le jour où vous ne pouvez plus répondre.</key>
 	<string>When the contact requests access, you are notified and can deny it during this window. Once it elapses without an answer from you, access opens — which is exactly what makes it useful the day you can no longer answer.</string>
+	<key>Qui a accès</key>
+	<string>Who has access</string>
 	<key>Quiconque l'a peut lire le secret. Envoyez-le par un canal différent de celui où vous avez annoncé son existence.</key>
 	<string>Anyone holding it can read the secret. Send it through a different channel than the one where you announced it.</string>
 	<key>Rechercher</key>

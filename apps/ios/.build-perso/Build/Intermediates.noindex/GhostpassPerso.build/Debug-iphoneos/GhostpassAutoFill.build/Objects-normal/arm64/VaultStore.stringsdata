@@ -23,7 +23,7 @@
         "key": "%@ n'a pas permis d'ouvrir le coffre.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 227
+          "startingLine": 234
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "%@ n'a pas pu être activé (code %d).",
         "location": {
           "startingColumn": 31,
-          "startingLine": 276
+          "startingLine": 281
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Aucune session enregistrée sur cet appareil.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 257
+          "startingLine": 262
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Mot de passe maître incorrect.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 266
+          "startingLine": 271
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "Aucune clé ne vous a encore été remise pour ce coffre.",
         "location": {
           "startingColumn": 35,
-          "startingLine": 1063
+          "startingLine": 1090
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "Serveur injoignable : la modification n'a pas été enregistrée.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 463
+          "startingLine": 488
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "Ce coffre d'équipe n'est plus accessible.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 499
+          "startingLine": 524
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "Serveur injoignable : la suppression n'a pas été enregistrée.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 486
+          "startingLine": 511
         }
       },
       {
@@ -87,7 +87,7 @@
         "key": "Ce coffre d'équipe n'est plus accessible.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 520
+          "startingLine": 545
         }
       },
       {
@@ -95,7 +95,7 @@
         "key": "Serveur injoignable : les dossiers n'ont pas été enregistrés.",
         "location": {
           "startingColumn": 23,
-          "startingLine": 626
+          "startingLine": 653
         }
       },
       {
@@ -103,7 +103,7 @@
         "key": "Serveur injoignable : les favoris n'ont pas été enregistrés.",
         "location": {
           "startingColumn": 23,
-          "startingLine": 652
+          "startingLine": 679
         }
       },
       {
@@ -111,7 +111,7 @@
         "key": "Aucune session enregistrée sur cet appareil.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 665
+          "startingLine": 692
         }
       },
       {
@@ -119,7 +119,7 @@
         "key": "Mot de passe maître incorrect.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 676
+          "startingLine": 703
         }
       },
       {
@@ -127,7 +127,7 @@
         "key": "Serveur injoignable : l'import s'est arrêté en chemin.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 702
+          "startingLine": 729
         }
       },
       {
@@ -135,7 +135,7 @@
         "key": "Serveur injoignable : la clé de récupération n'a pas été enregistrée.",
         "location": {
           "startingColumn": 17,
-          "startingLine": 730
+          "startingLine": 757
         }
       },
       {
@@ -143,7 +143,7 @@
         "key": "Adresse de serveur invalide.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 746
+          "startingLine": 773
         }
       },
       {
@@ -151,7 +151,7 @@
         "key": "Serveur injoignable.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 769
+          "startingLine": 796
         }
       },
       {
@@ -159,7 +159,7 @@
         "key": "Réponse du serveur incompréhensible.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 771
+          "startingLine": 798
         }
       },
       {
@@ -167,7 +167,7 @@
         "key": "Clé de récupération refusée.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 775
+          "startingLine": 802
         }
       },
       {
@@ -175,7 +175,7 @@
         "key": "Serveur injoignable : l'item n'a pas été restauré.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 859
+          "startingLine": 886
         }
       },
       {
@@ -183,7 +183,7 @@
         "key": "Serveur injoignable : l'item n'a pas été supprimé.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 872
+          "startingLine": 899
         }
       },
       {
@@ -191,7 +191,7 @@
         "key": "Ce serveur ne propose pas encore le second facteur.",
         "location": {
           "startingColumn": 31,
-          "startingLine": 1412
+          "startingLine": 1439
         }
       }
     ]

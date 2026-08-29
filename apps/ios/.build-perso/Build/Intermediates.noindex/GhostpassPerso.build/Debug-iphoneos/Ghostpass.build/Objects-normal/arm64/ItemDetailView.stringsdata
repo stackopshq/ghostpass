@@ -12,10 +12,18 @@
       },
       {
         "comment": "",
+        "key": "Partagé",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
         "key": "Dossier",
         "location": {
           "startingColumn": 37,
-          "startingLine": 49
+          "startingLine": 64
         }
       },
       {
@@ -23,7 +31,7 @@
         "key": "Identifiants",
         "location": {
           "startingColumn": 29,
-          "startingLine": 89
+          "startingLine": 104
         }
       },
       {
@@ -31,7 +39,7 @@
         "key": "Code à usage unique",
         "location": {
           "startingColumn": 24,
-          "startingLine": 122
+          "startingLine": 137
         }
       },
       {
@@ -39,7 +47,7 @@
         "key": "Renouvelé toutes les %lld secondes.",
         "location": {
           "startingColumn": 23,
-          "startingLine": 123
+          "startingLine": 138
         }
       },
       {
@@ -47,7 +55,7 @@
         "key": "Adresses",
         "location": {
           "startingColumn": 33,
-          "startingLine": 152
+          "startingLine": 167
         }
       },
       {
@@ -55,7 +63,7 @@
         "key": "Note",
         "location": {
           "startingColumn": 29,
-          "startingLine": 172
+          "startingLine": 187
         }
       },
       {
@@ -63,7 +71,7 @@
         "key": "Carte",
         "location": {
           "startingColumn": 29,
-          "startingLine": 183
+          "startingLine": 198
         }
       },
       {
@@ -71,7 +79,7 @@
         "key": "Retirer des favoris",
         "location": {
           "startingColumn": 46,
-          "startingLine": 74
+          "startingLine": 89
         }
       },
       {
@@ -79,7 +87,7 @@
         "key": "Mettre en favori",
         "location": {
           "startingColumn": 70,
-          "startingLine": 74
+          "startingLine": 89
         }
       },
       {
@@ -87,7 +95,7 @@
         "key": "Modifier",
         "location": {
           "startingColumn": 24,
-          "startingLine": 78
+          "startingLine": 93
         }
       },
       {
@@ -95,7 +103,7 @@
         "key": "Nom d'utilisateur",
         "location": {
           "startingColumn": 32,
-          "startingLine": 90
+          "startingLine": 105
         }
       },
       {
@@ -103,7 +111,7 @@
         "key": "Mot de passe",
         "location": {
           "startingColumn": 27,
-          "startingLine": 97
+          "startingLine": 112
         }
       },
       {
@@ -111,7 +119,7 @@
         "key": "Nom d'utilisateur copié",
         "location": {
           "startingColumn": 44,
-          "startingLine": 92
+          "startingLine": 107
         }
       },
       {
@@ -119,7 +127,7 @@
         "key": "Mot de passe copié",
         "location": {
           "startingColumn": 44,
-          "startingLine": 107
+          "startingLine": 122
         }
       },
       {
@@ -127,7 +135,7 @@
         "key": "Clé de vérification illisible.",
         "location": {
           "startingColumn": 30,
-          "startingLine": 143
+          "startingLine": 158
         }
       },
       {
@@ -135,7 +143,7 @@
         "key": "Code copié",
         "location": {
           "startingColumn": 50,
-          "startingLine": 137
+          "startingLine": 152
         }
       },
       {
@@ -143,7 +151,7 @@
         "key": "Adresse copiée",
         "location": {
           "startingColumn": 82,
-          "startingLine": 161
+          "startingLine": 176
         }
       },
       {
@@ -151,7 +159,7 @@
         "key": "Titulaire",
         "location": {
           "startingColumn": 32,
-          "startingLine": 184
+          "startingLine": 199
         }
       },
       {
@@ -159,7 +167,7 @@
         "key": "Numéro",
         "location": {
           "startingColumn": 27,
-          "startingLine": 191
+          "startingLine": 206
         }
       },
       {
@@ -167,7 +175,7 @@
         "key": "Expiration",
         "location": {
           "startingColumn": 32,
-          "startingLine": 201
+          "startingLine": 216
         }
       },
       {
@@ -175,7 +183,7 @@
         "key": "Titulaire copié",
         "location": {
           "startingColumn": 45,
-          "startingLine": 186
+          "startingLine": 201
         }
       },
       {
@@ -183,7 +191,7 @@
         "key": "Numéro copié",
         "location": {
           "startingColumn": 82,
-          "startingLine": 198
+          "startingLine": 213
         }
       },
       {
@@ -191,7 +199,7 @@
         "key": "Anciens mots de passe (%lld)",
         "location": {
           "startingColumn": 26,
-          "startingLine": 218
+          "startingLine": 233
         }
       },
       {
@@ -199,7 +207,7 @@
         "key": "Remplacé",
         "location": {
           "startingColumn": 35,
-          "startingLine": 239
+          "startingLine": 254
         }
       },
       {
@@ -207,7 +215,7 @@
         "key": "Ancien mot de passe copié",
         "location": {
           "startingColumn": 44,
-          "startingLine": 252
+          "startingLine": 267
         }
       },
       {
@@ -215,7 +223,7 @@
         "key": "Force",
         "location": {
           "startingColumn": 18,
-          "startingLine": 266
+          "startingLine": 281
         }
       },
       {
@@ -223,7 +231,7 @@
         "key": "%lld s",
         "location": {
           "startingColumn": 18,
-          "startingLine": 301
+          "startingLine": 316
         }
       },
       {
@@ -231,7 +239,7 @@
         "key": " — effacé dans %lld s",
         "location": {
           "startingColumn": 36,
-          "startingLine": 314
+          "startingLine": 329
         }
       }
     ]
