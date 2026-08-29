@@ -9,6 +9,8 @@ struct VaultListView: View {
     @State private var sheet: VaultSheet?
     /// Dossier affiché ; `nil` pour tout le coffre.
     @State private var filtre: FiltreDuCoffre = .tout
+    /// L'élément d'équipe dont on demande confirmation avant de le détruire.
+    @State private var aSupprimerDefinitivement: VaultEntry?
     /// Le chemin de navigation, tenu à la main : c'est ce qui permet à l'écran de santé
     /// d'envoyer directement sur l'élément qu'il signale.
     @State private var chemin: [VaultEntry] = []
@@ -101,10 +103,35 @@ struct VaultListView: View {
                 }
             }
             .searchable(text: $search, prompt: "Rechercher")
+            .alert(item: $aSupprimerDefinitivement) { cible in
+                Alert(
+                    title: Text("Supprimer définitivement ?"),
+                    message: Text(
+                        "Cet élément appartient à une équipe : il disparaîtra pour tous ses membres, et il n'y a pas de corbeille pour le récupérer."
+                    ),
+                    primaryButton: .destructive(Text("Supprimer")) {
+                        Task { await store.delete(cible) }
+                    },
+                    secondaryButton: .cancel(Text("Annuler")))
+            }
             .refreshable { await store.refresh() }
             .navigationTitle("Coffre")
             .toolbarBackground(Color.gpBase.opacity(0.9), for: .navigationBar)
             .toolbar {
+                // L'ornement vit dans la barre, pas dans le titre.
+                //
+                // Collé au titre, il partait avec lui partout où le titre sert
+                // d'identité : le bouton retour des fiches devenait « ‹ 🪎 Coffre », et
+                // VoiceOver annonçait l'emoji avant le mot à chaque fois. Ici il ne
+                // décore que l'écran auquel il appartient.
+                if !Emoji.coffre.isEmpty {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Text(verbatim: Emoji.coffre)
+                            .font(.title3)
+                            // Décoratif : rien à annoncer, et le titre le suit d'aussitôt.
+                            .accessibilityHidden(true)
+                    }
+                }
                 // Le bouton n'a de sens que si le verrouillage automatique attend.
                 //
                 // Avec le réglage par défaut — immédiat — quitter l'application verrouille
@@ -275,6 +302,30 @@ struct VaultListView: View {
     /// Une ligne du coffre. Un lien en bonne et due forme : masquer le `NavigationLink`
     /// sous une opacité nulle le rendrait inatteignable, au clavier comme au doigt. Le
     /// chevron du système fait donc l'affaire.
+    /// Peut-on supprimer cet élément ?
+    ///
+    /// Toujours dans le coffre personnel. Dans une équipe, seulement avec le droit
+    /// d'écriture — et l'absence de permission vaut refus : un serveur antérieur au
+    /// champ `permission` ne l'envoie pas, et mieux vaut cacher une action permise qu'en
+    /// promettre une qui échouera.
+    private func peutSupprimer(_ entry: VaultEntry) -> Bool {
+        entry.origine.appartenance.map(\.peutEcrire) ?? true
+    }
+
+    /// Demande confirmation avant de supprimer — ou supprime directement.
+    ///
+    /// La différence n'est pas cosmétique : le coffre personnel fait une suppression
+    /// douce, l'élément part à la corbeille et se restaure. **Une collection d'équipe n'a
+    /// pas de corbeille** : la suppression y est définitive, et elle l'est pour tous les
+    /// membres. Le geste était pourtant le même — un balayage, sans un mot.
+    private func demanderLaSuppression(_ entry: VaultEntry) {
+        if entry.origine.appartenance != nil {
+            aSupprimerDefinitivement = entry
+        } else {
+            Task { await store.delete(entry) }
+        }
+    }
+
     private func ligne(_ entry: VaultEntry) -> some View {
         NavigationLink(value: entry) {
             VaultRow(entry: entry, favori: store.isFavorite(entry))
@@ -286,8 +337,21 @@ struct VaultListView: View {
             .tint(Color.gpAccent)
         }
         .swipeActions {
-            Button("Supprimer", role: .destructive) {
-                Task { await store.delete(entry) }
+            // Le droit d'écrire commande la suppression : un membre en lecture seule
+            // recevait un 403 d'un bouton que l'interface venait de lui tendre. Une action
+            // cachée vaut mieux qu'une action promise qui échoue — et l'absence de
+            // permission vaut refus, pour qu'un serveur plus ancien ne l'ouvre pas.
+            if peutSupprimer(entry) {
+                Button("Supprimer", role: .destructive) { demanderLaSuppression(entry) }
+                    // La teinte de l'écran, posée plus haut pour colorer la navigation,
+                    // **écrase le rouge** que SwiftUI donne au rôle destructif : le bouton
+                    // de balayage s'affichait en bleu, comme n'importe quelle action.
+                    //
+                    // Le rôle ne suffit donc pas dès qu'une teinte est en vigueur, et rien
+                    // dans le code ne le laisse voir — il faut regarder l'écran. C'est le
+                    // deuxième endroit aujourd'hui où un style d'ensemble a effacé la
+                    // couleur d'un danger.
+                    .tint(Color.gpDanger)
             }
         }
         // Sur un téléphone, la raison d'ouvrir un identifiant est le plus souvent de le
@@ -318,8 +382,10 @@ struct VaultListView: View {
             ) {
                 Task { await store.toggleFavorite(entry) }
             }
-            Button("Supprimer", systemImage: "trash", role: .destructive) {
-                Task { await store.delete(entry) }
+            if peutSupprimer(entry) {
+                Button("Supprimer", systemImage: "trash", role: .destructive) {
+                    demanderLaSuppression(entry)
+                }
             }
         }
     }

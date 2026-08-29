@@ -111,7 +111,7 @@ final class AppStoreShots: XCTestCase {
         app.buttons["button.submit"].tap()
 
         XCTAssertTrue(
-            app.navigationBars["Coffre"].waitForExistence(timeout: 180),
+            coffreNavBar(app).waitForExistence(timeout: 180),
             "le coffre ne s'est pas ouvert — serveur injoignable ou identifiants refusés")
         _ = app.buttons["button.add"].waitForExistence(timeout: 60)
 
@@ -219,7 +219,7 @@ final class AppStoreShots: XCTestCase {
         // Refermer, pour repartir du coffre à la capture suivante.
         let fermer = titreDeLEcran.buttons.firstMatch
         if fermer.exists { taper(fermer) }
-        _ = app.navigationBars["Coffre"].waitForExistence(timeout: 20)
+        _ = coffreNavBar(app).waitForExistence(timeout: 20)
         Thread.sleep(forTimeInterval: 1.0)
     }
 }

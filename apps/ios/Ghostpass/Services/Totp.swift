@@ -53,6 +53,35 @@ enum Totp {
         return config
     }
 
+    /// Ce qu'un QR code s'est révélé contenir.
+    enum LectureDeQrCode: Equatable {
+        case totp(String)
+        /// `otpauth-migration://` — l'export d'une application d'authentification, qui
+        /// emporte plusieurs comptes dans un format protobuf compressé. Ce n'est pas un
+        /// second facteur, et le confondre avec l'un d'eux donnerait des codes faux.
+        case exportDApplication
+        case autreChose
+    }
+
+    /// Ce qu'on retient d'un QR code, et ce qu'on refuse.
+    ///
+    /// Plus strict que `parse`, délibérément : celui-ci accepte un secret base32 nu, parce
+    /// qu'un utilisateur qui tape dans le champ sait ce qu'il y met. Un QR code, lui, peut
+    /// contenir n'importe quoi — une adresse web, un réseau Wi-Fi, un billet de train — et
+    /// `parse` retiendrait ces chaînes comme un secret, faute de pouvoir distinguer un
+    /// secret d'un mot quelconque. On exige donc l'URI `otpauth://`, qui est ce que les
+    /// sites affichent réellement.
+    static func depuisUnQrCode(_ charge: String) -> LectureDeQrCode {
+        let propre = charge.trimmingCharacters(in: .whitespacesAndNewlines)
+        if propre.lowercased().hasPrefix("otpauth-migration://") {
+            return .exportDApplication
+        }
+        guard propre.lowercased().hasPrefix("otpauth://"), parse(propre) != nil else {
+            return .autreChose
+        }
+        return .totp(propre)
+    }
+
     /// Le code courant et le nombre de secondes qu'il lui reste à vivre.
     static func code(for config: OtpConfig, at date: Date = Date()) -> (
         code: String, remaining: Int

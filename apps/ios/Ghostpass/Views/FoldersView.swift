@@ -79,7 +79,10 @@ struct FoldersView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .overlay {
-                    if store.folderPaths.isEmpty {
+                    // Le voile ne se pose que sur une liste réellement vide. Le tester sur
+                    // les seuls dossiers personnels le faisait recouvrir les collections
+                    // d'équipe, qui sont bien là : un écran plein annoncé comme vide.
+                    if store.folderPaths.isEmpty && store.collectionsVisibles.isEmpty {
                         ContentUnavailableView {
                             Label("Aucun dossier", systemImage: "folder")
                         } description: {

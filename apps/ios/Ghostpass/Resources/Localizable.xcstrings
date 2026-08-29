@@ -4241,16 +4241,6 @@
         }
       }
     },
-    "https://ghostpass.stackops.ch": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "https://ghostpass.stackops.ch"
-          }
-        }
-      }
-    },
     "vous@exemple.ch": {
       "localizations": {
         "en": {

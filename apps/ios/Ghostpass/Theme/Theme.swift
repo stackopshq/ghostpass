@@ -179,6 +179,8 @@ extension View {
 }
 
 /// Action principale : un bloc d'accent plein, pleine largeur.
+/// Bouton principal. Comme le secondaire, il honore le rôle destructif : un bouton qui
+/// détruit ne doit pas ressembler à celui qui valide.
 struct PrimaryButtonStyle: ButtonStyle {
     var enabled = true
 
@@ -189,7 +191,8 @@ struct PrimaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(
-                Color.gpAccent.opacity(enabled ? (configuration.isPressed ? 0.8 : 1) : 0.35),
+                (configuration.role == .destructive ? Color.gpDanger : Color.gpAccent)
+                    .opacity(enabled ? (configuration.isPressed ? 0.8 : 1) : 0.35),
                 in: RoundedRectangle(cornerRadius: GP.radius)
             )
             // Seule l'action disponible rayonne. Faire luire un bouton inerte reviendrait
@@ -204,7 +207,19 @@ struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.subheadline, weight: .medium))
-            .foregroundStyle(Color.gpAccentText)
+            // Le rôle décide de la couleur.
+            //
+            // Un style personnalisé **écrase** le rendu que SwiftUI donne au rôle
+            // destructif : « Supprimer ce groupe » portait bien `role: .destructive` et
+            // s'affichait en bleu, comme n'importe quelle action ordinaire. Le défaut
+            // paraît juste à la lecture du code et faux à l'écran — c'est celui qu'on ne
+            // trouve qu'en regardant.
+            //
+            // Le lire ici plutôt qu'à chaque appel corrige la classe entière, y compris
+            // les boutons qui n'existent pas encore.
+            .foregroundStyle(
+                configuration.role == .destructive ? Color.gpDanger : Color.gpAccentText
+            )
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(

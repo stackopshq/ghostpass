@@ -92,6 +92,10 @@ targets:
         # Sans cette clé, iOS tue l'app à la première demande biométrique.
         INFOPLIST_KEY_NSFaceIDUsageDescription: >-
           Face ID déverrouille votre coffre sans ressaisir le mot de passe maître.
+        # Sans cette clé, iOS tue l'app à l'ouverture du scanner de QR code.
+        INFOPLIST_KEY_NSCameraUsageDescription: >-
+          L'appareil photo lit le QR code d'un second facteur. Aucune image n'est
+          enregistrée ni transmise.
         # Le chiffrement de GhostPass — Argon2id, XChaCha20-Poly1305 — n'entre dans aucune
         # des exemptions d'Apple : ce n'est ni du HTTPS d'appoint, ni de l'authentification
         # seule, c'est la fonction même du produit. Déclarer `false` serait donc faux.

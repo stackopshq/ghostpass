@@ -28,6 +28,7 @@ struct ItemEditView: View {
     @State private var expYear = ""
     @State private var cardCode = ""
     @State private var generating = false
+    @State private var scanEnCours = false
 
     enum Kind: String, CaseIterable, Identifiable {
         case login
@@ -116,6 +117,9 @@ struct ItemEditView: View {
             .sheet(isPresented: $generating) {
                 PasswordGeneratorView { password = $0 }
             }
+            .sheet(isPresented: $scanEnCours) {
+                ScanDeTotpView { totp = $0 }
+            }
         }
         .tint(Color.gpAccentText)
     }
@@ -185,12 +189,30 @@ struct ItemEditView: View {
                 note:
                     "La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil."
             ) {
-                TextField("", text: $totp, prompt: invite("Clé ou URI otpauth://"))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .foregroundStyle(Color.gpInk)
-                    .padding(14)
-                    .accessibilityIdentifier("field.totp")
+                HStack(spacing: 10) {
+                    TextField("", text: $totp, prompt: invite("Clé ou URI otpauth://"))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .foregroundStyle(Color.gpInk)
+                        .accessibilityIdentifier("field.totp")
+
+                    // Recopier trente-deux caractères base32 à la main est le moment où
+                    // l'on se trompe. Le QR code porte la même clé, plus la période et le
+                    // nombre de chiffres que la saisie manuelle laisse aux valeurs par
+                    // défaut — parfois à tort.
+                    Button {
+                        scanEnCours = true
+                    } label: {
+                        Image(systemName: "qrcode.viewfinder")
+                            .font(.system(size: 17, weight: .medium))
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.gpAccentText)
+                    .accessibilityLabel("Scanner le QR code")
+                    .accessibilityIdentifier("button.scanTotp")
+                }
+                .padding(14)
             }
         }
     }

@@ -6,6 +6,7 @@ import SwiftUI
 struct UnlockView: View {
     @EnvironmentObject private var store: VaultStore
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var server = ""
     @State private var email = ""
@@ -19,6 +20,7 @@ struct UnlockView: View {
     /// Affiché après une réinitialisation réussie : sans un mot, on retomberait sur le
     /// formulaire de connexion sans savoir si quelque chose s'est passé.
     @State private var messageDeReinitialisation = false
+    @State private var biometrieDemandee = false
 
     var body: some View {
         ZStack {
@@ -50,16 +52,34 @@ struct UnlockView: View {
         .onAppear {
             if store.hasSavedSession {
                 useSavedSession = true
-                // Une session enregistrée et la biométrie configurée : on la propose
-                // d'emblée, c'est le geste attendu à l'ouverture de l'app.
-                if store.canUnlockWithBiometrics {
-                    Task { await store.unlockWithBiometrics() }
-                }
+                demanderLaBiometrie()
             } else {
                 server = store.savedServer
                 email = store.savedEmail
             }
         }
+        // Au lancement à froid, `onAppear` se produit alors que l'application est encore
+        // `.inactive` : iOS refuse d'y présenter la demande biométrique, le trousseau
+        // répond « interaction impossible », et le store avale ce refus en silence — à
+        // raison, ce n'est pas un échec. Mais rien ne repartait ensuite, et il fallait
+        // appuyer soi-même sur un bouton pour obtenir ce qui devait venir seul.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { demanderLaBiometrie() }
+        }
+    }
+
+    /// Demande la biométrie, au plus une fois par présentation de cet écran.
+    ///
+    /// Deux chemins y mènent — l'apparition et le passage au premier plan — et sans ce
+    /// garde, un lancement où les deux se produisent poserait deux fois la question. Le
+    /// garde tient aussi après un refus : redemander à chaque retour dans l'application
+    /// harcèlerait celui qui vient justement de dire non. Le bouton reste à sa portée.
+    private func demanderLaBiometrie() {
+        guard !biometrieDemandee, useSavedSession, store.canUnlockWithBiometrics else {
+            return
+        }
+        biometrieDemandee = true
+        Task { await store.unlockWithBiometrics() }
     }
 
     private var enseigne: some View {
@@ -120,12 +140,20 @@ struct UnlockView: View {
                 }
             } else {
                 champ("Serveur") {
-                    TextField("", text: $server, prompt: invite("https://ghostpass.stackops.ch"))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                        .ghostField()
-                        .accessibilityIdentifier("field.server")
+                    // `verbatim` : une adresse n'est pas du texte à traduire, et passer par
+                    // une clé de localisation la faisait entrer au catalogue. Le domaine est
+                    // celui que la RFC 2606 réserve aux exemples — il ne résout nulle part,
+                    // donc personne ne se connectera par mégarde à l'instance d'un tiers.
+                    TextField(
+                        "", text: $server,
+                        prompt: Text(verbatim: "https://ghostpass.example.com")
+                            .foregroundColor(Color.gpMuted.opacity(0.7))
+                    )
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                    .ghostField()
+                    .accessibilityIdentifier("field.server")
                 }
                 champ("Adresse e-mail") {
                     TextField("", text: $email, prompt: invite("vous@exemple.ch"))

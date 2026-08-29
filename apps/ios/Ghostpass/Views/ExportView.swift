@@ -37,6 +37,11 @@ struct ExportView: View {
                     .accessibilityIdentifier("button.closeExport")
                 }
             }
+            // Un sélecteur de fichiers rend l'application inactive sans qu'elle quitte
+            // l'écran : on le dit au magasin, sinon le verrouillage immédiat couperait
+            // l'opération en cours.
+            .onAppear { store.unSelecteurDeFichiersEstOuvert = true }
+            .onDisappear { store.unSelecteurDeFichiersEstOuvert = false }
             .fileExporter(
                 isPresented: $enregistrement, document: document,
                 contentType: .commaSeparatedText,

@@ -361,6 +361,49 @@ final class GeneratorAndTotpTests: XCTestCase {
         XCTAssertEqual(config.algorithm, .sha256)
     }
 
+    // ─── Ce qu'un QR code a le droit de contenir ───
+
+    func testUnQrCodeOtpauthEstRetenu() {
+        let uri = "otpauth://totp/GhostPass:clara?secret=GEZDGNBVGY3TQOJQ&period=60"
+        XCTAssertEqual(Totp.depuisUnQrCode(uri), .totp(uri))
+    }
+
+    /// La lecture par caméra est plus stricte que la saisie, et c'est délibéré.
+    ///
+    /// `parse` accepte un secret nu : celui qui tape dans le champ sait ce qu'il y met.
+    /// Une caméra, elle, voit ce qu'on lui présente — et ces chaînes-là passeraient toutes
+    /// pour un secret base32, faute de rien qui distingue un secret d'un mot quelconque.
+    /// Un second facteur silencieusement faux ne se découvre qu'au moment de s'en servir,
+    /// c'est-à-dire au pire moment.
+    func testUnQrCodeQuiNEstPasUnSecondFacteurEstRefuse() {
+        for charge in [
+            "https://ghostpass.example.com",
+            "WIFI:S:Salon;T:WPA;P:motdepasse;;",
+            "BEGIN:VCARD\nFN:Clara\nEND:VCARD",
+            "GEZDGNBVGY3TQOJQ",
+            "",
+        ] {
+            XCTAssertEqual(
+                Totp.depuisUnQrCode(charge), .autreChose,
+                "« \(charge) » n'est pas un second facteur")
+        }
+    }
+
+    /// L'export d'une application d'authentification emporte plusieurs comptes dans un
+    /// protobuf compressé. Le retenir comme un secret donnerait des codes faux sans que
+    /// rien ne le signale ; on le nomme donc, pour pouvoir l'expliquer à l'écran.
+    func testLExportDUneApplicationEstReconnuCommeTel() {
+        XCTAssertEqual(
+            Totp.depuisUnQrCode("otpauth-migration://offline?data=Ci0KC..."),
+            .exportDApplication)
+    }
+
+    /// Une URI sans secret n'en est pas une : `parse` la rejette, la lecture aussi.
+    func testUneUriOtpauthSansSecretEstRefusee() {
+        XCTAssertEqual(
+            Totp.depuisUnQrCode("otpauth://totp/GhostPass:clara?period=30"), .autreChose)
+    }
+
     /// Un secret recopié à la main arrive avec des espaces et en minuscules.
     func testUnSecretBrutEstNormalise() throws {
         let config = try XCTUnwrap(Totp.parse("  gezd gnbv gy3t qojq  "))
@@ -1688,5 +1731,47 @@ final class AdresseDuServeurTests: XCTestCase {
         XCTAssertNil(url("   "))
         XCTAssertNil(url("ftp://exemple.ch"), "seuls http et https ont un sens ici")
         XCTAssertNil(url("https://"), "un schéma sans hôte ne mène nulle part")
+    }
+}
+
+/// L'inactivité, distincte de la sortie d'écran.
+///
+/// Le cas trouvé sur un iPad réel : quitter l'application et y revenir aussitôt ne passe
+/// **jamais** par `.background`. Le coffre restait donc ouvert malgré un réglage
+/// « immédiatement » — le réglage ne verrouillait qu'au bon vouloir du système.
+final class InactiviteTests: XCTestCase {
+
+    @MainActor
+    func testImmediatVerrouilleDesLInactivite() async {
+        let store = VaultStore()
+        store.forcerLEtatOuvertPourTest()
+        XCTAssertTrue(store.isUnlocked)
+
+        store.noterLInactivite(delai: nil)
+        XCTAssertFalse(
+            store.isUnlocked,
+            "« immédiatement » doit verrouiller dès que l'application quitte le premier plan")
+    }
+
+    @MainActor
+    func testUnDelaiNeVerrouillePasSurLInactivite() async {
+        // Avec un délai, l'inactivité ne doit rien déclencher : c'est le retour qui décide,
+        // en comparant l'heure de sortie. Verrouiller ici viderait le délai de son sens.
+        let store = VaultStore()
+        store.forcerLEtatOuvertPourTest()
+        store.noterLInactivite(delai: 60)
+        XCTAssertTrue(store.isUnlocked)
+    }
+
+    @MainActor
+    func testUnSelecteurDeFichiersSuspendLeVerrouillage() async {
+        // Un sélecteur de fichiers rend l'application inactive sans qu'elle quitte
+        // l'écran. Verrouiller là couperait l'import ou l'export que l'utilisateur vient
+        // de lancer, sans qu'il soit allé nulle part.
+        let store = VaultStore()
+        store.forcerLEtatOuvertPourTest()
+        store.unSelecteurDeFichiersEstOuvert = true
+        store.noterLInactivite(delai: nil)
+        XCTAssertTrue(store.isUnlocked, "un sélecteur ouvert ne doit pas déclencher le verrou")
     }
 }

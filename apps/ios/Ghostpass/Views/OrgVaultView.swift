@@ -18,6 +18,15 @@ struct OrgVaultView: View {
     @State private var edition: VaultEntry?
     @State private var creation = false
     @State private var administration = false
+    @State private var aSupprimer: VaultEntry?
+
+    /// Le droit réellement accordé sur la collection affichée, pas le rôle dans l'équipe.
+    /// Un membre ordinaire peut avoir « write » sur une collection et rien sur la suivante :
+    /// gager les boutons sur le rôle proposait des gestes que le serveur refusait ensuite.
+    private var peutEcrire: Bool {
+        guard let choisie else { return false }
+        return VaultStore.peutEcrire(choisie, role: ouvert.organisation.role)
+    }
 
     private var visibles: [VaultEntry] {
         let q = recherche.trimmingCharacters(in: .whitespaces)
@@ -59,7 +68,7 @@ struct OrgVaultView: View {
                         .accessibilityIdentifier("button.orgAdmin")
                     }
                 }
-                if ouvert.organisation.role.peutEcrire && choisie != nil {
+                if peutEcrire {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             creation = true
@@ -84,6 +93,26 @@ struct OrgVaultView: View {
             OrgAdminView(ouvert: ouvert) { dismiss() }
                 .environmentObject(store)
         }
+        .alert(
+            "Supprimer cet identifiant ?", isPresented: presentation($aSupprimer),
+            presenting: aSupprimer,
+            actions: { entree in
+                Button("Supprimer", role: .destructive) {
+                    let cible = entree
+                    aSupprimer = nil
+                    Task { await supprimer(cible) }
+                }
+                Button("Annuler", role: .cancel) { aSupprimer = nil }
+            },
+            message: { entree in
+                // Le serveur ne garde pas de corbeille et ne rend pas la main : dire
+                // « définitivement » et « pour toute l'équipe » est le minimum avant un
+                // geste que personne ne pourra défaire.
+                Text(
+                    "« \(entree.item.name) » disparaîtra définitivement, pour toute l'équipe."
+                )
+            }
+        )
         .sheet(isPresented: $creation) { editeur(nil) }
         .sheet(item: $edition) { entree in editeur(entree) }
     }
@@ -132,18 +161,38 @@ struct OrgVaultView: View {
         } else {
             GhostSection(titre: "Identifiants") {
                 ForEach(visibles) { entree in
-                    NavigationLink {
-                        ItemDetailView(
-                            entry: entree,
-                            onEdit: { edition = entree },
-                            lectureSeule: !ouvert.organisation.role.peutEcrire
-                        )
-                        .environmentObject(store)
-                    } label: {
-                        GhostRow(
-                            intitule: LocalizedStringKey(entree.item.name),
-                            valeur: entree.login?.username ?? ""
-                        ) {}
+                    // La corbeille vit à côté du lien, pas dedans : un bouton placé dans
+                    // l'étiquette d'un NavigationLink ne reçoit pas le toucher, c'est le
+                    // lien qui l'absorbe. Et ces lignes ne sont pas celles d'une List :
+                    // le balayage du coffre personnel n'existe pas ici.
+                    HStack(spacing: 8) {
+                        NavigationLink {
+                            ItemDetailView(
+                                entry: entree,
+                                onEdit: { edition = entree },
+                                lectureSeule: !peutEcrire
+                            )
+                            .environmentObject(store)
+                        } label: {
+                            GhostRow(
+                                intitule: LocalizedStringKey(entree.item.name),
+                                valeur: entree.login?.username ?? ""
+                            ) {}
+                        }
+
+                        if peutEcrire {
+                            Button {
+                                aSupprimer = entree
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Color.gpDanger)
+                            .accessibilityLabel("Supprimer")
+                            .accessibilityIdentifier("button.deleteOrgItem")
+                        }
                     }
                     if entree.id != visibles.last?.id { Divider().overlay(Color.gpBorder) }
                 }
@@ -164,6 +213,28 @@ struct OrgVaultView: View {
             }
         )
         .environmentObject(store)
+    }
+
+    private func supprimer(_ entree: VaultEntry) async {
+        guard let collection = choisie else { return }
+        if await store.supprimerDeLaCollection(
+            ouvert, collection: collection.id, id: entree.id)
+        {
+            await recharger()
+            // Le coffre unifié montre les mêmes lignes : sans cette relecture, l'élément
+            // supprimé resterait affiché derrière cette feuille.
+            await store.refresh()
+        }
+    }
+
+    /// Voir `FoldersView.presentation` : `.constant` empêcherait l'alerte suivante de
+    /// s'afficher, SwiftUI la croyant toujours présentée.
+    private func presentation<T>(_ valeur: Binding<T?>) -> Binding<Bool> {
+        Binding(
+            get: { valeur.wrappedValue != nil },
+            set: { presente in
+                if !presente { valeur.wrappedValue = nil }
+            })
     }
 
     private func recharger() async {

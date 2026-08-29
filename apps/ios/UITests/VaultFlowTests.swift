@@ -69,7 +69,7 @@ final class VaultFlowTests: XCTestCase {
         remplir(app, "field.master", master)
         app.buttons["button.submit"].tap()
         XCTAssertTrue(
-            app.navigationBars["Coffre"].waitForExistence(timeout: 180),
+            coffreNavBar(app).waitForExistence(timeout: 180),
             "le coffre ne s'est pas ouvert — serveur injoignable ou identifiants refusés")
         // La liste apparaît avant que le coffre ne soit déchiffré : tant que `refresh()`
         // occupe le fil principal, aucune alerte ne peut se poser. On attend donc que
@@ -306,9 +306,7 @@ final class VaultFlowTests: XCTestCase {
         let etoile = app.buttons["button.favorite"]
         XCTAssertTrue(etoile.waitForExistence(timeout: 30), "l'étoile des favoris est absente")
         taper(etoile)
-        if app.navigationBars.buttons["Coffre"].exists {
-            app.navigationBars.buttons["Coffre"].tap()
-        }
+        revenirAuCoffre(app)
         let sectionFavoris = app.descendants(matching: .any)
             .matching(identifier: "header.favorites").firstMatch
         XCTAssertTrue(
@@ -392,9 +390,7 @@ final class VaultFlowTests: XCTestCase {
         shot(app, "2-historique")
 
         // 4c. Dossiers : en créer un, y ranger l'élément, filtrer dessus
-        if app.navigationBars.buttons["Coffre"].exists {
-            app.navigationBars.buttons["Coffre"].tap()
-        }
+        revenirAuCoffre(app)
         app.buttons["button.folderFilter"].tap()
         XCTAssertTrue(
             app.buttons["button.newFolder"].waitForExistence(timeout: 20),
@@ -415,9 +411,7 @@ final class VaultFlowTests: XCTestCase {
         remplir(app, "field.folder", "Travail")
         app.buttons["button.save"].tap()
         sleep(2)
-        if app.navigationBars.buttons["Coffre"].exists {
-            app.navigationBars.buttons["Coffre"].tap()
-        }
+        revenirAuCoffre(app)
 
         app.buttons["button.folderFilter"].tap()
         XCTAssertTrue(app.staticTexts["Travail"].waitForExistence(timeout: 20))
@@ -437,9 +431,7 @@ final class VaultFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts[demoItem].waitForExistence(timeout: 30))
 
         // 5. Suppression
-        if app.navigationBars.buttons["Coffre"].exists {
-            app.navigationBars.buttons["Coffre"].tap()
-        }
+        revenirAuCoffre(app)
         let ligne = app.buttons["Forgejo prod, clara"].firstMatch
         XCTAssertTrue(ligne.waitForExistence(timeout: 30))
         ligne.swipeLeft()
@@ -531,7 +523,7 @@ final class VaultFlowTests: XCTestCase {
         app.launch()
 
         // Si la biométrie est déjà active, l'app se déverrouille seule au lancement.
-        if !app.navigationBars["Coffre"].waitForExistence(timeout: 45) {
+        if !coffreNavBar(app).waitForExistence(timeout: 45) {
             seConnecter(app)
             let plusTard = app.buttons["button.laterBiometric"].firstMatch
             if plusTard.waitForExistence(timeout: 5) { plusTard.tap() }
@@ -610,7 +602,7 @@ final class VaultFlowTests: XCTestCase {
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
         }
         XCTAssertTrue(
-            app.navigationBars["Coffre"].waitForExistence(timeout: 30),
+            coffreNavBar(app).waitForExistence(timeout: 30),
             "le coffre n'est pas revenu après la coupure de la biométrie")
     }
 
@@ -661,7 +653,7 @@ final class VaultFlowTests: XCTestCase {
         app.buttons["row.langue.anglais"].tap()
         app.buttons["button.doneSettings"].tap()
         XCTAssertTrue(
-            app.navigationBars["Vault"].waitForExistence(timeout: 30),
+            coffreNavBar(app, titre: "Vault").waitForExistence(timeout: 30),
             "le coffre est resté en français après le passage à l'anglais")
         shot(app, "7-anglais")
 
@@ -673,20 +665,20 @@ final class VaultFlowTests: XCTestCase {
             "la langue choisie a été oubliée au redémarrage")
         remplir(app, "field.master", master)
         app.buttons["button.submit"].tap()
-        XCTAssertTrue(app.navigationBars["Vault"].waitForExistence(timeout: 180))
+        XCTAssertTrue(coffreNavBar(app, titre: "Vault").waitForExistence(timeout: 180))
 
         // 3. Thème clair, puis sombre, mesurés à l'écran
         ouvrirReglages(app)
         app.buttons["tile.apparence.clair"].tap()
         app.buttons["button.doneSettings"].tap()
-        XCTAssertTrue(app.navigationBars["Vault"].waitForExistence(timeout: 20))
+        XCTAssertTrue(coffreNavBar(app, titre: "Vault").waitForExistence(timeout: 20))
         let clair = luminance(app.screenshot())
         shot(app, "8-clair")
 
         ouvrirReglages(app)
         app.buttons["tile.apparence.sombre"].tap()
         app.buttons["button.doneSettings"].tap()
-        XCTAssertTrue(app.navigationBars["Vault"].waitForExistence(timeout: 20))
+        XCTAssertTrue(coffreNavBar(app, titre: "Vault").waitForExistence(timeout: 20))
         let sombre = luminance(app.screenshot())
         shot(app, "9-sombre")
 
@@ -700,7 +692,7 @@ final class VaultFlowTests: XCTestCase {
         app.buttons["row.langue.systeme"].tap()
         app.buttons["button.doneSettings"].tap()
         XCTAssertTrue(
-            app.navigationBars["Coffre"].waitForExistence(timeout: 30),
+            coffreNavBar(app).waitForExistence(timeout: 30),
             "le retour au réglage du système n'a pas ramené le français")
     }
 
@@ -745,7 +737,7 @@ final class VaultFlowTests: XCTestCase {
         relancer(app)
         seConnecterAvec(app, "nouveau mot de passe maître")
         XCTAssertTrue(
-            app.navigationBars["Coffre"].waitForExistence(timeout: 180),
+            coffreNavBar(app).waitForExistence(timeout: 180),
             "le nouveau mot de passe n'ouvre pas le coffre")
         XCTAssertTrue(
             app.staticTexts[demoItem].waitForExistence(timeout: 60),
@@ -761,7 +753,7 @@ final class VaultFlowTests: XCTestCase {
         relancer(app)
         seConnecterAvec(app, master)
         XCTAssertTrue(
-            app.navigationBars["Coffre"].waitForExistence(timeout: 180),
+            coffreNavBar(app).waitForExistence(timeout: 180),
             "le mot de passe d'origine ne revient pas")
         ecarterLaPropositionBiometrique(app, delai: 5)
     }
@@ -810,7 +802,7 @@ final class VaultFlowTests: XCTestCase {
 
         app.buttons["button.closeEmergency"].tap()
         XCTAssertTrue(
-            app.navigationBars["Coffre"].waitForExistence(timeout: 30),
+            coffreNavBar(app).waitForExistence(timeout: 30),
             "la fermeture ne ramène pas au coffre")
         aucuneLigneFantome(app, "après un aller-retour par l'accès d'urgence")
     }
@@ -848,4 +840,37 @@ final class VaultFlowTests: XCTestCase {
             aDisparu(valider, delai: 30),
             "la feuille de réinitialisation ne se referme pas")
     }
+}
+
+/// La barre du coffre, désignée par ce qu'elle contient et non par son texte exact.
+///
+/// Le titre porte un emoji que les systèmes antérieurs à iOS 26 ne savent pas dessiner :
+/// l'application l'omet alors. Exiger le texte exact ferait échouer ces tests sur un
+/// simulateur plus ancien, sans que rien ne soit cassé.
+///
+/// `titre` sert à `test05Preferences`, seul test qui ait une raison d'exiger l'anglais :
+/// c'est là sa mesure. Partout ailleurs le défaut français convient. L'égalité stricte
+/// qu'il pratiquait auparavant a fait tomber quatre tests le jour où l'emoji est arrivé
+/// — un seul directement, les trois autres par ricochet, ce test échouant avant de
+/// reposer la langue qu'il promet de reposer.
+/// Remonte de la fiche au coffre, si l'on s'y trouve.
+///
+/// Le libellé du bouton retour est le titre de l'écran précédent — emoji compris depuis
+/// qu'on en a mis un. Chercher « Coffre » à l'identique le rendait introuvable, et le test
+/// poursuivait sans avoir quitté la fiche : il échouait trois écrans plus loin, sur un
+/// bouton absent, en désignant un coupable qui n'y était pour rien.
+///
+/// Écrit une fois : la même ligne était recopiée à quatre endroits, et je n'en ai corrigé
+/// qu'un au premier passage.
+func revenirAuCoffre(_ app: XCUIApplication) {
+    let retour = app.navigationBars.buttons.matching(
+        NSPredicate(format: "label CONTAINS %@", "Coffre")
+    ).firstMatch
+    if retour.exists { retour.tap() }
+}
+
+func coffreNavBar(_ app: XCUIApplication, titre: String = "Coffre") -> XCUIElement {
+    app.navigationBars.containing(
+        NSPredicate(format: "identifier CONTAINS %@", titre)
+    ).firstMatch
 }

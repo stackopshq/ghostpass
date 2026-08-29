@@ -43,6 +43,13 @@ WORK="$(mktemp -d)"
 # Les rapports d'un run raté survivent au nettoyage : sans eux, il ne reste qu'un nom de
 # test et aucune trace de ce que montrait l'écran. La CI les publie en artefact.
 RESULTS="$ROOT/apps/ios/TestResults"
+# Mais ils ne survivent qu'au run suivant, pas au-delà. Le nettoyage final n'écrasait que
+# les bundles de même nom : ceux d'un run tué en cours de route restaient à côté, avec un
+# `server.log` écrasé, lui, à chaque fois. On lisait alors des captures et un journal
+# venus de deux exécutions différentes, dont les horodatages ne se recoupaient pas — et
+# rien ne le disait. Une heure de diagnostic sur des pièces qui ne se rapportaient pas au
+# même run.
+rm -rf "$RESULTS"
 # Les produits de compilation, eux, survivent d'un run à l'autre : les remettre dans un
 # répertoire temporaire ferait tout recompiler à chaque fois — quatre minutes pour rien
 # en local. La CI part d'une machine neuve, cela ne change rien pour elle.

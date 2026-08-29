@@ -50,7 +50,11 @@ struct GhostpassApp: App {
             switch phase {
             case .background: store.noterLaSortieDeLEcran(delai: prefs.verrouillage.delai)
             case .active: store.verrouillerSiLeDelaiEstEcoule(delai: prefs.verrouillage.delai)
-            default: break
+            // « Immédiatement » doit vouloir dire ce qu'il dit. Un aller-retour rapide ne
+            // passe jamais par `.background` : sans cette branche, le coffre restait
+            // ouvert et le réglage ne verrouillait qu'au bon vouloir du système.
+            case .inactive: store.noterLInactivite(delai: prefs.verrouillage.delai)
+            @unknown default: break
             }
         }
     }

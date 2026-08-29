@@ -131,6 +131,40 @@ final class VaultStore: ObservableObject {
 
     /// L'application passe en arrière-plan. Sans délai, on referme tout de suite ; avec,
     /// on note l'heure et on décidera au retour.
+    /// Un sélecteur de fichiers du système est-il ouvert ?
+    ///
+    /// Il rend l'application « inactive » sans qu'elle ait quitté l'écran. Verrouiller là
+    /// interromprait un import ou un export que l'utilisateur vient de lancer, sans qu'il
+    /// soit allé nulle part.
+    ///
+    /// La feuille de partage, elle, n'est pas exemptée : elle peut rester ouverte
+    /// longtemps, et le lien qu'elle porte est déjà composé — un verrouillage derrière
+    /// elle ne perd rien.
+    var unSelecteurDeFichiersEstOuvert = false
+
+    /// Ouvre l'état sans compte ni réseau, pour éprouver la décision de verrouillage.
+    ///
+    /// Les tests portent sur *quand* on referme, pas sur ce qu'il y a dedans : monter un
+    /// vrai compte pour cela demanderait un serveur, et la question n'a rien à voir.
+    func forcerLEtatOuvertPourTest() { isUnlocked = true }
+
+    /// L'application quitte le premier plan sans forcément quitter l'écran.
+    ///
+    /// `.inactive` précède `.background`, mais **ne le précède pas toujours** : un
+    /// aller-retour rapide vers l'écran d'accueil n'atteint jamais `.background`, et le
+    /// coffre restait alors ouvert malgré un réglage « immédiatement ». C'est le cas que
+    /// Clara a trouvé sur son iPad, et il vidait le réglage de son sens : il ne
+    /// verrouillait que lorsque le système décidait de suspendre l'application.
+    ///
+    /// Seul « immédiatement » (`delai == nil`) referme ici. Un délai se mesure depuis une
+    /// sortie d'écran, pas depuis une inactivité : `.inactive` survient aussi quand une
+    /// alerte du système se pose, et refermer là-dessus rendrait l'application inutilisable
+    /// pour qui a choisi cinq minutes.
+    func noterLInactivite(delai: TimeInterval?) {
+        guard delai == nil, !unSelecteurDeFichiersEstOuvert else { return }
+        lock()
+    }
+
     func noterLaSortieDeLEcran(delai: TimeInterval?) {
         guard delai != nil else {
             sortieDeLEcran = nil
@@ -335,7 +369,9 @@ final class VaultStore: ObservableObject {
     /// Le rôle était une approximation : un membre ordinaire se voyait proposer
     /// « Modifier » sur une collection où il n'a que la lecture, et le serveur refusait
     /// ensuite. Elle ne sert plus que de repli pour un serveur antérieur au champ.
-    private static func peutEcrire(_ collection: OrgCollectionDTO, role: RoleDOrganisation)
+    /// Interne plutôt que privée : l'écran d'équipe décide avec elle s'il propose la
+    /// suppression, et deux calculs du même droit finiraient par diverger.
+    static func peutEcrire(_ collection: OrgCollectionDTO, role: RoleDOrganisation)
         -> Bool
     {
         guard let brute = collection.permission else { return role.peutEcrire }
