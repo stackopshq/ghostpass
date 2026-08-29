@@ -22,6 +22,9 @@ final class VaultStore: ObservableObject {
     /// l'élément — le modèle du cœur Rust n'en a pas — mais une liste tenue à part, dans
     /// son propre registre chiffré.
     @Published private(set) var favorites: Set<String> = []
+    /// Les partages en cours, avec leur jeton de révocation. Écrits dans un registre
+    /// chiffré que la web app lit et écrit aussi : un lien créé ici se révoque de là-bas.
+    @Published private(set) var partagesEnCours: [PartageEnCours] = []
     /// Identité de chaque registre, par nom, pour les mettre à jour plutôt que les
     /// multiplier. Un registre absent de ce dictionnaire n'existe pas encore côté serveur.
     private var registryIDs: [String: String] = [:]
@@ -204,6 +207,9 @@ final class VaultStore: ObservableObject {
         offersBiometricEnrollment = false
         emptyFolders = []
         favorites = []
+        // Les jetons de révocation quittent la mémoire avec le reste : ils vivent dans le
+        // coffre, et un coffre fermé ne laisse rien derrière lui.
+        partagesEnCours = []
         registryIDs = [:]
     }
 
@@ -453,6 +459,7 @@ final class VaultStore: ObservableObject {
         var entries: [VaultEntry] = []
         var folders: [String] = []
         var favorites: Set<String> = []
+        var partages: [PartageEnCours] = []
         /// Identité serveur de chaque registre, par nom.
         var registryIDs: [String: String] = [:]
     }
@@ -464,6 +471,12 @@ final class VaultStore: ObservableObject {
             guard let item = try? decrypt(dto, with: account) else { continue }
             if isRegistry(item) {
                 resultat.registryIDs[item.name] = dto.id
+                // Le registre des partages ne contient pas des chaînes mais des objets :
+                // il se décode à part, et son échec ne doit pas vider les deux autres.
+                if item.name == VaultConstants.sharesItemName {
+                    resultat.partages = partagesDeRegistre(item)
+                    continue
+                }
                 let liste = contenuDeRegistre(item)
                 switch item.name {
                 case VaultConstants.foldersItemName: resultat.folders = liste
@@ -490,6 +503,18 @@ final class VaultStore: ObservableObject {
         guard case .secureNote(let note) = item.data,
             let data = note.content.data(using: .utf8),
             let liste = try? JSONDecoder().decode([String].self, from: data)
+        else { return [] }
+        return liste
+    }
+
+    /// Le registre des partages : un `SecureNote` dont le contenu est un tableau JSON
+    /// d'objets. Illisible, il vaut mieux le tenir pour vide — un partage qu'on ne sait
+    /// plus révoquer reste un partage valide, alors qu'une lecture qui échoue emporterait
+    /// tout le coffre.
+    nonisolated private static func partagesDeRegistre(_ item: VaultItem) -> [PartageEnCours] {
+        guard case .secureNote(let note) = item.data,
+            let data = note.content.data(using: .utf8),
+            let liste = try? JSONDecoder().decode([PartageEnCours].self, from: data)
         else { return [] }
         return liste
     }
@@ -591,6 +616,7 @@ final class VaultStore: ObservableObject {
         registryIDs = lecture.registryIDs
         emptyFolders = lecture.folders
         favorites = lecture.favorites
+        partagesEnCours = lecture.partages
     }
 
     // ─── Dossiers ───
@@ -870,6 +896,39 @@ final class VaultStore: ObservableObject {
 
     /// Écrit un registre : un `SecureNote` dont le contenu est un tableau JSON, sous un nom
     /// que l'interface masque. Même format que la web app, au caractère près.
+    /// Écrit le registre des partages. Il ne contient pas des chaînes mais des objets :
+    /// il ne peut pas passer par `enregistrerRegistre`, dont c'est toute la signature.
+    ///
+    /// Le format est celui de la web app, au champ près — c'est ce qui permet de créer un
+    /// lien depuis le téléphone et de le révoquer depuis le navigateur.
+    private func ecrireLeRegistreDesPartages(_ partages: [PartageEnCours]) async {
+        guard let api, let token, let account else { return }
+        let contenu = String(
+            decoding: (try? JSONEncoder().encode(partages)) ?? Data("[]".utf8), as: UTF8.self)
+        let item = VaultItem(
+            name: VaultConstants.sharesItemName, notes: nil, folder: nil,
+            data: .secureNote(SecureNote(content: contenu)))
+        do {
+            let (key, data) = try Self.encrypt(item, with: account)
+            if let identifiant = registryIDs[VaultConstants.sharesItemName] {
+                _ = try await api.updateItem(
+                    token: token, id: identifiant, encryptedKey: key, encryptedData: data)
+            } else {
+                let cree = try await api.createItem(
+                    token: token, encryptedKey: key, encryptedData: data)
+                registryIDs[VaultConstants.sharesItemName] = cree.id
+            }
+            await refresh()
+        } catch {
+            // Le lien est créé, seul son enregistrement a échoué. On le dit sans effacer
+            // le lien lui-même : l'utilisateur en a besoin, même si nous perdons de quoi
+            // le révoquer.
+            errorMessage = tr(
+                "Le lien est créé, mais n'a pas pu être enregistré : il ne pourra pas être révoqué depuis cette application."
+            )
+        }
+    }
+
     private func enregistrerRegistre(
         _ nom: String, _ valeurs: [String], echec: String
     ) async {
@@ -1432,31 +1491,102 @@ final class VaultStore: ObservableObject {
     /// dans le fragment, que les navigateurs n'envoient jamais au serveur. C'est la raison
     /// pour laquelle le lien lui-même ne doit pas transiter par un canal qu'on ne
     /// contrôle pas : quiconque l'a peut lire une fois.
-    func partager(_ secret: String, heures: Int, consultations: Int) async -> URL? {
-        guard let api, let token,
-            let serveur = ServerAddress.normaliser(SharedStore.load()?.serverURL ?? "")
-        else { return nil }
+    /// - Parameter nom: ce que le registre retiendra du partage, pour qu'il soit
+    ///   reconnaissable dans la liste. Jamais le secret. L'écran partage un texte libre et
+    ///   n'a donc pas de nom d'entrée à donner : il envoie un libellé générique, que la
+    ///   date de création distingue. Le jour où l'on partagera depuis une fiche, c'est son
+    ///   nom qu'il faudra passer ici.
+    func partager(_ secret: String, heures: Int, consultations: Int, nom: String) async -> URL? {
+        guard let api, let token else { return nil }
         isBusy = true
         defer { isBusy = false }
         do {
             let scelle = try sealSend(plaintext: secret)
-            let id = try await api.createSend(
+            let cree = try await api.createSend(
                 token: token, ciphertext: scelle.ciphertext, iv: scelle.nonce,
                 expiresInHours: heures, maxViews: consultations)
-            var composants = URLComponents(url: serveur, resolvingAgainstBaseURL: false)
-            composants?.path = "/s/\(id)"
+            // Deux serveurs coexistent, et le client doit parler aux deux.
+            //
+            // Depuis le relais vers ghostbit, l'URL vient du serveur : la reconstruire
+            // depuis l'identifiant produirait un lien vers une machine qui ne connaît pas
+            // ce partage — mort, et sans la moindre erreur pour le dire. Mais un serveur
+            // antérieur héberge encore les partages lui-même et ne rend qu'un identifiant :
+            // là, le déduire de son adresse est la seule chose juste à faire.
+            //
+            // Se fier à `url` seule aurait cassé le partage sur tous les serveurs pas
+            // encore basculés, y compris celui de production au moment où j'écris.
+            guard var composants = lienDuPartage(cree) else {
+                errorMessage = tr("Le serveur a rendu un lien que l'application ne comprend pas.")
+                return nil
+            }
             // Le base64 du cœur est standard ; un fragment d'URL réclame la variante sans
             // caractères à échapper. Le web fait exactement la même conversion.
-            composants?.fragment =
+            composants.fragment =
                 scelle.key
                 .replacingOccurrences(of: "+", with: "-")
                 .replacingOccurrences(of: "/", with: "_")
                 .replacingOccurrences(of: "=", with: "")
-            return composants?.url
+            guard let lien = composants.url else { return nil }
+
+            // Le jeton de révocation n'existe qu'ici : le serveur n'en garde qu'une
+            // empreinte. Ne pas l'écrire, c'est créer un partage que personne ne pourra
+            // jamais rappeler. Sans relais il n'y en a pas, et la route de révocation
+            // n'existe pas non plus : le registre resterait un vœu.
+            if let jeton = cree.deleteToken {
+                await inscrireAuRegistreDesPartages(
+                    PartageEnCours(
+                        id: cree.id, url: lien.absoluteString, deleteToken: jeton,
+                        // Secondes, comme `expiresAt` : les deux champs avaient d'abord des
+                        // unités différentes dans une structure partagée par trois clients.
+                        // Corrigé pendant que c'était gratuit — aucun registre n'existait.
+                        name: nom, createdAt: Int(Date().timeIntervalSince1970),
+                        expiresAt: cree.expiresAt))
+            }
+            return lien
+        } catch APIError.http(let status, _) where status == 503 {
+            // Le serveur n'a pas de service de partage configuré. Il refuse net plutôt que
+            // de retomber sur un stockage local — mieux vaut ça qu'un secret déposé
+            // ailleurs que là où l'on croit. Reste à le dire en français.
+            errorMessage = tr("Ce serveur ne propose pas le partage de secrets.")
+            return nil
         } catch {
             errorMessage = error.localizedDescription
             return nil
         }
+    }
+
+    /// Le lien d'un partage : celui que le serveur donne, ou celui qu'on déduit de son
+    /// adresse quand il n'en donne pas.
+    private func lienDuPartage(_ cree: APIClient.PartageCree) -> URLComponents? {
+        if let url = cree.url { return URLComponents(string: url) }
+        guard let serveur = ServerAddress.normaliser(SharedStore.load()?.serverURL ?? "")
+        else { return nil }
+        var composants = URLComponents(url: serveur, resolvingAgainstBaseURL: false)
+        composants?.path = "/s/\(cree.id)"
+        return composants
+    }
+
+    /// Révoque un partage et le retire du registre.
+    ///
+    /// L'ordre compte : le serveur d'abord. Retirer la ligne avant l'appel effacerait le
+    /// seul jeton qui permet de réessayer, et un échec réseau rendrait le partage
+    /// définitivement irrévocable.
+    func revoquerLePartage(_ partage: PartageEnCours) async -> Bool {
+        guard let api, let token else { return false }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            try await api.revokeSend(token: token, id: partage.id, deleteToken: partage.deleteToken)
+            await ecrireLeRegistreDesPartages(partagesEnCours.filter { $0.id != partage.id })
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    private func inscrireAuRegistreDesPartages(_ partage: PartageEnCours) async {
+        await ecrireLeRegistreDesPartages(partagesEnCours + [partage])
     }
 
     // ─── Second facteur ───

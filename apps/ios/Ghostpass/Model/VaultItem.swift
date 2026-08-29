@@ -179,6 +179,31 @@ struct VaultEntry: Identifiable, Hashable {
     }
 }
 
+/// Un partage en cours, tel que son créateur le retient.
+///
+/// Même format que la web app, au champ près : le registre se lit et s'écrit des deux
+/// côtés, et un partage créé sur le téléphone doit pouvoir être révoqué depuis le
+/// navigateur — c'est tout l'intérêt de le ranger là plutôt que dans un coin de l'app.
+struct PartageEnCours: Codable, Identifiable, Equatable {
+    let id: String
+    /// L'URL **complète** rendue par le serveur, fragment compris. On ne la reconstruit
+    /// pas depuis l'identifiant : c'est l'erreur qui aurait produit des liens morts le
+    /// jour où le partage a déménagé chez ghostbit.
+    let url: String
+    let deleteToken: String
+    /// Le nom de l'entrée partagée, pour que la liste soit lisible — jamais le secret.
+    /// Le registre dit ce qui circule, pas ce qu'il contient.
+    let name: String
+    /// **Secondes** depuis l'epoch, comme `expiresAt`. Les deux champs n'avaient pas la
+    /// même unité au premier jet — millisecondes ici, secondes là — dans une structure
+    /// que trois clients se partagent. C'est le genre d'écart qui ne se voit qu'à
+    /// l'affichage, longtemps après, chez celui qui n'a pas écrit la ligne.
+    let createdAt: Int
+    /// Tel que le serveur le rend, sans conversion : deux clients qui convertiraient
+    /// différemment afficheraient deux échéances pour le même partage.
+    let expiresAt: Int?
+}
+
 enum VaultConstants {
     /// Le coffre ne connaît que des éléments chiffrés : tout ce que l'application doit
     /// retenir en plus — la liste des dossiers vides, celle des favoris — vit donc dans
@@ -194,6 +219,14 @@ enum VaultConstants {
 
     /// Les identifiants des éléments mis en favori.
     static let favoritesItemName = registryPrefix + "favorites"
+
+    /// Les partages en cours, avec leur jeton de révocation.
+    ///
+    /// Confier ces jetons au serveur ferait de lui le détenteur d'un pouvoir de révocation
+    /// sur des partages qu'il ne peut pas lire, et l'existence même de la liste lui
+    /// apprendrait qui partage quoi et quand. Le registre est donc chiffré, côté client,
+    /// comme les autres.
+    static let sharesItemName = registryPrefix + "shares"
 
     /// Combien d'anciens mots de passe un élément conserve. Le même nombre que la web
     /// app : un historique plus long d'un côté que de l'autre ferait croire à une perte.

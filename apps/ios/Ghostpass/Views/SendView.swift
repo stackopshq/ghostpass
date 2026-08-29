@@ -92,7 +92,11 @@ struct SendView: View {
             Button("Créer le lien") {
                 Task {
                     lien = await store.partager(
-                        secret, heures: heures, consultations: consultations)
+                        secret, heures: heures, consultations: consultations,
+                        // Un texte libre n'a pas de nom. Le registre en a besoin d'un pour
+                        // être lisible ailleurs — la date de création, qu'il retient aussi,
+                        // distingue les lignes entre elles.
+                        nom: tr("Secret partagé"))
                 }
             }
             .buttonStyle(

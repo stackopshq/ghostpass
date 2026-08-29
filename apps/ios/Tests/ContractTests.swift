@@ -361,6 +361,52 @@ final class GeneratorAndTotpTests: XCTestCase {
         XCTAssertEqual(config.algorithm, .sha256)
     }
 
+    // ─── Le registre des partages ───
+
+    /// Les noms de champs **sont** le contrat : le registre est écrit par le téléphone et
+    /// relu par le navigateur. Un champ renommé d'un côté ne casse rien à la compilation
+    /// et rend simplement les partages illisibles chez l'autre — sans erreur, sans trace.
+    func testLeRegistreDesPartagesGardeLesNomsDeChampsDuWeb() throws {
+        let partage = PartageEnCours(
+            id: "abc", url: "https://ghostbit.example/p/abc#cle", deleteToken: "jeton",
+            name: "Secret partagé", createdAt: 1_788_000_000, expiresAt: 1_788_086_400)
+        let json = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: JSONEncoder().encode([partage]))
+                as? [[String: Any]])
+        XCTAssertEqual(
+            Set(try XCTUnwrap(json.first).keys),
+            ["id", "url", "deleteToken", "name", "createdAt", "expiresAt"])
+    }
+
+    /// Une échéance absente est légitime : ghostbit accepte « jamais ».
+    func testUnPartageSansEcheanceSeRelit() throws {
+        let brut = Data(
+            """
+            [{"id":"a","url":"https://x/p/a#k","deleteToken":"j","name":"n",
+              "createdAt":1788000000,"expiresAt":null}]
+            """.utf8)
+        let liste = try JSONDecoder().decode([PartageEnCours].self, from: brut)
+        XCTAssertEqual(liste.count, 1)
+        XCTAssertNil(liste[0].expiresAt)
+    }
+
+    /// Les deux horodatages sont dans la même unité. Ils ne l'étaient pas au premier jet,
+    /// et l'écart ne se serait vu qu'à l'affichage, chez le client qui n'a pas écrit la
+    /// ligne. Onze chiffres, c'est une seconde ; treize, une milliseconde.
+    func testLesDeuxHorodatagesSontEnSecondes() {
+        let maintenant = Int(Date().timeIntervalSince1970)
+        XCTAssertEqual(
+            String(maintenant).count, 10,
+            "un horodatage en secondes tient sur dix chiffres jusqu'en 2286")
+    }
+
+    /// Le nom réservé doit être exactement celui de la web app, octet NUL compris : c'est
+    /// lui qui appareille les deux registres, et il masque la ligne dans l'interface.
+    func testLeNomReserveDuRegistreEstCeluiDuWeb() {
+        XCTAssertEqual(VaultConstants.sharesItemName, "\u{0}gp:shares")
+        XCTAssertTrue(VaultConstants.sharesItemName.hasPrefix(VaultConstants.registryPrefix))
+    }
+
     // ─── Ce qu'un QR code a le droit de contenir ───
 
     func testUnQrCodeOtpauthEstRetenu() {

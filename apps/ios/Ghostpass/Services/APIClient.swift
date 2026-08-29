@@ -252,8 +252,19 @@ private struct SendBody: Encodable {
     let maxViews: Int
 }
 
+/// Ce que le serveur rend d'un partage créé.
+///
+/// `url` vient de ghostbit, à qui le partage est relayé : le serveur GhostPass ne
+/// l'héberge plus. La reconstruire depuis l'identifiant produirait un lien vers un
+/// serveur qui ne connaît pas ce partage — un lien mort, sans la moindre erreur.
 private struct SendCreatedDTO: Decodable {
     let id: String
+    /// Optionnels **à dessein**. Un serveur antérieur au relais rend `{ id }` seul : les
+    /// exiger ferait échouer le décodage, et l'utilisateur verrait une réponse illisible
+    /// là où le partage a parfaitement fonctionné. Le client doit savoir parler aux deux.
+    let url: String?
+    let deleteToken: String?
+    let expiresAt: Int?
 }
 
 /// Ce que le serveur rend d'un partage : le chiffre et son nonce, jamais la clé.
@@ -355,7 +366,8 @@ struct APIClient {
     var session: URLSession = .shared
 
     private func request(
-        _ method: String, _ path: String, token: String? = nil, body: Data? = nil
+        _ method: String, _ path: String, token: String? = nil, body: Data? = nil,
+        headers: [String: String] = [:]
     ) async throws -> Data {
         guard let url = URL(string: path, relativeTo: baseURL) else { throw APIError.badURL }
         var req = URLRequest(url: url)
@@ -363,6 +375,9 @@ struct APIClient {
         req.httpBody = body
         if body != nil {
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        for (nom, valeur) in headers {
+            req.setValue(valeur, forHTTPHeaderField: nom)
         }
         if let token {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -716,16 +731,38 @@ struct APIClient {
 
     /// Dépose un secret déjà chiffré. Le serveur ne reçoit ni la clé ni le texte : il
     /// héberge un chiffre, en compte les consultations, et l'efface à échéance.
+    /// Ce qu'un partage créé rend au client : de quoi le transmettre, et de quoi le
+    /// révoquer. Le jeton n'existe qu'ici — le serveur n'en garde qu'une empreinte.
+    struct PartageCree {
+        let id: String
+        /// Absente si le serveur héberge encore les partages lui-même. Le lien se déduit
+        /// alors de son adresse, comme avant le relais.
+        let url: String?
+        /// Absent avec l'URL : sans relais, il n'y a pas de révocation à offrir.
+        let deleteToken: String?
+        let expiresAt: Int?
+    }
+
     func createSend(
         token: String, ciphertext: String, iv: String, expiresInHours: Int, maxViews: Int
-    ) async throws -> String {
+    ) async throws -> PartageCree {
         let body = try JSONEncoder().encode(
             SendBody(
                 ciphertext: ciphertext, iv: iv, expiresInHours: expiresInHours,
                 maxViews: maxViews))
-        return try decode(
-            SendCreatedDTO.self, from: await request("POST", "api/send", token: token, body: body)
-        ).id
+        let dto = try decode(
+            SendCreatedDTO.self, from: await request("POST", "api/send", token: token, body: body))
+        return PartageCree(
+            id: dto.id, url: dto.url, deleteToken: dto.deleteToken, expiresAt: dto.expiresAt)
+    }
+
+    /// Révoque un partage. Le jeton voyage en en-tête, pas dans l'URL : les chemins
+    /// s'écrivent dans les journaux des serveurs intermédiaires, les en-têtes beaucoup
+    /// moins. Le serveur rend 204 même rejouée.
+    func revokeSend(token: String, id: String, deleteToken: String) async throws {
+        _ = try await request(
+            "DELETE", "api/send/\(id)", token: token,
+            headers: ["x-delete-token": deleteToken])
     }
 
     /// Récupère un partage. Route publique — pas de jeton : celui qui a le lien y accède,

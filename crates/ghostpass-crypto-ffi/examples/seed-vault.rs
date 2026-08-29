@@ -90,12 +90,30 @@ fn main() {
     ];
     if vitrine {
         for (nom, data) in [
-            ("Gmail", r#"{"kind":"Login","data":{"username":"clara.vanacker@gmail.com","password":"Wq7!fRk2$mZp9Lx","uris":["https://mail.google.com"],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#),
-            ("Amazon", r#"{"kind":"Login","data":{"username":"clara.vanacker","password":"T4#vNs8qLd2!Wm","uris":["https://amazon.fr"],"totp":null,"password_history":[]}}"#),
-            ("Netflix", r#"{"kind":"Login","data":{"username":"clara@stackops.ch","password":"Zx9$bKt5!nQv3R","uris":["https://netflix.com"],"totp":null,"password_history":[]}}"#),
-            ("Banque", r#"{"kind":"Login","data":{"username":"FR7630001007","password":"Hn4!pXw8$cJm6T","uris":[],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#),
-            ("Carte bleue", r#"{"kind":"Card","data":{"cardholder":"CLARA VANACKER","number":"4111111111111111","exp_month":"09","exp_year":"2029","code":"123"}}"#),
-            ("Codes de secours", r#"{"kind":"SecureNote","data":{"content":"Codes de récupération à usage unique. À conserver hors ligne."}}"#),
+            (
+                "Gmail",
+                r#"{"kind":"Login","data":{"username":"clara.vanacker@gmail.com","password":"Wq7!fRk2$mZp9Lx","uris":["https://mail.google.com"],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
+            ),
+            (
+                "Amazon",
+                r#"{"kind":"Login","data":{"username":"clara.vanacker","password":"T4#vNs8qLd2!Wm","uris":["https://amazon.fr"],"totp":null,"password_history":[]}}"#,
+            ),
+            (
+                "Netflix",
+                r#"{"kind":"Login","data":{"username":"clara@stackops.ch","password":"Zx9$bKt5!nQv3R","uris":["https://netflix.com"],"totp":null,"password_history":[]}}"#,
+            ),
+            (
+                "Banque",
+                r#"{"kind":"Login","data":{"username":"FR7630001007","password":"Hn4!pXw8$cJm6T","uris":[],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
+            ),
+            (
+                "Carte bleue",
+                r#"{"kind":"Card","data":{"cardholder":"CLARA VANACKER","number":"4111111111111111","exp_month":"09","exp_year":"2029","code":"123"}}"#,
+            ),
+            (
+                "Codes de secours",
+                r#"{"kind":"SecureNote","data":{"content":"Codes de récupération à usage unique. À conserver hors ligne."}}"#,
+            ),
         ] {
             items.push(encrypted(&account, vault_item(nom, data)));
         }
