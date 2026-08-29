@@ -62,8 +62,12 @@ const en: Dict = {
   "org.permWrite": "Write",
   "org.permManage": "Manage",
   "org.grant": "Grant access",
-  "org.accessNone": "Nobody has explicit access to this collection.",
-  "org.accessWho": "Who has access today",
+  // « Personne n'a d'accès » était faux : les admins d'org et les membres d'un
+  // groupe entrent sans qu'aucune ligne n'existe. La liste montre désormais
+  // l'accès effectif, donc ce message ne s'affiche que si elle est vraiment vide.
+  "org.accessNone": "Nobody can reach this collection yet.",
+  "org.accessNotRevocable": "not revocable here",
+  "org.accessWho": "Who can reach it, and how",
   "org.newCollection": "New collection",
   "org.createCollection": "Create collection",
   "org.backToOrgs": "← My organisations",
@@ -283,8 +287,9 @@ const fr: Dict = {
   "org.permWrite": "Écriture",
   "org.permManage": "Gestion",
   "org.grant": "Accorder l'accès",
-  "org.accessNone": "Personne n'a d'accès explicite à cette collection.",
-  "org.accessWho": "Qui a accès aujourd'hui",
+  "org.accessNone": "Personne n'atteint encore cette collection.",
+  "org.accessNotRevocable": "pas révocable ici",
+  "org.accessWho": "Qui y accède, et par quel chemin",
   "org.newCollection": "Nouvelle collection",
   "org.createCollection": "Créer la collection",
   "org.backToOrgs": "← Mes organisations",
