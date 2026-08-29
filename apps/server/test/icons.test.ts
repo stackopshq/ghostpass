@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildApp } from "../src/app.js";
 import { openDatabase } from "../src/db/database.js";
-import { candidateUrls, normalizeDomain } from "../src/services/icons.js";
+import { candidateUrls, domainesParents, normalizeDomain } from "../src/services/icons.js";
 
 // Ces tests verrouillent la validation d'entrée du proxy de favicons (anti-SSRF), sans réseau :
 // toute saisie qui n'est pas un domaine public est rejetée AVANT toute requête sortante.
@@ -71,4 +71,39 @@ test("candidateUrls : que du HTTPS, et jamais un autre hôte que celui demandé"
       `hôte inattendu : ${parsed.hostname}`,
     );
   }
+});
+
+test("domainesParents remonte du sous-domaine vers le site, sans aller trop loin", () => {
+  // Le cas mesuré : `app.indy.fr` répond 404 sur les quatre chemins, `indy.fr` rend
+  // une image. Sans remontée, l'entrée reste sans logo alors que le site en a un.
+  assert.deepEqual(domainesParents("app.indy.fr"), ["indy.fr"]);
+  assert.deepEqual(domainesParents("manager.infomaniak.com"), ["infomaniak.com"]);
+
+  // Un domaine déjà à deux labels n'a pas de parent utile : on n'interroge pas le TLD.
+  assert.deepEqual(domainesParents("indy.fr"), []);
+
+  // Bornage à deux parents : au-delà on ne ferait qu'ajouter des appels sortants.
+  assert.deepEqual(domainesParents("a.b.c.d.example.com"), [
+    "b.c.d.example.com",
+    "c.d.example.com",
+  ]);
+
+  // Les suffixes publics courants sont écartés : `co.uk` n'appartient à personne, et
+  // l'interroger était une requête sortante garantie inutile sur tout domaine britannique.
+  assert.deepEqual(domainesParents("shop.example.co.uk"), ["example.co.uk"]);
+  assert.deepEqual(domainesParents("example.co.uk"), []);
+  assert.deepEqual(domainesParents("login.example.com.au"), ["example.com.au"]);
+});
+
+test("candidateUrls garde les chemins de l'hôte exact avant de remonter au site", () => {
+  const urls = candidateUrls("app.indy.fr");
+  // Les quatre chemins d'avant restent, et restent en tête : une icône propre au
+  // sous-domaine doit toujours l'emporter sur celle du site.
+  assert.deepEqual(urls.slice(0, 4), [
+    "https://app.indy.fr/favicon.ico",
+    "https://www.app.indy.fr/favicon.ico",
+    "https://app.indy.fr/apple-touch-icon.png",
+    "https://app.indy.fr/favicon.svg",
+  ]);
+  assert.equal(urls[4], "https://indy.fr/favicon.ico");
 });

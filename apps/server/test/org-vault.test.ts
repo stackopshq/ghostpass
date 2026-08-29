@@ -316,3 +316,100 @@ test("la liste d'accès montre l'accès effectif, admin compris, pas seulement l
   );
   await app.close();
 });
+
+test("révoquer un accès nommé le retire, ôte l'accès effectif, et reste idempotent", async () => {
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json();
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
+
+  await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+    payload: { userId: memberId, permission: "write" },
+  });
+
+  // Le bénéficiaire ne peut pas lire la liste : il a `write`, pas `manage`.
+  const indiscret = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(memberToken),
+  });
+  assert.equal(indiscret.statusCode, 403);
+
+  const retrait = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access/${memberId}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(retrait.statusCode, 204);
+
+  // Retiré de la liste — et l'accès effectivement perdu, pas seulement la ligne.
+  const apres = (
+    await app.inject({
+      method: "GET",
+      url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+      headers: auth(adminToken),
+    })
+  ).json().access;
+  assert.equal(
+    apres.some((a: { userId: string }) => a.userId === memberId),
+    false,
+    "le membre ne doit plus figurer dans la liste d'accès",
+  );
+  const refuse = await app.inject({
+    method: "GET",
+    url: `/api/orgs/${orgId}/collections/${col.id}/items`,
+    headers: auth(memberToken),
+  });
+  assert.equal(refuse.statusCode, 403);
+
+  // Idempotent : un second retrait répond comme le premier. Un double appui ne doit
+  // pas ressembler à une panne.
+  const encore = await app.inject({
+    method: "DELETE",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access/${memberId}`,
+    headers: auth(adminToken),
+  });
+  assert.equal(encore.statusCode, 204);
+  await app.close();
+});
+
+test("la liste des collections porte la permission effective, pas le rôle", async () => {
+  const { app, adminToken, memberToken, orgId } = await setupOrg();
+  const col = (await makeCollection(app, orgId, adminToken)).json();
+  const memberId = await userId(app, orgId, adminToken, "member@stackops.ch");
+
+  // L'admin d'org n'a reçu aucun octroi : sa permission vient de son rôle, et
+  // `permissionFor` la calcule à `manage`. C'est elle qu'on doit lire, pas le rôle brut.
+  const vueAdmin = (
+    await app.inject({
+      method: "GET",
+      url: `/api/orgs/${orgId}/collections`,
+      headers: auth(adminToken),
+    })
+  ).json().collections;
+  const sienne = vueAdmin.find((c: { id: string }) => c.id === col.id);
+  assert.equal(sienne.permission, "manage", "un administrateur gère toute collection");
+
+  // Un membre avec un octroi en lecture doit lire `read` — et non `member`, son rôle.
+  await app.inject({
+    method: "POST",
+    url: `/api/orgs/${orgId}/collections/${col.id}/access`,
+    headers: auth(adminToken),
+    payload: { userId: memberId, permission: "read" },
+  });
+  const vueMembre = (
+    await app.inject({
+      method: "GET",
+      url: `/api/orgs/${orgId}/collections`,
+      headers: auth(memberToken),
+    })
+  ).json().collections;
+  // Ne pas compter : l'organisation porte déjà une collection par défaut, que le membre
+  // voit aussi. C'est celle qu'on vient de lui ouvrir qu'on interroge.
+  const vue = vueMembre.find((c: { id: string }) => c.id === col.id);
+  assert.ok(vue, "le membre doit voir la collection qu'on vient de lui ouvrir");
+  assert.equal(vue.permission, "read", "la permission effective, pas le rôle « member »");
+  await app.close();
+});
