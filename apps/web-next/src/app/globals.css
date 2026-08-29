@@ -1,0 +1,53 @@
+/* Feuille d'entrée de GhostPass.
+ *
+ * Trois imports, et l'ordre compte : les polices hébergées, le thème généré du
+ * produit, puis Tailwind qui lit ces jetons par `@theme` ci-dessous.
+ *
+ * `ghost-theme.css` est COPIÉ depuis ghostsuite, pas édité ici. Il est produit
+ * par `tools/brand/emit_theme.py` à partir de `PRODUITS`, qui porte déjà les
+ * couleurs des logos : un accent changé là traverse les icônes ET le thème, ou
+ * aucun des deux. Le modifier à la main serait écrasé à la régénération, et la
+ * CI de ghostsuite refuse d'ailleurs un fichier généré qui a dérivé.
+ */
+@import "./fonts.css";
+@import "./ghost-theme.css";
+@import "tailwindcss";
+
+/* Le pont entre les jetons de la suite et les classes Tailwind. Aucune valeur
+ * n'est répétée : `text-sm` rend la marche `--text-sm`, `bg-surface` le fond
+ * `--color-surface`. Changer une valeur se fait dans PRODUITS, pas ici. */
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --text-2xs: var(--text-2xs);
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+
+  --color-base: var(--color-base);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-foreground: var(--color-foreground);
+  --color-muted: var(--color-muted);
+  --color-accent: var(--color-accent);
+  --color-accent-light: var(--color-accent-light);
+  --color-accent-deep: var(--color-accent-deep);
+  --color-accent-ink: var(--color-accent-ink);
+
+  --radius-sm: var(--radius-sm);
+  --radius: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-pill: var(--radius-pill);
+}
+
+body {
+  background: var(--color-base);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}

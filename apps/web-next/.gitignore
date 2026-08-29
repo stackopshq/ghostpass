@@ -1,0 +1,15 @@
+# La sortie de construction et les dépendances n'entrent pas dans le dépôt.
+#
+# Écrit APRÈS avoir commité 100 fichiers de `.next/`, dont des caches webpack —
+# la faute exacte que j'avais relevée chez la session iOS quelques heures plus
+# tôt, et pour la même raison : stager un répertoire dont la sortie n'est pas
+# ignorée. Un `.gitignore` posé en même temps que le premier build coûte une
+# minute ; posé après, il faut réécrire l'historique.
+.next/
+node_modules/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Copié à la construction depuis crates/ (voir le script `prebuild`), donc
+# jamais une source. Une copie versionnée serait périmée au premier cargo build.
+public/ghostpass_crypto_wasm_bg.wasm
