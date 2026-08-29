@@ -22,8 +22,11 @@ import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Cadenas, Coffre, Corbeille as IconeCorbeille, Plus } from "@/components/Icones";
+import { Cadenas, Coffre, Corbeille as IconeCorbeille, Organisation, Plus } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
+import { ListeOrgs } from "@/components/orgs/ListeOrgs";
+import { DetailOrg } from "@/components/orgs/DetailOrg";
+import type { OrgSummary } from "@/lib/orgs";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function VaultScreen() {
@@ -46,7 +49,10 @@ export function VaultScreen() {
   // Les sections portées à ce jour. Les organisations et la sécurité
   // arrivent ensuite : tant qu'elles ne sont pas là, elles ne figurent pas
   // dans le rail — un onglet qui mène à « bientôt » est pire que son absence.
-  const [section, setSection] = useState<"coffre" | "corbeille">("coffre");
+  const [section, setSection] = useState<"coffre" | "orgs" | "corbeille">("coffre");
+  // L'organisation ouverte. Nulle = la liste. La clé d'org vit dans le
+  // composant de détail, pas ici : quitter l'écran doit la laisser partir.
+  const [orgOuverte, setOrgOuverte] = useState<OrgSummary | null>(null);
 
   const charger = useCallback(async (): Promise<VaultEntry[]> => {
     if (!token || !account) return [];
@@ -226,12 +232,16 @@ export function VaultScreen() {
           <div className="mb-4 flex flex-col gap-0.5">
             {([
               ["coffre", "app.myVault", Coffre],
+              ["orgs", "app.orgs", Organisation],
               ["corbeille", "app.trash", IconeCorbeille],
             ] as const).map(([cle, libelle, Icone]) => (
               <button
                 key={cle}
                 type="button"
-                onClick={() => setSection(cle)}
+                onClick={() => {
+                  setSection(cle);
+                  if (cle !== "orgs") setOrgOuverte(null);
+                }}
                 aria-current={section === cle ? "page" : undefined}
                 className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${section === cle ? "bg-accent/12 font-medium text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}
               >
@@ -265,8 +275,14 @@ export function VaultScreen() {
           </div>
         </nav>
 
-        <div className={`verre-dense min-h-0 border-r border-border ${section === "corbeille" ? "col-span-2" : ""}`}>
-          {section === "corbeille" ? (
+        <div className={`verre-dense min-h-0 border-r border-border ${section !== "coffre" ? "col-span-2" : ""}`}>
+          {section === "orgs" ? (
+            orgOuverte ? (
+              <DetailOrg org={orgOuverte} onRetour={() => setOrgOuverte(null)} />
+            ) : (
+              <ListeOrgs onOuvrir={setOrgOuverte} />
+            )
+          ) : section === "corbeille" ? (
             <Corbeille onRestaure={() => void charger().then(() => setChoisi(null))} />
           ) : chargement ? (
             <p className="p-4 text-sm text-muted">{t("app.loadingCrypto")}</p>
@@ -282,7 +298,7 @@ export function VaultScreen() {
           )}
         </div>
 
-        <div className={`min-h-0 overflow-y-auto ${section === "corbeille" ? "hidden" : ""}`}>
+        <div className={`min-h-0 overflow-y-auto ${section !== "coffre" ? "hidden" : ""}`}>
           {edition !== null ? (
             <FormulaireEntree
               // La clé force un formulaire neuf quand on passe d'une entrée à
