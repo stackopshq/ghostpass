@@ -147,7 +147,51 @@ export function candidateUrls(domain: string): string[] {
   if (!domain.startsWith("www.")) urls.push(`https://www.${domain}/favicon.ico`);
   urls.push(`https://${domain}/apple-touch-icon.png`);
   urls.push(`https://${domain}/favicon.svg`);
+  // Puis le site lui-même, quand l'hôte est un sous-domaine. Ces candidats viennent en
+  // dernier : on préfère toujours l'icône de l'hôte exact quand il en a une.
+  for (const parent of domainesParents(domain)) {
+    urls.push(`https://${parent}/favicon.ico`);
+  }
   return urls;
+}
+
+/// Les domaines parents d'un hôte, du plus proche au plus lointain.
+///
+/// Un coffre contient des adresses de *connexion*, pas des pages d'accueil :
+/// `app.indy.fr`, `manager.infomaniak.com`, `login.example.com`. Ces sous-domaines ne
+/// servent presque jamais d'icône — mesuré le 2026-08-29 : `app.indy.fr` répond 404 sur
+/// les quatre chemins quand `indy.fr` rend une image. Les quatre chemins ajoutés la veille
+/// ne rattrapaient pas ce cas, puisqu'ils portent tous sur l'hôte exact.
+///
+/// Deux parents au plus : c'est un bornage des appels sortants.
+///
+/// La borne « au moins deux étiquettes » ne suffit pas à éviter les suffixes publics, et
+/// c'est un piège dans lequel on est tombé des deux côtés du projet : `example.co.uk` en
+/// compte trois, donc elle laisse passer `co.uk`, qui n'appartient à personne. Ce n'est
+/// pas une faille — une requête sortante garantie inutile, sur chaque domaine britannique,
+/// australien ou japonais.
+///
+/// D'où le garde ci-dessous. C'est une heuristique, pas la Public Suffix List : elle
+/// écarte `<sld>.<ccTLD de deux lettres>` pour une poignée de `sld` courants. Ce qu'elle
+/// rate coûte une requête, jamais une faille ; la vraie liste compte plusieurs milliers
+/// d'entrées à tenir à jour, pour un gain qui reste une requête.
+const SLD_PUBLICS = new Set(["co", "com", "net", "org", "gov", "edu", "ac"]);
+
+function estUnSuffixePublic(domain: string): boolean {
+  const labels = domain.split(".");
+  if (labels.length !== 2) return false;
+  return SLD_PUBLICS.has(labels[0]!) && labels[1]!.length === 2;
+}
+
+export function domainesParents(domain: string): string[] {
+  const labels = domain.split(".");
+  const parents: string[] = [];
+  for (let i = 1; labels.length - i >= 2 && parents.length < 2; i++) {
+    const parent = labels.slice(i).join(".");
+    if (estUnSuffixePublic(parent)) break;
+    parents.push(parent);
+  }
+  return parents;
 }
 
 /// Budget TOTAL de la résolution, tous candidats confondus. Sans lui, quatre
