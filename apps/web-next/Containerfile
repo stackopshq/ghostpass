@@ -22,6 +22,13 @@
 # /pkg` — un répertoire qui n'existe QUE s'il a été construit. `npm ci` échoue
 # tant que le WASM n'est pas là. L'ordre des étages n'est donc pas un choix de
 # style : Rust d'abord, npm ensuite.
+#
+# CE QUI EST SERVI : L'INTERFACE NEXT, EXPORTÉE EN FICHIERS STATIQUES
+# -------------------------------------------------------------------
+# Jusqu'au 2026-08-29 cette image servait `apps/web`, écrit en Svelte. Toute
+# l'application est cliente — elle déchiffre avec une clé que le serveur n'a
+# pas — donc `output: "export"` ne renonce à rien et garde la forme éprouvée :
+# un nginx, une seule origine, pas de processus Node à surveiller.
 
 # ---------------------------------------------------------------------------
 # Étage 1 — le cœur cryptographique, compilé en WebAssembly
@@ -57,10 +64,12 @@ WORKDIR /src
 # Le paquet WASM d'abord : `npm ci` résout `file:` au moment de l'installation,
 # et un répertoire absent y est une erreur, pas un avertissement.
 COPY --from=wasm /src/crates/ghostpass-crypto-wasm/pkg ./crates/ghostpass-crypto-wasm/pkg
-WORKDIR /src/apps/web
-COPY apps/web/package.json apps/web/package-lock.json ./
+WORKDIR /src/apps/web-next
+COPY apps/web-next/package.json apps/web-next/package-lock.json ./
 RUN npm ci
-COPY apps/web/ ./
+COPY apps/web-next/ ./
+# `prebuild` copie le module WASM dans `public/`, d'où `src/lib/crypto.ts` le
+# charge. Il vient de l'étage ci-dessus, pas du dépôt.
 RUN npm run build
 
 # ---------------------------------------------------------------------------
@@ -72,7 +81,7 @@ FROM docker.io/library/nginx:1.27-alpine
 # précisément pour que l'image ne présume pas de son voisinage.
 ENV GHOSTPASS_API=http://ghostpass-app:3000
 
-COPY --from=build /src/apps/web/dist /usr/share/nginx/html
-COPY apps/web/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY --from=build /src/apps/web-next/out /usr/share/nginx/html
+COPY apps/web-next/nginx.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 8080

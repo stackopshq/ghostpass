@@ -46,7 +46,11 @@ server {
         try_files $uri =404;
     }
 
-    location ~ ^/(assets|fonts)/ {
+    # `_next` est le préfixe des lots produits par Next, l'équivalent d'`assets`
+    # du temps de Vite. L'oublier ici rendrait `index.html` en 200 pour un lot
+    # manquant — le défaut mesuré le 2026-08-27 sur les icônes, transposé aux
+    # scripts, où il produirait un écran blanc sans message.
+    location ~ ^/(_next|assets|fonts)/ {
         try_files $uri =404;
         # Noms portant une empreinte pour les ressources, contenu figé pour les
         # polices : un an de cache, et une révision change le nom du fichier.
@@ -62,6 +66,17 @@ server {
         # Sur une réponse d'erreur, mieux vaut aucun en-tête de cache qu'un
         # en-tête qui promet un an.
         add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Les liens de partage. L'identifiant désigne un secret qui n'existe pas au
+    # moment de la construction, donc l'export statique ne produit qu'UN fichier
+    # pour cette route ; c'est le navigateur qui y lit l'identifiant réel.
+    #
+    # Ce bloc doit précéder le repli ci-dessous : sans lui, `/s/<id>` rendrait
+    # `index.html`, c'est-à-dire le coffre, et le destinataire d'un lien
+    # verrait un écran de connexion au lieu de son secret.
+    location ~ ^/s/[^/]+/?$ {
+        try_files /s/_gabarit.html =404;
     }
 
     # Application à page unique : toute route inconnue rend l'index, sinon un

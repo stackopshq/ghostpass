@@ -52,7 +52,7 @@ jobs:
         run: npm test
 
   web:
-    name: Web app (Svelte + WASM)
+    name: Web app (Next + WASM)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,15 +70,15 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-          cache-dependency-path: apps/web/package-lock.json
+          cache-dependency-path: apps/web-next/package-lock.json
       - name: Install
-        working-directory: apps/web
+        working-directory: apps/web-next
         run: npm ci
-      - name: Type-check (svelte-check)
-        working-directory: apps/web
-        run: npm run check
+      - name: Type-check (tsc)
+        working-directory: apps/web-next
+        run: npm run typecheck
       - name: Build
-        working-directory: apps/web
+        working-directory: apps/web-next
         run: npm run build
 
   # Publier ce qui a passé les contrôles, et seulement depuis `main`. Jusqu'au
@@ -120,7 +120,7 @@ jobs:
           # corrompent le cache. Contexte = racine du dépôt, les deux
           # Containerfile y puisent (`crates/` pour le WASM du frontend).
           podman build -f apps/server/Containerfile -t "${IMAGE}:sha-${SHORT}" .
-          podman build -f apps/web/Containerfile    -t "${IMAGE}:sha-${SHORT}-web" .
+          podman build -f apps/web-next/Containerfile -t "${IMAGE}:sha-${SHORT}-web" .
 
           # Le frontend part dans LE MÊME paquet, sous une balise suffixée. Les
           # deux dérivent du même SHORT : elles ne peuvent pas diverger, et un
