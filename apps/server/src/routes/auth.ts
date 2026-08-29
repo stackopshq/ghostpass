@@ -6,7 +6,7 @@ import {
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
 import { loginEvents, sessions, users, webauthnCredentials } from "../db/repositories.js";
-import { ORIGIN, RP_ID, putChallenge, takeChallenge } from "../services/webauthn.js";
+import { RP_ID, getAllowedOrigins, putChallenge, takeChallenge } from "../services/webauthn.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
 import {
@@ -152,7 +152,16 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
         const v = await verifyAuthenticationResponse({
           response: webauthnResponse,
           expectedChallenge,
-          expectedOrigin: ORIGIN,
+          // Toutes les origines autorisées, pas seulement la principale.
+          //
+          // `passkey.ts` le faisait déjà des deux côtés ; ici et à
+          // l'enregistrement d'une clé, la vérification restait sur `ORIGIN`
+          // seul. Conséquence : une personne dont le second facteur est une
+          // clé de sécurité ne pouvait pas se connecter depuis l'extension
+          // — origine `chrome-extension://…` — ni depuis aucun client à
+          // origine non standard. Le TOTP passait, la clé non, sans que rien
+          // ne l'explique à l'écran.
+          expectedOrigin: getAllowedOrigins(),
           expectedRPID: RP_ID,
           requireUserVerification: false,
           credential: {
