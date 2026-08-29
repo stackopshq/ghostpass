@@ -21,6 +21,9 @@ export function ListeSecrets({
   dossier,
   choisi,
   onChoisir,
+  selection,
+  onBasculerSelection,
+  onToutSelectionner,
 }: {
   items: VaultEntry[];
   total: number;
@@ -28,8 +31,12 @@ export function ListeSecrets({
   dossier: string | null;
   choisi: VaultEntry | null;
   onChoisir: (item: VaultEntry) => void;
+  selection: Set<string>;
+  onBasculerSelection: (id: string, jusqua?: VaultEntry[]) => void;
+  onToutSelectionner: (ids: string[]) => void;
 }) {
   const { t } = useI18n();
+  const tousChoisis = items.length > 0 && items.every((i) => selection.has(i.id));
 
   const titre = recherche.trim()
     ? t("app.results")
@@ -42,9 +49,22 @@ export function ListeSecrets({
       {/* Un vrai en-tête de page : un titre à sa taille, et le compte en
           sous-titre. L'ancienne version alignait les deux sur la même ligne en
           petit, ce qui ne hiérarchisait rien. */}
-      <div className="px-4 pb-3 pt-5">
-        <h2 className="truncate text-lg font-semibold text-foreground">{titre}</h2>
-        <p className="text-xs text-muted">{t("app.itemCount", { n: items.length })}</p>
+      <div className="flex items-start gap-3 px-4 pb-3 pt-5">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-lg font-semibold text-foreground">{titre}</h2>
+          <p className="text-xs text-muted">{t("app.itemCount", { n: items.length })}</p>
+        </div>
+        {items.length > 0 && (
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 pt-1 text-2xs text-muted">
+            <input
+              type="checkbox"
+              checked={tousChoisis}
+              onChange={() => onToutSelectionner(tousChoisis ? [] : items.map((i) => i.id))}
+              className="accent-accent"
+            />
+            {t("app.selectAll")}
+          </label>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-3">
@@ -71,22 +91,47 @@ export function ListeSecrets({
           items.map((item) => {
             const actif = choisi?.id === item.id;
             const sous = sousTitre(item, t);
+            const coche = selection.has(item.id);
             return (
-              <button
+              <div
                 key={item.id}
-                type="button"
-                onClick={() => onChoisir(item)}
-                aria-current={actif ? "true" : undefined}
                 // Séparation par surface et par espace, pas par un trait : c'est
                 // ce qui distingue une liste d'un tableur.
-                className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors ${actif ? "bg-accent/12 text-accent" : "hover:bg-surface"}`}
+                className={`group flex items-center gap-3 rounded-lg px-3 py-3 transition-colors ${actif ? "bg-accent/12" : coche ? "bg-surface" : "hover:bg-surface"}`}
               >
-                <Avatar nom={item.name} url={item.url} />
-                <span className="flex min-w-0 flex-col">
-                  <span className={`truncate text-sm ${actif ? "text-accent" : "text-foreground"}`}>{item.name}</span>
-                  {sous && <span className="truncate text-xs text-muted">{sous}</span>}
-                </span>
-              </button>
+                {/* La case est HORS du bouton : imbriquer un contrôle dans un
+                    bouton le rend inatteignable — le clic déclenche le bouton,
+                    jamais la case. Elle n'apparaît qu'au survol ou dès qu'une
+                    sélection existe, pour ne pas alourdir la lecture courante. */}
+                <label
+                  className={`flex shrink-0 cursor-pointer items-center transition-opacity ${coche || selection.size > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={coche}
+                    onChange={(e) =>
+                      // Maj enfoncée : on étend depuis la dernière case cochée,
+                      // ce qu'on attend d'une liste dès qu'elle dépasse dix
+                      // lignes.
+                      onBasculerSelection(item.id, (e.nativeEvent as MouseEvent).shiftKey ? items : undefined)
+                    }
+                    aria-label={t("app.selectItem", { name: item.name })}
+                    className="accent-accent"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => onChoisir(item)}
+                  aria-current={actif ? "true" : undefined}
+                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+                >
+                  <Avatar nom={item.name} url={item.url} />
+                  <span className="flex min-w-0 flex-col">
+                    <span className={`truncate text-sm ${actif ? "text-accent" : "text-foreground"}`}>{item.name}</span>
+                    {sous && <span className="truncate text-xs text-muted">{sous}</span>}
+                  </span>
+                </button>
+              </div>
             );
           })
         )}

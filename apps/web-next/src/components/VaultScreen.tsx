@@ -53,6 +53,10 @@ export function VaultScreen() {
   // L'organisation ouverte. Nulle = la liste. La clé d'org vit dans le
   // composant de détail, pas ici : quitter l'écran doit la laisser partir.
   const [orgOuverte, setOrgOuverte] = useState<OrgSummary | null>(null);
+  // La sélection multiple. `ancre` retient la dernière case cochée, pour que
+  // Maj-clic étende une plage — sans elle, la touche n'a rien d'où partir.
+  const [selection, setSelection] = useState<Set<string>>(new Set());
+  const [ancre, setAncre] = useState<string | null>(null);
 
   const charger = useCallback(async (): Promise<VaultEntry[]> => {
     if (!token || !account) return [];
@@ -170,6 +174,57 @@ export function VaultScreen() {
     }
   };
 
+  const basculerSelection = (id: string, plage?: VaultEntry[]) => {
+    setSelection((prec) => {
+      const s = new Set(prec);
+      if (plage && ancre && ancre !== id) {
+        const i = plage.findIndex((x) => x.id === ancre);
+        const j = plage.findIndex((x) => x.id === id);
+        if (i >= 0 && j >= 0) {
+          // On ajoute la plage sans jamais rien retirer : une extension qui
+          // décoche au passage surprend, et on ne s'en aperçoit qu'après avoir
+          // supprimé.
+          for (const it of plage.slice(Math.min(i, j), Math.max(i, j) + 1)) s.add(it.id);
+          return s;
+        }
+      }
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      return s;
+    });
+    setAncre(id);
+  };
+
+  /// Supprimer la sélection.
+  ///
+  /// Il n'existe pas de route de suppression en lot : on enchaîne les appels et
+  /// on COMPTE. Annoncer « supprimés » alors que l'un a échoué serait pire que
+  /// l'échec lui-même, puisque personne n'irait vérifier.
+  const supprimerSelection = async () => {
+    if (!token || selection.size === 0) return;
+    if (!confirm(t("app.confirmDeleteMany", { n: selection.size }))) return;
+    setOccupe(true);
+    let ok = 0;
+    let ko = 0;
+    try {
+      for (const id of selection) {
+        try {
+          await api.deleteItem(token, id);
+          ok++;
+        } catch {
+          ko++;
+        }
+      }
+      setSelection(new Set());
+      setAncre(null);
+      setChoisi(null);
+      await charger();
+      setErreur(ko > 0 ? t("app.deletedSome", { ok, ko }) : null);
+    } finally {
+      setOccupe(false);
+    }
+  };
+
   const basculer = (path: string) => {
     setReplies((prec) => {
       const s = new Set(prec);
@@ -259,7 +314,10 @@ export function VaultScreen() {
             recherche={recherche}
             replies={replies}
             chemins={chemins}
-            onChoisir={setDossier}
+            onChoisir={(p) => {
+            setDossier(p);
+            setSelection(new Set());
+          }}
             onBasculer={basculer}
             onCreer={creerDossier}
             onSupprimer={supprimerDossier}
@@ -287,14 +345,42 @@ export function VaultScreen() {
           ) : chargement ? (
             <p className="p-4 text-sm text-muted">{t("app.loadingCrypto")}</p>
           ) : (
-            <ListeSecrets
-              items={visibles}
-              total={items.length}
-              recherche={recherche}
-              dossier={dossier}
-              choisi={choisi}
-              onChoisir={setChoisi}
-            />
+            <div className="flex min-h-0 flex-col">
+              {selection.size > 0 && (
+                // Une barre qui n'existe que pendant la sélection : un rang
+                // permanent porterait des boutons inertes la plupart du temps.
+                <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2.5">
+                  <span className="text-xs text-muted">{t("app.selected", { n: selection.size })}</span>
+                  <span className="flex-1" />
+                  <Bouton
+                    variante="discret"
+                    onClick={() => {
+                      setSelection(new Set());
+                      setAncre(null);
+                    }}
+                  >
+                    {t("app.clearSelection")}
+                  </Bouton>
+                  <Bouton variante="danger" onClick={supprimerSelection} disabled={occupe}>
+                    {t("app.deleteSelected")}
+                  </Bouton>
+                </div>
+              )}
+              <ListeSecrets
+                items={visibles}
+                total={items.length}
+                recherche={recherche}
+                dossier={dossier}
+                choisi={choisi}
+                onChoisir={setChoisi}
+                selection={selection}
+                onBasculerSelection={basculerSelection}
+                onToutSelectionner={(ids) => {
+                  setSelection(new Set(ids));
+                  setAncre(null);
+                }}
+              />
+            </div>
           )}
         </div>
 

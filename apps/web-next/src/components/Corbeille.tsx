@@ -86,9 +86,13 @@ export function Corbeille({ onRestaure }: { onRestaure: () => void }) {
                 <p className="truncate text-sm text-foreground">{item.name}</p>
                 <p className="truncate text-2xs text-muted">{formatDate(item.updatedAt, locale)}</p>
               </div>
+              {/* Le nom de l'entrée dans le libellé accessible : « Restaurer »
+                  seul, répété sur chaque ligne, ne dit pas quoi. Même raison que
+                  pour les boutons de copie du détail. */}
               <Bouton
                 variante="discret"
                 disabled={occupe}
+                aria-label={`${t("app.restore")} — ${item.name}`}
                 onClick={() => agir(() => api.restoreItem(token!, item.id), true)}
               >
                 {t("app.restore")}
@@ -96,6 +100,7 @@ export function Corbeille({ onRestaure }: { onRestaure: () => void }) {
               <Bouton
                 variante="danger"
                 disabled={occupe}
+                aria-label={`${t("app.delete")} — ${item.name}`}
                 onClick={() => {
                   // Ici la suppression est vraiment définitive : le dire, plutôt
                   // que de reprendre le mot « supprimer » qui a déjà servi pour
