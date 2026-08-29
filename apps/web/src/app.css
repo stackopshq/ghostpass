@@ -1546,12 +1546,39 @@ button:disabled {
    présent sur chaque ligne partagée, donc il doit se lire d'un coup d'œil sans
    attirer l'œil plus que le nom du secret. La teinte d'accent est réservée aux
    choses sur lesquelles on clique. */
-.pill-shared {
-  flex-shrink: 0;
-  max-width: 40%;
+.pill-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Le nom d'organisation passe au second plan : il ne s'affiche que s'il y en a
+   plusieurs, et il cède la place en premier quand l'espace manque. */
+.pill-org {
+  flex-shrink: 1000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.pill-org::before {
+  content: "· ";
+}
+
+.pill-shared {
+  /* `text-overflow: ellipsis` ne s'applique QU'AUX conteneurs de bloc. `.pill`
+     est en `inline-flex`, donc le texte y devient un élément flex anonyme et la
+     propriété est ignorée : la coupe se faisait net, en plein milieu d'une
+     lettre, sans les points de suspension qui l'auraient signalée. L'ellipse
+     vit désormais sur `.pill-text`, qui est un bloc.
+
+     `flex-shrink: 0` était l'autre moitié du défaut : la pastille refusait de
+     rétrécir tout en étant plafonnée à 40 %, donc son contenu débordait au lieu
+     de s'adapter. */
+  min-width: 0;
+  max-width: 45%;
+  gap: 0.35rem;
   color: var(--muted);
   background: color-mix(in srgb, var(--muted) 10%, transparent);
   border-color: color-mix(in srgb, var(--muted) 18%, transparent);
