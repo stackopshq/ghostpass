@@ -7,6 +7,7 @@
     computeLoginHash,
     createRecovery,
     decryptEmergencyItem,
+    decryptOrgItem,
     decryptVaultItem,
     emergencyTakeover,
     encryptFolders,
@@ -16,6 +17,7 @@
     FOLDERS_ITEM_NAME,
     REGISTRY_PREFIX,
     openEmergency,
+    openOrg,
     recoverAccount,
     register,
     sealUserKeyFor,
@@ -64,6 +66,10 @@
   let token = $state<string | null>(null);
   let account = $state<Account | null>(null);
   let items = $state<VaultEntry[]>([]);
+  /// Le sous-ensemble personnel. Dérivé plutôt que maintenu à part : deux
+  /// listes tenues en parallèle finissent par diverger, et c'est celle-ci qui
+  /// garde les secrets d'équipe hors de l'export.
+  const personalItems = $derived(items.filter((i) => !i.shared));
   let nav = $state<"vault" | "orgs" | "security" | "trash">("vault");
   let trashItems = $state<VaultEntry[]>([]);
 
@@ -79,6 +85,11 @@
 
   // Dossier sélectionné dans l'arbre de gauche (null = tous les éléments).
   let selectedFolder = $state<string | null>(null);
+  /// Filtre par collection d'équipe. Distinct de `selectedFolder` : un dossier
+  /// personnel et une collection d'équipe ne se mélangent pas, et confondre les
+  /// deux ferait afficher « aucun secret dans ce dossier » sur une collection
+  /// qui en contient.
+  let selectedCollectionId = $state<string | null>(null);
 
   // Dossiers vides persistés (registre chiffré) + code OTP courant de l'entrée affichée.
   let emptyFolders = $state<string[]>([]);
@@ -117,7 +128,16 @@
   function exportCsv() {
     const esc = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
     const header = "name,folder,url,username,password,totp";
-    const rows = items.map((i) =>
+    // `personalItems`, PAS `items`. Depuis que la liste fusionne les éléments
+    // d'équipe, exporter `items` déposerait les secrets de toute l'organisation
+    // en clair dans un fichier, sur l'appareil d'un seul de ses membres — et
+    // sans que l'équipe l'apprenne. Sortir un secret partagé du coffre est une
+    // décision qui appartient à l'équipe, pas à celui qui clique.
+    //
+    // Trou signalé par la session iOS le 2026-08-29, qui l'a rencontré en
+    // cherchant *qui d'autre* lisait sa collection unifiée. Je ne l'avais pas
+    // vu non plus en écrivant la fusion.
+    const rows = personalItems.map((i) =>
       [i.name, i.folder, i.url, i.username, i.password, i.totp].map(esc).join(","),
     );
     const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
@@ -448,8 +468,20 @@
     items
       .filter((it) => {
         const q = search.trim().toLowerCase();
-        if (q) return it.name.toLowerCase().includes(q) || it.username.toLowerCase().includes(q);
-        return selectedFolder === null || it.folder === selectedFolder;
+        if (q) {
+          // « tous les mots de passe de l'équipe Ops » est une requête naturelle,
+          // donc le nom de l'équipe et celui de la collection sont cherchables
+          // au même titre que le nom du secret. Aligné avec le client iOS.
+          const champs = [
+            it.name, it.username, it.url,
+            it.shared?.orgName ?? "", it.shared?.collectionName ?? "",
+          ];
+          return champs.some((c) => (c ?? "").toLowerCase().includes(q));
+        }
+        if (selectedCollectionId) return it.shared?.collectionId === selectedCollectionId;
+        // Sans filtre, tout ; avec un dossier, les personnels de ce dossier.
+        if (selectedFolder === null) return true;
+        return !it.shared && it.folder === selectedFolder;
       })
       .sort((a, b) => a.name.localeCompare(b.name)),
   );
@@ -458,6 +490,12 @@
   interface VaultEntry extends DecryptedItem {
     id: string;
     updatedAt: number;
+    /// Renseigné UNIQUEMENT pour un élément d'équipe. Son absence veut dire
+    /// « personnel », et c'est ce qui route les écritures : un élément d'équipe
+    /// enregistré par l'API personnelle ne met pas à jour l'original, il en
+    /// crée une COPIE PRIVÉE — et l'équipe ne voit jamais la modification.
+    /// Signalé par la session iOS le 2026-08-29, qui a rencontré le même piège.
+    shared?: { orgId: string; orgName: string; collectionId: string; collectionName: string };
   }
 
   // ─── Arborescence des dossiers (déduite des chemins chiffrés "A/B/C") ───
@@ -498,10 +536,42 @@
   }
 
   // L'arbre (colonne de gauche) liste tous les dossiers, vides compris — c'est la navigation.
-  const tree = $derived(buildTree(items, emptyFolders));
+  // `personalItems` : un élément d'équipe n'a pas de dossier, il a une collection.
+  // Le passer à `buildTree` le ferait apparaître à la racine des dossiers
+  // personnels, c'est-à-dire au mauvais endroit sous le bon nom.
+  const tree = $derived(buildTree(personalItems, emptyFolders));
+
+  /// Les équipes et leurs collections, déduites des éléments chargés — pas
+  /// d'un second appel. Une collection vide n'apparaît donc pas ici ; elle est
+  /// visible dans l'écran Organisations, à qui elle appartient.
+  const orgSections = $derived.by(() => {
+    const parOrg = new Map<string, { name: string; cols: Map<string, { name: string; n: number }> }>();
+    for (const it of items) {
+      if (!it.shared) continue;
+      const org = parOrg.get(it.shared.orgId) ?? { name: it.shared.orgName, cols: new Map() };
+      const col = org.cols.get(it.shared.collectionId)
+        ?? { name: it.shared.collectionName, n: 0 };
+      col.n += 1;
+      org.cols.set(it.shared.collectionId, col);
+      parOrg.set(it.shared.orgId, org);
+    }
+    return [...parOrg.entries()].map(([orgId, o]) => ({
+      orgId,
+      name: o.name,
+      total: [...o.cols.values()].reduce((s, c) => s + c.n, 0),
+      collections: [...o.cols.entries()].map(([id, c]) => ({ id, ...c })),
+    }));
+  });
+
+  function selectCollection(id: string | null) {
+    selectedCollectionId = id;
+    selectedFolder = null;
+    menuOpen = false;
+  }
 
   function selectFolder(path: string | null) {
     selectedFolder = path;
+    selectedCollectionId = null;
     // Sur téléphone, choisir un dossier est une navigation : le tiroir doit se
     // refermer, sinon il masque la liste qu'on vient de demander.
     menuOpen = false;
@@ -512,6 +582,10 @@
     const counts = new Map<string, number>();
     for (const i of items) if (i.password) counts.set(i.password, (counts.get(i.password) ?? 0) + 1);
     return {
+      // `items` et NON `personalItems`, délibérément : un mot de passe d'équipe
+      // faible ou réutilisé est exactement ce qu'on veut voir remonter, et c'est
+      // souvent le plus coûteux. Ne pas « corriger » en personnel — l'export,
+      // lui, reste personnel, et c'est la seule exclusion qui se justifie.
       weak: items.filter((i) => i.password && passwordStrength(i.password).level <= 1),
       reused: items.filter((i) => i.password && (counts.get(i.password) ?? 0) > 1),
       noTotp: items.filter((i) => !i.totp),
@@ -547,8 +621,10 @@
     }
   }
   // Chemins de dossiers existants (pour l'autocomplétion du formulaire).
+  // `personalItems` : les dossiers sont une notion du coffre personnel, et
+  // proposer une collection d'équipe comme dossier n'aurait pas de sens.
   const folderPaths = $derived(
-    [...new Set([...items.map((i) => i.folder).filter(Boolean), ...emptyFolders])].sort((a, b) =>
+    [...new Set([...personalItems.map((i) => i.folder).filter(Boolean), ...emptyFolders])].sort((a, b) =>
       a.localeCompare(b),
     ),
   );
@@ -779,8 +855,21 @@
     adding = true;
   }
 
+  /// Refuser une écriture sur un élément d'équipe, en disant où la faire.
+  /// Un refus muet ressemblerait à une panne ; un bouton inerte serait pire.
+  function refuseWriteOnShared() {
+    error = t("app.sharedReadOnly");
+    busy = false;
+  }
+
   async function deleteEntry() {
     if (!selected || !token) return;
+    // Un élément d'équipe ne passe PAS par l'API personnelle. `deleteItem`
+    // viserait un identifiant qui n'existe pas dans le coffre personnel ; et
+    // pour l'écriture, `updateItem` créerait une copie privée au lieu de mettre
+    // à jour l'original — l'équipe ne verrait jamais la modification, et
+    // personne n'aurait d'erreur pour le dire.
+    if (selected.shared) return refuseWriteOnShared();
     if (!confirm(`Déplacer « ${selected.name} » vers la corbeille ?`)) return;
     busy = true;
     error = null;
@@ -924,11 +1013,67 @@
         entries.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
       }
     }
-    items = entries;
+    items = [...entries, ...(await loadOrgItems())];
     folderRegistryId = registryId;
     emptyFolders = registryPaths;
     selected = null;
     detailRevealed = false;
+  }
+
+  /// Les secrets des équipes dont l'utilisatrice est membre, déchiffrés avec la
+  /// clé d'org et marqués de leur provenance.
+  ///
+  /// POURQUOI ILS ENTRENT DANS LA LISTE PRINCIPALE
+  /// Un compte dont tout le contenu vit dans une équipe affichait « 0 mot de
+  /// passe » et une recherche sans résultat. Le coffre n'était pas vide : on ne
+  /// regardait qu'une moitié.
+  ///
+  /// POURQUOI ILS ÉCHOUENT EN SILENCE
+  /// Une organisation dont la clé n'a pas été remise, une collection devenue
+  /// inaccessible : on passe. L'alternative afficherait une erreur de coffre à
+  /// quelqu'un dont le coffre va très bien — et le coffre personnel, lui, est
+  /// déjà chargé. Le silence porte donc sur un supplément, jamais sur le tout.
+  async function loadOrgItems(): Promise<VaultEntry[]> {
+    if (!token || !account) return [];
+    const sortis: VaultEntry[] = [];
+    let orgs: Array<{ orgId: string; name: string; status: string }> = [];
+    try {
+      orgs = (await api.listOrgs(token)).organizations;
+    } catch {
+      return [];
+    }
+    for (const org of orgs) {
+      if (org.status !== "active") continue;
+      try {
+        const m = await api.getMembership(token, org.orgId);
+        if (!m.encryptedOrgKey || !m.sealedByPublicKey) continue;
+        const handle = openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey);
+        const { collections } = await api.listCollections(token, org.orgId);
+        for (const col of collections) {
+          try {
+            const { items: dtos } = await api.listCollectionItems(token, org.orgId, col.id);
+            for (const d of dtos) {
+              sortis.push({
+                ...decryptOrgItem(handle, d.encryptedKey, d.encryptedData),
+                id: d.id,
+                updatedAt: d.updatedAt,
+                shared: {
+                  orgId: org.orgId,
+                  orgName: org.name,
+                  collectionId: col.id,
+                  collectionName: col.name,
+                },
+              });
+            }
+          } catch {
+            // Collection inaccessible : les autres restent lisibles.
+          }
+        }
+      } catch {
+        // Organisation illisible : les autres restent lisibles.
+      }
+    }
+    return sortis;
   }
 
   async function submitAuth(e: SubmitEvent) {
@@ -1028,6 +1173,10 @@
         cardExp: itemCardExp,
         cardCode: itemCardCode,
       });
+      if (editingId && items.find((i) => i.id === editingId)?.shared) {
+        refuseWriteOnShared();
+        return;
+      }
       const savedId = editingId
         ? (await api.updateItem(token, editingId, enc), editingId)
         : (await api.createItem(token, enc)).id;
@@ -1263,6 +1412,12 @@
       {:else if item.kind === "note"}<span class="entry-sub">{t("app.secureNote")}</span>
       {:else if item.kind === "card" && item.cardNumber}<span class="entry-sub">•••• {item.cardNumber.slice(-4)}</span>{/if}
     </span>
+    <!-- Marqueur permanent, pas seulement dans le détail : confondre « moi
+         seule vois ça » et « toute l'équipe voit ça » est la confusion qui
+         coûte cher dans un coffre, et elle se produit en survolant une liste. -->
+    {#if item.shared}
+      <span class="pill pill-shared">{item.shared.orgName} · {item.shared.collectionName}</span>
+    {/if}
   </button>
 {/snippet}
 {#snippet healthRow(label: string, list: VaultEntry[])}
@@ -1495,6 +1650,22 @@
             <datalist id="folder-list">
               {#each folderPaths as p}<option value={p}></option>{/each}
             </datalist>
+            {#each orgSections as org (org.orgId)}
+              <div class="tree-section">
+                <span class="label" style="margin:0">{org.name}</span>
+                <span class="tree-count">{org.total}</span>
+              </div>
+              {#each org.collections as col (col.id)}
+                <button
+                  class="tree-all"
+                  class:active={selectedCollectionId === col.id}
+                  style="padding-left:26px"
+                  onclick={() => selectCollection(col.id)}
+                >
+                  <span class="tree-name">{col.name}</span><span class="tree-count">{col.n}</span>
+                </button>
+              {/each}
+            {/each}
             {#each tree.children as folder (folder.path)}
               {@render folderNode(folder, 0)}
             {/each}
@@ -1606,12 +1777,28 @@
               {@render itemAvatar(selected.name, selected.url, true)}
               <div>
                 <h2>{selected.name}</h2>
-                <div class="sub">{selected.kind === "note" ? "Note sécurisée" : selected.kind === "card" ? "Carte chiffrée" : "Identifiant chiffré"}</div>
+                <div class="sub">
+                  {selected.kind === "note" ? "Note sécurisée" : selected.kind === "card" ? "Carte chiffrée" : "Identifiant chiffré"}
+                  <!-- La provenance en toutes lettres, pas seulement la pastille
+                       de la liste : c'est ici qu'on décide de copier un secret,
+                       et savoir qui d'autre le voit fait partie de la décision. -->
+                  {#if selected.shared}
+                    <br /><span class="muted">{t("app.sharedOrigin", { org: selected.shared.orgName, collection: selected.shared.collectionName })}</span>
+                  {/if}
+                </div>
               </div>
               <div class="detail-actions">
-                <button class="ghost sm" onclick={shareEntry} disabled={shareBusy}>{shareBusy ? "…" : "Partager"}</button>
-                <button class="ghost sm" onclick={startEdit}>{t("app.edit")}</button>
-                <button class="danger" onclick={deleteEntry} disabled={busy}>{t("app.delete")}</button>
+                <!-- Modifier et supprimer visent l'API personnelle. Sur un
+                     élément d'équipe elles créeraient une copie privée au lieu
+                     de toucher l'original ; on les retire plutôt que d'offrir
+                     un bouton qui ment sur ce qu'il fait. -->
+                {#if selected.shared}
+                  <span class="muted">{t("org.accessNotRevocable")}</span>
+                {:else}
+                  <button class="ghost sm" onclick={shareEntry} disabled={shareBusy}>{shareBusy ? "…" : "Partager"}</button>
+                  <button class="ghost sm" onclick={startEdit}>{t("app.edit")}</button>
+                  <button class="danger" onclick={deleteEntry} disabled={busy}>{t("app.delete")}</button>
+                {/if}
               </div>
             </div>
 
@@ -1978,7 +2165,10 @@
               <span>{t("app.exportA")}<strong>{t("app.exportB")}</strong>{t("app.exportC")}</span>
             </div>
             <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:0.9rem">
-              <button class="ghost" onclick={exportCsv} disabled={items.length === 0}>{t("app.exportCsv")}</button>
+              <button class="ghost" onclick={exportCsv} disabled={personalItems.length === 0}>{t("app.exportCsv")}</button>
+              {#if items.length !== personalItems.length}
+                <p class="muted" style="margin:0.4rem 0 0">{t("app.exportPersonalOnly")}</p>
+              {/if}
               <label class="ghost" style="cursor:pointer">
                 Importer (CSV)
                 <input type="file" accept=".csv,text/csv" onchange={importCsv} style="display:none" />

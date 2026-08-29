@@ -180,3 +180,56 @@ jobs:
           path: apps/ios/TestResults/
           retention-days: 7
 
+  # Publier ce qui a passé les contrôles, et seulement depuis `main`. Jusqu'au
+  # 2026-08-28 ghostpass ne publiait RIEN : déployer voulait dire construire les
+  # deux images à la main sur le poste, ce qui rend « quelle version tourne ? »
+  # une question à laquelle aucun registre ne répond. Ses voisins ghostcal et
+  # ghostlink publiaient déjà ; ce produit était l'exception.
+  #
+  # Balisé par SHA de commit, jamais `latest` : une balise immuable est ce qui
+  # permet de dire quelle construction est déployée, et d'y revenir. `main`
+  # bouge — c'est une commodité, pas quelque chose depuis quoi déployer.
+  image:
+    name: Images (Podman → ghcr)
+    needs: [crypto, server, web]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # PAS `ubuntu-latest`. Sur cette étiquette le job tourne DANS un conteneur,
+    # donc podman s'y exécute imbriqué, retombe sur `runc` et échoue à monter
+    # `/proc`. Sans image, il s'exécute sur la machine où podman est réel.
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construire et publier
+        env:
+          REGISTRY: ghcr.io
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          # `ghcr.io/stackopshq/…` en dur : sur la forge `github.repository` vaut
+          # `stackops/ghostpass`, un espace de noms qui n'existe pas sur ghcr.
+          IMAGE: ghcr.io/stackopshq/ghostpass
+        run: |
+          set -euo pipefail
+          # Le jeton de la forge est refusé par ghcr en 403 ; les identifiants
+          # sont des secrets d'ORGANISATION `stackops`, partagés avec ghostcal.
+          printf '%s' "${GHCR_TOKEN}" \
+            | podman login "${REGISTRY}" -u "${GHCR_USERNAME}" --password-stdin
+          SHORT="$(git rev-parse --short=7 HEAD)"
+
+          # Les deux constructions EN SÉQUENCE : menées en parallèle elles se
+          # corrompent le cache. Contexte = racine du dépôt, les deux
+          # Containerfile y puisent (`crates/` pour le WASM du frontend).
+          podman build -f apps/server/Containerfile -t "${IMAGE}:sha-${SHORT}" .
+          podman build -f apps/web/Containerfile    -t "${IMAGE}:sha-${SHORT}-web" .
+
+          # Le frontend part dans LE MÊME paquet, sous une balise suffixée. Les
+          # deux dérivent du même SHORT : elles ne peuvent pas diverger, et un
+          # seul épinglage côté Ansible (`apollo_ghostpass_image`) décrit les
+          # deux — l'image `-web` en est dérivée dans les défauts du rôle.
+          podman push "${IMAGE}:sha-${SHORT}"
+          podman push "${IMAGE}:sha-${SHORT}-web"
+          podman tag  "${IMAGE}:sha-${SHORT}"      "${IMAGE}:main"
+          podman tag  "${IMAGE}:sha-${SHORT}-web"  "${IMAGE}:main-web"
+          podman push "${IMAGE}:main"
+          podman push "${IMAGE}:main-web"
+          echo "publié ${IMAGE}:sha-${SHORT} et -web"
+          podman logout "${REGISTRY}" || true

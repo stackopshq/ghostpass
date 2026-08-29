@@ -378,8 +378,17 @@ export const api = {
   },
   /// Qui a acces a une collection, et retrait de cet acces.
   listCollectionAccess(token: string, orgId: string, collectionId: string) {
+    // L'accès EFFECTIF : le rôle d'admin et l'appartenance à un groupe donnent
+    // l'accès sans laisser de ligne, et les omettre est ce qui faisait afficher
+    // « personne » sur une collection que deux personnes utilisaient.
     return http<{
-      access: Array<{ userId: string; email: string | null; permission: string }>;
+      access: Array<{
+        userId: string;
+        email: string | null;
+        permission: string;
+        sources: Array<{ kind: string; label: string; permission: string }>;
+        revocable: boolean;
+      }>;
     }>(`/api/orgs/${orgId}/collections/${collectionId}/access`, { token });
   },
   revokeCollectionAccess(token: string, orgId: string, collectionId: string, userId: string) {
