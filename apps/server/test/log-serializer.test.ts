@@ -2,25 +2,36 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serialiserLaRequete } from "../src/app.js";
 
-// Sans ce test, quelqu'un « simplifierait » un jour `url.split("?")[0]` en `url` —
-// la forme courte est toujours la plus tentante — et rien n'échouerait. Or ce
-// `?` est ce qui sépare un journal d'exploitation d'un relevé des domaines que
-// contient le coffre de chaque utilisateur.
-test("le journal garde le chemin, jamais la chaîne de requête", () => {
+// Deux fuites du même jour, deux formes différentes — et le gabarit de route
+// ferme les deux. Sans ces cas, quelqu'un « simplifierait » un jour le
+// sérialiseur vers `req.url`, la forme la plus courte étant la plus tentante,
+// et rien n'échouerait.
+
+test("la chaîne de requête ne rejoint jamais le journal", () => {
   assert.deepEqual(
     serialiserLaRequete({ method: "GET", url: "/api/icons?domain=banque-privee.example" }),
-    { method: "GET", url: "/api/icons" },
+    { method: "GET", route: "/api/icons" },
   );
 });
 
-test("un chemin sans chaîne de requête traverse inchangé", () => {
+test("un jeton porté DANS le chemin ne rejoint pas le journal non plus", () => {
   assert.deepEqual(
-    serialiserLaRequete({ method: "POST", url: "/api/auth/login" }),
-    { method: "POST", url: "/api/auth/login" },
+    serialiserLaRequete({
+      method: "GET",
+      url: "/api/send/le-jeton-en-clair",
+      routeOptions: { url: "/api/send/:id" },
+    }),
+    { method: "GET", route: "/api/send/:id" },
   );
 });
 
-// Une chaîne vide reste une chaîne : `/x?` ne doit pas devenir `/x?`.
+test("sans route correspondante, on garde le chemin nu — un 404 reste visible", () => {
+  assert.deepEqual(
+    serialiserLaRequete({ method: "GET", url: "/nexiste-pas?x=1" }),
+    { method: "GET", route: "/nexiste-pas" },
+  );
+});
+
 test("un point d'interrogation nu est retiré lui aussi", () => {
-  assert.equal(serialiserLaRequete({ method: "GET", url: "/api/icons?" }).url, "/api/icons");
+  assert.equal(serialiserLaRequete({ method: "GET", url: "/api/icons?" }).route, "/api/icons");
 });
