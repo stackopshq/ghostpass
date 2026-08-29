@@ -9,10 +9,24 @@
 # décrit le binaire réellement embarqué, et pas une déclaration qui aurait divergé.
 set -euo pipefail
 
-CRATE=ghostpass-crypto-ffi
-LIB=libghostpass_crypto_ffi.a
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-OUT="$ROOT/apps/ios"
+# Le cœur cryptographique vit dans le dépôt de la suite, pas ici — une seule
+# implémentation pour tous les produits, décision consignée dans son ADR 0001. Ce dépôt
+# n'en garde donc aucune copie.
+#
+# `GHOSTSUITE` dit où le trouver ; par défaut, un clone voisin. Ce n'est pas la forme
+# définitive : distribuer l'XCFramework construit plutôt que le compiler chez chaque
+# produit éviterait d'exiger un second dépôt sur chaque poste. À trancher.
+CRATE=ghost-crypto-ffi
+LIB=libghost_crypto_ffi.a
+PRODUIT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="${GHOSTSUITE:-$(cd "$PRODUIT/.." && pwd)/suite}"
+if [[ ! -d "$ROOT/crates/$CRATE" ]]; then
+  echo "Cœur commun introuvable : $ROOT/crates/$CRATE" >&2
+  echo "Clonez git@git.stackops.ch:stackops/ghostsuite.git à côté de ce dépôt," >&2
+  echo "ou indiquez son chemin :  GHOSTSUITE=/chemin/vers/ghostsuite $0" >&2
+  exit 1
+fi
+OUT="$PRODUIT/apps/ios"
 BUILD="$ROOT/target"
 
 cd "$ROOT"
