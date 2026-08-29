@@ -71,7 +71,16 @@
   // État d'affichage (UI uniquement).
   let revealed = $state<Set<number>>(new Set());
   // Qui a un acces explicite a la collection ouverte.
-  let access = $state<Array<{ userId: string; email: string | null; permission: string }>>([]);
+  // L'accès EFFECTIF, pas les seules lignes de `collection_access` : un admin
+  // d'org et un membre de groupe entrent sans qu'aucune ligne n'existe. Voir le
+  // commentaire du GET côté serveur.
+  let access = $state<Array<{
+    userId: string;
+    email: string | null;
+    permission: string;
+    sources: Array<{ kind: string; label: string; permission: string }>;
+    revocable: boolean;
+  }>>([]);
   // Codes TOTP du moment, indexes par rang de ligne.
   let otpCodes = $state<Record<number, string>>({});
   let copiedKey = $state<string | null>(null);
@@ -731,12 +740,28 @@
                 <span class="avatar">{(a.email ?? "?").charAt(0).toUpperCase()}</span>
                 <div class="row-main">
                   <span class="row-title">{a.email ?? t("org.unknownEmail")}</span>
-                  <span class="row-sub"><span class="pill pill-role">{a.permission}</span></span>
+                  <span class="row-sub">
+                    <span class="pill pill-role">{a.permission}</span>
+                    <!-- D'où vient l'accès. Sans cette mention, un admin
+                         apparaît sans qu'on sache pourquoi le bouton
+                         « révoquer » ne lui est pas proposé. -->
+                    {#each a.sources as src (src.kind + src.label)}
+                      <span class="pill">{src.label}</span>
+                    {/each}
+                  </span>
                 </div>
                 <div class="row-actions">
-                  <button class="danger" onclick={() => revokeAccess(a.userId)} disabled={busy}>
-                    Révoquer
-                  </button>
+                  {#if a.revocable}
+                    <button class="danger" onclick={() => revokeAccess(a.userId)} disabled={busy}>
+                      {t("org.revoke")}
+                    </button>
+                  {:else}
+                    <!-- Rien à révoquer ici : il n'y a pas de ligne. Un admin
+                         se retire en changeant son rôle, un membre de groupe en
+                         quittant le groupe. Un bouton qui ne ferait rien serait
+                         pire que pas de bouton. -->
+                    <span class="muted">{t("org.accessNotRevocable")}</span>
+                  {/if}
                 </div>
               </li>
             {/each}
