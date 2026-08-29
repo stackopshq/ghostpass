@@ -66,7 +66,8 @@ struct MfaView: View {
 
             GhostSection(
                 titre: "Mot de passe maître",
-                note: "Il est vérifié sur cet appareil et n'en sort pas : le serveur n'en reçoit qu'une empreinte."
+                note:
+                    "Il est vérifié sur cet appareil et n'en sort pas : le serveur n'en reçoit qu'une empreinte."
             ) {
                 SecureField("Votre mot de passe", text: $motDePasse)
                     .foregroundStyle(Color.gpInk)
@@ -89,7 +90,8 @@ struct MfaView: View {
         VStack(alignment: .leading, spacing: 16) {
             GhostSection(
                 titre: "À enregistrer dans votre application d'authentification",
-                note: "Ce secret ne sera plus affiché. Sans lui et sans votre application, la connexion deviendra impossible — gardez un moyen de secours."
+                note:
+                    "Ce secret ne sera plus affiché. Sans lui et sans votre application, la connexion deviendra impossible — gardez un moyen de secours."
             ) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(verbatim: c.secret)
@@ -109,7 +111,8 @@ struct MfaView: View {
 
             GhostSection(
                 titre: "Confirmer",
-                note: "Tant que ce code n'est pas validé, le compte reste accessible sans second facteur. C'est ce qui évite de s'enfermer dehors avec une application mal configurée."
+                note:
+                    "Tant que ce code n'est pas validé, le compte reste accessible sans second facteur. C'est ce qui évite de s'enfermer dehors avec une application mal configurée."
             ) {
                 TextField("123456", text: $code)
                     .keyboardType(.numberPad)
@@ -171,7 +174,8 @@ struct MfaView: View {
 
             GhostSection(
                 titre: "Le retirer",
-                note: "Les deux sont exigés : le mot de passe maître et un code valide. Un téléphone déverrouillé trouvé sur une table ne doit pas suffire à retirer la protection."
+                note:
+                    "Les deux sont exigés : le mot de passe maître et un code valide. Un téléphone déverrouillé trouvé sur une table ne doit pas suffire à retirer la protection."
             ) {
                 VStack(spacing: 0) {
                     SecureField("Mot de passe maître", text: $motDePasse)

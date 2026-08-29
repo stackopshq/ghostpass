@@ -147,6 +147,19 @@ jobs:
           # deuxième ligne : le shell des steps tourne en `-e -o pipefail`, et l'étape
           # échouerait *après* avoir réussi. `sed -n 1p` lit tout le flux, lui.
           xcodebuild -version | sed -n 1p
+      # Le pendant de `cargo fmt --check` pour Swift, qui manquait : le formatage du Rust
+      # était vérifié, celui de l'app ne l'était pas, et 166 écarts s'étaient accumulés
+      # sur 36 fichiers. Placé avant toute construction, il échoue en quelques secondes
+      # plutôt qu'après un quart d'heure de build et de simulateur.
+      #
+      # `--strict` fait de chaque avertissement une erreur. La base est à zéro : toute
+      # sortie non vide est donc une régression, pas un bruit de fond à trier.
+      - name: Formatage Swift
+        run: |
+          set -e
+          outil="$(xcrun --find swift-format)"
+          "$outil" lint --strict -r --configuration apps/ios/.swift-format \
+            apps/ios/Ghostpass apps/ios/GhostpassAutoFill apps/ios/UITests apps/ios/Tests
       - name: Cibles Rust pour iOS
         run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
       - name: Dépendances du serveur de test

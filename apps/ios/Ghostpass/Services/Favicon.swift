@@ -36,10 +36,10 @@ enum Favicon {
     private static func estUnDomainePublic(_ hote: String) -> Bool {
         guard !hote.hasPrefix("["), hote.contains(".") else { return false }
         let labels = hote.components(separatedBy: ".")
-        guard labels.count >= 2, let extension_ = labels.last, extension_.count >= 2 else {
+        guard labels.count >= 2, let suffixe = labels.last, suffixe.count >= 2 else {
             return false
         }
-        return extension_.allSatisfy { $0.isLetter }
+        return suffixe.allSatisfy { $0.isLetter }
     }
 
     /// Une couleur de repli déterministe, la même que celle de la web app : deux écrans
@@ -95,7 +95,8 @@ struct SiteIcon: View {
         .background(fond, in: RoundedRectangle(cornerRadius: taille * 0.26))
         .overlay(
             RoundedRectangle(cornerRadius: taille * 0.26)
-                .strokeBorder(Color.gpBorder, lineWidth: 1))
+                .strokeBorder(Color.gpBorder, lineWidth: 1)
+        )
         .accessibilityHidden(true)
     }
 

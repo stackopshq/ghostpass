@@ -306,7 +306,9 @@ final class VaultFlowTests: XCTestCase {
         let etoile = app.buttons["button.favorite"]
         XCTAssertTrue(etoile.waitForExistence(timeout: 30), "l'étoile des favoris est absente")
         taper(etoile)
-        if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
+        if app.navigationBars.buttons["Coffre"].exists {
+            app.navigationBars.buttons["Coffre"].tap()
+        }
         let sectionFavoris = app.descendants(matching: .any)
             .matching(identifier: "header.favorites").firstMatch
         XCTAssertTrue(
@@ -369,7 +371,8 @@ final class VaultFlowTests: XCTestCase {
             "la clé TOTP a été effacée par l'édition")
         XCTAssertEqual(
             code.label.count, 6, "un code TOTP à six chiffres était attendu, pas « \(code.label) »")
-        XCTAssertTrue(code.label.allSatisfy(\.isNumber), "code TOTP non numérique : « \(code.label) »")
+        XCTAssertTrue(
+            code.label.allSatisfy(\.isNumber), "code TOTP non numérique : « \(code.label) »")
         shot(app, "2-detail")
 
         // 6b. Changer le mot de passe archive l'ancien. C'est ce qui sauve un compte dont
@@ -389,10 +392,13 @@ final class VaultFlowTests: XCTestCase {
         shot(app, "2-historique")
 
         // 4c. Dossiers : en créer un, y ranger l'élément, filtrer dessus
-        if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
+        if app.navigationBars.buttons["Coffre"].exists {
+            app.navigationBars.buttons["Coffre"].tap()
+        }
         app.buttons["button.folderFilter"].tap()
         XCTAssertTrue(
-            app.buttons["button.newFolder"].waitForExistence(timeout: 20), "écran des dossiers absent")
+            app.buttons["button.newFolder"].waitForExistence(timeout: 20),
+            "écran des dossiers absent")
         app.buttons["button.newFolder"].tap()
         remplir(app, "field.folderName", "Travail")
         app.buttons["button.createFolder"].firstMatch.tap()
@@ -409,7 +415,9 @@ final class VaultFlowTests: XCTestCase {
         remplir(app, "field.folder", "Travail")
         app.buttons["button.save"].tap()
         sleep(2)
-        if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
+        if app.navigationBars.buttons["Coffre"].exists {
+            app.navigationBars.buttons["Coffre"].tap()
+        }
 
         app.buttons["button.folderFilter"].tap()
         XCTAssertTrue(app.staticTexts["Travail"].waitForExistence(timeout: 20))
@@ -429,7 +437,9 @@ final class VaultFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts[demoItem].waitForExistence(timeout: 30))
 
         // 5. Suppression
-        if app.navigationBars.buttons["Coffre"].exists { app.navigationBars.buttons["Coffre"].tap() }
+        if app.navigationBars.buttons["Coffre"].exists {
+            app.navigationBars.buttons["Coffre"].tap()
+        }
         let ligne = app.buttons["Forgejo prod, clara"].firstMatch
         XCTAssertTrue(ligne.waitForExistence(timeout: 30))
         ligne.swipeLeft()
@@ -492,7 +502,8 @@ final class VaultFlowTests: XCTestCase {
         // 6. Verrouiller relâche vraiment les clés
         verrouiller(app)
         XCTAssertTrue(app.buttons["button.submit"].waitForExistence(timeout: 30))
-        XCTAssertFalse(app.staticTexts[demoItem].exists, "le coffre reste visible après verrouillage")
+        XCTAssertFalse(
+            app.staticTexts[demoItem].exists, "le coffre reste visible après verrouillage")
 
         // 7. Réouverture avec le seul mot de passe maître, sans réseau ni ressaisie du compte
         remplir(app, "field.master", master)
@@ -546,7 +557,8 @@ final class VaultFlowTests: XCTestCase {
             // d'échouer trois écrans plus loin sur un symptôme.
             if app.buttons["button.confirmBiometric"].firstMatch.waitForExistence(timeout: 5),
                 app.navigationBars.staticTexts.containing(
-                    NSPredicate(format: "label BEGINSWITH %@", "Activer")).element.exists
+                    NSPredicate(format: "label BEGINSWITH %@", "Activer")
+                ).element.exists
             {
                 shot(app, "4-echec-activation")
                 XCTFail("activation biométrique refusée par le trousseau")
@@ -626,7 +638,8 @@ final class VaultFlowTests: XCTestCase {
         XCTAssertTrue(
             app.otherElements["banner.offline"].waitForExistence(timeout: 30)
                 || app.staticTexts.containing(
-                    NSPredicate(format: "label CONTAINS[c] %@", "Hors ligne")).element.exists,
+                    NSPredicate(format: "label CONTAINS[c] %@", "Hors ligne")
+                ).element.exists,
             "rien n'indique que le coffre affiché vient de l'appareil")
         aucuneLigneFantome(app, "hors ligne")
         shot(app, "6-hors-ligne")
@@ -753,7 +766,6 @@ final class VaultFlowTests: XCTestCase {
         ecarterLaPropositionBiometrique(app, delai: 5)
     }
 
-
     /// Confier l'accès de son coffre à un contact, puis le retirer.
     ///
     /// Ce que le test prouve vraiment, c'est la chaîne complète du scellement : l'app va
@@ -802,7 +814,6 @@ final class VaultFlowTests: XCTestCase {
             "la fermeture ne ramène pas au coffre")
         aucuneLigneFantome(app, "après un aller-retour par l'accès d'urgence")
     }
-
 
     /// Remplit le formulaire « mot de passe oublié » et attend la confirmation. Laisse
     /// l'écran de connexion prêt, serveur et compte déjà saisis.

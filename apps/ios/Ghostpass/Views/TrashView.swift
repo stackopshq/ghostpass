@@ -81,7 +81,8 @@ struct TrashView: View {
                 },
                 message: { entry in
                     Text("« \(entry.item.name) » sera perdu, sans possibilité de retour.")
-                })
+                }
+            )
             .task { await recharger() }
         }
         .tint(Color.gpAccentText)

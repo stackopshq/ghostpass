@@ -47,7 +47,8 @@ struct ActivityView: View {
     private var sectionActions: some View {
         GhostSection(
             titre: "Actions sensibles",
-            note: "Ce qui retire une protection ou ouvre le coffre à quelqu'un d'autre. Une ligne que vous ne reconnaissez pas mérite de changer votre mot de passe maître."
+            note:
+                "Ce qui retire une protection ou ouvre le coffre à quelqu'un d'autre. Une ligne que vous ne reconnaissez pas mérite de changer votre mot de passe maître."
         ) {
             if actions.isEmpty {
                 Text("Aucune action enregistrée.")
@@ -87,7 +88,8 @@ struct ActivityView: View {
     private var sectionConnexions: some View {
         GhostSection(
             titre: "Connexions",
-            note: "Un appareil inconnu signalé ici, que vous ne reconnaissez pas, veut dire que quelqu'un connaît votre mot de passe maître."
+            note:
+                "Un appareil inconnu signalé ici, que vous ne reconnaissez pas, veut dire que quelqu'un connaît votre mot de passe maître."
         ) {
             if connexions.isEmpty {
                 Text("Aucune connexion enregistrée.")

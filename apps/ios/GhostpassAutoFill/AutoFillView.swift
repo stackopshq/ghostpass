@@ -56,9 +56,9 @@ struct AutoFillView: View {
                             } icon: {
                                 Image(systemName: "exclamationmark.triangle.fill")
                             }
-                                .font(.footnote)
-                                .foregroundStyle(Color.gpDanger)
-                                .fixedSize(horizontal: false, vertical: true)
+                            .font(.footnote)
+                            .foregroundStyle(Color.gpDanger)
+                            .fixedSize(horizontal: false, vertical: true)
                         }
 
                         VStack(spacing: 10) {
@@ -68,7 +68,9 @@ struct AutoFillView: View {
                                     password = ""
                                 }
                             }
-                            .buttonStyle(PrimaryButtonStyle(enabled: !store.isBusy && !password.isEmpty))
+                            .buttonStyle(
+                                PrimaryButtonStyle(enabled: !store.isBusy && !password.isEmpty)
+                            )
                             .disabled(store.isBusy || password.isEmpty)
                             .accessibilityIdentifier("button.submit")
 

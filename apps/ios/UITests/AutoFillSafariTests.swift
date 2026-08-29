@@ -38,7 +38,8 @@ final class AutoFillSafariTests: XCTestCase {
         sleep(3)
 
         let barre = safari.textFields.firstMatch
-        try XCTSkipUnless(barre.waitForExistence(timeout: 20), "barre d'adresse de Safari introuvable")
+        try XCTSkipUnless(
+            barre.waitForExistence(timeout: 20), "barre d'adresse de Safari introuvable")
         barre.tap()
         sleep(1)
         safari.typeText(page + "\n")
@@ -105,7 +106,8 @@ final class AutoFillSafariTests: XCTestCase {
             .matching(identifier: "field.master").firstMatch
         XCTAssertTrue(
             champMaitre.waitForExistence(timeout: 30),
-            "l'extension ne demande pas le mot de passe maître — session absente du conteneur partagé ?")
+            "l'extension ne demande pas le mot de passe maître — session absente du conteneur partagé ?"
+        )
         champMaitre.tap()
         safari.typeText(master)
         safari.buttons["button.submit"].firstMatch.tap()

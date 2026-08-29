@@ -26,7 +26,8 @@ struct OrgInviteView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     GhostSection(
                         titre: "La personne",
-                        note: "Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe."
+                        note:
+                            "Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe."
                     ) {
                         TextField("adresse@exemple.com", text: $email)
                             .textInputAutocapitalization(.never)

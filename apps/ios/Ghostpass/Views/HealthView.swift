@@ -104,7 +104,8 @@ struct HealthView: View {
     private var fuites: some View {
         GhostSection(
             titre: "Fuites connues",
-            note: "Seuls les cinq premiers caractères de l'empreinte du mot de passe sont envoyés : ni le mot de passe ni son empreinte complète ne quittent l'appareil."
+            note:
+                "Seuls les cinq premiers caractères de l'empreinte du mot de passe sont envoyés : ni le mot de passe ni son empreinte complète ne quittent l'appareil."
         ) {
             switch verification {
             case .pasEncore, .echouee:

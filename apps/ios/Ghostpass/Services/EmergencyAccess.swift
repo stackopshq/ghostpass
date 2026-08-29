@@ -39,8 +39,13 @@ enum RoleDUrgence: String, CaseIterable, Identifiable {
     @MainActor
     var explication: String {
         switch self {
-        case .view: return tr("Le contact pourra lire vos identifiants, sans rien y changer ni vous en priver.")
-        case .takeover: return tr("Le contact pourra en plus choisir un nouveau mot de passe maître — ce qui vous exclura de votre propre coffre.")
+        case .view:
+            return tr(
+                "Le contact pourra lire vos identifiants, sans rien y changer ni vous en priver.")
+        case .takeover:
+            return tr(
+                "Le contact pourra en plus choisir un nouveau mot de passe maître — ce qui vous exclura de votre propre coffre."
+            )
         }
     }
 }

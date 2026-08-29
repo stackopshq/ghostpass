@@ -153,9 +153,9 @@ struct UnlockView: View {
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
                 }
-                    .font(.footnote)
-                    .foregroundStyle(Color.gpDanger)
-                    .fixedSize(horizontal: false, vertical: true)
+                .font(.footnote)
+                .foregroundStyle(Color.gpDanger)
+                .fixedSize(horizontal: false, vertical: true)
             }
 
             VStack(spacing: 10) {

@@ -116,7 +116,6 @@ private struct TakeoverBody: Encodable {
     let encryptedUserKey: String
 }
 
-
 // ─── Organisations ───
 
 struct OrgSummaryDTO: Decodable, Identifiable {
@@ -370,7 +369,8 @@ struct APIClient {
 
     func prelogin(email: String) async throws -> PreloginResponse {
         let body = try JSONEncoder().encode(["email": email])
-        return try decode(PreloginResponse.self, from: await request("POST", "api/auth/prelogin", body: body))
+        return try decode(
+            PreloginResponse.self, from: await request("POST", "api/auth/prelogin", body: body))
     }
 
     func login(email: String, masterPasswordHash: String, totpCode: String?) async throws
@@ -379,7 +379,8 @@ struct APIClient {
         var payload: [String: String] = ["email": email, "masterPasswordHash": masterPasswordHash]
         if let totpCode, !totpCode.isEmpty { payload["totpCode"] = totpCode }
         let body = try JSONEncoder().encode(payload)
-        return try decode(LoginResponse.self, from: await request("POST", "api/auth/login", body: body))
+        return try decode(
+            LoginResponse.self, from: await request("POST", "api/auth/login", body: body))
     }
 
     func logout(token: String) async throws {
@@ -427,7 +428,8 @@ struct APIClient {
     // ─── Coffre ───
 
     func listItems(token: String) async throws -> [EncryptedItemDTO] {
-        try decode(ItemsEnvelope.self, from: await request("GET", "api/vault/items", token: token)).items
+        try decode(ItemsEnvelope.self, from: await request("GET", "api/vault/items", token: token))
+            .items
     }
 
     func createItem(token: String, encryptedKey: String, encryptedData: String) async throws
@@ -686,7 +688,6 @@ struct APIClient {
             "DELETE", "api/orgs/\(org)/groups/\(group)/collections/\(collection)", token: token)
     }
 
-
     // ─── Partage ponctuel ───
 
     /// Dépose un secret déjà chiffré. Le serveur ne reçoit ni la clé ni le texte : il
@@ -708,7 +709,6 @@ struct APIClient {
     func fetchSend(id: String) async throws -> SendContentDTO {
         try decode(SendContentDTO.self, from: await request("GET", "api/send/\(id)"))
     }
-
 
     // ─── Second facteur ───
 
@@ -740,7 +740,6 @@ struct APIClient {
         _ = try await request("POST", "api/mfa/disable", token: token, body: body)
     }
 
-
     // ─── Journal du compte ───
 
     /// Les connexions enregistrées : adresse, appareil, et si celui-ci était inconnu.
@@ -757,7 +756,6 @@ struct APIClient {
             AuditEventsDTO.self, from: await request("GET", "api/account/audit", token: token)
         ).events
     }
-
 
     // ─── Accès nommés aux collections ───
     // Les trois exigent la permission `manage` sur la collection ; le serveur le vérifie,

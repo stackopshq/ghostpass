@@ -28,20 +28,23 @@ struct RecoverAccountView: View {
         NavigationStack {
             GhostScreen {
                 GhostSection(
-                    note: "Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste intact : rien n'est perdu, rien n'est déchiffré côté serveur."
+                    note:
+                        "Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste intact : rien n'est perdu, rien n'est déchiffré côté serveur."
                 ) {
                     TextField("", text: .constant(email), prompt: invite("Adresse e-mail"))
                         .disabled(true)
                         .foregroundStyle(Color.gpMuted)
                         .padding(14)
                     GhostDivider()
-                    TextField("", text: $cle, prompt: invite("Clé de récupération"), axis: .vertical)
-                        .lineLimit(2...4)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .foregroundStyle(Color.gpInk)
-                        .padding(14)
-                        .accessibilityIdentifier("field.recoveryKey")
+                    TextField(
+                        "", text: $cle, prompt: invite("Clé de récupération"), axis: .vertical
+                    )
+                    .lineLimit(2...4)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .foregroundStyle(Color.gpInk)
+                    .padding(14)
+                    .accessibilityIdentifier("field.recoveryKey")
                     GhostDivider()
                     SecureField("", text: $nouveau, prompt: invite("Nouveau mot de passe maître"))
                         .foregroundStyle(Color.gpInk)

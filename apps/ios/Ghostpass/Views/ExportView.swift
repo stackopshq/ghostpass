@@ -85,7 +85,8 @@ struct ExportView: View {
 
             Button("Préparer le fichier") { preparer() }
                 .buttonStyle(
-                    PrimaryButtonStyle(enabled: !motDePasse.isEmpty && !store.entries.isEmpty))
+                    PrimaryButtonStyle(enabled: !motDePasse.isEmpty && !store.entries.isEmpty)
+                )
                 .disabled(motDePasse.isEmpty || store.entries.isEmpty)
                 .accessibilityIdentifier("button.prepareExport")
         }

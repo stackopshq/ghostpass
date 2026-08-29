@@ -55,8 +55,8 @@ struct ItemDetailView: View {
                         Image(systemName: "folder")
                     }
                     .foregroundStyle(Color.gpMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
                 }
             }
         }
@@ -95,7 +95,8 @@ struct ItemDetailView: View {
             GhostDivider()
             GhostRow(
                 intitule: "Mot de passe",
-                valeur: revealed ? login.password : String(repeating: "•", count: max(login.password.count, 8)),
+                valeur: revealed
+                    ? login.password : String(repeating: "•", count: max(login.password.count, 8)),
                 monospace: true, estSecret: !revealed
             ) {
                 GhostIconButton(systemImage: revealed ? "eye.slash" : "eye") {
@@ -117,7 +118,10 @@ struct ItemDetailView: View {
         }
 
         if let config = login.totp.flatMap(Totp.parse) {
-            GhostSection(titre: "Code à usage unique", note: "Renouvelé toutes les \(config.period) secondes.") {
+            GhostSection(
+                titre: "Code à usage unique",
+                note: "Renouvelé toutes les \(config.period) secondes."
+            ) {
                 // `TimelineView` réévalue chaque seconde : pas de minuterie à démarrer ni
                 // à arrêter, et rien ne continue de tourner une fois l'écran quitté.
                 TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -178,12 +182,15 @@ struct ItemDetailView: View {
     private func contenuCarte(_ card: Card) -> some View {
         GhostSection(titre: "Carte") {
             GhostRow(intitule: "Titulaire", valeur: card.cardholder) {
-                GhostIconButton(systemImage: "doc.on.doc") { copier(card.cardholder, "Titulaire copié") }
+                GhostIconButton(systemImage: "doc.on.doc") {
+                    copier(card.cardholder, "Titulaire copié")
+                }
             }
             GhostDivider()
             GhostRow(
                 intitule: "Numéro",
-                valeur: revealed ? card.number : String(repeating: "•", count: max(card.number.count, 8)),
+                valeur: revealed
+                    ? card.number : String(repeating: "•", count: max(card.number.count, 8)),
                 monospace: true, estSecret: !revealed
             ) {
                 GhostIconButton(systemImage: revealed ? "eye.slash" : "eye") { revealed.toggle() }
@@ -230,7 +237,8 @@ struct ItemDetailView: View {
                     let devoile = anciensDevoiles.contains(rang)
                     GhostRow(
                         intitule: "Remplacé",
-                        valeur: devoile ? ancien : String(repeating: "•", count: max(ancien.count, 8)),
+                        valeur: devoile
+                            ? ancien : String(repeating: "•", count: max(ancien.count, 8)),
                         monospace: true, estSecret: !devoile
                     ) {
                         GhostIconButton(systemImage: devoile ? "eye.slash" : "eye") {
@@ -307,14 +315,14 @@ struct ItemDetailView: View {
             } icon: {
                 Image(systemName: "checkmark.circle.fill")
             }
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Color.gpInk)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.gpBorder, lineWidth: 1))
-                .padding(.bottom, 24)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(Color.gpInk)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.gpBorder, lineWidth: 1))
+            .padding(.bottom, 24)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 

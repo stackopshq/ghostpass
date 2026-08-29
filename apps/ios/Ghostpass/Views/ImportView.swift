@@ -91,7 +91,8 @@ struct ImportView: View {
         VStack(alignment: .leading, spacing: 16) {
             GhostSection(
                 titre: "À importer",
-                note: "Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà."
+                note:
+                    "Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà."
             ) {
                 GhostRow(intitule: "Fichier", valeur: nomDuFichier) {}
                 GhostDivider()
@@ -194,7 +195,8 @@ struct ImportView: View {
         }
         let items = CsvImport.items(String(decoding: donnees, as: UTF8.self))
         guard !items.isEmpty else {
-            echec = "Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont pas reconnues."
+            echec =
+                "Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont pas reconnues."
             return
         }
         nomDuFichier = url.lastPathComponent

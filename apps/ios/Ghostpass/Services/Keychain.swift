@@ -49,8 +49,9 @@ enum Keychain {
     /// (typiquement `errSecAuthFailed` / `-34018` quand l'appareil n'a pas de code).
     @discardableResult
     static func setBiometric(_ value: String, for key: String) -> OSStatus {
-        guard let access = SecAccessControlCreateWithFlags(
-            nil, kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly, .biometryCurrentSet, nil)
+        guard
+            let access = SecAccessControlCreateWithFlags(
+                nil, kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly, .biometryCurrentSet, nil)
         else { return errSecParam }
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

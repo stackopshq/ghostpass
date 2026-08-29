@@ -60,7 +60,8 @@ struct EmergencyView: View {
                 .environmentObject(store)
         }
         .alert(
-            "Retirer cet accès ?", isPresented: Binding(
+            "Retirer cet accès ?",
+            isPresented: Binding(
                 get: { aRevoquer != nil }, set: { if !$0 { aRevoquer = nil } })
         ) {
             Button("Annuler", role: .cancel) { aRevoquer = nil }
@@ -85,7 +86,8 @@ struct EmergencyView: View {
     private var mesContacts: some View {
         GhostSection(
             titre: "Mes contacts de confiance",
-            note: "Ils pourront ouvrir votre coffre si vous ne le pouvez plus. Vous gardez la main tant que vous répondez."
+            note:
+                "Ils pourront ouvrir votre coffre si vous ne le pouvez plus. Vous gardez la main tant que vous répondez."
         ) {
             if donnes.isEmpty {
                 Text("Personne pour l'instant.")
@@ -128,10 +130,11 @@ struct EmergencyView: View {
                     Text(
                         verbatim: String(
                             format: tr("Accès automatique le %@ si vous ne faites rien."),
-                            ouverture.formatted(date: .abbreviated, time: .shortened)))
-                        .font(.footnote)
-                        .foregroundStyle(Color.gpDanger)
-                        .fixedSize(horizontal: false, vertical: true)
+                            ouverture.formatted(date: .abbreviated, time: .shortened))
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(Color.gpDanger)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
                 HStack(spacing: 10) {
                     Button("Refuser") {

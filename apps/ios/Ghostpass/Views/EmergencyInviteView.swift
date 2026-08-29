@@ -26,7 +26,8 @@ struct EmergencyInviteView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     GhostSection(
                         titre: "Le contact",
-                        note: "Il doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège la vôtre."
+                        note:
+                            "Il doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège la vôtre."
                     ) {
                         TextField("adresse@exemple.com", text: $email)
                             .textInputAutocapitalization(.never)
@@ -68,7 +69,8 @@ struct EmergencyInviteView: View {
 
                     GhostSection(
                         titre: "Le délai avant ouverture",
-                        note: "Quand le contact demandera l'accès, vous serez prévenu et pourrez refuser pendant ce temps. Passé ce délai sans réponse de votre part, l'accès s'ouvre — c'est précisément ce qui le rend utile le jour où vous ne pouvez plus répondre."
+                        note:
+                            "Quand le contact demandera l'accès, vous serez prévenu et pourrez refuser pendant ce temps. Passé ce délai sans réponse de votre part, l'accès s'ouvre — c'est précisément ce qui le rend utile le jour où vous ne pouvez plus répondre."
                     ) {
                         Stepper(
                             value: $delai, in: 1...90,

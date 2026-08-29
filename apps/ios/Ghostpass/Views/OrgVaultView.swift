@@ -142,7 +142,8 @@ struct OrgVaultView: View {
                     } label: {
                         GhostRow(
                             intitule: LocalizedStringKey(entree.item.name),
-                            valeur: entree.login?.username ?? "") {}
+                            valeur: entree.login?.username ?? ""
+                        ) {}
                     }
                     if entree.id != visibles.last?.id { Divider().overlay(Color.gpBorder) }
                 }

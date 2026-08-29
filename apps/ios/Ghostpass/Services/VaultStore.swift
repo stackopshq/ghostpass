@@ -571,7 +571,8 @@ final class VaultStore: ObservableObject {
             errorMessage = nil
             return kit.recoveryKey
         } catch is URLError {
-            errorMessage = tr("Serveur injoignable : la clé de récupération n'a pas été enregistrée.")
+            errorMessage = tr(
+                "Serveur injoignable : la clé de récupération n'a pas été enregistrée.")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -835,7 +836,9 @@ final class VaultStore: ObservableObject {
                 role: RoleDUrgence(rawValue: acces.role) ?? .view,
                 donneur: acces.grantorEmail,
                 kdfParams: acces.grantorKdfParams,
-                entrees: entrees.sorted { $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending },
+                entrees: entrees.sorted {
+                    $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending
+                },
                 coffre: coffre)
         } catch {
             errorMessage = error.localizedDescription
@@ -1072,7 +1075,8 @@ final class VaultStore: ObservableObject {
                 let enveloppe = [
                     "encrypted_key": dto.encryptedKey, "encrypted_data": dto.encryptedData,
                 ]
-                let json = String(data: try JSONEncoder().encode(enveloppe), encoding: .utf8) ?? "{}"
+                let json =
+                    String(data: try JSONEncoder().encode(enveloppe), encoding: .utf8) ?? "{}"
                 let refait = try neuve.rewrapItem(oldOrg: ouvert.org, encryptedItemJson: json)
                 let relu = try JSONDecoder().decode(
                     EnveloppeChiffree.self, from: Data(refait.utf8))
@@ -1204,7 +1208,6 @@ final class VaultStore: ObservableObject {
         }
     }
 
-
     // ─── Partage ponctuel ───
 
     /// Scelle un secret et le dépose. Rend le lien complet, clé comprise — celle-ci vit
@@ -1237,7 +1240,6 @@ final class VaultStore: ObservableObject {
             return nil
         }
     }
-
 
     // ─── Second facteur ───
 
@@ -1298,7 +1300,6 @@ final class VaultStore: ObservableObject {
         }
     }
 
-
     // ─── Journal du compte ───
 
     func connexions() async -> [Connexion] {
@@ -1322,7 +1323,6 @@ final class VaultStore: ObservableObject {
             return []
         }
     }
-
 
     // ─── Accès nommés aux collections ───
 

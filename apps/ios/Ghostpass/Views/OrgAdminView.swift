@@ -97,7 +97,8 @@ struct OrgAdminView: View {
     private var sectionMembres: some View {
         GhostSection(
             titre: "Membres",
-            note: "Inviter quelqu'un lui scelle la clé de l'équipe vers sa clé publique. Le serveur ne transporte qu'un blob qu'il ne peut pas ouvrir."
+            note:
+                "Inviter quelqu'un lui scelle la clé de l'équipe vers sa clé publique. Le serveur ne transporte qu'un blob qu'il ne peut pas ouvrir."
         ) {
             VStack(spacing: 0) {
                 ForEach(membres) { membre in
@@ -213,7 +214,8 @@ struct OrgAdminView: View {
     private var sectionGroupes: some View {
         GhostSection(
             titre: "Groupes",
-            note: "Un groupe donne accès à des collections. C'est par lui qu'on ouvre un coffre à plusieurs personnes sans les nommer une à une."
+            note:
+                "Un groupe donne accès à des collections. C'est par lui qu'on ouvre un coffre à plusieurs personnes sans les nommer une à une."
         ) {
             VStack(spacing: 0) {
                 ForEach(groupes) { groupe in

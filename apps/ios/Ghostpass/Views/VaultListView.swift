@@ -27,7 +27,8 @@ struct VaultListView: View {
             guard !search.isEmpty else { return true }
             return entry.item.name.localizedCaseInsensitiveContains(search)
                 || (entry.login?.username.localizedCaseInsensitiveContains(search) ?? false)
-                || (entry.login?.uris.contains { $0.localizedCaseInsensitiveContains(search) } ?? false)
+                || (entry.login?.uris.contains { $0.localizedCaseInsensitiveContains(search) }
+                    ?? false)
         }
     }
 
@@ -227,7 +228,8 @@ struct VaultListView: View {
             .alert(
                 "Erreur", isPresented: erreurAffichee,
                 actions: { Button("OK") { store.errorMessage = nil } },
-                message: { Text(verbatim: store.errorMessage ?? "") })
+                message: { Text(verbatim: store.errorMessage ?? "") }
+            )
             // La proposition d'activer la biométrie arrive avec le coffre, une fois le
             // déchiffrement terminé.
             .onAppear { proposerLaBiometrieSiBesoin() }

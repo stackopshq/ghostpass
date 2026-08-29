@@ -54,7 +54,9 @@ enum Totp {
     }
 
     /// Le code courant et le nombre de secondes qu'il lui reste à vivre.
-    static func code(for config: OtpConfig, at date: Date = Date()) -> (code: String, remaining: Int)? {
+    static func code(for config: OtpConfig, at date: Date = Date()) -> (
+        code: String, remaining: Int
+    )? {
         let key = base32Decode(config.secret)
         guard !key.isEmpty else { return nil }
 
@@ -62,13 +64,14 @@ enum Totp {
         let counter = UInt64(seconds / config.period)
         var message = Data(count: 8)
         for index in 0..<8 {
-            message[index] = UInt8truncating(counter >> (8 * UInt64(7 - index)))
+            message[index] = tronquerEnOctet(counter >> (8 * UInt64(7 - index)))
         }
 
         let secret = SymmetricKey(data: key)
         let digest: Data
         switch config.algorithm {
-        case .sha1: digest = Data(HMAC<Insecure.SHA1>.authenticationCode(for: message, using: secret))
+        case .sha1:
+            digest = Data(HMAC<Insecure.SHA1>.authenticationCode(for: message, using: secret))
         case .sha256: digest = Data(HMAC<SHA256>.authenticationCode(for: message, using: secret))
         case .sha512: digest = Data(HMAC<SHA512>.authenticationCode(for: message, using: secret))
         }
@@ -88,7 +91,7 @@ enum Totp {
         return (code, remaining)
     }
 
-    private static func UInt8truncating(_ value: UInt64) -> UInt8 { UInt8(value & 0xff) }
+    private static func tronquerEnOctet(_ value: UInt64) -> UInt8 { UInt8(value & 0xff) }
 
     /// Base32 (RFC 4648) sans padding, caractères inconnus ignorés — les secrets
     /// recopiés à la main arrivent souvent avec des espaces ou des tirets.

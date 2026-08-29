@@ -29,7 +29,8 @@ struct OrganizationsView: View {
                         if !invitations.isEmpty {
                             GhostSection(
                                 titre: "Invitations",
-                                note: "Accepter vous donnera accès aux coffres que l'équipe partage avec vous."
+                                note:
+                                    "Accepter vous donnera accès aux coffres que l'équipe partage avec vous."
                             ) {
                                 lignes(invitations)
                             }
@@ -40,7 +41,8 @@ struct OrganizationsView: View {
                         if !revoquees.isEmpty {
                             GhostSection(
                                 titre: "Accès révoqués",
-                                note: "Ces coffres ne s'ouvrent plus. Après une rotation de clé, ce que vous en aviez vu reste connu de vous — les mots de passe concernés doivent être changés par l'équipe."
+                                note:
+                                    "Ces coffres ne s'ouvrent plus. Après une rotation de clé, ce que vous en aviez vu reste connu de vous — les mots de passe concernés doivent être changés par l'équipe."
                             ) {
                                 lignes(revoquees)
                             }

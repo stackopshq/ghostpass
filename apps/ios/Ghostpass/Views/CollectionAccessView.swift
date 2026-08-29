@@ -58,7 +58,8 @@ struct CollectionAccessView: View {
     private var sectionNommes: some View {
         GhostSection(
             titre: "Accès nommés",
-            note: "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran."
+            note:
+                "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran."
         ) {
             VStack(spacing: 0) {
                 if chargement {
@@ -142,7 +143,8 @@ struct CollectionAccessView: View {
     private var sectionGroupes: some View {
         GhostSection(
             titre: "Par les groupes",
-            note: "Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent."
+            note:
+                "Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent."
         ) {
             VStack(spacing: 0) {
                 ForEach(groupesQuiOuvrent, id: \.groupe.id) { entree in
@@ -175,7 +177,8 @@ struct CollectionAccessView: View {
     private var sectionAdministrateurs: some View {
         GhostSection(
             titre: "Par leur rôle",
-            note: "Un administrateur de l'équipe gère toutes les collections, y compris celle-ci. Cet accès ne se retire qu'en changeant son rôle."
+            note:
+                "Un administrateur de l'équipe gère toutes les collections, y compris celle-ci. Cet accès ne se retire qu'en changeant son rôle."
         ) {
             VStack(spacing: 0) {
                 ForEach(administrateurs) { membre in

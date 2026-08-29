@@ -12,7 +12,8 @@ struct SettingsView: View {
             GhostScreen {
                 GhostSection(
                     titre: "Apparence",
-                    note: "« Système » suit le réglage de l'appareil, y compris son passage automatique à la nuit."
+                    note:
+                        "« Système » suit le réglage de l'appareil, y compris son passage automatique à la nuit."
                 ) {
                     // Trois vignettes plutôt qu'une liste déroulante : le choix est visuel,
                     // et l'aperçu vaut mieux qu'un nom.
@@ -26,7 +27,8 @@ struct SettingsView: View {
 
                 GhostSection(
                     titre: "Verrouillage",
-                    note: "Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d'applications."
+                    note:
+                        "Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d'applications."
                 ) {
                     ForEach(Array(Verrouillage.allCases.enumerated()), id: \.element.id) {
                         index, cas in
@@ -54,7 +56,8 @@ struct SettingsView: View {
 
                 GhostSection(
                     titre: "Icônes des sites",
-                    note: "Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun tiers n'est sollicité."
+                    note:
+                        "Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun tiers n'est sollicité."
                 ) {
                     Toggle(isOn: $prefs.afficheLesIcones) {
                         Text("Afficher les logos").foregroundStyle(Color.gpInk)
@@ -135,7 +138,8 @@ struct SettingsView: View {
                 RoundedRectangle(cornerRadius: GP.radius)
                     .strokeBorder(
                         choisi ? Color.gpAccent : Color.gpBorder,
-                        lineWidth: choisi ? 1.5 : 1))
+                        lineWidth: choisi ? 1.5 : 1)
+            )
             .foregroundStyle(choisi ? Color.gpAccentText : Color.gpMuted)
         }
         .buttonStyle(.plain)

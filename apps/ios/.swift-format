@@ -12,12 +12,12 @@
     "ReturnVoidInsteadOfEmptyTuple": true,
     "UseShorthandTypeNames": true,
     "NoLeadingUnderscores": false,
-    "AlwaysUseLiteralForEmptyArrayInit": false,
+    "AlwaysUseLiteralForEmptyCollectionInit": false,
     "ValidateDocumentationComments": false,
     "AllPublicDeclarationsHaveDocumentation": false,
     "BeginDocumentationCommentWithOneLineSummary": false,
     "NeverUseImplicitlyUnwrappedOptionals": true,
-    "NoForceTry": true,
+    "NeverUseForceTry": true,
     "UseSynthesizedInitializer": false
   }
 }

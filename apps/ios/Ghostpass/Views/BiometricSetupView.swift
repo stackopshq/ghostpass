@@ -34,10 +34,12 @@ struct BiometricSetupView: View {
                 .padding(.top, 12)
 
                 GhostSection(titre: "Mot de passe maître") {
-                    SecureField("", text: $password, prompt: invite("Pour confirmer que c'est bien vous"))
-                        .foregroundStyle(Color.gpInk)
-                        .padding(14)
-                        .accessibilityIdentifier("field.masterConfirm")
+                    SecureField(
+                        "", text: $password, prompt: invite("Pour confirmer que c'est bien vous")
+                    )
+                    .foregroundStyle(Color.gpInk)
+                    .padding(14)
+                    .accessibilityIdentifier("field.masterConfirm")
                 }
 
                 if let message = store.errorMessage {
@@ -46,9 +48,9 @@ struct BiometricSetupView: View {
                     } icon: {
                         Image(systemName: "exclamationmark.triangle.fill")
                     }
-                        .font(.footnote)
-                        .foregroundStyle(Color.gpDanger)
-                        .fixedSize(horizontal: false, vertical: true)
+                    .font(.footnote)
+                    .foregroundStyle(Color.gpDanger)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Button("Activer") {

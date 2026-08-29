@@ -108,10 +108,13 @@ struct PasswordGeneratorView: View {
     private var force: some View {
         let bits = entropie
         let (libelle, couleur): (LocalizedStringKey, Color) =
-            bits >= 100 ? ("Excellent", .gpSuccess)
-            : bits >= 72 ? ("Solide", .gpSuccess)
-            : bits >= 50 ? ("Correct", .gpAccentText)
-            : ("Faible", .gpDanger)
+            bits >= 100
+            ? ("Excellent", .gpSuccess)
+            : bits >= 72
+                ? ("Solide", .gpSuccess)
+                : bits >= 50
+                    ? ("Correct", .gpAccentText)
+                    : ("Faible", .gpDanger)
         return HStack(spacing: 8) {
             Text(libelle).font(.caption.weight(.semibold)).foregroundStyle(couleur)
             Text("≈ \(Int(bits)) bits").font(.caption2).foregroundStyle(Color.gpMuted)
@@ -137,12 +140,16 @@ struct PasswordGeneratorView: View {
     private func binding(_ path: WritableKeyPath<GeneratorOptions, Bool>) -> Binding<Bool> {
         Binding(
             get: { options[keyPath: path] },
-            set: { options[keyPath: path] = $0; regenerate() })
+            set: {
+                options[keyPath: path] = $0; regenerate()
+            })
     }
 
     private var lengthBinding: Binding<Double> {
         Binding(
             get: { Double(options.length) },
-            set: { options.length = Int($0); regenerate() })
+            set: {
+                options.length = Int($0); regenerate()
+            })
     }
 }

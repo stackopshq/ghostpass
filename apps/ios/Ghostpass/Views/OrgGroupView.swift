@@ -60,7 +60,9 @@ struct OrgGroupView: View {
                     Toggle(
                         isOn: Binding(
                             get: { dedans.contains(membre.id) },
-                            set: { dedans_ in Task { await basculer(membre, dedans_) } })
+                            set: { desormaisDedans in
+                                Task { await basculer(membre, desormaisDedans) }
+                            })
                     ) {
                         Text(verbatim: membre.email ?? membre.id)
                             .foregroundStyle(Color.gpInk)
@@ -76,7 +78,8 @@ struct OrgGroupView: View {
     private var sectionCollections: some View {
         GhostSection(
             titre: "Ce que le groupe ouvre",
-            note: "Lecture pour consulter, écriture pour modifier, gestion pour régler les accès de la collection."
+            note:
+                "Lecture pour consulter, écriture pour modifier, gestion pour régler les accès de la collection."
         ) {
             VStack(spacing: 0) {
                 ForEach(ouvert.collections) { collection in

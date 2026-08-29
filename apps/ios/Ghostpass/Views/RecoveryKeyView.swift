@@ -83,7 +83,8 @@ struct RecoveryKeyView: View {
         VStack(alignment: .leading, spacing: 16) {
             GhostSection(
                 titre: "Votre clé de récupération",
-                note: "Elle ne sera plus affichée. Sans elle, un mot de passe maître oublié rend le coffre définitivement illisible."
+                note:
+                    "Elle ne sera plus affichée. Sans elle, un mot de passe maître oublié rend le coffre définitivement illisible."
             ) {
                 Text(verbatim: cle)
                     .font(.system(.body, design: .monospaced, weight: .medium))

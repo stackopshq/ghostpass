@@ -142,7 +142,8 @@ struct ItemEditView: View {
                         RoundedRectangle(cornerRadius: GP.radius)
                             .strokeBorder(
                                 kind == cas ? Color.gpAccent : Color.gpBorder,
-                                lineWidth: kind == cas ? 1.5 : 1))
+                                lineWidth: kind == cas ? 1.5 : 1)
+                    )
                     .foregroundStyle(kind == cas ? Color.gpAccentText : Color.gpMuted)
                 }
                 .buttonStyle(.plain)
@@ -181,7 +182,8 @@ struct ItemEditView: View {
 
             GhostSection(
                 titre: "Code à usage unique",
-                note: "La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil."
+                note:
+                    "La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil."
             ) {
                 TextField("", text: $totp, prompt: invite("Clé ou URI otpauth://"))
                     .textInputAutocapitalization(.never)

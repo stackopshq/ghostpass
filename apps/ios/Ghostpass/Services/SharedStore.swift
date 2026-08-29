@@ -18,7 +18,8 @@ enum SharedStore {
     /// c'est l'extension qui ne verra rien.
     static var container: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
-            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first
     }
 
     /// Vrai quand le groupe est réellement accessible : l'extension ne peut travailler

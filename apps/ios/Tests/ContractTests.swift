@@ -18,7 +18,8 @@ final class ContractTests: XCTestCase {
     /// comme un objet, puis le ré-encoder, produisait une chaîne doublement échappée que
     /// serde rejette — et toute connexion échouait dès le hash d'authentification.
     func testPreloginRenvoieLesParametresKdfSousFormeDeChaine() throws {
-        let json = Data(#"{"kdfParams":"{\"mem_cost_kib\":65536,\"time_cost\":3,\"parallelism\":4}"}"#.utf8)
+        let json = Data(
+            #"{"kdfParams":"{\"mem_cost_kib\":65536,\"time_cost\":3,\"parallelism\":4}"}"#.utf8)
         let res = try JSONDecoder().decode(PreloginResponse.self, from: json)
         XCTAssertEqual(res.kdfParams, #"{"mem_cost_kib":65536,"time_cost":3,"parallelism":4}"#)
     }
@@ -26,7 +27,8 @@ final class ContractTests: XCTestCase {
     /// La chaîne doit arriver au cœur Rust telle quelle : c'est elle, et pas une version
     /// re-sérialisée, qui doit produire un hash d'authentification.
     func testLesParametresKdfDuServeurSontAcceptesParLeCoeur() throws {
-        let json = Data(#"{"kdfParams":"{\"mem_cost_kib\":65536,\"time_cost\":3,\"parallelism\":4}"}"#.utf8)
+        let json = Data(
+            #"{"kdfParams":"{\"mem_cost_kib\":65536,\"time_cost\":3,\"parallelism\":4}"}"#.utf8)
         let kdf = try JSONDecoder().decode(PreloginResponse.self, from: json).kdfParams
         XCTAssertNoThrow(
             try masterPasswordHash(
@@ -35,7 +37,8 @@ final class ContractTests: XCTestCase {
     }
 
     func testLoginRenvoieLesBlobsEtLesParametresKdf() throws {
-        let json = Data(#"""
+        let json = Data(
+            #"""
             {"token":"tok","kdfParams":"{\"mem_cost_kib\":65536,\"time_cost\":3,\"parallelism\":4}",
              "encryptedUserKey":"2.aaa.bbb","encryptedPrivateKey":"2.ccc.ddd"}
             """#.utf8)
@@ -52,7 +55,8 @@ final class ContractTests: XCTestCase {
     /// décodage de la liste **entière** : le coffre restait vide, sans autre explication
     /// qu'un « Réponse inattendue du serveur ».
     func testLesHorodatagesDesItemsSontDesEntiers() throws {
-        let json = Data(#"""
+        let json = Data(
+            #"""
             {"items":[{"id":"abc","encryptedKey":"2.k.k","encryptedData":"2.d.d",
              "createdAt":1787669299110,"updatedAt":1787669299110,"deletedAt":null}]}
             """#.utf8)
@@ -72,7 +76,8 @@ final class ContractTests: XCTestCase {
     // ─── Aller-retour à travers le cœur Rust ───
 
     private func compteDeTest() throws -> Account {
-        let reg = try register(password: "correct horse battery staple", email: "clara@ghostpass.test")
+        let reg = try register(
+            password: "correct horse battery staple", email: "clara@ghostpass.test")
         return reg.account()
     }
 
@@ -102,14 +107,17 @@ final class ContractTests: XCTestCase {
             let (key, data) = try VaultStore.encrypt(item, with: account)
             let dto = EncryptedItemDTO(
                 id: "x", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
-            XCTAssertEqual(try VaultStore.decrypt(dto, with: account), item, "aller-retour de « \(item.name) »")
+            XCTAssertEqual(
+                try VaultStore.decrypt(dto, with: account), item, "aller-retour de « \(item.name) »"
+            )
         }
     }
 
     /// Une clé d'enveloppe étrangère ne doit rien pouvoir ouvrir.
     func testUnAutreCompteNeDechiffrePas() throws {
         let (a, b) = (try compteDeTest(), try compteDeTest())
-        let item = VaultItem(name: "x", notes: nil, folder: nil, data: .secureNote(SecureNote(content: "y")))
+        let item = VaultItem(
+            name: "x", notes: nil, folder: nil, data: .secureNote(SecureNote(content: "y")))
         let (key, data) = try VaultStore.encrypt(item, with: a)
         let dto = EncryptedItemDTO(
             id: "x", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
@@ -147,7 +155,6 @@ final class ContractTests: XCTestCase {
             VaultStore.isRegistry(ordinaire),
             "un item que l'utilisateur pourrait nommer ainsi ne doit pas disparaître")
     }
-
 
     /// Le trousseau du simulateur survit à la désinstallation : un test qui ne le vide pas
     /// hérite de l'état laissé par le précédent.
@@ -292,7 +299,8 @@ final class GeneratorAndTotpTests: XCTestCase {
     }
 
     func testUnSeulJeuNeProduitQueCeJeu() {
-        var options = GeneratorOptions(length: 40, lowercase: false, uppercase: false, digits: true, symbols: false)
+        var options = GeneratorOptions(
+            length: 40, lowercase: false, uppercase: false, digits: true, symbols: false)
         options.length = 40
         let mot = PasswordGenerator.generate(options)
         XCTAssertTrue(mot.allSatisfy(\.isNumber), "« \(mot) » ne devrait contenir que des chiffres")
@@ -327,7 +335,8 @@ final class GeneratorAndTotpTests: XCTestCase {
             (2_000_000_000, "69279037"),
         ]
         for (instant, attendu) in attendus {
-            let resultat = try XCTUnwrap(Totp.code(for: config, at: Date(timeIntervalSince1970: instant)))
+            let resultat = try XCTUnwrap(
+                Totp.code(for: config, at: Date(timeIntervalSince1970: instant)))
             XCTAssertEqual(resultat.code, attendu, "à t=\(Int(instant))")
         }
     }
@@ -343,7 +352,9 @@ final class GeneratorAndTotpTests: XCTestCase {
 
     func testUneUriOtpauthEstComprise() throws {
         let config = try XCTUnwrap(
-            Totp.parse("otpauth://totp/GhostPass:clara?secret=GEZDGNBVGY3TQOJQ&period=60&digits=8&algorithm=SHA256"))
+            Totp.parse(
+                "otpauth://totp/GhostPass:clara?secret=GEZDGNBVGY3TQOJQ&period=60&digits=8&algorithm=SHA256"
+            ))
         XCTAssertEqual(config.secret, "GEZDGNBVGY3TQOJQ")
         XCTAssertEqual(config.period, 60)
         XCTAssertEqual(config.digits, 8)
@@ -491,7 +502,8 @@ final class AutoFillLogicTests: XCTestCase {
         XCTAssertEqual(login.password, "s3cret-GitHub")
 
         // Sur un site inconnu, rien n'est suggéré — la liste complète reste accessible.
-        XCTAssertTrue(visibles.filter { SiteMatching.matches($0, domains: ["exemple.test"]) }.isEmpty)
+        XCTAssertTrue(
+            visibles.filter { SiteMatching.matches($0, domains: ["exemple.test"]) }.isEmpty)
     }
 }
 
@@ -524,7 +536,9 @@ final class FolderRegistryTests: XCTestCase {
         let relu = try VaultStore.decrypt(dto, with: account)
 
         XCTAssertTrue(VaultStore.isRegistry(relu), "le registre doit rester masqué")
-        guard case .secureNote(let note) = relu.data else { return XCTFail("un SecureNote était attendu") }
+        guard case .secureNote(let note) = relu.data else {
+            return XCTFail("un SecureNote était attendu")
+        }
         XCTAssertEqual(
             try JSONDecoder().decode([String].self, from: Data(note.content.utf8)), chemins)
     }
@@ -647,8 +661,10 @@ final class PasswordHealthTests: XCTestCase {
     /// remplirait l'écran de santé d'alertes sans objet.
     func testSeulsLesIdentifiantsSontJuges() {
         let note = VaultEntry(
-            id: "n", item: VaultItem(name: "Note", notes: nil, folder: nil,
-                                     data: .secureNote(SecureNote(content: "x"))),
+            id: "n",
+            item: VaultItem(
+                name: "Note", notes: nil, folder: nil,
+                data: .secureNote(SecureNote(content: "x"))),
             updatedAt: nil)
         let bilan = PasswordHealth.bilan([note, entree("Faible", motDePasse: "abc")])
         XCTAssertEqual(bilan.faibles.map(\.item.name), ["Faible"])
@@ -721,7 +737,8 @@ final class PasswordHistoryTests: XCTestCase {
         guard case .login(let login) = relu.data else { return XCTFail("un Login était attendu") }
         XCTAssertEqual(
             login.passwordHistory, anciens,
-            "l'historique ne traverse pas le chiffrement — le champ `password_history` a changé de nom")
+            "l'historique ne traverse pas le chiffrement — le champ `password_history` a changé de nom"
+        )
     }
 
     /// Le plafond est celui de la web app. S'il divergeait, un même coffre montrerait
@@ -1048,8 +1065,10 @@ final class FaviconTests: XCTestCase {
     private let serveur = "https://ghostpass.stackops.ch"
 
     func testLAdresseViseLeProxyDuServeur() throws {
-        let url = try XCTUnwrap(Favicon.url(pour: "https://www.decathlon.fr/rayon", serveur: serveur))
-        XCTAssertEqual(url.host, "ghostpass.stackops.ch", "l'icône ne doit venir que de notre serveur")
+        let url = try XCTUnwrap(
+            Favicon.url(pour: "https://www.decathlon.fr/rayon", serveur: serveur))
+        XCTAssertEqual(
+            url.host, "ghostpass.stackops.ch", "l'icône ne doit venir que de notre serveur")
         XCTAssertEqual(url.path, "/api/icons")
         let composants = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
         XCTAssertEqual(
@@ -1061,7 +1080,9 @@ final class FaviconTests: XCTestCase {
     func testUneAdresseInexploitableNeDonneAucuneUrl() {
         XCTAssertNil(Favicon.url(pour: "", serveur: serveur))
         XCTAssertNil(Favicon.url(pour: "localhost", serveur: serveur))
-        XCTAssertNil(Favicon.url(pour: "http://192.168.1.10:8080", serveur: serveur), "une IP n'est pas un domaine")
+        XCTAssertNil(
+            Favicon.url(pour: "http://192.168.1.10:8080", serveur: serveur),
+            "une IP n'est pas un domaine")
         XCTAssertNil(Favicon.url(pour: "https://decathlon.fr", serveur: ""))
     }
 
@@ -1250,7 +1271,8 @@ final class OrganisationsTests: XCTestCase {
     /// Le coffre partagé et le coffre personnel ouvrent la même enveloppe : c'est ce que le
     /// protocole garantit, et c'est ce qui permet de n'écrire ce code qu'une fois.
     func testLeCoffreDEquipeOuvreLaMemeEnveloppeQueLeCompte() throws {
-        let inscription = try register(password: "correct horse battery staple", email: "clara@test.ch")
+        let inscription = try register(
+            password: "correct horse battery staple", email: "clara@test.ch")
         let compte = inscription.account()
         let creation = try compte.createOrg()
         let org = creation.org()
@@ -1459,10 +1481,10 @@ final class ImportDepuisConcurrentsTests: XCTestCase {
     /// naïves.
     func testUneNoteMultilignePasseEntiere() throws {
         let csv = #"""
-        name,username,password,notes
-        Forgejo,clara,s3cr3t,"Première ligne, avec virgule
-        Deuxième ligne avec ""guillemets"""
-        """#
+            name,username,password,notes
+            Forgejo,clara,s3cr3t,"Première ligne, avec virgule
+            Deuxième ligne avec ""guillemets"""
+            """#
         let item = try seul(csv)
         XCTAssertEqual(
             item.notes, "Première ligne, avec virgule\nDeuxième ligne avec \"guillemets\"")

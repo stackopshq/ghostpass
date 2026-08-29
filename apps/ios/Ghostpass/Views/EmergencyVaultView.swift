@@ -45,7 +45,8 @@ struct EmergencyVaultView: View {
                                 } label: {
                                     GhostRow(
                                         intitule: LocalizedStringKey(entree.item.name),
-                                        valeur: entree.login?.username ?? "") {}
+                                        valeur: entree.login?.username ?? ""
+                                    ) {}
                                 }
                                 if entree.id != visibles.last?.id {
                                     Divider().overlay(Color.gpBorder)
@@ -98,7 +99,8 @@ struct EmergencyVaultView: View {
     private var reprise: some View {
         GhostSection(
             titre: "Reprise du compte",
-            note: "Choisir un nouveau mot de passe maître rendra le coffre inaccessible à son propriétaire actuel. À ne faire que s'il ne peut plus s'en servir lui-même."
+            note:
+                "Choisir un nouveau mot de passe maître rendra le coffre inaccessible à son propriétaire actuel. À ne faire que s'il ne peut plus s'en servir lui-même."
         ) {
             Button("Reprendre le compte") { repriseDemandee = true }
                 .buttonStyle(SecondaryButtonStyle())

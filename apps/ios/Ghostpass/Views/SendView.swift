@@ -54,7 +54,8 @@ struct SendView: View {
         VStack(alignment: .leading, spacing: 16) {
             GhostSection(
                 titre: "Le secret",
-                note: "Il est chiffré sur cet appareil. Le serveur n'en reçoit que le chiffre, jamais la clé."
+                note:
+                    "Il est chiffré sur cet appareil. Le serveur n'en reçoit que le chiffre, jamais la clé."
             ) {
                 TextEditor(text: $secret)
                     .frame(minHeight: 120)
@@ -77,7 +78,8 @@ struct SendView: View {
 
             GhostSection(
                 titre: "Consultations",
-                note: "Le lien s'efface une fois ce nombre atteint. Une seule consultation vous dit aussi que quelqu'un d'autre l'a lu avant vous."
+                note:
+                    "Le lien s'efface une fois ce nombre atteint. Une seule consultation vous dit aussi que quelqu'un d'autre l'a lu avant vous."
             ) {
                 Stepper(value: $consultations, in: 1...100) {
                     Text(verbatim: String(format: tr("%d consultation(s)"), consultations))
@@ -98,7 +100,9 @@ struct SendView: View {
                     enabled: !secret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         && !store.isBusy)
             )
-            .disabled(secret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isBusy)
+            .disabled(
+                secret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isBusy
+            )
             .accessibilityIdentifier("button.createSend")
 
             if let message = store.errorMessage {
@@ -118,7 +122,8 @@ struct SendView: View {
         VStack(alignment: .leading, spacing: 16) {
             GhostSection(
                 titre: "Le lien",
-                note: "Quiconque l'a peut lire le secret. Envoyez-le par un canal différent de celui où vous avez annoncé son existence."
+                note:
+                    "Quiconque l'a peut lire le secret. Envoyez-le par un canal différent de celui où vous avez annoncé son existence."
             ) {
                 Text(verbatim: lien.absoluteString)
                     .font(.system(.footnote, design: .monospaced))
