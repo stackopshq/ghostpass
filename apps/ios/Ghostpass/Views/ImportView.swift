@@ -55,7 +55,7 @@ struct ImportView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             Text(
-                "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, 1Password, LastPass et Chrome sont reconnues."
+                "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues."
             )
             .foregroundStyle(Color.gpMuted)
             .fixedSize(horizontal: false, vertical: true)

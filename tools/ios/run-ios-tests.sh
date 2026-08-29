@@ -135,6 +135,25 @@ print(phones[-1]["identifier"], runtime["identifier"])
   exit 1
 }
 
+# Ménage des simulateurs orphelins d'anciens runs.
+#
+# Le nettoyage de fin ne s'exécute pas si le script est tué sans ménagement (`kill -9`,
+# machine qui redémarre). Le simulateur reste alors allumé et continue de consommer : trois
+# orphelins ont fait monter la charge à 120 et expirer une prise de vue au bout de 180 s.
+#
+# Le nom porte le PID de son créateur, ce qui permet de ne supprimer que ceux dont le
+# processus a disparu. On ne touche jamais à celui d'un run en cours — la règle est la même
+# que pour le serveur : ne pas détruire ce qu'on n'a pas lancé.
+while read -r nom identifiant; do
+  pid="${nom##ghostpass-tests-}"
+  [[ "$pid" =~ ^[0-9]+$ ]] || continue
+  kill -0 "$pid" 2>/dev/null && continue
+  xcrun simctl shutdown "$identifiant" >/dev/null 2>&1 || true
+  xcrun simctl delete "$identifiant" >/dev/null 2>&1 &&
+    echo "  simulateur orphelin supprimé : $nom" >&2
+done < <(xcrun simctl list devices |
+  sed -n 's/^ *\(ghostpass-tests-[0-9]*\) (\([0-9A-F-]\{36\}\)).*/\1 \2/p')
+
 DEVICE="$(xcrun simctl create "ghostpass-tests-$$" "$DEVTYPE" "$RUNTIME")"
 say "Simulateur éphémère $DEVICE ($DEVTYPE)"
 xcrun simctl boot "$DEVICE" >/dev/null 2>&1 || true

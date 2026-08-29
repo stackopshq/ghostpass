@@ -6,6 +6,12 @@
 //! le coffre amorcé est exactement celui qu'elle saura rouvrir.
 //!
 //! Usage : `cargo run -p ghostpass-crypto-ffi --example seed-vault -- <email> <mot de passe>`
+//!
+//! Avec `--vitrine` en troisième argument, quelques items supplémentaires viennent
+//! s'ajouter. Ils ne servent qu'aux captures de la fiche App Store : un coffre à deux
+//! entrées ne montre pas ce que fait le produit. Les tests, eux, s'appuient sur le compte
+//! exact ci-dessous — d'où un drapeau plutôt qu'un enrichissement systématique, qui
+//! ferait mentir leurs décomptes.
 
 use ghostpass_crypto_ffi::{register, Account};
 use std::sync::Arc;
@@ -43,6 +49,8 @@ fn main() {
         }
     };
 
+    let vitrine = args.next().is_some_and(|a| a == "--vitrine");
+
     let registration = register(password, email.clone()).expect("inscription");
     let blob: serde_json::Value =
         serde_json::from_str(&registration.blob()).expect("le blob est du JSON");
@@ -72,6 +80,27 @@ fn main() {
         r#"{"kind":"Login","data":{"username":"clara","password":"local-s3cret","uris":["http://127.0.0.1:8099"],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
     );
 
+    // La vitrine : des entrées plausibles, aux noms reconnaissables, dont une avec un
+    // second facteur et une carte — de quoi montrer que le coffre ne range pas que des
+    // mots de passe.
+    let mut items = vec![
+        encrypted(&account, folders),
+        encrypted(&account, demo),
+        encrypted(&account, local),
+    ];
+    if vitrine {
+        for (nom, data) in [
+            ("Gmail", r#"{"kind":"Login","data":{"username":"clara.vanacker@gmail.com","password":"Wq7!fRk2$mZp9Lx","uris":["https://mail.google.com"],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#),
+            ("Amazon", r#"{"kind":"Login","data":{"username":"clara.vanacker","password":"T4#vNs8qLd2!Wm","uris":["https://amazon.fr"],"totp":null,"password_history":[]}}"#),
+            ("Netflix", r#"{"kind":"Login","data":{"username":"clara@stackops.ch","password":"Zx9$bKt5!nQv3R","uris":["https://netflix.com"],"totp":null,"password_history":[]}}"#),
+            ("Banque", r#"{"kind":"Login","data":{"username":"FR7630001007","password":"Hn4!pXw8$cJm6T","uris":[],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#),
+            ("Carte bleue", r#"{"kind":"Card","data":{"cardholder":"CLARA VANACKER","number":"4111111111111111","exp_month":"09","exp_year":"2029","code":"123"}}"#),
+            ("Codes de secours", r#"{"kind":"SecureNote","data":{"content":"Codes de récupération à usage unique. À conserver hors ligne."}}"#),
+        ] {
+            items.push(encrypted(&account, vault_item(nom, data)));
+        }
+    }
+
     let out = serde_json::json!({
         "registration": {
             "email": email,
@@ -82,7 +111,7 @@ fn main() {
             "encryptedPrivateKey": blob["encrypted_private_key"],
             "publicKey": account.public_key(),
         },
-        "items": [encrypted(&account, folders), encrypted(&account, demo), encrypted(&account, local)],
+        "items": items,
     });
     println!("{out}");
 }

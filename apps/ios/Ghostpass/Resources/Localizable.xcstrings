@@ -1026,12 +1026,18 @@
         }
       }
     },
-    "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, 1Password, LastPass et Chrome sont reconnues.": {
+    "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues.": {
       "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues."
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose the CSV file exported by your current manager. Bitwarden, 1Password, LastPass and Chrome column names are recognised."
+            "value": "Choose the CSV file exported by your current manager. Columns from Bitwarden, Dashlane, 1Password, LastPass and Chrome are recognised."
           }
         }
       }

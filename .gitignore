@@ -34,3 +34,7 @@ __pycache__/
 
 # Métadonnées du Finder, jamais utiles à personne.
 .DS_Store
+
+# Traces de la dernière prise de vue App Store, conservées pour diagnostic seulement.
+apps/ios/AppStore/derniere-prise-de-vue.log
+apps/ios/AppStore/derniere-prise-de-vue.xcresult/
