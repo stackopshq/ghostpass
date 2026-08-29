@@ -25,6 +25,7 @@ import { Bouton } from "@/components/champs";
 import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Organisation, Plus } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
 import { Securite } from "@/components/Securite";
+import { ImportExport } from "@/components/ImportExport";
 import { ListeOrgs } from "@/components/orgs/ListeOrgs";
 import { DetailOrg } from "@/components/orgs/DetailOrg";
 import type { OrgSummary } from "@/lib/orgs";
@@ -324,6 +325,12 @@ export function VaultScreen() {
             onCreer={creerDossier}
             onSupprimer={supprimerDossier}
           />
+          )}
+          {section === "coffre" && (
+            <ImportExport
+              personnels={items}
+              onImporte={() => void charger().then(() => setChoisi(null))}
+            />
           )}
           {/* Le pied de la colonne dit l'état du coffre. C'est la seule chose
               qui rappelle, à tout moment, que les clés sont en mémoire. */}

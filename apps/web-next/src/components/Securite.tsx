@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { wrapUserKeyForPasskey } from "@/lib/crypto";
+import { createRecovery, wrapUserKeyForPasskey } from "@/lib/crypto";
 import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { libelleAppareil } from "@/lib/securite";
@@ -97,6 +97,12 @@ export function Securite() {
   const [clesSecu, setClesSecu] = useState<Cle[]>([]);
   const [connexions, setConnexions] = useState<Connexion[]>([]);
   const [mfa, setMfa] = useState<{ secret: string; otpauthUri: string } | null>(null);
+  // La clé de récupération n'est affichée QU'UNE FOIS, à sa création. Elle ne
+  // vit ni en base ni ailleurs dans cet état : le serveur n'en reçoit que
+  // l'empreinte et la clé de coffre re-scellée. La ré-afficher plus tard
+  // demanderait qu'elle soit stockée quelque part, ce qui la viderait de son
+  // sens.
+  const [kit, setKit] = useState<string | null>(null);
   const [codeMfa, setCodeMfa] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -300,6 +306,50 @@ export function Securite() {
               void agir(() => api.webauthnDeleteCredential(token!, c.id));
             }}
           />
+        </Carte>
+
+        <Carte
+          titre={t("app.recoveryKit")}
+          sous={kit ? undefined : t("app.recoverySub")}
+          action={
+            !kit && (
+              <Bouton
+                variante="discret"
+                disabled={occupe}
+                onClick={() =>
+                  void agir(async () => {
+                    const k = createRecovery(account!);
+                    await api.enrollRecovery(token!, {
+                      recoveryAuthHash: k.recoveryAuthHash,
+                      encryptedUserKeyRecovery: k.encryptedUserKeyRecovery,
+                    });
+                    setKit(k.recoveryKey);
+                  })
+                }
+              >
+                {t("app.genRecovery")}
+              </Bouton>
+            )
+          }
+        >
+          {kit && (
+            <div className="space-y-3">
+              {/* L'avertissement AVANT la clé, pas après : lu dans l'autre
+                  ordre, il arrive quand la fenêtre est déjà fermée. */}
+              <p className="rounded-lg bg-warn/10 px-3 py-2 text-xs text-warn">{t("app.recoveryWarn")}</p>
+              <div className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
+                <code className="min-w-0 flex-1 break-all font-mono text-xs text-foreground">{kit}</code>
+                <button
+                  type="button"
+                  onClick={() => copier(kit, "kit")}
+                  aria-label={t("app.copyKey")}
+                  className={`shrink-0 cursor-pointer rounded p-1 ${copie === "kit" ? "text-accent" : "text-muted hover:text-foreground"}`}
+                >
+                  {copie === "kit" ? <Coche className="size-4" /> : <Copier className="size-4" />}
+                </button>
+              </div>
+            </div>
+          )}
         </Carte>
 
         <Carte titre={t("app.recentActivity")}>
