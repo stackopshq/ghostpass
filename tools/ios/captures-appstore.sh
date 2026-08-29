@@ -18,6 +18,8 @@ fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IOS="$ROOT/apps/ios"
+# Un répertoire par appareil : le jeu iPad ne doit pas écraser le jeu iPhone, App Store
+# Connect les réclamant tous les deux quand l'application se déclare universelle.
 SORTIE="$IOS/AppStore/captures"
 # Un port distinct de celui de la suite de tests : les deux doivent pouvoir tourner sans
 # se marcher dessus, et un run qui échoue faute de port libre ne dit rien d'utile.
@@ -27,6 +29,9 @@ PASSWORD="correct horse battery staple"
 APPAREIL="${GHOSTPASS_APPAREIL:-iPhone 17 Pro Max}"
 # Exporté : le fragment Python ci-dessous le lit dans son environnement.
 export APPAREIL
+case "$APPAREIL" in
+  iPad*) SORTIE="$IOS/AppStore/captures-ipad" ;;
+esac
 
 say() { printf "\n\033[1m▸ %s\033[0m\n" "$*" >&2; }
 
@@ -183,7 +188,13 @@ print(f"  {n} capture(s)")
 PYTHON
 
 say "Vérification des dimensions"
-attendu_l=1320; attendu_h=2868
+# La taille attendue est celle que rend *cet* appareil, relevée sur une capture du
+# simulateur — pas une constante. Figée, elle aurait interdit de photographier un iPad,
+# dont App Store Connect réclame son propre jeu.
+xcrun simctl io "$DEVICE" screenshot "$TRAVAIL/reference.png" >/dev/null 2>&1
+attendu_l=$(sips -g pixelWidth "$TRAVAIL/reference.png" | awk '/pixelWidth/{print $2}')
+attendu_h=$(sips -g pixelHeight "$TRAVAIL/reference.png" | awk '/pixelHeight/{print $2}')
+echo "  taille native de « $APPAREIL » : ${attendu_l}×${attendu_h}" >&2
 ok=true
 for f in "$SORTIE"/*.png; do
   [[ -e "$f" ]] || continue
@@ -199,4 +210,4 @@ for f in "$SORTIE"/*.png; do
 done
 $ok || { echo "Des captures n'ont pas la taille exigée." >&2; exit 1; }
 
-say "Captures dans apps/ios/AppStore/captures/"
+say "Captures dans ${SORTIE#"$ROOT/"}/"

@@ -62,8 +62,48 @@ publication, pas parce que ce document sait y répondre.
   Ce serait faux : le serveur stocke bien une adresse e-mail et des blobs. Qu'ils soient
   illisibles ne les rend pas inexistants, et une déclaration inexacte se paie au contrôle.
 
-- Captures d'écran aux tailles demandées, description, mots-clés, classification d'âge.
-- Catégorie suggérée : Utilitaires (ou Productivité).
+- Captures d'écran, description, mots-clés, classification d'âge : **prêts dans le dépôt**,
+  voir [`apps/ios/AppStore/fiche.md`](../apps/ios/AppStore/fiche.md) et
+  `apps/ios/AppStore/captures/`. Il reste à les coller et à trancher les mentions entre
+  crochets — prix, URL d'assistance, raison sociale.
+
+### iPhone seulement, ou iPad aussi ? — à trancher
+
+L'application se déclare **universelle**. `TARGETED_DEVICE_FAMILY` n'est fixé nulle part,
+et Xcode retient alors iPhone *et* iPad : le binaire construit porte bien
+`UIDeviceFamily = [1, 2]`, ce qui n'est pas une supposition mais ce qu'on lit dans son
+Info.plist.
+
+Deux conséquences, l'une administrative et l'autre plus sérieuse :
+
+- App Store Connect **réclamera un second jeu de captures**, au format iPad 13 pouces.
+- On publierait une plateforme sur laquelle **rien n'a jamais été éprouvé** : ni la suite
+  de tests, ni le remplissage automatique, ni la mise en page.
+
+L'application a été ouverte sur un iPad Pro 13 pouces pour en avoir le cœur net, et les
+captures sont dans `apps/ios/AppStore/captures-ipad/`. Le verdict est nuancé : **elle
+fonctionne**, la connexion, la liste et la navigation répondent. Mais elle n'est
+visiblement pas dessinée pour cet écran :
+
+- la liste s'étire sur toute la largeur, une ligne de 2 064 points pour deux lignes de
+  texte ;
+- les feuilles deviennent des cartes centrées de hauteur fixe, et **le contenu y est
+  tronqué** : sur « Santé du coffre », la dernière ligne est coupée net par le bord de la
+  carte.
+
+Ce n'est pas rédhibitoire — rien n'est cassé — mais cela se verra, et un examinateur
+d'Apple regarde les captures iPad avec les mêmes yeux que le reste.
+
+Deux issues, au choix :
+
+1. **S'en tenir à l'iPhone** — poser `TARGETED_DEVICE_FAMILY = 1` dans `project.yml`. Un
+   seul jeu de captures, rien d'invérifié à la vente. C'est le choix prudent tant que
+   personne n'a ouvert l'application sur un iPad.
+2. **Assumer l'iPad** — le vérifier écran par écran, puis produire son jeu :
+   `GHOSTPASS_APPAREIL="iPad Pro 13-inch (M5)" ./tools/ios/captures-appstore.sh`, qui range
+   ses images dans `apps/ios/AppStore/captures-ipad/`.
+
+Ce choix appartient au produit, pas au dépôt. Il conditionne l'envoi.
 
 ## À éprouver avant d'envoyer
 
