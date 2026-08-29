@@ -22,7 +22,8 @@ import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Cadenas, Coffre, Plus } from "@/components/Icones";
+import { Cadenas, Coffre, Corbeille as IconeCorbeille, Plus } from "@/components/Icones";
+import { Corbeille } from "@/components/Corbeille";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function VaultScreen() {
@@ -42,6 +43,10 @@ export function VaultScreen() {
   // `null` = pas de formulaire ouvert ; sinon l'identifiant en cours de
   // modification, ou la chaîne vide pour une création.
   const [edition, setEdition] = useState<string | null>(null);
+  // Les sections portées à ce jour. Les organisations et la sécurité
+  // arrivent ensuite : tant qu'elles ne sont pas là, elles ne figurent pas
+  // dans le rail — un onglet qui mène à « bientôt » est pire que son absence.
+  const [section, setSection] = useState<"coffre" | "corbeille">("coffre");
 
   const charger = useCallback(async (): Promise<VaultEntry[]> => {
     if (!token || !account) return [];
@@ -175,6 +180,7 @@ export function VaultScreen() {
           <Coffre className="size-5 text-accent" />
           GhostPass
         </span>
+        {section === "coffre" && (
         <input
           type="search"
           value={recherche}
@@ -183,6 +189,8 @@ export function VaultScreen() {
           aria-label={t("app.searchVault")}
           className="ml-auto w-full max-w-md rounded-pill border border-border bg-surface-2 px-4 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
         />
+        )}
+        {section === "coffre" && (
         <Bouton
           onClick={() => {
             // Le dossier ouvert pré-remplit le champ : on ajoute presque
@@ -196,6 +204,8 @@ export function VaultScreen() {
             <span className="min-w-[13ch] text-center">{t("app.newItem")}</span>
           </span>
         </Bouton>
+        )}
+        <div className={section === "coffre" ? "" : "ml-auto"} />
         <LanguageSwitcher />
         <Bouton variante="discret" onClick={fermer}>
           <span className="flex items-center gap-1.5">
@@ -213,6 +223,25 @@ export function VaultScreen() {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[15rem_20rem_1fr]">
         <nav className="verre-dense hidden min-h-0 flex-col overflow-y-auto border-r border-border p-3 md:flex">
+          <div className="mb-4 flex flex-col gap-0.5">
+            {([
+              ["coffre", "app.myVault", Coffre],
+              ["corbeille", "app.trash", IconeCorbeille],
+            ] as const).map(([cle, libelle, Icone]) => (
+              <button
+                key={cle}
+                type="button"
+                onClick={() => setSection(cle)}
+                aria-current={section === cle ? "page" : undefined}
+                className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${section === cle ? "bg-accent/12 font-medium text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}
+              >
+                <Icone className="size-4 shrink-0" />
+                {t(libelle)}
+              </button>
+            ))}
+          </div>
+
+          {section === "coffre" && (
           <ArbreDossiers
             tree={tree}
             total={items.length}
@@ -225,6 +254,7 @@ export function VaultScreen() {
             onCreer={creerDossier}
             onSupprimer={supprimerDossier}
           />
+          )}
           {/* Le pied de la colonne dit l'état du coffre. C'est la seule chose
               qui rappelle, à tout moment, que les clés sont en mémoire. */}
           <div className="mt-auto pt-4">
@@ -235,8 +265,10 @@ export function VaultScreen() {
           </div>
         </nav>
 
-        <div className="verre-dense min-h-0 border-r border-border">
-          {chargement ? (
+        <div className={`verre-dense min-h-0 border-r border-border ${section === "corbeille" ? "col-span-2" : ""}`}>
+          {section === "corbeille" ? (
+            <Corbeille onRestaure={() => void charger().then(() => setChoisi(null))} />
+          ) : chargement ? (
             <p className="p-4 text-sm text-muted">{t("app.loadingCrypto")}</p>
           ) : (
             <ListeSecrets
@@ -250,7 +282,7 @@ export function VaultScreen() {
           )}
         </div>
 
-        <div className="min-h-0 overflow-y-auto">
+        <div className={`min-h-0 overflow-y-auto ${section === "corbeille" ? "hidden" : ""}`}>
           {edition !== null ? (
             <FormulaireEntree
               // La clé force un formulaire neuf quand on passe d'une entrée à
