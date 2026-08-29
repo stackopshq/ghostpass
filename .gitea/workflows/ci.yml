@@ -137,6 +137,21 @@ jobs:
       # xcodegen et Node sont ceux du poste. On vérifie qu'ils répondent plutôt que de
       # les réinstaller à chaque exécution — et l'absence de l'un doit se lire d'un coup
       # d'œil, pas se deviner trente lignes plus bas.
+      # Le cœur cryptographique vit dans le dépôt de la suite, pas ici — un seul cœur pour
+      # tous les produits (ghostsuite, ADR 0001). L'exécuteur récupère donc deux dépôts.
+      #
+      # C'est le prix de la boucle courte, assumé et documenté : compiler depuis les
+      # sources permet de corriger le cœur et de le vérifier chez un produit dans la
+      # foulée. Le jour où l'artefact sera publié — à l'arrivée d'Android, ou quand le
+      # cœur cessera de bouger — cette étape disparaîtra (ghostsuite, ADR 0002).
+      - name: Cœur commun de la suite
+        uses: actions/checkout@v4
+        with:
+          repository: stackops/ghostsuite
+          path: ghostsuite
+          # Le dépôt est privé sur cette forge : sans jeton, le clone échoue en 404, ce
+          # qui se lit comme « dépôt inexistant » plutôt que « accès refusé ».
+          token: ${{ secrets.GITEA_TOKEN }}
       - name: Prérequis du poste
         run: |
           set -e
@@ -169,6 +184,10 @@ jobs:
       # un coffre de test (registre gp:folders compris), déroule les suites, coupe le
       # serveur pour éprouver le hors-ligne, puis remplit un formulaire dans Safari.
       - name: Tests iOS
+        # `GHOSTSUITE` dit au script où trouver le cœur : à côté du produit sur un poste,
+        # dans l'espace de travail en intégration continue.
+        env:
+          GHOSTSUITE: ${{ github.workspace }}/ghostsuite
         run: ./tools/ios/run-ios-tests.sh
       # Un échec ne laisse qu'un nom de test : les rapports portent les captures d'écran
       # et le journal du serveur, seuls moyens de comprendre sans reproduire localement.
