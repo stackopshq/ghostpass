@@ -32,10 +32,18 @@ enum CouleurDEquipe {
     /// La somme des octets suffit : il ne s'agit pas de résister à un adversaire, mais de
     /// rendre le même résultat sur l'iPhone, l'iPad et le web. Un hachage de bibliothèque
     /// ne le garantirait pas — `hashValue` de Swift varie d'un lancement à l'autre, ce qui
-    /// aurait donné une couleur différente à chaque ouverture de l'application.
+    /// aurait donné une couleur différente à chaque ouverture de l'application. En
+    /// JavaScript le problème est l'inverse et mène au même endroit : faute de hachage
+    /// dans la bibliothèque standard, chacun invente le sien, et deux inventions ne
+    /// coïncident jamais. D'où une règle écrite en toutes lettres, copiable telle quelle.
+    ///
+    /// La première version réduisait la somme modulo 4096 à chaque octet. C'était inerte :
+    /// 8 divise 4096, donc `(x % 4096) % 8 == x % 8`. Retiré plutôt que commenté — un
+    /// lecteur aurait cherché ce que ce nombre protégeait. Vérifié sur des identifiants
+    /// réels et pathologiques avant de le retirer : aucune couleur ne change.
     static func attribuee(_ identifiant: String) -> String {
         guard !identifiant.isEmpty else { return palette[0] }
-        let somme = identifiant.utf8.reduce(0) { ($0 + Int($1)) % 4096 }
+        let somme = identifiant.utf8.reduce(0) { $0 + Int($1) }
         return palette[somme % palette.count]
     }
 

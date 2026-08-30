@@ -379,6 +379,22 @@ final class GeneratorAndTotpTests: XCTestCase {
             Set(couleurs).count, 3, "huit équipes ne doivent pas se retrouver toutes pareilles")
     }
 
+    /// Des vecteurs, pour que le client web puisse vérifier qu'il attribue les mêmes
+    /// couleurs que nous sans avoir à relire ce code. Un utilisateur qui n'a rien réglé
+    /// doit voir la même teinte des deux côtés ; sans vecteurs partagés, l'écart ne se
+    /// découvrirait qu'en regardant les deux écrans côte à côte.
+    func testLesVecteursDAttributionSontCeuxQuePartageLaSuite() {
+        let attendus = [
+            "org_stackops": "#7A8CFF",
+            "org_1": "#4C8DFF",
+            "org_2": "#B57BFF",
+            "ORG-9f3c-4d2e": "#FFC53D",
+        ]
+        for (identifiant, couleur) in attendus {
+            XCTAssertEqual(CouleurDEquipe.attribuee(identifiant), couleur, identifiant)
+        }
+    }
+
     func testLaCouleurChoisieLEmporteSurCelleAttribuee() {
         XCTAssertEqual(
             CouleurDEquipe.hex("org_a", choisies: ["org_a": "#123456"]), "#123456")
