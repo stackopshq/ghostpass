@@ -392,12 +392,29 @@ final class GeneratorAndTotpTests: XCTestCase {
 
     /// Les deux horodatages sont dans la même unité. Ils ne l'étaient pas au premier jet,
     /// et l'écart ne se serait vu qu'à l'affichage, chez le client qui n'a pas écrit la
-    /// ligne. Onze chiffres, c'est une seconde ; treize, une milliseconde.
-    func testLesDeuxHorodatagesSontEnSecondes() {
-        let maintenant = Int(Date().timeIntervalSince1970)
-        XCTAssertEqual(
-            String(maintenant).count, 10,
-            "un horodatage en secondes tient sur dix chiffres jusqu'en 2286")
+    /// ligne.
+    ///
+    /// La première version de ce test mesurait `Date().timeIntervalSince1970` — une
+    /// propriété de Foundation, vraie par définition, qui serait restée verte si le champ
+    /// repassait en millisecondes. Il porte maintenant sur la fonction qui écrit
+    /// réellement la valeur.
+    func testLHorodatageDuRegistreEstEnSecondes() {
+        let repere = Date(timeIntervalSince1970: 1_788_000_000)
+        XCTAssertEqual(VaultStore.horodatage(repere), 1_788_000_000)
+    }
+
+    /// Les deux champs se comparent : une durée de vie se calcule en les soustrayant, et
+    /// deux unités différentes donneraient un résultat mille fois trop grand.
+    func testLesDeuxHorodatagesSeComparentSansConversion() throws {
+        let brut = Data(
+            """
+            [{"id":"a","url":"https://x/p/a#k","deleteToken":"j","name":"n",
+              "createdAt":1788000000,"expiresAt":1788086400}]
+            """.utf8)
+        let partage = try XCTUnwrap(
+            JSONDecoder().decode([PartageEnCours].self, from: brut).first)
+        let duree = try XCTUnwrap(partage.expiresAt) - partage.createdAt
+        XCTAssertEqual(duree, 86_400, "vingt-quatre heures, en secondes de part et d'autre")
     }
 
     /// Le nom réservé doit être exactement celui de la web app, octet NUL compris : c'est

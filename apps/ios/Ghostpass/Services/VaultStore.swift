@@ -1539,7 +1539,7 @@ final class VaultStore: ObservableObject {
                         // Secondes, comme `expiresAt` : les deux champs avaient d'abord des
                         // unités différentes dans une structure partagée par trois clients.
                         // Corrigé pendant que c'était gratuit — aucun registre n'existait.
-                        name: nom, createdAt: Int(Date().timeIntervalSince1970),
+                        name: nom, createdAt: Self.horodatage(),
                         expiresAt: cree.expiresAt))
             }
             return lien
@@ -1553,6 +1553,16 @@ final class VaultStore: ObservableObject {
             errorMessage = error.localizedDescription
             return nil
         }
+    }
+
+    /// L'horodatage tel qu'il entre au registre : **secondes** depuis l'epoch.
+    ///
+    /// Isolé pour être vérifiable. Un test qui mesure `Date().timeIntervalSince1970`
+    /// prouve une propriété de Foundation, vraie quoi qu'on écrive ici ; il reste vert
+    /// si le champ repasse en millisecondes. Celui-ci se teste sur ce qui est réellement
+    /// écrit.
+    nonisolated static func horodatage(_ date: Date = Date()) -> Int {
+        Int(date.timeIntervalSince1970)
     }
 
     /// Le lien d'un partage : celui que le serveur donne, ou celui qu'on déduit de son
