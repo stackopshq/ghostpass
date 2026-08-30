@@ -167,6 +167,8 @@ const en: Dict = {
   "app.sharesSub": "Links issued from this browser or from the app. Revoking one makes it unreadable immediately. A link whose registry entry could not be written is missing here — it exists, but nothing can revoke it.",
   "app.revoke": "Revoke",
   "app.shareCreated": "Link created — it is in « Shares in progress » if you need to revoke it.",
+  "auth.passkey": "Sign in with a passkey",
+  "auth.passkeyNeedsEmail": "Enter your email first: the server needs it to offer your keys.",
   "app.sharedOn": "shared {date}",
   "app.confirmShareHost":
     "This link points at {host}, which is not this server. The decryption key will be placed in the link and read by that site. Continue only if you recognise it.",
@@ -478,6 +480,8 @@ const fr: Dict = {
   "app.sharesSub": "Les liens émis depuis ce navigateur ou depuis l'application. En révoquer un le rend illisible immédiatement. Un lien dont l'inscription au registre a échoué n'apparaît pas ici — il existe, mais rien ne peut le révoquer.",
   "app.revoke": "Révoquer",
   "app.shareCreated": "Lien créé — il est dans « Partages en cours » si vous devez le révoquer.",
+  "auth.passkey": "Se connecter avec une clé d'accès",
+  "auth.passkeyNeedsEmail": "Saisissez d'abord votre adresse : le serveur en a besoin pour proposer vos clés.",
   "app.sharedOn": "partagé le {date}",
   "app.confirmShareHost":
     "Ce lien pointe vers {host}, qui n'est pas ce serveur. La clé de déchiffrement sera placée dans le lien et lue par ce site. Ne continuez que si vous le reconnaissez.",
