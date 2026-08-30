@@ -117,25 +117,50 @@ Le Client autorise le recours aux sous-traitants ci-dessous. StackOps informe le
 Client de tout ajout ou remplacement **au moins trente jours avant**, et le
 Client peut s'y opposer ; à défaut d'accord, il peut résilier sans pénalité.
 
-La liste ci-dessous est celle de **GhostPass**, tracée dans sa configuration de
-déploiement — pas celle de l'infrastructure StackOps en général. Deux
-prestataires du parc n'y figurent pas parce qu'ils ne sont pas sur le chemin de
-ce produit : **Infomaniak**, dont GhostPass ne dépend pas — son nom public passe
-par un tunnel Cloudflare et non par le frontal Pangolin — et **Hetzner**, qui
-reçoit d'autres dépôts de sauvegarde mais pas celui qui contient cette base.
-
 | Sous-traitant | Rôle pour GhostPass | Pays | Accès aux données |
 |---|---|---|---|
-| **Cloudflare, Inc.** | Tunnel du nom public **et** courtier d'identité (Access) | 🇺🇸 | Voit le trafic ; **sert le code qui chiffre** ; voit l'adresse de courriel à la connexion |
-| **Google Workspace** | Fournisseur d'identité derrière Cloudflare Access, sur l'instance opérée par StackOps | 🇺🇸 | Adresse de courriel, journal de connexion |
-| **Google LLC (Drive)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | 🇺🇸 | Aucun accès en clair |
+| **Cloudflare, Inc.** | Tunnel du nom public — rien d'autre | 🇺🇸 | Voit le trafic ; **sert le code qui chiffre** (voir plus bas) |
+| **Google LLC (Drive)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | 🇺🇸 | Aucun accès en clair. **Remplacement annoncé, voir plus bas** |
 
-**Ce que Cloudflare peut, et que le Client doit savoir.** Le frontal termine le
-TLS, donc il sert le JavaScript et le module WebAssembly qui chiffrent. Un
-intermédiaire capable de modifier ce code peut défaire le chiffrement, sans
-jamais toucher à la base. **Ce n'est pas propre à GhostPass** : c'est la limite
-de tout chiffrement livré par le Web, chez tous les produits à interface
-navigateur.
+**Deux lignes ont été retirées de ce tableau, et il faut dire pourquoi**, sans
+quoi une version antérieure de ce document contredirait celle-ci.
+
+*L'identité n'est pas dans le périmètre du Client.* StackOps utilise Cloudflare
+Access et un annuaire Google Workspace **pour ses propres accès à sa propre
+infrastructure**. Ce sont ses outils internes d'exploitant, pas un traitement des
+données du Client. Les utilisateurs du Client s'authentifient par **mot de passe
+maître**, par **clé d'accès**, ou par le fournisseur OIDC que **le Client
+choisit** — et dans ce dernier cas ce fournisseur est un sous-traitant *du
+Client*, pas de StackOps : nous n'avons ni contrat avec lui, ni moyen d'agir sur
+lui, et le déclarer comme le nôtre laisserait croire le contraire.
+
+*Deux prestataires du parc ne sont pas sur le chemin de ce produit.*
+**Infomaniak** — le nom public de GhostPass passe par un tunnel Cloudflare, pas
+par le frontal Pangolin — et **Hetzner**, qui reçoit d'autres dépôts de
+sauvegarde mais pas celui qui contient cette base.
+
+Un sous-traitant déclaré en trop n'est pas un excès de prudence : il autorise un
+transfert qui n'a pas lieu, et rend la liste entière suspecte le jour où le
+Client la vérifie.
+
+### Changement annoncé : les sauvegardes quittent Google Drive
+
+Elles partiront vers **Swiss Backup** (Infomaniak, 🇨🇭). C'est exactement le cas
+que régit le préavis de trente jours ci-dessus, et il vaut d'être signalé pour ce
+qu'il **retire** : un transfert vers les États-Unis.
+
+Les instantanés sont chiffrés par restic avant de quitter la machine dans les
+deux cas — ce qui change est la juridiction du dépôt, pas la confidentialité du
+contenu. Le tableau sera mis à jour **le jour de la bascule et pas avant** : un
+contrat décrit ce qui est, pas ce qui est prévu.
+
+### Ce que Cloudflare peut, et que le Client doit savoir
+
+Le tunnel termine le TLS, donc il sert le JavaScript et le module WebAssembly qui
+chiffrent. Un intermédiaire capable de modifier ce code peut défaire le
+chiffrement, sans jamais toucher à la base. **Ce n'est pas propre à GhostPass** :
+c'est la limite de tout chiffrement livré par le Web, chez tous les produits à
+interface navigateur.
 
 **L'atténuation est réelle et livrée : GhostPass s'auto-héberge.** Le Client qui
 refuse cet intermédiaire le retire, en servant le produit depuis sa propre
@@ -143,17 +168,11 @@ infrastructure. La confiance ne disparaît pas — elle passe de Cloudflare au
 Client, ce qui est exactement ce que doit vouloir un Client que la question
 préoccupe.
 
-**Le fournisseur d'identité n'est pas dans ce tableau, et c'est volontaire.**
-Sur l'instance opérée par StackOps, la connexion déléguée passe par **Google
-Workspace**. Mais un Client peut brancher **son propre fournisseur OIDC** — c'est
-lui qui choisit, et nous nous adaptons. Dans ce cas le fournisseur est un
-sous-traitant **du Client**, pas de StackOps : nous n'avons ni contrat avec lui,
-ni moyen d'agir sur lui, et le déclarer comme le nôtre laisserait croire le
-contraire.
+### Transferts hors de Suisse et de l'Union européenne
 
-Les transferts hors de Suisse et de l'Union européenne s'appuient sur les
-clauses contractuelles types et, pour les sauvegardes, sur le fait qu'elles sont
-chiffrées avant tout envoi.
+Ils s'appuient sur les clauses contractuelles types et, pour les sauvegardes, sur
+le fait qu'elles sont chiffrées avant tout envoi. Après la bascule vers Swiss
+Backup, **le seul transfert restant sera celui du tunnel Cloudflare**.
 
 ## 7. Assistance au Client (art. 28.3.e et 28.3.f)
 
