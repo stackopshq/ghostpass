@@ -12,11 +12,16 @@
 // choisi « nulle part ».
 
 import type { Account } from "ghostpass-crypto-wasm";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { api } from "@/lib/api";
 
 export type Session = {
   token: string | null;
   account: Account | null;
+  /// Le jeton que les balises `<img>` accrochent à l'URL du proxy de favicons.
+  /// Il vit ici parce qu'il dérive de la session et meurt avec elle ; ailleurs,
+  /// chaque composant l'aurait redemandé.
+  jetonIcone: string | null;
   ouvrir: (token: string, account: Account) => void;
   fermer: () => void;
 };
@@ -26,6 +31,25 @@ const Ctx = createContext<Session | null>(null);
 export function useSessionValue(): Session {
   const [token, setToken] = useState<string | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
+  const [jetonIcone, setJetonIcone] = useState<string | null>(null);
+
+  // Un seul appel par session. Un échec n'est pas fatal : les icônes ne
+  // s'affichent simplement pas, et le reste du coffre fonctionne — une pastille
+  // absente vaut mieux qu'un écran qui refuse de se rendre.
+  useEffect(() => {
+    if (!token) {
+      setJetonIcone(null);
+      return;
+    }
+    let vivant = true;
+    api
+      .iconToken(token)
+      .then((r) => vivant && setJetonIcone(r.token))
+      .catch(() => vivant && setJetonIcone(null));
+    return () => {
+      vivant = false;
+    };
+  }, [token]);
 
   const ouvrir = useCallback((t: string, a: Account) => {
     setToken(t);
@@ -39,9 +63,13 @@ export function useSessionValue(): Session {
     account?.free();
     setAccount(null);
     setToken(null);
+    setJetonIcone(null);
   }, [account]);
 
-  return useMemo(() => ({ token, account, ouvrir, fermer }), [token, account, ouvrir, fermer]);
+  return useMemo(
+    () => ({ token, account, jetonIcone, ouvrir, fermer }),
+    [token, account, jetonIcone, ouvrir, fermer],
+  );
 }
 
 export const SessionContext = Ctx;

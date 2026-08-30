@@ -133,7 +133,7 @@ export function buildApp(db: DB): FastifyInstance {
   registerOrgRoutes(app, db);
   registerOrgVaultRoutes(app, db);
   registerOrgAdminRoutes(app, db);
-  registerIconRoutes(app);
+  registerIconRoutes(app, db);
   registerSendRoutes(app, db);
   registerWebAuthnRoutes(app, db);
   registerPasskeyRoutes(app, db);

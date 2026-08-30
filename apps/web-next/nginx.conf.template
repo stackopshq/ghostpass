@@ -68,6 +68,16 @@ server {
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
 
+    # `security.txt` (RFC 9116). Bloc explicite plutôt que le repli : sans lui,
+    # un fichier absent rendrait `index.html` en 200 avec `text/html`, et un
+    # outil de collecte lirait une page HTML comme une politique de sécurité.
+    # C'est le défaut mesuré le 2026-08-27 sur `/apple-touch-icon.png`, dont le
+    # commentaire est vingt lignes plus haut.
+    location = /.well-known/security.txt {
+        try_files $uri =404;
+        add_header Content-Type "text/plain; charset=utf-8";
+    }
+
     # Les liens de partage. L'identifiant désigne un secret qui n'existe pas au
     # moment de la construction, donc l'export statique ne produit qu'UN fichier
     # pour cette route ; c'est le navigateur qui y lit l'identifiant réel.

@@ -8,11 +8,13 @@
 
 import { useState } from "react";
 import { faviconUrl } from "@/lib/crypto";
+import { useSession } from "@/lib/session";
 import { avatarColor } from "@/lib/vault";
 
 export function Avatar({ nom, url, grand = false }: { nom: string; url?: string; grand?: boolean }) {
   const [cassee, setCassee] = useState(false);
-  const src = url ? faviconUrl(url) : "";
+  const { jetonIcone } = useSession();
+  const src = url ? faviconUrl(url, jetonIcone) : "";
   const taille = grand ? "size-11 text-lg" : "size-8 text-sm";
   return (
     <span

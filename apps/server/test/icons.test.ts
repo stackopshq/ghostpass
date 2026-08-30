@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildApp } from "../src/app.js";
 import { openDatabase } from "../src/db/database.js";
-import { candidateUrls, domainesParents, normalizeDomain } from "../src/services/icons.js";
+import { candidateUrls, domainesParents, normalizeDomain, creerJetonIcone } from "../src/services/icons.js";
 
 // Ces tests verrouillent la validation d'entrée du proxy de favicons (anti-SSRF), sans réseau :
 // toute saisie qui n'est pas un domaine public est rejetée AVANT toute requête sortante.
@@ -36,10 +36,15 @@ test("normalizeDomain rejette les cibles SSRF et saisies invalides", () => {
 
 test("GET /api/icons → 400 sur domaine invalide / cible SSRF (aucun fetch sortant)", async () => {
   const app = buildApp(openDatabase(":memory:"));
+  // Un jeton valide est désormais nécessaire : la route n'est plus publique,
+  // parce que son cache était un oracle inter-locataires. Le contrôle du jeton
+  // passe AVANT celui du domaine, délibérément — un appelant sans jeton ne doit
+  // pas pouvoir distinguer « domaine invalide » de quoi que ce soit d'autre.
+  const jeton = creerJetonIcone("utilisateur-de-test").token;
   for (const bad of ["localhost", "127.0.0.1", "169.254.169.254", "192.168.0.1", ""]) {
     const res = await app.inject({
       method: "GET",
-      url: `/api/icons?domain=${encodeURIComponent(bad)}`,
+      url: `/api/icons?domain=${encodeURIComponent(bad)}&t=${encodeURIComponent(jeton)}`,
     });
     assert.equal(res.statusCode, 400, `devrait être 400 pour: "${bad}"`);
   }
