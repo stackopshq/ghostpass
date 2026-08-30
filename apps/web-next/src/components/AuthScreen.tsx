@@ -10,8 +10,8 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { computeLoginHash, ensureCryptoReady, register, unlock } from "@/lib/crypto";
-import { getAssertion } from "@/lib/webauthn";
+import { computeLoginHash, ensureCryptoReady, register, unlock, unlockWithPasskey } from "@/lib/crypto";
+import { authenticatePasskey, getAssertion } from "@/lib/webauthn";
 import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { Bouton, Champ, Saisie, TeteDePanneau } from "@/components/champs";
@@ -128,6 +128,44 @@ export function AuthScreen() {
     }
   }
 
+  /// Ouvrir le coffre avec une clé d'accès, sans mot de passe maître.
+  ///
+  /// Ce n'est pas un second facteur : c'est un chemin d'entrée complet, et il
+  /// reste zero-knowledge. L'extension **PRF** de WebAuthn fait produire à
+  /// l'authentificateur un secret stable, dérivé d'un sel fixe et de la clé
+  /// elle-même. Ce secret n'existe que dans le navigateur, et c'est lui qui
+  /// enveloppe la clé de l'utilisateur à l'enrôlement. Le serveur ne détient
+  /// donc qu'un blob qu'il ne peut pas ouvrir — exactement comme avec un mot
+  /// de passe maître.
+  ///
+  /// Une YubiKey, Touch ID, Windows Hello ou une clé Apple synchronisée font
+  /// toutes l'affaire : ce qui compte est le support de PRF (`hmac-secret` au
+  /// niveau CTAP2), pas la marque. `authenticatePasskey` refuse explicitement
+  /// un authentificateur qui ne la porte pas, plutôt que de dériver un secret
+  /// vide et d'échouer plus loin sur un déchiffrement incompréhensible.
+  ///
+  /// L'adresse est nécessaire : le serveur doit savoir de quelles clés
+  /// proposer l'assertion. Elle ne prouve rien à elle seule.
+  async function connexionParCleDAcces() {
+    if (!email) {
+      setErreur(t("auth.passkeyNeedsEmail"));
+      return;
+    }
+    setErreur(null);
+    setOccupe(true);
+    try {
+      await ensureCryptoReady();
+      const options = await api.passkeyLoginOptions(email);
+      const { response, prf } = await authenticatePasskey(options);
+      const res = await api.passkeyLogin(email, response);
+      ouvrir(res.token, unlockWithPasskey(prf, res.prfWrappedUserKey, res.encryptedPrivateKey));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOccupe(false);
+    }
+  }
+
   async function versSso() {
     setErreur(null);
     setOccupe(true);
@@ -219,6 +257,14 @@ export function AuthScreen() {
               </form>
 
               <div className="mt-4 flex flex-col gap-2">
+                <Bouton
+                  variante="discret"
+                  onClick={connexionParCleDAcces}
+                  disabled={occupe}
+                  className="w-full"
+                >
+                  {t("auth.passkey")}
+                </Bouton>
                 <Bouton variante="discret" onClick={versSso} disabled={occupe} className="w-full">
                   {t("auth.sso")}
                 </Bouton>
