@@ -17,11 +17,26 @@ async function http<T>(
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers["content-type"] = "application/json";
   if (opts.token) headers["authorization"] = `Bearer ${opts.token}`;
-  // Les en-têtes de l'appelant en DERNIER, mais sans pouvoir écraser
-  // l'autorisation : un appel qui remplacerait le jeton par erreur échouerait
-  // de façon incompréhensible.
+  // Les en-têtes de l'appelant en DERNIER, mais l'autorisation ne se passe pas
+  // par là : elle se passe par `opts.token`.
+  //
+  // Ce garde-fou RETIRAIT silencieusement un `authorization` fourni ici, et ce
+  // silence a coûté cher : quatre appels écrits avec `headers: { authorization }`
+  // sont partis en production sans aucune autorisation. Ils rendaient 401, les
+  // favicons ne s'affichaient plus, et l'export comme la suppression de compte
+  // ne marchaient pas — sans que rien ne le dise, puisque la forme était
+  // plausible et que le retrait était muet.
+  //
+  // Il lève maintenant. Un garde-fou qui corrige en silence transforme une
+  // faute de frappe en défaut de production ; un garde-fou qui refuse la
+  // transforme en erreur au premier appel.
   for (const [k, v] of Object.entries(opts.headers ?? {})) {
-    if (k.toLowerCase() !== "authorization") headers[k] = v;
+    if (k.toLowerCase() === "authorization")
+      throw new Error(
+        "http() : passer le jeton par `token`, pas par un en-tête `authorization` — " +
+          "il serait ignoré et la requête partirait non authentifiée",
+      );
+    headers[k] = v;
   }
 
   const res = await fetch(path, {
@@ -50,32 +65,28 @@ export const api = {
   /// être publique : son cache est désormais cloisonné par utilisateur, et
   /// c'est ce cloisonnement qui ferme l'oracle de cache.
   iconToken(token: string) {
-    return http<{ token: string; expiresAt: number }>("/api/icons/token", {
-      headers: { authorization: `Bearer ${token}` },
-    });
+    return http<{ token: string; expiresAt: number }>("/api/icons/token", { token });
   },
   /// Ce que le client doit savoir du compte ouvert : l'adresse et les
   /// paramètres KDF lui servent à recalculer la preuve d'authentification.
   accountInfo(token: string) {
     return http<{ email: string; kdfParams: string; mfaEnabled: boolean; createdAt: number }>(
       "/api/account",
-      { headers: { authorization: `Bearer ${token}` } },
+      { token },
     );
   },
   /// Tout ce que le serveur détient sur vous, chiffré tel qu'il le détient.
   /// Nous ne pouvons pas déchiffrer, donc nous n'exportons pas en clair : c'est
   /// la contrepartie exacte du zero-knowledge, pas une limite de l'export.
   accountExport(token: string) {
-    return http<Record<string, unknown>>("/api/account/export", {
-      headers: { authorization: `Bearer ${token}` },
-    });
+    return http<Record<string, unknown>>("/api/account/export", { token });
   },
   /// Effacement définitif. Le mot de passe est redemandé : une session ouverte
   /// prouve qu'on est devant l'écran, pas qu'on est la titulaire du compte.
   accountDelete(token: string, serverPassword: string, totpCode?: string) {
     return http<void>("/api/account", {
       method: "DELETE",
-      headers: { authorization: `Bearer ${token}` },
+      token,
       body: { serverPassword, ...(totpCode ? { totpCode } : {}) },
     });
   },
