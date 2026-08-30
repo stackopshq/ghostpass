@@ -39,7 +39,14 @@ export function serialiserLaRequete(req: { method: string; url: string }): {
   method: string;
   url: string;
 } {
-  return { method: req.method, url: req.url.split("?")[0] };
+  // `split("?")[0]` serait plus court, mais `noUncheckedIndexedAccess` le type
+  // `string | undefined` — vrai pour le vérificateur, jamais pour l'exécution.
+  // Plutôt qu'un `??` qui masque la question, on coupe à l'indice.
+  const separateur = req.url.indexOf("?");
+  return {
+    method: req.method,
+    url: separateur === -1 ? req.url : req.url.slice(0, separateur),
+  };
 }
 
 export function buildApp(db: DB): FastifyInstance {
