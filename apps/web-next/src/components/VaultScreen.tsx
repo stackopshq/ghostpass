@@ -438,7 +438,7 @@ export function VaultScreen() {
           {section === "coffre" && (
             <>
               <Bouton
-                className="mb-3 w-full"
+                className="mb-4 w-full"
                 onClick={() => {
                   // Le dossier ouvert pré-remplit le champ : on ajoute presque
                   // toujours là où l'on est en train de regarder.
@@ -457,12 +457,20 @@ export function VaultScreen() {
                 onChange={(e) => setRecherche(e.target.value)}
                 placeholder={t("app.searchVault")}
                 aria-label={t("app.searchVault")}
-                className="mb-4 w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+                className="mb-6 w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
               />
             </>
           )}
 
-          <div className="mb-4 flex flex-col gap-0.5">
+          {/* Les espacements du rail sont ceux de ghostcal, mesurés dans
+              `dashboard/layout.tsx` : 16 px sous le bouton principal, 24 px
+              avant la navigation, 4 px entre ses éléments. GhostPass en avait
+              12, 16 et 2 — chaque écart est petit, leur somme donne un rail
+              serré là où l'autre respire.
+
+              `gap-1` plutôt que `gap-0.5` : à 2 px, deux lignes de navigation
+              se touchent presque et la liste se lit comme un bloc. */}
+          <div className="mb-6 flex flex-col gap-1">
             {([
               ["coffre", "app.myVault", Coffre],
               ["orgs", "app.orgs", Organisation],
