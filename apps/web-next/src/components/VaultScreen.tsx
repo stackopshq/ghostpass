@@ -415,13 +415,23 @@ export function VaultScreen() {
               `rgb(11,15,25)` — la couleur du FOND. Noir sur noir, invisible, et
               la capture d'écran ne montrait qu'une icône. Une couleur qui porte
               du sens se déclare, elle ne s'hérite pas. */}
-          <span className="mb-5 flex items-center gap-2.5 px-2 pt-1 text-base font-semibold text-foreground">
+          {/* Aligné au pixel près sur ghostcal, `dashboard/layout.tsx:107-116` :
+              `text-lg tracking-tight`, logo de 28 px, `gap-2`, `mb-6`.
+              GhostPass en avait TROIS de moins — 16 px, interlettrage normal,
+              logo de 24 px — et c'est leur cumul qui se voyait : plus petit ET
+              plus espacé d'un côté, plus grand ET plus resserré de l'autre.
+              Aucun des trois n'aurait sauté aux yeux seul.
+
+              Ces valeurs devront cesser d'être recopiées : le mot-marque est
+              exactement ce qu'un gabarit partagé doit porter (ghostsuite #176),
+              sans quoi la question se reposera au produit suivant. */}
+          <span className="mb-6 flex items-center gap-2 px-2 pt-1 text-lg font-semibold tracking-tight text-foreground">
             {/* Le logo de la charte, servi tel quel — même traitement que
                 ghostcal. C'est une IMAGE et non un SVG recopié dans le
                 balisage : le fichier est une sortie de `tools/brand/`, et le
                 dupliquer ici rouvrirait la dérive de teintes qu'on a refermée. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="" width={24} height={24} />
+            <img src="/logo.svg" alt="" width={28} height={28} className="h-7 w-7" />
             GhostPass
           </span>
 
