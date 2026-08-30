@@ -28,7 +28,7 @@ export function Partages({
   const { copie, copier } = useCopie();
 
   return (
-    <div className="min-h-0 overflow-y-auto px-6 py-5">
+    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
       <div className="mx-auto max-w-3xl">
         <h2 className="text-lg font-semibold text-foreground">{t("app.shares")}</h2>
         <p className="mb-5 text-xs text-muted">{t("app.sharesSub")}</p>

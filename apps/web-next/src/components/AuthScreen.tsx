@@ -14,7 +14,7 @@ import { computeLoginHash, ensureCryptoReady, register, unlock } from "@/lib/cry
 import { getAssertion } from "@/lib/webauthn";
 import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
-import { Bouton, Champ, Panneau, Saisie, TeteDePanneau } from "@/components/champs";
+import { Bouton, Champ, Saisie, TeteDePanneau } from "@/components/champs";
 import { Cadenas } from "@/components/Icones";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
@@ -140,17 +140,24 @@ export function AuthScreen() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-8">
+    <main className="grid min-h-dvh place-items-center px-4 py-10">
       <div className="w-full max-w-[420px]">
-        <div className="mb-4 flex items-center justify-between">
-          <span className="flex items-center gap-2 text-xl font-semibold text-foreground">
-            <Cadenas className="size-5 text-accent" />
-            GhostPass
-          </span>
-          <LanguageSwitcher />
+        {/* La marque, centrée et à sa taille de page d'accueil — `--text-2xl`,
+            une marche de la charte, et non une valeur choisie ici. Le logo est
+            le fichier de `tools/brand/`, servi tel quel : une icône de cadenas
+            générique tenait sa place, si bien que l'écran par lequel tout le
+            monde entre était le seul à ne pas porter l'identité du produit. */}
+        <div className="mb-7 flex flex-col items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="" width={44} height={44} className="size-11" />
+          <span className="text-2xl font-semibold tracking-tight text-foreground">GhostPass</span>
         </div>
 
-        <Panneau>
+        {/* `verre` et non une surface pleine : l'aurore posée sur le corps ne se
+            voit qu'à travers une matière translucide. Un aplat uni par-dessus
+            l'éteint — c'est ce que faisait `Panneau`, et l'écran perdait la
+            profondeur que le reste de l'application a. */}
+        <section className="verre rounded-lg border border-border p-6">
           {sso ? (
             // L'identité est prouvée par le fournisseur ; le coffre attend
             // encore le mot de passe maître, que lui seul peut ouvrir.
@@ -231,7 +238,19 @@ export function AuthScreen() {
               {erreur}
             </p>
           )}
-        </Panneau>
+        </section>
+
+        {/* Le sélecteur de langue passe SOUS la carte : au-dessus, il partageait
+            la ligne de la marque et lui disputait le regard. Et la mention
+            `zero-knowledge`, la même qu'au pied du coffre — c'est la promesse du
+            produit, elle a sa place là où l'on décide d'y entrer. */}
+        <div className="mt-6 flex items-center justify-center gap-4 text-muted">
+          <span className="flex items-center gap-1.5 text-xs">
+            <Cadenas className="size-3.5" />
+            {t("app.pt1b")}
+          </span>
+          <LanguageSwitcher />
+        </div>
       </div>
     </main>
   );

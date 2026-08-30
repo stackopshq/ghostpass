@@ -11,6 +11,18 @@ import type { DecryptedItem } from "@/lib/crypto";
 export interface VaultEntry extends DecryptedItem {
   id: string;
   updatedAt: number;
+  /// Présent uniquement sur les éléments qui viennent d'une collection
+  /// d'équipe. Son absence signifie « personnel », et c'est ce que teste tout
+  /// ce qui ne doit toucher que le coffre de la personne — l'export CSV en
+  /// premier, qui déposerait sinon les secrets de toute l'organisation en clair
+  /// sur l'appareil d'un seul de ses membres.
+  shared?: {
+    orgId: string;
+    orgName: string;
+    collectionId: string;
+    collectionName: string;
+    permission: string;
+  };
 }
 
 export interface TreeNode {
