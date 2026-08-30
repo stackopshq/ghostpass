@@ -168,6 +168,12 @@ const en: Dict = {
   "app.revoke": "Revoke",
   "app.shareCreated": "Link created — it is in « Shares in progress » if you need to revoke it.",
   "app.sharedOn": "shared {date}",
+  "app.confirmShareHost":
+    "This link points at {host}, which is not this server. The decryption key will be placed in the link and read by that site. Continue only if you recognise it.",
+  "app.shareCancelled": "Share cancelled and revoked.",
+  "app.shareRefused.url-illisible": "The server returned an unreadable address. The share was revoked.",
+  "app.shareRefused.schema-non-chiffre":
+    "The server returned an unencrypted address. The share was revoked.",
   "app.expiresOn": "expires {date}",
   "app.noExpiry": "no expiry",
   "app.noName": "(no name)",
@@ -473,6 +479,12 @@ const fr: Dict = {
   "app.revoke": "Révoquer",
   "app.shareCreated": "Lien créé — il est dans « Partages en cours » si vous devez le révoquer.",
   "app.sharedOn": "partagé le {date}",
+  "app.confirmShareHost":
+    "Ce lien pointe vers {host}, qui n'est pas ce serveur. La clé de déchiffrement sera placée dans le lien et lue par ce site. Ne continuez que si vous le reconnaissez.",
+  "app.shareCancelled": "Partage annulé et révoqué.",
+  "app.shareRefused.url-illisible": "Le serveur a rendu une adresse illisible. Le partage a été révoqué.",
+  "app.shareRefused.schema-non-chiffre":
+    "Le serveur a rendu une adresse non chiffrée. Le partage a été révoqué.",
   "app.expiresOn": "expire le {date}",
   "app.noExpiry": "sans échéance",
   "app.noName": "(sans nom)",

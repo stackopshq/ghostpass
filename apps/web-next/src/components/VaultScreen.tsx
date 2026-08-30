@@ -19,6 +19,7 @@ import {
   type PartageEnCours,
 } from "@/lib/crypto";
 import { useI18n } from "@/lib/i18n";
+import { approuverLHote, examinerLienDePartage, hotesApprouves } from "@/lib/lienDePartage";
 import { useSession } from "@/lib/session";
 import {
   buildTree,
@@ -277,7 +278,41 @@ export function VaultScreen() {
       // L'URL vient du serveur, le fragment est ajouté ici : la clé ne doit
       // jamais traverser le réseau, donc le serveur ne peut pas composer le
       // lien complet lui-même.
-      const lien = `${cree.url}#${scelle.keyFragment}`;
+      //
+      // Mais elle ne s'y ajoute pas les yeux fermés. Le fragment ne part pas
+      // sur le réseau — et la PAGE servie par ce domaine, elle, lit
+      // `location.hash`. Un serveur compromis qui rendrait l'adresse d'un
+      // relais hostile obtiendrait donc la clé, alors qu'il détient déjà le
+      // chiffré. Voir `lib/lienDePartage.ts` pour le raisonnement complet.
+      const verdict = examinerLienDePartage(
+        cree.url,
+        scelle.keyFragment,
+        location.origin,
+        hotesApprouves(),
+      );
+
+      if (verdict.statut === "refuse") {
+        // Le partage existe déjà côté serveur : le révoquer est ce qui évite de
+        // laisser derrière soi un secret déposé que plus personne ne peut
+        // effacer.
+        await api.revokeSend(token, cree.id, cree.deleteToken).catch(() => undefined);
+        setErreur(t(`app.shareRefused.${verdict.raison}`));
+        return;
+      }
+
+      if (verdict.statut === "demander") {
+        // `confirm` natif, et non une fenêtre de l'application : une décision de
+        // sécurité rendue dans le cadre du navigateur ne peut pas être imitée
+        // par du code de la page.
+        if (!confirm(t("app.confirmShareHost", { host: verdict.hote }))) {
+          await api.revokeSend(token, cree.id, cree.deleteToken).catch(() => undefined);
+          setErreur(t("app.shareCancelled"));
+          return;
+        }
+        approuverLHote(verdict.hote);
+      }
+
+      const lien = verdict.lien;
       const suivant = [
         {
           id: cree.id,
