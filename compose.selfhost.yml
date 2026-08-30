@@ -1,0 +1,65 @@
+# GhostPass, auto-hébergé, à partir des images publiées.
+#
+# `docker-compose.yml` est une pile de DÉVELOPPEMENT : elle monte les sources,
+# lance `npm ci` à chaque démarrage et ne sert pas l'application web. Elle ne
+# convient pas à qui veut simplement faire tourner GhostPass — d'où ce fichier.
+#
+#   cp .env.example .env    # et remplir les deux secrets
+#   podman compose -f compose.selfhost.yml up -d
+#
+# Puis http://localhost:8080. Le premier compte créé est le vôtre.
+#
+# Pour une exposition publique, mettez un terminateur TLS devant `web` et
+# renseignez WEBAUTHN_RP_ID / WEBAUTHN_ORIGIN : WebAuthn exige un contexte
+# sécurisé et un NOM DE DOMAINE — une adresse IP ne marche pas, et l'échec se
+# produit à l'enrôlement de la clé, pas au démarrage.
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: ghostpass
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant — voir .env.example}
+      POSTGRES_DB: ghostpass
+    volumes:
+      - pgdata:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ghostpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    # Épinglez une empreinte plutôt qu'une balise mouvante. Nous le faisons sur
+    # notre propre déploiement, et `:main` a déjà menti une fois ici.
+    image: ghcr.io/stackopshq/ghostpass:${GHOSTPASS_TAG:-main}
+    container_name: ghostpass-app
+    environment:
+      DATABASE_URL: postgres://ghostpass:${POSTGRES_PASSWORD}@postgres:5432/ghostpass
+      PORT: "3000"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-http://localhost:8080}
+      # Le proxy de favicons émet une requête vers le site enregistré, et
+      # apprend donc son domaine. `false` le désactive : c'est la seule façon de
+      # supprimer cette requête, qui est inhérente au principe.
+      ICONS_ENABLED: ${ICONS_ENABLED:-true}
+      ICON_TOKEN_SECRET: ${ICON_TOKEN_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/stackopshq/ghostpass:${GHOSTPASS_TAG:-main}-web
+    environment:
+      GHOSTPASS_API: http://ghostpass-app:3000
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:8080:8080"
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  pgdata:
