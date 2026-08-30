@@ -3,6 +3,21 @@ import SwiftUI
 @main
 struct GhostpassApp: App {
     init() {
+        // Aucune réponse réseau ne touche le disque.
+        //
+        // Le cache d'URL écrit les requêtes et leurs réponses dans un fichier système que
+        // l'application ne protège pas et ne contrôle pas. Les seules qui y passaient
+        // étaient celles du proxy d'icônes — `?domain=github.com` — et cela suffisait :
+        // le coffre restait chiffré, mais **la liste des sites qu'il contient** cessait de
+        // l'être, ce que le chiffrement de bout en bout visait précisément à cacher.
+        //
+        // Purger à la déconnexion ne traitait qu'un moment. Un cache sans disque ferme la
+        // classe entière, y compris pour la requête qu'on ajoutera un jour sans y penser :
+        // la donnée sensible n'est ni dans le corps ni chiffrable, elle est dans le chemin,
+        // et le chemin est ce que toute couche journalise par défaut. La mémoire suffit —
+        // les icônes se rechargent, et elles ne coûtent rien.
+        URLCache.shared = URLCache(memoryCapacity: 16 * 1024 * 1024, diskCapacity: 0)
+
         // Les barres de navigation gardent leurs teintes système, qui jurent avec la nuit
         // de la suite : on les aligne une fois pour toutes plutôt qu'écran par écran.
         let barre = UINavigationBarAppearance()
