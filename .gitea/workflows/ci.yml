@@ -170,8 +170,19 @@ jobs:
               "https://git.stackops.ch/api/v1/repos/stackops/ghostsuite" || echo "000")
           case "$code" in
             200) echo "Le cœur commun est accessible." ;;
-            401|403|404)
-              echo "::error::Accès refusé à stackops/ghostsuite (HTTP $code). Le dépôt existe ; la forge masque son existence à un jeton sans droit de lecture. Vérifiez la portée de secrets.GITEA_TOKEN dans les paramètres du dépôt ou de l'organisation."
+            # Trois refus, trois gestes différents. Les confondre a un coût mesuré : le
+            # premier diagnostic de cette panne disait « vérifiez la portée du jeton »
+            # là où le jeton était valide, ce qui aurait envoyé chercher ailleurs après
+            # l'avoir renouvelé pour rien. Les codes ont été relevés un par un sur cette
+            # même URL, pas déduits.
+            401)
+              echo "::error::Le jeton présenté est refusé par la forge (HTTP 401) : invalide, révoqué ou expiré. Renouvelez secrets.GITEA_TOKEN."
+              exit 1 ;;
+            403)
+              echo "::error::Aucune identité n'a été présentée à la forge (HTTP 403). secrets.GITEA_TOKEN est vide ou n'est pas transmis à ce travail."
+              exit 1 ;;
+            404)
+              echo "::error::Le jeton est valide mais n'a pas accès à stackops/ghostsuite (HTTP 404 — la forge masque l'existence d'un dépôt privé plutôt que d'avouer le refus). Le renouveler ne changerait rien : il faut donner au compte propriétaire du jeton un accès en lecture au dépôt, ou utiliser un jeton d'un compte qui l'a déjà."
               exit 1 ;;
             *) echo "::warning::N'a pas pu vérifier l'accès au cœur commun (HTTP $code) — réseau, ou curl absent. L'étape suivante tranchera." ;;
           esac
