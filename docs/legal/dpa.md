@@ -119,8 +119,8 @@ Client peut s'y opposer ; à défaut d'accord, il peut résilier sans pénalité
 
 | Sous-traitant | Rôle pour GhostPass | Pays | Accès aux données |
 |---|---|---|---|
-| **Cloudflare, Inc.** | Tunnel du nom public — rien d'autre | 🇺🇸 | Voit le trafic ; **sert le code qui chiffre** (voir plus bas) |
-| **Google LLC (Drive)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | 🇺🇸 | Aucun accès en clair. **Remplacement annoncé, voir plus bas** |
+| **Cloudflare, Inc.** | Tunnel du nom public — rien d'autre | États-Unis | Voit le trafic ; **sert le code qui chiffre** (voir plus bas) |
+| **Infomaniak Network SA (Swiss Backup)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | Suisse | Aucun accès en clair |
 
 **Deux lignes ont été retirées de ce tableau, et il faut dire pourquoi**, sans
 quoi une version antérieure de ce document contredirait celle-ci.
@@ -134,25 +134,33 @@ choisit** — et dans ce dernier cas ce fournisseur est un sous-traitant *du
 Client*, pas de StackOps : nous n'avons ni contrat avec lui, ni moyen d'agir sur
 lui, et le déclarer comme le nôtre laisserait croire le contraire.
 
-*Deux prestataires du parc ne sont pas sur le chemin de ce produit.*
-**Infomaniak** — le nom public de GhostPass passe par un tunnel Cloudflare, pas
-par le frontal Pangolin — et **Hetzner**, qui reçoit d'autres dépôts de
-sauvegarde mais pas celui qui contient cette base.
+*Un prestataire du parc n'est pas sur le chemin de ce produit.* **Hetzner**
+reçoit d'autres dépôts de sauvegarde, mais pas celui qui contient cette base.
+
+*Et Infomaniak n'y est qu'à un titre.* Il héberge le frontal Pangolin du reste du
+parc, dont **GhostPass ne dépend pas** — son nom public passe par un tunnel
+Cloudflare. Il figure au tableau ci-dessus uniquement comme dépôt de
+sauvegardes.
 
 Un sous-traitant déclaré en trop n'est pas un excès de prudence : il autorise un
 transfert qui n'a pas lieu, et rend la liste entière suspecte le jour où le
 Client la vérifie.
 
-### Changement annoncé : les sauvegardes quittent Google Drive
+### Les sauvegardes ont quitté Google Drive
 
-Elles partiront vers **Swiss Backup** (Infomaniak, 🇨🇭). C'est exactement le cas
-que régit le préavis de trente jours ci-dessus, et il vaut d'être signalé pour ce
-qu'il **retire** : un transfert vers les États-Unis.
+Elles vont désormais chez **Swiss Backup** (Infomaniak), en Suisse. Le tableau
+ci-dessus décrit l'état après cette bascule, faite le 2026-08-30.
 
-Les instantanés sont chiffrés par restic avant de quitter la machine dans les
-deux cas — ce qui change est la juridiction du dépôt, pas la confidentialité du
-contenu. Le tableau sera mis à jour **le jour de la bascule et pas avant** : un
-contrat décrit ce qui est, pas ce qui est prévu.
+Ce qu'elle **retire** : un transfert vers les États-Unis. Les instantanés étaient
+déjà chiffrés par restic avant de quitter la machine dans les deux cas — ce qui
+change n'est pas la confidentialité du contenu, c'est la juridiction du dépôt et
+donc le régime d'accès dont il relève.
+
+*Note de rédaction : cette version du document est écrite le jour même de la
+bascule. Si la relecture juridique intervient avant qu'elle soit effective, la
+ligne « Swiss Backup » du tableau est en avance sur le réel — c'est le seul
+endroit de cet accord où ce risque existe, et il se lève par une vérification de
+la configuration de `core-db`.*
 
 ### Ce que Cloudflare peut, et que le Client doit savoir
 
@@ -170,9 +178,12 @@ préoccupe.
 
 ### Transferts hors de Suisse et de l'Union européenne
 
-Ils s'appuient sur les clauses contractuelles types et, pour les sauvegardes, sur
-le fait qu'elles sont chiffrées avant tout envoi. Après la bascule vers Swiss
-Backup, **le seul transfert restant sera celui du tunnel Cloudflare**.
+Depuis la bascule des sauvegardes vers la Suisse, **le tunnel Cloudflare est le
+seul transfert hors de Suisse et de l'Union européenne** qui subsiste pour
+GhostPass. Il s'appuie sur les clauses contractuelles types.
+
+Le Client qui souhaite le supprimer entièrement le peut : il auto-héberge, et
+plus aucune donnée ne quitte son périmètre.
 
 ## 7. Assistance au Client (art. 28.3.e et 28.3.f)
 
