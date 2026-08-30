@@ -117,13 +117,18 @@ Le Client autorise le recours aux sous-traitants ci-dessous. StackOps informe le
 Client de tout ajout ou remplacement **au moins trente jours avant**, et le
 Client peut s'y opposer ; à défaut d'accord, il peut résilier sans pénalité.
 
-| Sous-traitant | Rôle | Pays | Accès aux données |
+La liste ci-dessous est celle de **GhostPass**, tracée dans sa configuration de
+déploiement — pas celle de l'infrastructure StackOps en général. Deux
+prestataires du parc n'y figurent pas parce qu'ils ne sont pas sur le chemin de
+ce produit : **Infomaniak**, dont GhostPass ne dépend pas — son nom public passe
+par un tunnel Cloudflare et non par le frontal Pangolin — et **Hetzner**, qui
+reçoit d'autres dépôts de sauvegarde mais pas celui qui contient cette base.
+
+| Sous-traitant | Rôle pour GhostPass | Pays | Accès aux données |
 |---|---|---|---|
-| **Cloudflare, Inc.** | Termine le TLS du nom public, sert l'application | 🇺🇸 | Voit le trafic ; **sert le code qui chiffre** — voir ci-dessous |
-| **Infomaniak Network SA** | Frontal d'exposition | 🇨🇭 | Trafic chiffré |
-| **Google LLC (Drive)** | Dépôt des sauvegardes, chiffrées avant envoi | 🇺🇸 | Aucun accès en clair |
-| **Google Workspace** | Fournisseur d'identité de l'instance opérée par StackOps | 🇺🇸 | Adresse de courriel, journal de connexion |
-| **Hetzner Online GmbH** | Dépôt secondaire des sauvegardes | 🇩🇪 | Aucun accès en clair |
+| **Cloudflare, Inc.** | Tunnel du nom public **et** courtier d'identité (Access) | 🇺🇸 | Voit le trafic ; **sert le code qui chiffre** ; voit l'adresse de courriel à la connexion |
+| **Google Workspace** | Fournisseur d'identité derrière Cloudflare Access, sur l'instance opérée par StackOps | 🇺🇸 | Adresse de courriel, journal de connexion |
+| **Google LLC (Drive)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | 🇺🇸 | Aucun accès en clair |
 
 **Ce que Cloudflare peut, et que le Client doit savoir.** Le frontal termine le
 TLS, donc il sert le JavaScript et le module WebAssembly qui chiffrent. Un
@@ -172,11 +177,20 @@ Le Client reste responsable de sa propre notification à l'autorité.
 Au choix du Client, exprimé avant le terme : restitution des données au format
 d'export du §7, ou effacement.
 
-À défaut d'instruction, les données sont effacées **90 jours** après le terme.
-Les sauvegardes chiffrées existantes sont purgées selon leur propre rotation, au
-plus tard **180 jours** après le terme — un effacement immédiat des sauvegardes
-n'est pas techniquement possible sans détruire celles des autres clients, et le
-dire vaut mieux que promettre l'inverse.
+À défaut d'instruction, les données de production sont effacées **90 jours**
+après le terme.
+
+**Les sauvegardes suivent leur propre rotation, et elle est plus longue que ça.**
+Mesurée sur la machine le 2026-08-30 : `restic forget` conserve **14
+quotidiennes, 8 hebdomadaires et 12 mensuelles**. Une donnée peut donc subsister
+dans une sauvegarde chiffrée **jusqu'à environ douze mois** après son
+effacement en production, et non six.
+
+Un effacement immédiat des sauvegardes n'est pas techniquement possible sans
+détruire celles des autres clients — mais le délai réel est celui-là, et
+l'annoncer plus court aurait été un engagement intenable. Les instantanés sont
+chiffrés par restic avant de quitter la machine : le prestataire de stockage n'y
+a aucun accès en clair pendant ces douze mois.
 
 ## 9. Audit (art. 28.3.h)
 
