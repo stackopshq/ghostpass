@@ -11,7 +11,8 @@
 
 ## 1. Qui édite ce service
 
-GhostPass est édité par **StackOps Sàrl**, en Suisse. Contact :
+GhostPass est édité par **StackOps**, entreprise individuelle de Kevin Allioli,
+en Suisse. Contact :
 support@stackops.ch. Pour toute question de protection des données :
 privacy@stackops.ch. Pour signaler une faille : security@stackops.ch (voir
 `/.well-known/security.txt`).
@@ -104,6 +105,13 @@ Notre responsabilité ne peut être engagée pour la perte d'un mot de passe ma�
 
 Nous n'excluons pas notre responsabilité en cas de faute grave ou intentionnelle.
 
+**Aucun plafond de responsabilité n'est fixé ici**, et c'est une lacune, pas une
+générosité. StackOps est une entreprise individuelle : sans plafond, l'exploitant
+répond sur son patrimoine propre, sans limite de montant. Une clause de
+plafonnement — usuellement adossée au montant payé sur douze mois — appartient à
+cette section, et son absence est le point que la relecture juridique doit
+trancher en premier.
+
 ## 11. Modification
 
 Toute modification substantielle est annoncée **trente jours avant** son entrée
@@ -112,6 +120,8 @@ pendant ce délai.
 
 ## 12. Droit applicable
 
-Droit suisse. For juridique : Genève, sous réserve des dispositions impératives
+Droit suisse. For juridique : le siège de l'exploitant — **à compléter**, il ne
+s'invente pas et une clause de for erronée est pire qu'absente. Sous réserve des
+dispositions impératives
 protégeant les consommateurs et, pour les résidents de l'Union européenne, des
 règles de compétence qui leur sont propres.

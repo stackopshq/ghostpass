@@ -46,6 +46,10 @@ services:
       # supprimer cette requête, qui est inhérente au principe.
       ICONS_ENABLED: ${ICONS_ENABLED:-true}
       ICON_TOKEN_SECRET: ${ICON_TOKEN_SECRET:-}
+      # Sans elle, le secret du second facteur est en clair en base. Le serveur
+      # démarre quand même — casser une instance qui monte de version serait
+      # pire — mais il l'écrit à chaque démarrage.
+      MFA_SECRET_KEY: ${MFA_SECRET_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

@@ -16,7 +16,7 @@ art. 9 de la loi fédérale suisse sur la protection des données (nLPD).*
 | | |
 |---|---|
 | **Responsable du traitement** | Le Client, personne morale souscrivant à GhostPass |
-| **Sous-traitant** | StackOps Sàrl (« StackOps »), éditeur de GhostPass |
+| **Sous-traitant** | **StackOps, entreprise individuelle de Kevin Allioli** (« StackOps »), éditeur de GhostPass |
 
 **Deux régimes coexistent dans le produit, et les confondre serait une faute :**
 
@@ -27,6 +27,18 @@ art. 9 de la loi fédérale suisse sur la protection des données (nLPD).*
 
 Le présent accord régit le second cas. Le premier relève des conditions
 générales d'utilisation.
+
+**StackOps est une entreprise individuelle, pas une société de capitaux**, et un
+Client a le droit de le savoir avant de confier ses données : l'exploitant
+répond des engagements de cet accord sur son patrimoine propre, sans écran de
+responsabilité. C'est une garantie inhabituellement forte pour le Client — et
+une exposition inhabituellement forte pour l'exploitant, dont l'art. 61 nLPD
+fait par ailleurs une amende **personnelle** pouvant atteindre 250 000 francs.
+
+Cette ligne appelle deux vérifications qui ne sont pas techniques : que la forme
+reste adaptée au volume de données confiées, et qu'une assurance en
+responsabilité professionnelle couvre le risque. Ni l'une ni l'autre n'est
+tranchée à ce jour.
 
 ## 2. Ce qui est traité
 
@@ -105,19 +117,58 @@ Le Client autorise le recours aux sous-traitants ci-dessous. StackOps informe le
 Client de tout ajout ou remplacement **au moins trente jours avant**, et le
 Client peut s'y opposer ; à défaut d'accord, il peut résilier sans pénalité.
 
-| Sous-traitant | Rôle | Pays | Accès aux données |
+| Sous-traitant | Rôle pour GhostPass | Pays | Accès aux données |
 |---|---|---|---|
-| **Cloudflare, Inc.** | Termine le TLS du nom public, sert l'application | 🇺🇸 | Voit le trafic ; **sert le code qui chiffre** — voir ci-dessous |
-| **Infomaniak Network SA** | Frontal d'exposition | 🇨🇭 | Trafic chiffré |
-| **Google LLC (Drive)** | Dépôt des sauvegardes, chiffrées avant envoi | 🇺🇸 | Aucun accès en clair |
-| **Hetzner Online GmbH** | Dépôt secondaire des sauvegardes | 🇩🇪 | Aucun accès en clair |
+| **Cloudflare, Inc.** | Tunnel du nom public — rien d'autre | États-Unis | Voit le trafic ; **sert le code qui chiffre** (voir plus bas) |
+| **Infomaniak Network SA (Swiss Backup)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | Suisse | Aucun accès en clair |
 
-**Ce que Cloudflare peut, et que le Client doit savoir.** Le frontal termine le
-TLS, donc il sert le JavaScript et le module WebAssembly qui chiffrent. Un
-intermédiaire capable de modifier ce code peut défaire le chiffrement, sans
-jamais toucher à la base. **Ce n'est pas propre à GhostPass** : c'est la limite
-de tout chiffrement livré par le Web, chez tous les produits à interface
-navigateur.
+**Deux lignes ont été retirées de ce tableau, et il faut dire pourquoi**, sans
+quoi une version antérieure de ce document contredirait celle-ci.
+
+*L'identité n'est pas dans le périmètre du Client.* StackOps utilise Cloudflare
+Access et un annuaire Google Workspace **pour ses propres accès à sa propre
+infrastructure**. Ce sont ses outils internes d'exploitant, pas un traitement des
+données du Client. Les utilisateurs du Client s'authentifient par **mot de passe
+maître**, par **clé d'accès**, ou par le fournisseur OIDC que **le Client
+choisit** — et dans ce dernier cas ce fournisseur est un sous-traitant *du
+Client*, pas de StackOps : nous n'avons ni contrat avec lui, ni moyen d'agir sur
+lui, et le déclarer comme le nôtre laisserait croire le contraire.
+
+*Un prestataire du parc n'est pas sur le chemin de ce produit.* **Hetzner**
+reçoit d'autres dépôts de sauvegarde, mais pas celui qui contient cette base.
+
+*Et Infomaniak n'y est qu'à un titre.* Il héberge le frontal Pangolin du reste du
+parc, dont **GhostPass ne dépend pas** — son nom public passe par un tunnel
+Cloudflare. Il figure au tableau ci-dessus uniquement comme dépôt de
+sauvegardes.
+
+Un sous-traitant déclaré en trop n'est pas un excès de prudence : il autorise un
+transfert qui n'a pas lieu, et rend la liste entière suspecte le jour où le
+Client la vérifie.
+
+### Les sauvegardes ont quitté Google Drive
+
+Elles vont désormais chez **Swiss Backup** (Infomaniak), en Suisse. Le tableau
+ci-dessus décrit l'état après cette bascule, faite le 2026-08-30.
+
+Ce qu'elle **retire** : un transfert vers les États-Unis. Les instantanés étaient
+déjà chiffrés par restic avant de quitter la machine dans les deux cas — ce qui
+change n'est pas la confidentialité du contenu, c'est la juridiction du dépôt et
+donc le régime d'accès dont il relève.
+
+*Note de rédaction : cette version du document est écrite le jour même de la
+bascule. Si la relecture juridique intervient avant qu'elle soit effective, la
+ligne « Swiss Backup » du tableau est en avance sur le réel — c'est le seul
+endroit de cet accord où ce risque existe, et il se lève par une vérification de
+la configuration de `core-db`.*
+
+### Ce que Cloudflare peut, et que le Client doit savoir
+
+Le tunnel termine le TLS, donc il sert le JavaScript et le module WebAssembly qui
+chiffrent. Un intermédiaire capable de modifier ce code peut défaire le
+chiffrement, sans jamais toucher à la base. **Ce n'est pas propre à GhostPass** :
+c'est la limite de tout chiffrement livré par le Web, chez tous les produits à
+interface navigateur.
 
 **L'atténuation est réelle et livrée : GhostPass s'auto-héberge.** Le Client qui
 refuse cet intermédiaire le retire, en servant le produit depuis sa propre
@@ -125,9 +176,14 @@ infrastructure. La confiance ne disparaît pas — elle passe de Cloudflare au
 Client, ce qui est exactement ce que doit vouloir un Client que la question
 préoccupe.
 
-Les transferts hors de Suisse et de l'Union européenne s'appuient sur les
-clauses contractuelles types et, pour les sauvegardes, sur le fait qu'elles sont
-chiffrées avant tout envoi.
+### Transferts hors de Suisse et de l'Union européenne
+
+Depuis la bascule des sauvegardes vers la Suisse, **le tunnel Cloudflare est le
+seul transfert hors de Suisse et de l'Union européenne** qui subsiste pour
+GhostPass. Il s'appuie sur les clauses contractuelles types.
+
+Le Client qui souhaite le supprimer entièrement le peut : il auto-héberge, et
+plus aucune donnée ne quitte son périmètre.
 
 ## 7. Assistance au Client (art. 28.3.e et 28.3.f)
 
@@ -151,11 +207,20 @@ Le Client reste responsable de sa propre notification à l'autorité.
 Au choix du Client, exprimé avant le terme : restitution des données au format
 d'export du §7, ou effacement.
 
-À défaut d'instruction, les données sont effacées **90 jours** après le terme.
-Les sauvegardes chiffrées existantes sont purgées selon leur propre rotation, au
-plus tard **180 jours** après le terme — un effacement immédiat des sauvegardes
-n'est pas techniquement possible sans détruire celles des autres clients, et le
-dire vaut mieux que promettre l'inverse.
+À défaut d'instruction, les données de production sont effacées **90 jours**
+après le terme.
+
+**Les sauvegardes suivent leur propre rotation, et elle est plus longue que ça.**
+Mesurée sur la machine le 2026-08-30 : `restic forget` conserve **14
+quotidiennes, 8 hebdomadaires et 12 mensuelles**. Une donnée peut donc subsister
+dans une sauvegarde chiffrée **jusqu'à environ douze mois** après son
+effacement en production, et non six.
+
+Un effacement immédiat des sauvegardes n'est pas techniquement possible sans
+détruire celles des autres clients — mais le délai réel est celui-là, et
+l'annoncer plus court aurait été un engagement intenable. Les instantanés sont
+chiffrés par restic avant de quitter la machine : le prestataire de stockage n'y
+a aucun accès en clair pendant ces douze mois.
 
 ## 9. Audit (art. 28.3.h)
 
