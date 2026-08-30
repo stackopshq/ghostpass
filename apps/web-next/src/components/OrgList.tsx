@@ -75,7 +75,7 @@ export function OrgList({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
       <Panneau>
         <TeteDePanneau titre={t("org.myOrgs")} compte={orgs.length} />
         {orgs.length === 0 ? (

@@ -145,7 +145,7 @@ export function Securite() {
   const supporte = webAuthnSupported();
 
   return (
-    <div className="min-h-0 overflow-y-auto px-6 py-5">
+    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
       <div className="mx-auto max-w-3xl space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">{t("app.security")}</h2>
