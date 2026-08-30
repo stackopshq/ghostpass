@@ -116,6 +116,23 @@ struct OrganizationsView: View {
         .glassCard()
     }
 
+    /// La couleur de l'équipe, lue dans le registre et réécrite au changement.
+    ///
+    /// Une liaison plutôt qu'un bouton : `ColorPicker` écrit en continu pendant qu'on
+    /// déplace le curseur. On n'enregistre donc que lorsque la valeur change réellement,
+    /// sinon chaque frôlement produirait une écriture chiffrée et un aller-retour serveur.
+    private func liaisonDeCouleur(_ organisation: Organisation) -> Binding<Color> {
+        Binding(
+            get: {
+                CouleurDEquipe.couleur(de: organisation.id, choisies: store.couleursDEquipe)
+            },
+            set: { couleur in
+                let hex = CouleurDEquipe.hex(de: couleur)
+                guard hex != store.couleursDEquipe[organisation.id] else { return }
+                Task { await store.definirLaCouleur(hex, pour: organisation.id) }
+            })
+    }
+
     @ViewBuilder private func lignes(_ groupe: [Organisation]) -> some View {
         ForEach(groupe) { organisation in
             ligne(organisation)
@@ -125,8 +142,20 @@ struct OrganizationsView: View {
 
     private func ligne(_ organisation: Organisation) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(verbatim: organisation.nom)
-                .foregroundStyle(Color.gpInk)
+            HStack(spacing: 10) {
+                // La pastille sert à deux choses à la fois : montrer la couleur de
+                // l'équipe telle qu'elle apparaît dans le coffre, et la changer. Un
+                // sélecteur séparé aurait obligé à deviner à quoi il se rapporte.
+                ColorPicker(
+                    "", selection: liaisonDeCouleur(organisation), supportsOpacity: false
+                )
+                .labelsHidden()
+                .frame(width: 28, height: 28)
+                .accessibilityLabel(
+                    Text("Couleur de \(organisation.nom)", comment: "Sélecteur de couleur"))
+                Text(verbatim: organisation.nom)
+                    .foregroundStyle(Color.gpInk)
+            }
             Text(verbatim: "\(organisation.role.intitule) · \(organisation.etat.intitule)")
                 .font(.footnote)
                 .foregroundStyle(Color.gpMuted)

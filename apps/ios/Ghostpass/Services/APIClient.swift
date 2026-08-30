@@ -8,6 +8,7 @@ enum APIError: LocalizedError, Equatable {
     case http(status: Int, message: String)
     case mfaRequired(type: String)
     case malformedResponse
+    case reponseTropGrande
 
     var errorDescription: String? {
         switch self {
@@ -15,6 +16,8 @@ enum APIError: LocalizedError, Equatable {
         case .http(_, let message): return message
         case .mfaRequired: return "Second facteur requis."
         case .malformedResponse: return "Réponse inattendue du serveur."
+        case .reponseTropGrande:
+            return "Le serveur a renvoyé une réponse anormalement volumineuse."
         }
     }
 }
@@ -363,7 +366,10 @@ private struct CollectionAccessBody: Encodable {
 /// n'existe que de l'autre côté de la frontière FFI.
 struct APIClient {
     var baseURL: URL
-    var session: URLSession = .shared
+    /// Bornée : voir `ReseauBorne`. Le seuil s'applique **pendant** la réception, pas
+    /// après — une réponse déjà entière en mémoire est déjà le problème qu'on voulait
+    /// éviter.
+    var reseau: ReseauBorne = .partage
 
     private func request(
         _ method: String, _ path: String, token: String? = nil, body: Data? = nil,
@@ -382,7 +388,7 @@ struct APIClient {
         if let token {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        let (data, response) = try await session.data(for: req)
+        let (data, response) = try await reseau.donnees(pour: req)
         guard let http = response as? HTTPURLResponse else { throw APIError.malformedResponse }
         guard (200..<300).contains(http.statusCode) else {
             let parsed = try? JSONDecoder().decode(ServerError.self, from: data)

@@ -46,6 +46,7 @@ enum SharedStore {
     static func save(_ session: Session) {
         guard let sessionURL, let data = try? JSONEncoder().encode(session) else { return }
         try? data.write(to: sessionURL, options: [.atomic, .completeFileProtection])
+        exclureDesSauvegardes(sessionURL)
     }
 
     static func load() -> Session? {
@@ -57,4 +58,19 @@ enum SharedStore {
         guard let sessionURL else { return }
         try? FileManager.default.removeItem(at: sessionURL)
     }
+}
+
+/// Écarte un fichier des sauvegardes iCloud et iTunes.
+///
+/// Le trousseau est en « cet appareil seulement » : la décision de ne rien laisser sortir
+/// de l'appareil était donc déjà prise, mais elle ne valait que pour lui. Ces fichiers-ci
+/// portent l'adresse du serveur, le compte, les paramètres de dérivation et le coffre
+/// chiffré — de quoi attaquer le mot de passe maître hors ligne, sans limite de débit et
+/// **sans jamais toucher l'appareil**, à partir d'une seule sauvegarde. Rien n'est perdu à
+/// les exclure : ils se reconstituent depuis le serveur.
+func exclureDesSauvegardes(_ url: URL) {
+    var valeurs = URLResourceValues()
+    valeurs.isExcludedFromBackup = true
+    var mutable = url
+    try? mutable.setResourceValues(valeurs)
 }

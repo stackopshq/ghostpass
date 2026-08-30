@@ -98,10 +98,9 @@ enum CsvImport {
             // `extra` chez LastPass, `note` au singulier chez Dashlane et Chrome. Les
             // omettre perdait les notes de tout coffre migré — silencieusement.
             let note = premier(ligne, "notes", "note", "extra", "comments")
+            let nom = nettoyerLeNom(premier(ligne, "name", "title"))
             return VaultItem(
-                name: premier(ligne, "name", "title").isEmpty
-                    ? NSLocalizedString("(sans nom)", comment: "")
-                    : premier(ligne, "name", "title"),
+                name: nom.isEmpty ? NSLocalizedString("(sans nom)", comment: "") : nom,
                 notes: note.isEmpty ? nil : note,
                 folder: dossier.isEmpty ? nil : dossier,
                 data: .login(
@@ -111,6 +110,30 @@ enum CsvImport {
                         uris: adresse.isEmpty ? [] : [adresse],
                         totp: totp.isEmpty ? nil : totp)))
         }
+    }
+
+    /// Ce qu'on accepte comme nom d'élément importé.
+    ///
+    /// Deux choses s'y jouent, et aucune ne vient du format CSV lui-même :
+    ///
+    /// - **Le préfixe de registre.** Les registres internes portent un nom commençant par
+    ///   un octet NUL, que personne ne peut taper — mais qu'un fichier peut contenir. Un
+    ///   élément importé sous ce nom serait pris pour un registre : il disparaîtrait de la
+    ///   liste, et pire, détournerait l'identité du vrai registre, si bien que la
+    ///   prochaine écriture de dossiers ou de favoris irait dans le mauvais élément. On le
+    ///   refuse en retirant le NUL plutôt qu'en rejetant la ligne : perdre un import
+    ///   entier pour un caractère invisible serait disproportionné.
+    /// - **L'apostrophe de neutralisation** posée par notre export devant ce qu'un tableur
+    ///   évaluerait. La retirer ici est ce qui rend l'aller-retour exact.
+    static func nettoyerLeNom(_ valeur: String) -> String {
+        rendreSaFormule(valeur.replacingOccurrences(of: "\u{0}", with: ""))
+    }
+
+    /// Retire l'apostrophe que l'export a posée, et elle seule.
+    static func rendreSaFormule(_ valeur: String) -> String {
+        guard valeur.first == "'" else { return valeur }
+        let reste = String(valeur.dropFirst())
+        return CsvExport.amorceUneFormule(reste) ? reste : valeur
     }
 
     /// La première colonne renseignée parmi celles qui désignent la même chose.

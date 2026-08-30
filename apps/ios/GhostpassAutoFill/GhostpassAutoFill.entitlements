@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Le groupe de trousseau partagé, décidé dans docs/adr/0001. Il vient **en premier**
+	     et devient donc le groupe par défaut des deux cibles : l'extension peut lire le
+	     mot de passe maître que l'application a rangé, sous la même protection biométrique.
+	     Pour l'application, ce défaut est celui d'avant — rien à migrer. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)ch.stackops.ghostpass</string>
+	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.ch.stackops.ghostpass</string>

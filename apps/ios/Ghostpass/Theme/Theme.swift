@@ -324,7 +324,14 @@ struct GhostDivider: View {
 
 /// Une ligne de consultation : un intitulé, une valeur, et ce qu'on peut en faire.
 struct GhostRow<Actions: View>: View {
-    let intitule: LocalizedStringKey
+    /// L'intitulé, **déjà rendu**. C'était une `LocalizedStringKey`, ce qui convenait aux
+    /// libellés de l'application mais pas aux noms venus du coffre : passer un nom
+    /// d'élément par ce chemin le fait chercher dans le catalogue de traduction, et
+    /// surtout interpréter ses `%@` comme un format. Un coéquipier pouvait ainsi nommer un
+    /// élément `%@ %@` et corrompre — voire faire tomber — l'écran des autres membres.
+    /// En prenant un `Text`, l'appelant choisit explicitement entre `Text("clé")` et
+    /// `Text(verbatim:)`, et le compilateur ne peut plus confondre les deux.
+    let intitule: Text
     /// Le contenu du coffre, jamais traduit : un mot de passe reste ce qu'il est.
     let valeur: String
     var monospace = false
@@ -334,7 +341,7 @@ struct GhostRow<Actions: View>: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(intitule)
+                intitule
                     .font(.caption)
                     .foregroundStyle(Color.gpMuted)
                 // `.enabled` et `.disabled` sont deux types distincts : un ternaire ne

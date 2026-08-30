@@ -143,6 +143,13 @@ enum OrigineDuCoffre: Hashable {
 /// partage. Les distinguer dans le type évite de traiter l'un comme l'autre.
 enum FiltreDuCoffre: Hashable {
     case tout
+    /// Ce qui n'appartient à aucune équipe.
+    ///
+    /// « Tous les éléments » mêle le personnel et le partagé, ce qui est le bon défaut —
+    /// on cherche un mot de passe, pas une provenance. Mais l'inverse manquait : voir son
+    /// propre coffre seul, sans ce que les équipes y versent, n'était possible par aucun
+    /// chemin. C'est la contrepartie du choix d'unifier les deux listes.
+    case personnel
     case dossier(String)
     case collection(organisation: String, collection: String, nom: String)
 
@@ -156,6 +163,8 @@ enum FiltreDuCoffre: Hashable {
         switch self {
         case .tout:
             return true
+        case .personnel:
+            return !entry.origine.estPartage
         case .dossier(let chemin):
             // Un dossier contient aussi ce que rangent ses sous-dossiers.
             let range = entry.item.folder ?? ""
@@ -227,6 +236,12 @@ enum VaultConstants {
     /// apprendrait qui partage quoi et quand. Le registre est donc chiffré, côté client,
     /// comme les autres.
     static let sharesItemName = registryPrefix + "shares"
+
+    /// La couleur choisie pour chaque équipe, par identifiant d'organisation.
+    ///
+    /// Un registre plutôt qu'un réglage local : une couleur qui différerait entre le
+    /// téléphone et la tablette ressemblerait à un défaut, pas à une préférence.
+    static let orgColorsItemName = registryPrefix + "orgcolors"
 
     /// Combien d'anciens mots de passe un élément conserve. Le même nombre que la web
     /// app : un historique plus long d'un côté que de l'autre ferait croire à une perte.

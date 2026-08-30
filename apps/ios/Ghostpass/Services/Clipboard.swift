@@ -14,6 +14,15 @@ enum Clipboard {
     static func copy(_ value: String) {
         UIPasteboard.general.setItems(
             [[UTType.utf8PlainText.identifier: value]],
-            options: [.expirationDate: Date().addingTimeInterval(lifetime)])
+            options: [
+                .expirationDate: Date().addingTimeInterval(lifetime),
+                // `localOnly` ferme le Presse-papiers universel. Sans elle, un mot de passe
+                // copié ici arrivait dans le presse-papiers de tous les Mac et iPad du même
+                // compte iCloud — et sur un Mac, n'importe quelle application le lit sans
+                // rien demander. L'expiration bornait la durée, pas la portée : ce sont deux
+                // options distinctes, et le commentaire ci-dessus nommait le risque que le
+                // code ne fermait pas.
+                .localOnly: true,
+            ])
     }
 }

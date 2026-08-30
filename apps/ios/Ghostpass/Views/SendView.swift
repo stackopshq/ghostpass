@@ -48,6 +48,25 @@ struct SendView: View {
         }
         .tint(Color.gpAccentText)
         .onAppear { if secret.isEmpty { secret = secretInitial } }
+        // Le serveur peut désigner un autre domaine que le sien pour héberger le partage.
+        // C'est ce domaine qui servira la page où la clé de déchiffrement arrivera, dans
+        // le fragment du lien : lui faire confiance sans le dire reviendrait à laisser le
+        // serveur choisir qui peut lire le secret. On le montre, et l'utilisateur tranche.
+        .alert(
+            "Envoyer vers ce domaine ?",
+            isPresented: Binding(
+                get: { store.destinationAConfirmer != nil },
+                set: { if !$0 { store.destinationAConfirmer = nil } }),
+            presenting: store.destinationAConfirmer,
+            actions: { _ in
+                Button("Envoyer") { Task { lien = await store.confirmerLaDestination() } }
+                Button("Annuler", role: .cancel) { Task { await store.refuserLaDestination() } }
+            },
+            message: { hote in
+                Text(
+                    "Votre serveur héberge ce partage sur « \(hote) », qui n'est pas son propre domaine. C'est là que la clé de déchiffrement arrivera quand le destinataire ouvrira le lien. N'acceptez que si ce domaine vous est connu."
+                )
+            })
     }
 
     private var formulaire: some View {

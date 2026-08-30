@@ -23,6 +23,7 @@ enum VaultCache {
     static func save(_ items: [EncryptedItemDTO]) {
         guard let url, let data = try? JSONEncoder().encode(items) else { return }
         try? data.write(to: url, options: [.atomic, .completeFileProtection])
+        exclureDesSauvegardes(url)
     }
 
     /// Renvoie `nil` s'il n'y a rien, ou si le fichier n'est plus lisible — un cache

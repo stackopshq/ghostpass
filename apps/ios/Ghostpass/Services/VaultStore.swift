@@ -25,6 +25,12 @@ final class VaultStore: ObservableObject {
     /// Les partages en cours, avec leur jeton de révocation. Écrits dans un registre
     /// chiffré que la web app lit et écrit aussi : un lien créé ici se révoque de là-bas.
     @Published private(set) var partagesEnCours: [PartageEnCours] = []
+    /// La couleur choisie pour chaque équipe. Vide tant que rien n'a été personnalisé :
+    /// une couleur est alors attribuée d'office, voir `CouleurDEquipe`.
+    @Published private(set) var couleursDEquipe: [String: String] = [:]
+    /// Le domaine vers lequel le serveur veut envoyer un lien, quand ce n'est pas le sien.
+    /// Non nul tant que l'utilisateur ne s'est pas prononcé.
+    @Published var destinationAConfirmer: String?
     /// Identité de chaque registre, par nom, pour les mettre à jour plutôt que les
     /// multiplier. Un registre absent de ce dictionnaire n'existe pas encore côté serveur.
     private var registryIDs: [String: String] = [:]
@@ -149,7 +155,12 @@ final class VaultStore: ObservableObject {
     ///
     /// Les tests portent sur *quand* on referme, pas sur ce qu'il y a dedans : monter un
     /// vrai compte pour cela demanderait un serveur, et la question n'a rien à voir.
-    func forcerLEtatOuvertPourTest() { isUnlocked = true }
+    #if DEBUG
+        /// Absente de la version livrée : une porte de test dans un binaire publié n'a
+        /// rien à y faire, même inoffensive — ici le coffre s'ouvrirait vide, sans clé et
+        /// sans rien à déchiffrer.
+        func forcerLEtatOuvertPourTest() { isUnlocked = true }
+    #endif
 
     /// L'application quitte le premier plan sans forcément quitter l'écran.
     ///
@@ -205,11 +216,17 @@ final class VaultStore: ObservableObject {
         isOffline = false
         pendingPassword = nil
         offersBiometricEnrollment = false
+        // Le cache d'URL garde les requêtes d'icônes — `?domain=github.com` — en clair
+        // dans un fichier système sans protection forte. Le coffre reste chiffré, mais la
+        // liste des sites qu'il contient cessait de l'être, ce que le chiffrement de bout
+        // en bout visait précisément à cacher. Se déconnecter doit l'effacer aussi.
+        URLCache.shared.removeAllCachedResponses()
         emptyFolders = []
         favorites = []
         // Les jetons de révocation quittent la mémoire avec le reste : ils vivent dans le
         // coffre, et un coffre fermé ne laisse rien derrière lui.
         partagesEnCours = []
+        couleursDEquipe = [:]
         registryIDs = [:]
     }
 
@@ -460,6 +477,7 @@ final class VaultStore: ObservableObject {
         var folders: [String] = []
         var favorites: Set<String> = []
         var partages: [PartageEnCours] = []
+        var couleurs: [String: String] = [:]
         /// Identité serveur de chaque registre, par nom.
         var registryIDs: [String: String] = [:]
     }
@@ -475,6 +493,10 @@ final class VaultStore: ObservableObject {
                 // il se décode à part, et son échec ne doit pas vider les deux autres.
                 if item.name == VaultConstants.sharesItemName {
                     resultat.partages = partagesDeRegistre(item)
+                    continue
+                }
+                if item.name == VaultConstants.orgColorsItemName {
+                    resultat.couleurs = couleursDeRegistre(item)
                     continue
                 }
                 let liste = contenuDeRegistre(item)
@@ -517,6 +539,45 @@ final class VaultStore: ObservableObject {
             let liste = try? JSONDecoder().decode([PartageEnCours].self, from: data)
         else { return [] }
         return liste
+    }
+
+    /// Le registre des couleurs : un objet JSON, identifiant d'équipe vers `#RRGGBB`.
+    nonisolated private static func couleursDeRegistre(_ item: VaultItem) -> [String: String] {
+        guard case .secureNote(let note) = item.data,
+            let data = note.content.data(using: .utf8),
+            let table = try? JSONDecoder().decode([String: String].self, from: data)
+        else { return [:] }
+        return table
+    }
+
+    /// Choisit — ou efface, avec `nil` — la couleur d'une équipe.
+    func definirLaCouleur(_ hex: String?, pour organisation: String) async {
+        var table = couleursDEquipe
+        if let hex { table[organisation] = hex } else { table.removeValue(forKey: organisation) }
+        await ecrireLeRegistreDesCouleurs(table)
+    }
+
+    private func ecrireLeRegistreDesCouleurs(_ table: [String: String]) async {
+        guard let api, let token, let account else { return }
+        let contenu = String(
+            decoding: (try? JSONEncoder().encode(table)) ?? Data("{}".utf8), as: UTF8.self)
+        let item = VaultItem(
+            name: VaultConstants.orgColorsItemName, notes: nil, folder: nil,
+            data: .secureNote(SecureNote(content: contenu)))
+        do {
+            let (key, data) = try Self.encrypt(item, with: account)
+            if let identifiant = registryIDs[VaultConstants.orgColorsItemName] {
+                _ = try await api.updateItem(
+                    token: token, id: identifiant, encryptedKey: key, encryptedData: data)
+            } else {
+                let cree = try await api.createItem(
+                    token: token, encryptedKey: key, encryptedData: data)
+                registryIDs[VaultConstants.orgColorsItemName] = cree.id
+            }
+            await refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func save(_ item: VaultItem, id: String?) async {
@@ -617,6 +678,7 @@ final class VaultStore: ObservableObject {
         emptyFolders = lecture.folders
         favorites = lecture.favorites
         partagesEnCours = lecture.partages
+        couleursDEquipe = lecture.couleurs
     }
 
     // ─── Dossiers ───
@@ -1528,6 +1590,19 @@ final class VaultStore: ObservableObject {
                 .replacingOccurrences(of: "=", with: "")
             guard let lien = composants.url else { return nil }
 
+            // Le domaine décide, et il décide **avant** que la clé ne soit remise à
+            // l'utilisateur. S'il n'est pas de confiance, on n'affiche rien et on garde
+            // de quoi reprendre après réponse.
+            if let serveur = ServerAddress.normaliser(SharedStore.load()?.serverURL ?? ""),
+                !Self.destinationEstDeConfiance(
+                    composants, serveur: serveur, approuves: destinationsApprouvees(serveur))
+            {
+                partageEnAttente = EnAttenteDApprobation(
+                    cree: cree, lien: lien, nom: nom, serveur: serveur)
+                destinationAConfirmer = composants.host ?? ""
+                return nil
+            }
+
             // Le jeton de révocation n'existe qu'ici : le serveur n'en garde qu'une
             // empreinte. Ne pas l'écrire, c'est créer un partage que personne ne pourra
             // jamais rappeler. Sans relais il n'y en a pas, et la route de révocation
@@ -1555,6 +1630,48 @@ final class VaultStore: ObservableObject {
         }
     }
 
+    /// Ce qu'il faut retenir d'un partage créé mais pas encore remis à l'utilisateur,
+    /// le temps qu'il se prononce sur sa destination.
+    private struct EnAttenteDApprobation {
+        let cree: APIClient.PartageCree
+        let lien: URL
+        let nom: String
+        let serveur: URL
+    }
+
+    private var partageEnAttente: EnAttenteDApprobation?
+
+    /// L'utilisateur accepte que la clé parte vers ce domaine. On s'en souvient pour ce
+    /// serveur, et le lien devient utilisable.
+    func confirmerLaDestination() async -> URL? {
+        guard let attente = partageEnAttente else { return nil }
+        partageEnAttente = nil
+        destinationAConfirmer = nil
+        if let hote = URLComponents(url: attente.lien, resolvingAgainstBaseURL: false)?.host {
+            approuverLaDestination(hote.lowercased(), pour: attente.serveur)
+        }
+        if let jeton = attente.cree.deleteToken {
+            await inscrireAuRegistreDesPartages(
+                PartageEnCours(
+                    id: attente.cree.id, url: attente.lien.absoluteString, deleteToken: jeton,
+                    name: attente.nom, createdAt: Self.horodatage(),
+                    expiresAt: attente.cree.expiresAt))
+        }
+        return attente.lien
+    }
+
+    /// L'utilisateur refuse. Le partage existe déjà côté serveur : on le révoque plutôt
+    /// que de le laisser vivre sans que personne n'en connaisse le lien — et surtout sans
+    /// que le secret reste déposé chez un tiers qu'on vient de juger douteux.
+    func refuserLaDestination() async {
+        guard let attente = partageEnAttente else { return }
+        partageEnAttente = nil
+        destinationAConfirmer = nil
+        if let api, let token, let jeton = attente.cree.deleteToken {
+            try? await api.revokeSend(token: token, id: attente.cree.id, deleteToken: jeton)
+        }
+    }
+
     /// L'horodatage tel qu'il entre au registre : **secondes** depuis l'epoch.
     ///
     /// Isolé pour être vérifiable. Un test qui mesure `Date().timeIntervalSince1970`
@@ -1567,13 +1684,70 @@ final class VaultStore: ObservableObject {
 
     /// Le lien d'un partage : celui que le serveur donne, ou celui qu'on déduit de son
     /// adresse quand il n'en donne pas.
+    ///
+    /// **Le domaine est vérifié, et c'est le point le plus important de cette fonction.**
+    /// La clé de déchiffrement est posée dans le fragment de ce lien. Le fragment n'est
+    /// jamais envoyé au serveur par un navigateur — mais la *page* servie par ce domaine,
+    /// elle, est du code que ce domaine contrôle, et rien ne l'empêche de lire
+    /// `location.hash`. Accepter sans contrôle l'adresse rendue par le serveur revenait
+    /// donc à le laisser désigner qui recevra la clé : il détient déjà le chiffré, et
+    /// obtenait ainsi le secret en clair. Le coffre restait fermé, les partages non.
+    ///
+    /// L'ancre de confiance est le serveur que l'utilisateur a saisi lui-même. Tout autre
+    /// domaine lui est soumis avant que la clé n'y soit attachée.
     private func lienDuPartage(_ cree: APIClient.PartageCree) -> URLComponents? {
-        if let url = cree.url { return URLComponents(string: url) }
         guard let serveur = ServerAddress.normaliser(SharedStore.load()?.serverURL ?? "")
         else { return nil }
-        var composants = URLComponents(url: serveur, resolvingAgainstBaseURL: false)
-        composants?.path = "/s/\(cree.id)"
-        return composants
+        guard let url = cree.url else {
+            // Serveur antérieur au relais : il héberge lui-même, le lien se déduit de son
+            // adresse. C'est le cas le plus sûr, celui où l'on ne fait confiance qu'à
+            // l'adresse que l'utilisateur a tapée.
+            var composants = URLComponents(url: serveur, resolvingAgainstBaseURL: false)
+            composants?.path = "/s/\(cree.id)"
+            return composants
+        }
+        return URLComponents(string: url)
+    }
+
+    /// Le domaine où le serveur veut envoyer le lien mérite-t-il la clé ?
+    ///
+    /// Trois conditions, et le refus de l'une suffit :
+    /// - le lien doit être en `https`, sauf si le serveur lui-même est en clair — un
+    ///   auto-hébergement en boucle locale, seul cas où l'app l'accepte déjà ;
+    /// - le domaine doit être celui du serveur, ou l'un de ceux que l'utilisateur a
+    ///   explicitement approuvés pour ce serveur ;
+    /// - à défaut, on demande, en montrant le domaine.
+    nonisolated static func destinationEstDeConfiance(
+        _ lien: URLComponents, serveur: URL, approuves: [String]
+    ) -> Bool {
+        guard let hote = lien.host?.lowercased(), !hote.isEmpty else { return false }
+        let schemaDuServeur = (serveur.scheme ?? "https").lowercased()
+        let schema = (lien.scheme ?? "").lowercased()
+        guard schema == "https" || (schema == "http" && schemaDuServeur == "http") else {
+            return false
+        }
+        if let hoteDuServeur = serveur.host?.lowercased(), hote == hoteDuServeur { return true }
+        return approuves.contains(hote)
+    }
+
+    /// Les domaines de partage approuvés pour un serveur donné.
+    ///
+    /// Rangés par serveur, jamais globalement : approuver un relais pour son instance ne
+    /// doit pas l'approuver pour celle de quelqu'un d'autre. Ce ne sont pas des secrets —
+    /// des noms de domaine —, d'où les préférences plutôt que le trousseau.
+    private static func cleDesDestinations(_ serveur: URL) -> String {
+        "gp.destinationsDePartage.\(serveur.host?.lowercased() ?? serveur.absoluteString)"
+    }
+
+    private func destinationsApprouvees(_ serveur: URL) -> [String] {
+        UserDefaults.standard.stringArray(forKey: Self.cleDesDestinations(serveur)) ?? []
+    }
+
+    private func approuverLaDestination(_ hote: String, pour serveur: URL) {
+        var liste = destinationsApprouvees(serveur)
+        guard !liste.contains(hote) else { return }
+        liste.append(hote)
+        UserDefaults.standard.set(liste, forKey: Self.cleDesDestinations(serveur))
     }
 
     /// Révoque un partage et le retire du registre.

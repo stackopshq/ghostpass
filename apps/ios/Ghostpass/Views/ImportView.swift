@@ -39,7 +39,14 @@ struct ImportView: View {
             // Un sélecteur de fichiers rend l'application inactive sans qu'elle quitte
             // l'écran : on le dit au magasin, sinon le verrouillage immédiat couperait
             // l'opération en cours.
-            .onAppear { store.unSelecteurDeFichiersEstOuvert = true }
+            //
+            // Suspendu au seul moment où le sélecteur est présenté, et non à toute la vie
+            // de l'écran : posé sur `onAppear`, il désarmait le verrouillage immédiat
+            // pendant qu'on lisait la page, avant même d'avoir cliqué. Une exemption doit
+            // durer exactement ce qu'elle protège.
+            .onChange(of: choix) { _, present in
+                store.unSelecteurDeFichiersEstOuvert = present
+            }
             .onDisappear { store.unSelecteurDeFichiersEstOuvert = false }
             .fileImporter(
                 isPresented: $choix, allowedContentTypes: [.commaSeparatedText, .text]
@@ -99,9 +106,9 @@ struct ImportView: View {
                 note:
                     "Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà."
             ) {
-                GhostRow(intitule: "Fichier", valeur: nomDuFichier) {}
+                GhostRow(intitule: Text("Fichier"), valeur: nomDuFichier) {}
                 GhostDivider()
-                GhostRow(intitule: "Entrées trouvées", valeur: "\(trouves.count)") {}
+                GhostRow(intitule: Text("Entrées trouvées"), valeur: "\(trouves.count)") {}
             }
 
             GhostSection(titre: "Aperçu") {

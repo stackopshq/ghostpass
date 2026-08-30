@@ -40,7 +40,14 @@ struct ExportView: View {
             // Un sélecteur de fichiers rend l'application inactive sans qu'elle quitte
             // l'écran : on le dit au magasin, sinon le verrouillage immédiat couperait
             // l'opération en cours.
-            .onAppear { store.unSelecteurDeFichiersEstOuvert = true }
+            //
+            // Suspendu au seul moment où le sélecteur est présenté, et non à toute la vie
+            // de l'écran : posé sur `onAppear`, il désarmait le verrouillage immédiat
+            // pendant qu'on lisait la page, avant même d'avoir cliqué. Une exemption doit
+            // durer exactement ce qu'elle protège.
+            .onChange(of: enregistrement) { _, present in
+                store.unSelecteurDeFichiersEstOuvert = present
+            }
             .onDisappear { store.unSelecteurDeFichiersEstOuvert = false }
             .fileExporter(
                 isPresented: $enregistrement, document: document,

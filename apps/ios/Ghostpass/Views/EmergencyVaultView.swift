@@ -44,7 +44,7 @@ struct EmergencyVaultView: View {
                                         .environmentObject(store)
                                 } label: {
                                     GhostRow(
-                                        intitule: LocalizedStringKey(entree.item.name),
+                                        intitule: Text(verbatim: entree.item.name),
                                         valeur: entree.login?.username ?? ""
                                     ) {}
                                 }

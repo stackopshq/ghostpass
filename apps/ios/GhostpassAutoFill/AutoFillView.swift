@@ -4,6 +4,7 @@ import SwiftUI
 /// déverrouillage, puis la liste — les entrées du site en cours en tête.
 struct AutoFillView: View {
     @EnvironmentObject private var store: AutoFillStore
+    @Environment(\.scenePhase) private var scenePhase
     @State private var password = ""
 
     var body: some View {
@@ -16,6 +17,15 @@ struct AutoFillView: View {
                     } else {
                         deverrouillage
                     }
+                }
+            }
+            // Le même voile que l'application, pour la même raison — et il manquait ici.
+            // Cette liste montre des identifiants et des codes à usage unique en clair ;
+            // le système photographie l'écran à la sortie, et l'extension n'échappe pas à
+            // cette vignette sous prétexte que sa vie est courte.
+            .overlay {
+                if scenePhase != .active && store.isUnlocked {
+                    VoileDeConfidentialite()
                 }
             }
             .navigationTitle("GhostPass")

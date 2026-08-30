@@ -102,14 +102,14 @@ struct ItemDetailView: View {
     @ViewBuilder
     private func contenuIdentifiant(_ login: Login) -> some View {
         GhostSection(titre: "Identifiants") {
-            GhostRow(intitule: "Nom d'utilisateur", valeur: login.username) {
+            GhostRow(intitule: Text("Nom d'utilisateur"), valeur: login.username) {
                 GhostIconButton(systemImage: "doc.on.doc") {
                     copier(login.username, "Nom d'utilisateur copié")
                 }
             }
             GhostDivider()
             GhostRow(
-                intitule: "Mot de passe",
+                intitule: Text("Mot de passe"),
                 valeur: revealed
                     ? login.password : String(repeating: "•", count: max(login.password.count, 8)),
                 monospace: true, estSecret: !revealed
@@ -196,14 +196,14 @@ struct ItemDetailView: View {
     @ViewBuilder
     private func contenuCarte(_ card: Card) -> some View {
         GhostSection(titre: "Carte") {
-            GhostRow(intitule: "Titulaire", valeur: card.cardholder) {
+            GhostRow(intitule: Text("Titulaire"), valeur: card.cardholder) {
                 GhostIconButton(systemImage: "doc.on.doc") {
                     copier(card.cardholder, "Titulaire copié")
                 }
             }
             GhostDivider()
             GhostRow(
-                intitule: "Numéro",
+                intitule: Text("Numéro"),
                 valeur: revealed
                     ? card.number : String(repeating: "•", count: max(card.number.count, 8)),
                 monospace: true, estSecret: !revealed
@@ -213,7 +213,7 @@ struct ItemDetailView: View {
                 GhostIconButton(systemImage: "doc.on.doc") { copier(card.number, "Numéro copié") }
             }
             GhostDivider()
-            GhostRow(intitule: "Expiration", valeur: "\(card.expMonth)/\(card.expYear)") {}
+            GhostRow(intitule: Text("Expiration"), valeur: "\(card.expMonth)/\(card.expYear)") {}
         }
     }
 
@@ -251,7 +251,7 @@ struct ItemDetailView: View {
                     GhostDivider()
                     let devoile = anciensDevoiles.contains(rang)
                     GhostRow(
-                        intitule: "Remplacé",
+                        intitule: Text("Remplacé"),
                         valeur: devoile
                             ? ancien : String(repeating: "•", count: max(ancien.count, 8)),
                         monospace: true, estSecret: !devoile

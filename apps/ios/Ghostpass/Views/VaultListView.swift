@@ -19,6 +19,35 @@ struct VaultListView: View {
     @State private var aOuvrir: VaultEntry?
     @ObservedObject private var prefs = Preferences.shared
 
+    /// L'emoji de la barre, purement décoratif.
+    ///
+    /// Sorti du corps de la vue : la barre d'outils y était déjà longue et le vérificateur
+    /// de types abandonnait — « unable to type-check this expression in reasonable time ».
+    /// Un contenu de barre nommé lui rend la tâche possible, et se lit mieux.
+    @ToolbarContentBuilder private var ornementDuCoffre: some ToolbarContent {
+        if !Emoji.coffre.isEmpty {
+            // iOS 26 enferme chaque élément de barre dans une capsule de verre. Elle
+            // convient à un bouton, pas à un ornement : elle en a l'air, elle se touche,
+            // et rien ne se produit — Kevin l'a essayée. `sharedBackgroundVisibility`
+            // retire ce fond, mais n'existe qu'à partir d'iOS 26 ; en deçà la capsule
+            // reste, et l'emoji au moins ne réagit plus.
+            if #available(iOS 26.0, *) {
+                ToolbarItem(placement: .topBarLeading) { emojiDuCoffre }
+                    .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .topBarLeading) { emojiDuCoffre }
+            }
+        }
+    }
+
+    private var emojiDuCoffre: some View {
+        Text(verbatim: Emoji.coffre)
+            .font(.title3)
+            // Décoratif : rien à annoncer, et le titre le suit aussitôt.
+            .accessibilityHidden(true)
+            .allowsHitTesting(false)
+    }
+
     private var visible: [VaultEntry] {
         store.entries.filter { entry in
             guard filtre.retient(entry) else { return false }
@@ -124,14 +153,7 @@ struct VaultListView: View {
                 // d'identité : le bouton retour des fiches devenait « ‹ 🪎 Coffre », et
                 // VoiceOver annonçait l'emoji avant le mot à chaque fois. Ici il ne
                 // décore que l'écran auquel il appartient.
-                if !Emoji.coffre.isEmpty {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Text(verbatim: Emoji.coffre)
-                            .font(.title3)
-                            // Décoratif : rien à annoncer, et le titre le suit d'aussitôt.
-                            .accessibilityHidden(true)
-                    }
-                }
+                ornementDuCoffre
                 // Le bouton n'a de sens que si le verrouillage automatique attend.
                 //
                 // Avec le réglage par défaut — immédiat — quitter l'application verrouille
@@ -328,7 +350,9 @@ struct VaultListView: View {
 
     private func ligne(_ entry: VaultEntry) -> some View {
         NavigationLink(value: entry) {
-            VaultRow(entry: entry, favori: store.isFavorite(entry))
+            VaultRow(
+                entry: entry, favori: store.isFavorite(entry),
+                couleurs: store.couleursDEquipe)
         }
         .swipeActions(edge: .leading) {
             Button(store.isFavorite(entry) ? "Retirer des favoris" : "Mettre en favori") {
@@ -406,6 +430,7 @@ struct VaultListView: View {
     private var iconeDuFiltre: String {
         switch filtre {
         case .tout: return "tray.full"
+        case .personnel: return "person.crop.square"
         case .dossier: return "folder.fill"
         case .collection: return "person.2.fill"
         }
@@ -423,6 +448,7 @@ struct VaultListView: View {
                 Group {
                     switch filtre {
                     case .tout: Text("Tous les éléments")
+                    case .personnel: Text("Personnel")
                     case .dossier(let chemin): Text(verbatim: chemin)
                     case .collection(_, _, let nom): Text(verbatim: nom)
                     }
@@ -536,6 +562,10 @@ enum EditTarget: Identifiable {
 private struct VaultRow: View {
     let entry: VaultEntry
     var favori = false
+    /// Passées plutôt qu'observées : cette ligne est reconstruite pour chaque élément, et
+    /// lui donner tout le magasin la ferait redessiner à chaque changement qui ne la
+    /// concerne pas.
+    var couleurs: [String: String] = [:]
 
     var body: some View {
         HStack(spacing: 14) {
@@ -574,16 +604,23 @@ private struct VaultRow: View {
             // de l'équipe plutôt qu'une icône seule — savoir *laquelle* compte dès qu'on
             // appartient à deux.
             if let etiquette = entry.origine.etiquette {
+                // La couleur distingue les équipes entre elles. Elle est attribuée d'office
+                // à partir de l'identifiant — trois équipes toutes bleues n'apprennent rien
+                // de plus qu'aucune pastille — et se personnalise dans l'écran des équipes.
+                let teinte =
+                    entry.origine.appartenance.map {
+                        CouleurDEquipe.couleur(de: $0.organisation, choisies: couleurs)
+                    } ?? Color.gpAccentText
                 Label {
                     Text(verbatim: etiquette).lineLimit(1)
                 } icon: {
                     Image(systemName: "person.2.fill")
                 }
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(Color.gpAccentText)
+                .foregroundStyle(teinte)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)
-                .background(Color.gpAccent.opacity(0.16), in: Capsule())
+                .background(teinte.opacity(0.16), in: Capsule())
                 .layoutPriority(-1)
             }
 

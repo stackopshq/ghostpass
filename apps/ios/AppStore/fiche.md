@@ -16,7 +16,7 @@ que le code ne tiendrait pas** : chaque affirmation renvoie à une fonctionnalit
 | Catégorie secondaire | Productivité |
 | Classification d'âge | 4+ |
 | Appareils | iPhone **et** iPad (`TARGETED_DEVICE_FAMILY = "1,2"`) |
-| Prix | [à trancher] |
+| Prix | **Gratuit** |
 
 Le sous-titre fait 27 caractères. Deux variantes de repli, si celle-ci déplaît :
 « Coffre-fort de mots de passe » (28), « Chiffré de bout en bout » (23).
@@ -236,6 +236,32 @@ Le chiffrement n'est pas accessoire ici, c'est la fonction même du produit : d�
 - côté français, une **déclaration ANSSI** de fourniture d'un moyen de cryptologie.
 
 Ces deux démarches engagent l'entreprise et ne se règlent pas dans le dépôt.
+
+## Le modèle économique, et ce qu'Apple en pensera
+
+L'application est **gratuite**. Deux façons de s'en servir :
+
+- **auto-hébergement**, le serveur étant libre ;
+- **abonnement**, qui provisionne à l'abonné **sa propre instance**.
+
+**Le point à préparer plutôt qu'à découvrir au refus.** L'app ne fonctionne qu'avec un
+compte, et l'abonnement se souscrit hors de l'App Store. Apple refuse régulièrement les
+applications dont la fonction principale exige un compte payant acquis ailleurs, au titre
+de la règle 3.1.1 sur les achats intégrés. Deux éléments jouent en faveur de GhostPass, et
+il faut les énoncer explicitement dans les notes d'examen plutôt que d'espérer qu'ils
+soient devinés :
+
+1. **L'auto-hébergement est gratuit et suffisant.** L'application est pleinement
+   utilisable sans rien payer à qui que ce soit : ce n'est pas une démonstration bridée.
+   C'est l'argument le plus fort — il n'y a pas de fonctionnalité déverrouillée par un
+   paiement.
+2. **L'abonnement n'achète pas une fonctionnalité de l'app, mais un hébergement** —
+   l'exemption « services multiplateformes » (3.1.3(b)) vise ce cas : un service acquis
+   ailleurs, consommé par un client gratuit.
+
+Ce qui reste risqué et doit être décidé : l'application ne doit **ni mentionner
+l'abonnement, ni y renvoyer par un lien**, faute de quoi la règle 3.1.3(a) s'applique.
+L'utilisateur arrive avec l'adresse de son serveur, quelle qu'en soit l'origine.
 
 ## Ce qui reste à trancher
 

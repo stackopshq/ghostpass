@@ -361,6 +361,215 @@ final class GeneratorAndTotpTests: XCTestCase {
         XCTAssertEqual(config.algorithm, .sha256)
     }
 
+    // ─── Les couleurs d'équipe ───
+
+    /// La couleur attribuée doit être **stable** : la même à chaque lancement, sur chaque
+    /// appareil, et sur le web. `hashValue` de Swift ne l'est pas — il varie d'un
+    /// processus à l'autre — et l'aurait fait changer à chaque ouverture de l'application.
+    func testLaCouleurAttribueeEstStable() {
+        let premiere = CouleurDEquipe.attribuee("org_stackops")
+        XCTAssertEqual(premiere, CouleurDEquipe.attribuee("org_stackops"))
+        XCTAssertTrue(CouleurDEquipe.palette.contains(premiere))
+    }
+
+    /// Deux équipes doivent avoir des chances raisonnables de se distinguer.
+    func testDesEquipesDifferentesRecoiventDesCouleursDifferentes() {
+        let couleurs = (1...8).map { CouleurDEquipe.attribuee("org_\($0)") }
+        XCTAssertGreaterThan(
+            Set(couleurs).count, 3, "huit équipes ne doivent pas se retrouver toutes pareilles")
+    }
+
+    func testLaCouleurChoisieLEmporteSurCelleAttribuee() {
+        XCTAssertEqual(
+            CouleurDEquipe.hex("org_a", choisies: ["org_a": "#123456"]), "#123456")
+        XCTAssertEqual(
+            CouleurDEquipe.hex("org_a", choisies: [:]), CouleurDEquipe.attribuee("org_a"))
+    }
+
+    /// Le registre est écrit par d'autres clients : une valeur illisible ne doit pas
+    /// donner du noir sans qu'on sache pourquoi.
+    func testUneCouleurIllisibleEstRefusee() {
+        for valeur in ["", "#12345", "bleu", "#GGGGGG", "#1234567"] {
+            XCTAssertNil(CouleurDEquipe.couleur(valeur), "« \(valeur) » n'est pas une couleur")
+        }
+        XCTAssertNotNil(CouleurDEquipe.couleur("#4C8DFF"))
+        XCTAssertNotNil(CouleurDEquipe.couleur("4C8DFF"))
+    }
+
+    /// L'aller-retour couleur → texte → couleur ne doit pas dériver : le registre est relu
+    /// à chaque ouverture, et une dérive d'un point par cycle finirait par se voir.
+    func testLAllerRetourDUneCouleurEstStable() throws {
+        for hex in CouleurDEquipe.palette {
+            let couleur = try XCTUnwrap(CouleurDEquipe.couleur(hex))
+            XCTAssertEqual(CouleurDEquipe.hex(de: couleur), hex)
+        }
+    }
+
+    // ─── La borne sur ce que le serveur renvoie ───
+
+    /// Éprouvé avec un `URLProtocol` plutôt qu'un vrai serveur : fabriquer trente mégaoctets
+    /// en mémoire coûte moins qu'un aller-retour réseau, et surtout permet de mentir sur
+    /// l'en-tête `Content-Length`, ce qu'aucun serveur honnête ne fera pour nous.
+    private func reseauDEssai(limite: Int) -> ReseauBorne {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ProtocoleDEssai.self]
+        return ReseauBorne(limite: limite, configuration: configuration)
+    }
+
+    private var requeteDEssai: URLRequest {
+        URLRequest(url: URL(string: "https://essai.invalid/x")!)
+    }
+
+    func testUneReponseNormalePasse() async throws {
+        ProtocoleDEssai.corps = Data("bonjour".utf8)
+        ProtocoleDEssai.annonceLaTaille = true
+        let (donnees, _) = try await reseauDEssai(limite: 1024).donnees(pour: requeteDEssai)
+        XCTAssertEqual(String(decoding: donnees, as: UTF8.self), "bonjour")
+    }
+
+    /// Le cas le moins coûteux : le serveur annonce sa taille, on refuse avant le corps.
+    func testUneReponseTropGrandeAnnonceeEstRefusee() async {
+        ProtocoleDEssai.corps = Data(repeating: 0x41, count: 4096)
+        ProtocoleDEssai.annonceLaTaille = true
+        do {
+            _ = try await reseauDEssai(limite: 1024).donnees(pour: requeteDEssai)
+            XCTFail("une réponse annoncée au-dessus du seuil doit être refusée")
+        } catch {
+            XCTAssertEqual(error as? APIError, .reponseTropGrande)
+        }
+    }
+
+    /// Le cas qui compte vraiment : un serveur qui n'annonce rien — ou qui ment. La borne
+    /// doit alors mordre **pendant** la réception, sinon elle ne borne rien du tout.
+    func testUneReponseTropGrandeNonAnnonceeEstRefusee() async {
+        ProtocoleDEssai.corps = Data(repeating: 0x41, count: 4096)
+        ProtocoleDEssai.annonceLaTaille = false
+        do {
+            _ = try await reseauDEssai(limite: 1024).donnees(pour: requeteDEssai)
+            XCTFail("une réponse non annoncée au-dessus du seuil doit être refusée")
+        } catch {
+            XCTAssertEqual(error as? APIError, .reponseTropGrande)
+        }
+    }
+
+    /// Une réponse qui vaut exactement le seuil passe : la borne est un maximum, pas un
+    /// interdit. Un décalage d'un octet ici refuserait le coffre le plus gros toléré.
+    func testUneReponseExactementAuSeuilPasse() async throws {
+        ProtocoleDEssai.corps = Data(repeating: 0x41, count: 1024)
+        ProtocoleDEssai.annonceLaTaille = true
+        let (donnees, _) = try await reseauDEssai(limite: 1024).donnees(pour: requeteDEssai)
+        XCTAssertEqual(donnees.count, 1024)
+    }
+
+    // ─── Ce qu'un fichier importé ne doit pas pouvoir faire ───
+
+    /// Un nom d'élément est du texte écrit par quelqu'un d'autre — un CSV qu'on vous fait
+    /// importer, un élément semé dans une collection d'équipe. Il ressort à l'export, dans
+    /// un fichier qu'on ouvre avec un tableur, à côté des mots de passe en clair.
+    func testLExportNeutraliseLesFormulesDeTableur() {
+        for valeur in ["=HYPERLINK(\"http://x\")", "+1+1", "-2", "@SUM(A1)", "\tx", "\rx"] {
+            XCTAssertTrue(
+                CsvExport.neutraliserLaFormule(valeur).hasPrefix("'"),
+                "« \(valeur) » serait évaluée par un tableur")
+        }
+    }
+
+    func testLExportNeTouchePasAuTexteOrdinaire() {
+        for valeur in ["GitHub", "clara@stackops.ch", "mot de passe", ""] {
+            XCTAssertEqual(CsvExport.neutraliserLaFormule(valeur), valeur)
+        }
+    }
+
+    /// La neutralisation doit être **réversible**, sinon chaque aller-retour ajouterait une
+    /// apostrophe. Le cas piégeux est la valeur qui commence déjà par une apostrophe.
+    func testLAllerRetourRendExactementLaValeurDOrigine() {
+        for valeur in ["=SOMME(A1)", "'=SOMME(A1)", "''=x", "'texte", "texte", "-1"] {
+            XCTAssertEqual(
+                CsvImport.rendreSaFormule(CsvExport.neutraliserLaFormule(valeur)), valeur,
+                "« \(valeur) » n'a pas survécu à l'aller-retour")
+        }
+    }
+
+    /// Le préfixe des registres commence par un octet NUL, qu'aucun clavier ne produit —
+    /// mais qu'un fichier contient sans peine. Un élément importé sous ce nom serait pris
+    /// pour un registre : invisible dans la liste, et surtout capable de détourner
+    /// l'identité du vrai registre, si bien que la prochaine écriture de dossiers ou de
+    /// favoris irait dans le mauvais élément.
+    func testUnNomImporteNePeutPasSeFairePasserPourUnRegistre() {
+        let nom = CsvImport.nettoyerLeNom("\u{0}gp:folders")
+        XCTAssertEqual(nom, "gp:folders")
+        XCTAssertFalse(nom.hasPrefix(VaultConstants.registryPrefix))
+    }
+
+    // ─── À qui l'on confie la clé d'un partage ───
+
+    /// La clé de déchiffrement voyage dans le fragment du lien. Un navigateur ne l'envoie
+    /// jamais au serveur — mais la page servie par ce domaine est du code que ce domaine
+    /// contrôle, et rien ne l'empêche de lire `location.hash`. Laisser le serveur désigner
+    /// librement ce domaine revenait donc à le laisser choisir qui lit le secret : il a
+    /// déjà le chiffré. Ces tests portent sur la décision, pas sur l'alerte qui la montre.
+    private func lien(_ url: String) throws -> URLComponents {
+        try XCTUnwrap(URLComponents(string: url))
+    }
+
+    func testLeDomaineDuServeurEstDeConfiance() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        XCTAssertTrue(
+            VaultStore.destinationEstDeConfiance(
+                try lien("https://ghostpass.example.com/s/abc"), serveur: serveur,
+                approuves: []))
+    }
+
+    func testUnAutreDomaineNEstPasDeConfianceParDefaut() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        for adresse in [
+            "https://relais.attaquant.example/p/abc",
+            // Le piège classique : un domaine qui *contient* celui du serveur.
+            "https://ghostpass.example.com.attaquant.example/p/abc",
+            // Et celui qui s'en approche par la gauche.
+            "https://evil-ghostpass.example.com.co/p/abc",
+        ] {
+            XCTAssertFalse(
+                VaultStore.destinationEstDeConfiance(
+                    try lien(adresse), serveur: serveur, approuves: []),
+                "« \(adresse) » ne doit pas recevoir la clé sans approbation")
+        }
+    }
+
+    func testUnDomaineApprouveParLUtilisateurPasse() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        XCTAssertTrue(
+            VaultStore.destinationEstDeConfiance(
+                try lien("https://ghostbit.example.com/p/abc"), serveur: serveur,
+                approuves: ["ghostbit.example.com"]))
+    }
+
+    /// Un serveur en HTTPS ne peut pas rediriger la clé vers du texte clair : elle
+    /// traverserait le réseau lisible par quiconque écoute.
+    func testUnLienEnClairEstRefuseQuandLeServeurEstChiffre() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        XCTAssertFalse(
+            VaultStore.destinationEstDeConfiance(
+                try lien("http://ghostpass.example.com/s/abc"), serveur: serveur,
+                approuves: ["ghostpass.example.com"]))
+    }
+
+    /// Mais un auto-hébergement en boucle locale reste utilisable : l'application accepte
+    /// déjà `http://` pour lui, refuser ici l'aurait privé du partage.
+    func testUnServeurEnClairAccepteUnLienEnClairSurLuiMeme() throws {
+        let serveur = try XCTUnwrap(URL(string: "http://127.0.0.1:3111"))
+        XCTAssertTrue(
+            VaultStore.destinationEstDeConfiance(
+                try lien("http://127.0.0.1:3111/s/abc"), serveur: serveur, approuves: []))
+    }
+
+    func testUnLienSansHoteEstRefuse() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        XCTAssertFalse(
+            VaultStore.destinationEstDeConfiance(
+                try lien("https:///s/abc"), serveur: serveur, approuves: []))
+    }
+
     // ─── Le registre des partages ───
 
     /// Les noms de champs **sont** le contrat : le registre est écrit par le téléphone et
@@ -1836,5 +2045,34 @@ final class InactiviteTests: XCTestCase {
         store.unSelecteurDeFichiersEstOuvert = true
         store.noterLInactivite(delai: nil)
         XCTAssertTrue(store.isUnlocked, "un sélecteur ouvert ne doit pas déclencher le verrou")
+    }
+}
+
+/// Un serveur en mémoire, qui répond ce qu'on lui dit — y compris en omettant la taille
+/// qu'il annonce, ce qu'un serveur réel ne fera pas sur commande.
+final class ProtocoleDEssai: URLProtocol {
+    nonisolated(unsafe) static var corps = Data()
+    nonisolated(unsafe) static var annonceLaTaille = true
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func stopLoading() {}
+
+    override func startLoading() {
+        let entetes =
+            Self.annonceLaTaille ? ["Content-Length": String(Self.corps.count)] : [:]
+        let reponse = HTTPURLResponse(
+            url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1",
+            headerFields: entetes)!
+        client?.urlProtocol(self, didReceive: reponse, cacheStoragePolicy: .notAllowed)
+        // Par morceaux : c'est ainsi qu'arrive une vraie réponse, et c'est ce qui permet à
+        // la borne de mordre avant la fin.
+        var reste = Self.corps[...]
+        while !reste.isEmpty {
+            let taille = min(512, reste.count)
+            client?.urlProtocol(self, didLoad: Data(reste.prefix(taille)))
+            reste = reste.dropFirst(taille)
+        }
+        client?.urlProtocolDidFinishLoading(self)
     }
 }

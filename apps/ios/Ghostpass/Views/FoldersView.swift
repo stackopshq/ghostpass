@@ -32,6 +32,15 @@ struct FoldersView: View {
                         titre: Text("Tous les éléments"), icone: "tray.full",
                         compte: store.entries.count, filtre: .tout)
 
+                    // Le pendant de « tous » : son propre coffre, sans ce que les équipes
+                    // y versent. La ligne ne paraît que s'il y a quelque chose à séparer —
+                    // sans équipe, elle ferait doublon avec celle du dessus.
+                    if !store.collectionsVisibles.isEmpty {
+                        ligne(
+                            titre: Text("Personnel"), icone: "person.crop.square",
+                            compte: store.personnelles.count, filtre: .personnel)
+                    }
+
                     if !store.folderPaths.isEmpty {
                         Section {
                             ForEach(store.folderPaths, id: \.self) { chemin in
