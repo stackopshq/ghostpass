@@ -10,6 +10,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { sealSend } from "@/lib/send";
 import {
+  decryptOrgItem,
+  openOrg,
   decryptVaultItem,
   encryptFolders,
   encryptItem,
@@ -73,6 +75,65 @@ export function VaultScreen() {
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [ancre, setAncre] = useState<string | null>(null);
 
+  /// Les éléments des collections d'équipe, pour qu'ils rejoignent la liste
+  /// principale.
+  ///
+  /// POURQUOI ILS Y ENTRENT
+  /// Un compte dont tout le contenu vit dans une équipe affichait « 0 mot de
+  /// passe » et une recherche sans résultat. Le coffre n'était pas vide : on
+  /// n'en regardait qu'une moitié. C'était le cas de Clara ce soir, et c'est le
+  /// portage qui l'avait perdu — le Svelte le faisait, le Next ne le faisait
+  /// plus.
+  ///
+  /// POURQUOI ILS ÉCHOUENT EN SILENCE
+  /// Une organisation dont la clé n'a pas été remise, une collection devenue
+  /// inaccessible : on passe. L'alternative afficherait une erreur de coffre à
+  /// quelqu'un dont le coffre va très bien — et le coffre personnel, lui, est
+  /// déjà chargé. Le silence porte sur un supplément, jamais sur le tout.
+  const chargerElementsDEquipe = useCallback(async (): Promise<VaultEntry[]> => {
+    if (!token || !account) return [];
+    const sortis: VaultEntry[] = [];
+    let orgs: Awaited<ReturnType<typeof api.listOrgs>>["organizations"] = [];
+    try {
+      orgs = (await api.listOrgs(token)).organizations;
+    } catch {
+      return [];
+    }
+    for (const org of orgs) {
+      if (org.status !== "active") continue;
+      try {
+        const m = await api.getMembership(token, org.orgId);
+        if (!m.encryptedOrgKey || !m.sealedByPublicKey) continue;
+        const handle = openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey);
+        const { collections } = await api.listCollections(token, org.orgId);
+        for (const col of collections) {
+          try {
+            const { items: dtos } = await api.listCollectionItems(token, org.orgId, col.id);
+            for (const d of dtos) {
+              sortis.push({
+                ...decryptOrgItem(handle, d.encryptedKey, d.encryptedData),
+                id: d.id,
+                updatedAt: d.updatedAt,
+                shared: {
+                  orgId: org.orgId,
+                  orgName: org.name,
+                  collectionId: col.id,
+                  collectionName: col.name,
+                  permission: col.permission,
+                },
+              });
+            }
+          } catch {
+            // Collection inaccessible : les autres restent lisibles.
+          }
+        }
+      } catch {
+        // Organisation illisible : les autres restent lisibles.
+      }
+    }
+    return sortis;
+  }, [token, account]);
+
   const charger = useCallback(async (): Promise<VaultEntry[]> => {
     if (!token || !account) return [];
     setChargement(true);
@@ -95,7 +156,11 @@ export function VaultScreen() {
           entrees.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
         }
       }
+      // Le coffre personnel d'abord, l'équipe ensuite : si les collections sont
+      // lentes ou inaccessibles, la liste reste utilisable.
       setItems(entrees);
+      const equipe = await chargerElementsDEquipe();
+      if (equipe.length > 0) setItems([...entrees, ...equipe]);
       setRegistreId(regId);
       setDossiersVides(regChemins);
       setRegistrePartagesId(regPartagesId);
@@ -108,7 +173,7 @@ export function VaultScreen() {
     } finally {
       setChargement(false);
     }
-  }, [token, account]);
+  }, [token, account, chargerElementsDEquipe]);
 
   useEffect(() => {
     void charger().then(() => setChoisi(null));
@@ -450,7 +515,18 @@ export function VaultScreen() {
           </div>
         </nav>
 
-        <div className={`verre-dense min-h-0 border-r border-border ${section !== "coffre" ? "col-span-2" : ""}`}>
+        {/* `overflow-hidden` et non seulement `min-h-0` : sans lui, une section
+            plus haute que l'écran déborde cette colonne, déborde la grille, et
+            c'est la PAGE qui se met à défiler — emportant le rail de gauche,
+            qui devrait rester fixe. Signalé par Clara sur l'écran de sécurité,
+            dont l'historique de connexions dépasse vite la hauteur d'écran.
+
+            `flex flex-col` donne aux sections un contexte où `flex-1` a un
+            sens : `min-h-0 overflow-y-auto` sur un bloc sans hauteur définie ne
+            déclenche jamais de défilement, il grandit. */}
+        <div
+          className={`verre-dense flex min-h-0 flex-col overflow-hidden border-r border-border ${section !== "coffre" ? "col-span-2" : ""}`}
+        >
           {section === "partages" ? (
             <Partages partages={partages} occupe={occupe} onRevoquer={revoquerPartage} />
           ) : section === "securite" ? (

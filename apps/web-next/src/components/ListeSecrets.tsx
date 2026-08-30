@@ -126,10 +126,29 @@ export function ListeSecrets({
                   className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
                 >
                   <Avatar nom={item.name} url={item.url} />
-                  <span className="flex min-w-0 flex-col">
+                  <span className="flex min-w-0 flex-1 flex-col">
                     <span className={`truncate text-sm ${actif ? "text-accent" : "text-foreground"}`}>{item.name}</span>
                     {sous && <span className="truncate text-xs text-muted">{sous}</span>}
                   </span>
+                  {/* D'OÙ VIENT CETTE ENTRÉE.
+                      La liste mêle le coffre personnel et les collections
+                      d'équipe : sans cette marque, rien ne distingue un secret
+                      qu'on possède d'un secret que l'équipe partage — et les
+                      deux ne se suppriment pas, ne s'exportent pas et ne se
+                      modifient pas de la même façon.
+
+                      `block` et non `inline-flex` : `text-overflow: ellipsis`
+                      ne s'applique qu'à un conteneur de bloc. Sur `inline-flex`
+                      les trois propriétés sont là et aucune n'agit — le nom de
+                      collection était coupé net, sans points de suite. */}
+                  {item.shared && (
+                    <span
+                      className="ml-2 hidden max-w-[9rem] shrink-0 truncate rounded-full bg-accent/12 px-2 py-0.5 text-2xs text-accent sm:block"
+                      title={`${item.shared.orgName} · ${item.shared.collectionName}`}
+                    >
+                      {item.shared.collectionName}
+                    </span>
+                  )}
                 </button>
               </div>
             );

@@ -364,7 +364,14 @@ export const api = {
     });
   },
   listCollections(token: string, orgId: string) {
-    return http<{ collections: Array<{ id: string; name: string }> }>(
+    // `permission` est la permission EFFECTIVE calculée par le serveur
+    // (`orgVault.ts:147`) : rôle d'administrateur et appartenance à un groupe
+    // comprises, et non les seuls octrois directs. Le type l'omettait alors que
+    // la réponse la porte depuis le 2026-08-29 — une omission qui ne casse
+    // rien à l'exécution et rend le champ invisible à qui lit le client.
+    return http<{
+      collections: Array<{ id: string; name: string; permission: "read" | "write" | "manage" }>;
+    }>(
       `/api/orgs/${orgId}/collections`,
       { token },
     );
