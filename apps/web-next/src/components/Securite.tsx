@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { createRecovery, wrapUserKeyForPasskey } from "@/lib/crypto";
+import { computeLoginHash, createRecovery, wrapUserKeyForPasskey } from "@/lib/crypto";
 import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { libelleAppareil } from "@/lib/securite";
@@ -90,7 +90,57 @@ function ListeCles({
 
 export function Securite() {
   const { t, locale } = useI18n();
-  const { token, account } = useSession();
+  const { token, account, fermer } = useSession();
+  const [infoCompte, setInfoCompte] = useState<{ email: string; kdfParams: string; mfaEnabled: boolean } | null>(null);
+  const [suppressionOuverte, setSuppressionOuverte] = useState(false);
+  const [motDePasseSuppression, setMotDePasseSuppression] = useState("");
+  const [codeSuppression, setCodeSuppression] = useState("");
+  const [occupeDonnees, setOccupeDonnees] = useState(false);
+  const [erreurDonnees, setErreurDonnees] = useState<string | null>(null);
+
+  /// L'export part en téléchargement plutôt qu'à l'écran : c'est un fichier
+  /// qu'on garde, pas une page qu'on lit, et il porte du chiffré illisible.
+  const exporter = useCallback(async () => {
+    if (!token) return;
+    setOccupeDonnees(true);
+    setErreurDonnees(null);
+    try {
+      const donnees = await api.accountExport(token);
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(donnees, null, 2)], { type: "application/json" }),
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ghostpass-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErreurDonnees(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOccupeDonnees(false);
+    }
+  }, [token]);
+
+  const supprimerLeCompte = useCallback(async () => {
+    if (!token || !infoCompte) return;
+    setOccupeDonnees(true);
+    setErreurDonnees(null);
+    try {
+      // La même dérivation qu'à la connexion : le serveur ne voit jamais le
+      // mot de passe maître, seulement la preuve qui en découle.
+      const preuve = computeLoginHash(
+        infoCompte.email,
+        motDePasseSuppression,
+        infoCompte.kdfParams,
+      );
+      await api.accountDelete(token, preuve, codeSuppression || undefined);
+      fermer();
+    } catch (e) {
+      setErreurDonnees(e instanceof Error ? e.message : String(e));
+      setOccupeDonnees(false);
+    }
+  }, [token, infoCompte, motDePasseSuppression, codeSuppression, fermer]);
+
   const { copie, copier } = useCopie();
 
   const [passkeys, setPasskeys] = useState<Cle[]>([]);
@@ -121,6 +171,10 @@ export function Securite() {
     if (pk.status === "fulfilled") setPasskeys(pk.value.credentials);
     if (ck.status === "fulfilled") setClesSecu(ck.value.credentials);
     if (act.status === "fulfilled") setConnexions(act.value.events);
+    // Le compte lui-même : l'écran en a besoin pour savoir s'il doit demander
+    // un code de second facteur à la suppression, et pour recalculer la preuve
+    // d'authentification sans faire retaper l'adresse.
+    api.accountInfo(token).then(setInfoCompte).catch(() => setInfoCompte(null));
     const echecs = [pk, ck, act].filter((r) => r.status === "rejected").length;
     setErreur(echecs > 0 ? t("app.deletedSome", { ok: 3 - echecs, ko: echecs }) : null);
   }, [token, t]);
@@ -378,6 +432,57 @@ export function Securite() {
               ))}
             </ul>
           )}
+        </Carte>
+
+        {/* Partir avec ses données, et partir tout court.
+            Ces deux droits existaient dans le règlement et nulle part dans le
+            produit : l'API comptait 62 chemins et aucun des deux, alors que le
+            schéma portait déjà les cascades qui les rendaient possibles. */}
+        <Carte titre={t("app.yourData")} sous={t("app.yourDataSub")}>
+          <div className="flex flex-col gap-3">
+            <Bouton variante="discret" onClick={exporter} disabled={occupeDonnees}>
+              {t("app.exportData")}
+            </Bouton>
+
+            {!suppressionOuverte ? (
+              <Bouton variante="discret" onClick={() => setSuppressionOuverte(true)}>
+                {t("app.deleteAccount")}
+              </Bouton>
+            ) : (
+              <div className="flex flex-col gap-2 rounded-lg border border-danger/30 bg-danger/5 p-3">
+                <p className="text-xs text-danger">{t("app.deleteAccountWarn")}</p>
+                {/* Le mot de passe est redemandé : une session ouverte prouve
+                    qu'on est devant l'écran, pas qu'on est la titulaire. */}
+                <Champ label={t("app.masterPassword")}>
+                  <Saisie
+                    type="password"
+                    value={motDePasseSuppression}
+                    onChange={(e) => setMotDePasseSuppression(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </Champ>
+                {infoCompte?.mfaEnabled && (
+                  <Champ label={t("app.totpCode")}>
+                    <Saisie
+                      inputMode="numeric"
+                      value={codeSuppression}
+                      onChange={(e) => setCodeSuppression(e.target.value)}
+                    />
+                  </Champ>
+                )}
+                <div className="flex gap-2">
+                  <Bouton variante="discret" onClick={() => setSuppressionOuverte(false)}>
+                    {t("app.cancel")}
+                  </Bouton>
+                  <Bouton onClick={supprimerLeCompte} disabled={occupeDonnees}>
+                    {t("app.deleteAccountConfirm")}
+                  </Bouton>
+                </div>
+              </div>
+            )}
+
+            {erreurDonnees && <p className="text-xs text-danger">{erreurDonnees}</p>}
+          </div>
         </Carte>
 
         <p className="flex items-center gap-2 px-1 text-2xs text-muted">

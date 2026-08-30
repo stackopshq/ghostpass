@@ -45,6 +45,31 @@ async function http<T>(
 }
 
 export const api = {
+  /// Ce que le client doit savoir du compte ouvert : l'adresse et les
+  /// paramètres KDF lui servent à recalculer la preuve d'authentification.
+  accountInfo(token: string) {
+    return http<{ email: string; kdfParams: string; mfaEnabled: boolean; createdAt: number }>(
+      "/api/account",
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+  },
+  /// Tout ce que le serveur détient sur vous, chiffré tel qu'il le détient.
+  /// Nous ne pouvons pas déchiffrer, donc nous n'exportons pas en clair : c'est
+  /// la contrepartie exacte du zero-knowledge, pas une limite de l'export.
+  accountExport(token: string) {
+    return http<Record<string, unknown>>("/api/account/export", {
+      headers: { authorization: `Bearer ${token}` },
+    });
+  },
+  /// Effacement définitif. Le mot de passe est redemandé : une session ouverte
+  /// prouve qu'on est devant l'écran, pas qu'on est la titulaire du compte.
+  accountDelete(token: string, serverPassword: string, totpCode?: string) {
+    return http<void>("/api/account", {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${token}` },
+      body: { serverPassword, ...(totpCode ? { totpCode } : {}) },
+    });
+  },
   register(data: RegistrationData) {
     return http<{ userId: string; token: string }>("/api/auth/register", {
       method: "POST",

@@ -35,6 +35,14 @@ export interface NewUser {
 }
 
 export const users = {
+  /// Efface l'utilisateur. La cascade du schéma emporte coffre, sessions,
+  /// clés d'accès, seconds facteurs, historique de connexion, appartenances
+  /// et accès aux collections. `audit_log` est en `ON DELETE SET NULL` et doit
+  /// donc être anonymisé AVANT l'appel — voir `routes/account.ts`.
+  async deleteById(db: DB, id: string): Promise<void> {
+    await db.deleteFrom("users").where("id", "=", id).execute();
+  },
+
   async create(db: DB, u: NewUser): Promise<void> {
     await db
       .insertInto("users")
@@ -637,6 +645,11 @@ export interface NewMember {
 }
 
 export const orgMembers = {
+  /// Toutes les appartenances d'une personne, tous statuts confondus.
+  listByUser(db: DB, userId: string): Promise<OrgMemberRow[]> {
+    return db.selectFrom("org_members").selectAll().where("user_id", "=", userId).execute();
+  },
+
   async create(db: DB, m: NewMember): Promise<void> {
     await db
       .insertInto("org_members")
@@ -860,6 +873,11 @@ export const orgItems = {
 };
 
 export const collectionAccess = {
+  /// Tous les accès directs d'une personne à des collections.
+  listByUser(db: DB, userId: string): Promise<CollectionAccessRow[]> {
+    return db.selectFrom("collection_access").selectAll().where("user_id", "=", userId).execute();
+  },
+
   /// Accorde (ou met à jour) la permission d'un utilisateur sur une collection.
   async grant(
     db: DB,
