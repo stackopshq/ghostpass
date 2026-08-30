@@ -35,18 +35,38 @@ import { getAllowedOrigins } from "./services/webauthn.js";
 ///
 /// Exportée pour être testable. Un sérialiseur atteint par un symbole interne de
 /// pino ne se teste pas — il se devine.
-export function serialiserLaRequete(req: { method: string; url: string }): {
+/// Ce que le journal retient d'une requête : la méthode et le GABARIT de route.
+///
+/// `req.url` écrit le chemin tel qu'il est arrivé — donc tout secret qui y
+/// voyage, dans le chemin comme dans la chaîne de requête. Deux fuites l'ont
+/// montré le même jour :
+///
+///   - `/api/icons?domain=…` transportait le domaine d'une entrée du coffre,
+///     demandé au rendu de CHAQUE ligne. Retirer la chaîne de requête suffisait
+///     pour celle-là.
+///   - `/api/send/<jeton>` porte son identifiant DANS le chemin. Aucune
+///     suppression de chaîne de requête ne l'atteint.
+///
+/// Le gabarit ferme les deux : `req.routeOptions.url` rend `/api/send/:id`, et
+/// la route la plus bavarde de demain sera couverte sans que personne ait à y
+/// penser. Un journal ne s'oublie pas.
+///
+/// C'est la solution de ghostcal, qui journalise `route_template()`.
+///
+/// Exportée pour être testable. Un sérialiseur atteint par un symbole interne
+/// de pino ne se teste pas — il se devine.
+export function serialiserLaRequete(req: {
   method: string;
   url: string;
-} {
-  // `split("?")[0]` serait plus court, mais `noUncheckedIndexedAccess` le type
-  // `string | undefined` — vrai pour le vérificateur, jamais pour l'exécution.
-  // Plutôt qu'un `??` qui masque la question, on coupe à l'indice.
+  routeOptions?: { url?: string };
+}): { method: string; route: string } {
+  // Repli sur le chemin nu quand aucune route ne correspond : un 404 doit
+  // rester visible sans révéler en entier ce qui a été tenté. On coupe à
+  // l'indice plutôt que par `split("?")[0]`, que `noUncheckedIndexedAccess`
+  // type `string | undefined` — vrai pour le vérificateur, jamais à l'exécution.
   const separateur = req.url.indexOf("?");
-  return {
-    method: req.method,
-    url: separateur === -1 ? req.url : req.url.slice(0, separateur),
-  };
+  const chemin = separateur === -1 ? req.url : req.url.slice(0, separateur);
+  return { method: req.method, route: req.routeOptions?.url ?? chemin };
 }
 
 export function buildApp(db: DB): FastifyInstance {
