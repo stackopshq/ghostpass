@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import type { DecryptedItem } from "@/lib/crypto";
 import { faviconUrl } from "@/lib/crypto";
+import { useSession } from "@/lib/session";
 import { generateOtp, parseOtp } from "@/lib/totp";
 import { useI18n } from "@/lib/i18n";
 import { BoutonIcone } from "@/components/champs";
@@ -49,7 +50,8 @@ export function SecretRow({
     return () => clearInterval(id);
   }, [item.totp]);
 
-  const favicon = faviconUrl(item.url);
+  const { jetonIcone } = useSession();
+  const favicon = faviconUrl(item.url, jetonIcone);
 
   return (
     <li className="flex items-start gap-3 border-b border-border py-3 last:border-0">

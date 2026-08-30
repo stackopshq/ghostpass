@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import type { DB } from "./db/database.js";
+import { registerAccountRoutes } from "./routes/account.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerEmergencyRoutes } from "./routes/emergency.js";
@@ -123,6 +124,7 @@ export function buildApp(db: DB): FastifyInstance {
   app.get("/.well-known/webauthn", async () => ({ origins: getAllowedOrigins() }));
 
   registerAuthRoutes(app, db);
+  registerAccountRoutes(app, db);
   registerAuditRoutes(app, db);
   registerSsoRoutes(app, db);
   registerMfaRoutes(app, db);
@@ -131,7 +133,7 @@ export function buildApp(db: DB): FastifyInstance {
   registerOrgRoutes(app, db);
   registerOrgVaultRoutes(app, db);
   registerOrgAdminRoutes(app, db);
-  registerIconRoutes(app);
+  registerIconRoutes(app, db);
   registerSendRoutes(app, db);
   registerWebAuthnRoutes(app, db);
   registerPasskeyRoutes(app, db);
