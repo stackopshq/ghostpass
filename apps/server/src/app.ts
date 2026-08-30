@@ -21,6 +21,34 @@ import { getAllowedOrigins } from "./services/webauthn.js";
 
 /// Construit l'instance Fastify autour d'une base donnée.
 /// Séparé de `index.ts` pour permettre les tests via `app.inject()` sur une DB en mémoire.
+/// Ce que le journal retient d'une requête : la méthode et le CHEMIN, jamais la
+/// chaîne de requête.
+///
+/// `req.url` en Fastify inclut le `?…`, et `/api/icons?domain=…` y transporte le
+/// domaine d'une entrée du coffre — déchiffré au navigateur, extrait par
+/// `faviconUrl()`, demandé au rendu de CHAQUE ligne. Ouvrir son coffre écrivait
+/// donc la liste de ses domaines dans ce journal, une ligne par entrée.
+///
+/// C'est exactement ce que le sérialiseur refuse par ailleurs pour l'adresse IP,
+/// avec une valeur plus parlante encore : savoir qu'une personne a un compte
+/// chez tel prestataire en dit plus que savoir d'où elle se connecte.
+///
+/// Exportée pour être testable. Un sérialiseur atteint par un symbole interne de
+/// pino ne se teste pas — il se devine.
+export function serialiserLaRequete(req: { method: string; url: string }): {
+  method: string;
+  url: string;
+} {
+  // `split("?")[0]` serait plus court, mais `noUncheckedIndexedAccess` le type
+  // `string | undefined` — vrai pour le vérificateur, jamais pour l'exécution.
+  // Plutôt qu'un `??` qui masque la question, on coupe à l'indice.
+  const separateur = req.url.indexOf("?");
+  return {
+    method: req.method,
+    url: separateur === -1 ? req.url : req.url.slice(0, separateur),
+  };
+}
+
 export function buildApp(db: DB): FastifyInstance {
   const app = Fastify({
     // `info` et non `warn` : à `warn`, Fastify ne journalise NI les requêtes
@@ -35,7 +63,7 @@ export function buildApp(db: DB): FastifyInstance {
     logger: {
       level: process.env.LOG_LEVEL ?? "info",
       serializers: {
-        req: (req) => ({ method: req.method, url: req.url }),
+        req: serialiserLaRequete,
         res: (res) => ({ statusCode: res.statusCode }),
       },
     },
