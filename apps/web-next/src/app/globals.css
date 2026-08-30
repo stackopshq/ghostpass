@@ -18,6 +18,17 @@
  * sombre et unique ; si la charte gagne un jour un mode clair, ces trois-là
  * devront le suivre au même endroit qu'elle. */
 :root {
+  /* Le survol d'un lien doit MONTER en contraste, jamais descendre. Sur le
+     fond sombre, c'est l'accent clair de la charte : #2E7DFF au repos donne
+     4,90, #9CC3FF au survol donne 10,40.
+
+     Ce jeton vit ici et non dans `ghost-theme.css`, qui est GÉNÉRÉ par
+     tools/brand/emit_theme.py : une valeur écrite à la main y disparaîtrait
+     à la régénération suivante, sans que rien ne le signale. Sa place
+     naturelle reste la charte — un lien survolé se comporte pareil dans les
+     huit produits — le jour où le générateur saura émettre les deux thèmes. */
+  --color-accent-hover: #9CC3FF;
+
   /* L'aurore du thème généré est à 8 %, calibrée sur les accents clairs de la
      suite. Sur le bleu de ghostpass — 3,1 fois moins lumineux que le cyan de
      ghostcal — elle ne se voit pas. On la renforce ici plutôt que dans le
@@ -53,6 +64,10 @@
   --color-border-strong: rgba(15, 23, 42, 0.18);
   --color-accent: #1b5fd9;
   --color-accent-ink: #ffffff;
+  /* Mesure sur la carte blanche : #1b5fd9 au repos donne 5,70, et
+     l'accent clair #9CC3FF donnerait 1,80 — sous le seuil AA de 4,50
+     et même sous 3,00. Le survol part donc vers le profond, à 9,83. */
+  --color-accent-hover: #143F8F;
   --aurora: color-mix(in srgb, #1b5fd9 10%, transparent);
   --danger: #b3261e;
   --warn: #8a5300;
@@ -83,6 +98,7 @@
   --color-muted: var(--color-muted);
   --color-accent: var(--color-accent);
   --color-accent-light: var(--color-accent-light);
+  --color-accent-hover: var(--color-accent-hover);
   --color-accent-deep: var(--color-accent-deep);
   --color-accent-ink: var(--color-accent-ink);
 
