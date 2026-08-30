@@ -24,6 +24,20 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:
 /// changement d'algorithme un jour ne soit pas indiscernable de l'absence.
 const PREFIXE = "v1:";
 
+/// Longueur de l'étiquette d'authentification, en octets, EXPLICITE des deux
+/// côtés.
+///
+/// Sans elle, Node accepte à la vérification n'importe quelle étiquette de 4 à
+/// 16 octets. Un attaquant peut alors présenter une étiquette **tronquée** :
+/// forger devient exponentiellement plus facile à chaque octet retiré, et 4
+/// octets se force en quelques milliards d'essais hors ligne. Le chiffrement
+/// tiendrait, l'authentification non — et c'est elle qui empêche de fabriquer
+/// une valeur de remplacement.
+///
+/// Relevé par Semgrep (`gcm-no-tag-length`) sur la première version de ce
+/// fichier. Le garde-fou a fait exactement son travail.
+const LONGUEUR_ETIQUETTE = 16;
+
 let cleEnMemoire: Buffer | null = null;
 
 /// Charge la clé depuis l'environnement. Séparée du reste pour être testable
@@ -51,7 +65,9 @@ export function laCleEstPosee(): boolean {
 export function chiffrerAuRepos(clair: string): string {
   if (!cleEnMemoire) return clair;
   const iv = randomBytes(12);
-  const c = createCipheriv("aes-256-gcm", cleEnMemoire, iv);
+  const c = createCipheriv("aes-256-gcm", cleEnMemoire, iv, {
+    authTagLength: LONGUEUR_ETIQUETTE,
+  });
   const ct = Buffer.concat([c.update(clair, "utf8"), c.final()]);
   const tag = c.getAuthTag();
   return `${PREFIXE}${iv.toString("base64url")}:${tag.toString("base64url")}:${ct.toString("base64url")}`;
@@ -72,8 +88,16 @@ export function dechiffrerAuRepos(stocke: string): string {
     );
   const [iv, tag, ct] = stocke.slice(PREFIXE.length).split(":");
   if (!iv || !tag || !ct) throw new Error("secret au repos malformé");
-  const d = createDecipheriv("aes-256-gcm", cleEnMemoire, Buffer.from(iv, "base64url"));
-  d.setAuthTag(Buffer.from(tag, "base64url"));
+  const d = createDecipheriv("aes-256-gcm", cleEnMemoire, Buffer.from(iv, "base64url"), {
+    authTagLength: LONGUEUR_ETIQUETTE,
+  });
+  const etiquette = Buffer.from(tag, "base64url");
+  // Refuser AVANT `setAuthTag` : `authTagLength` borne ce que Node accepte,
+  // mais un refus explicite dit pourquoi, là où l'erreur de la bibliothèque
+  // parle d'une longueur invalide sans dire qu'on tentait de tronquer.
+  if (etiquette.length !== LONGUEUR_ETIQUETTE)
+    throw new Error("étiquette d'authentification de longueur inattendue");
+  d.setAuthTag(etiquette);
   return Buffer.concat([d.update(Buffer.from(ct, "base64url")), d.final()]).toString("utf8");
 }
 

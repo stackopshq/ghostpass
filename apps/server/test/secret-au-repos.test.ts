@@ -158,3 +158,17 @@ test("de bout en bout : le secret est chiffré en base, et la 2FA marche quand m
 
   await app.close();
 });
+
+test("une étiquette d'authentification tronquée est refusée", () => {
+  definirLaCle(chargerLaCle("a".repeat(64)));
+  const stocke = chiffrerAuRepos(SECRET);
+  const [prefixe, iv, tag, ct] = [
+    stocke.slice(0, 3),
+    ...stocke.slice(3).split(":"),
+  ] as [string, string, string, string];
+  // Sans `authTagLength` explicite, Node accepterait cette étiquette de quatre
+  // octets à la place de seize — et forger devient exponentiellement plus
+  // facile à chaque octet retiré. Relevé par Semgrep, pas par relecture.
+  const tronque = Buffer.from(tag, "base64url").subarray(0, 4).toString("base64url");
+  assert.throws(() => dechiffrerAuRepos(`${prefixe}${iv}:${tronque}:${ct}`));
+});
