@@ -110,6 +110,7 @@ Client peut s'y opposer ; à défaut d'accord, il peut résilier sans pénalité
 | **Cloudflare, Inc.** | Termine le TLS du nom public, sert l'application | 🇺🇸 | Voit le trafic ; **sert le code qui chiffre** — voir ci-dessous |
 | **Infomaniak Network SA** | Frontal d'exposition | 🇨🇭 | Trafic chiffré |
 | **Google LLC (Drive)** | Dépôt des sauvegardes, chiffrées avant envoi | 🇺🇸 | Aucun accès en clair |
+| **Google Workspace** | Fournisseur d'identité de l'instance opérée par StackOps | 🇺🇸 | Adresse de courriel, journal de connexion |
 | **Hetzner Online GmbH** | Dépôt secondaire des sauvegardes | 🇩🇪 | Aucun accès en clair |
 
 **Ce que Cloudflare peut, et que le Client doit savoir.** Le frontal termine le
@@ -124,6 +125,14 @@ refuse cet intermédiaire le retire, en servant le produit depuis sa propre
 infrastructure. La confiance ne disparaît pas — elle passe de Cloudflare au
 Client, ce qui est exactement ce que doit vouloir un Client que la question
 préoccupe.
+
+**Le fournisseur d'identité n'est pas dans ce tableau, et c'est volontaire.**
+Sur l'instance opérée par StackOps, la connexion déléguée passe par **Google
+Workspace**. Mais un Client peut brancher **son propre fournisseur OIDC** — c'est
+lui qui choisit, et nous nous adaptons. Dans ce cas le fournisseur est un
+sous-traitant **du Client**, pas de StackOps : nous n'avons ni contrat avec lui,
+ni moyen d'agir sur lui, et le déclarer comme le nôtre laisserait croire le
+contraire.
 
 Les transferts hors de Suisse et de l'Union européenne s'appuient sur les
 clauses contractuelles types et, pour les sauvegardes, sur le fait qu'elles sont
