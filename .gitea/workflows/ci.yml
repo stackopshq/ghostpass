@@ -144,6 +144,37 @@ jobs:
       # sources permet de corriger le cœur et de le vérifier chez un produit dans la
       # foulée. Le jour où l'artefact sera publié — à l'arrivée d'Android, ou quand le
       # cœur cessera de bouger — cette étape disparaîtra (ghostsuite, ADR 0002).
+      # L'étape suivante clone un dépôt privé. Sans droit de lecture, la forge répond
+      # « not found » — elle masque l'existence à qui n'y a pas accès — et le journal se
+      # lit alors comme « ce dépôt n'existe pas », ce qui envoie chercher au mauvais
+      # endroit. Le commentaire ci-dessous le prédisait déjà ; un commentaire ne protège
+      # que celui qui le lit au bon moment, et on ne lit pas les commentaires du fichier
+      # quand on cherche pourquoi un clone échoue.
+      #
+      # Trois issues, jamais deux : accessible, refusé, ou **pas pu regarder**. Confondre
+      # les deux derniers enverrait quelqu'un renouveler un jeton parfaitement valide
+      # parce que le réseau était coupé.
+      - name: Le dépôt du cœur est-il accessible ?
+        env:
+          JETON: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${JETON:-}" ]; then
+            echo "::error::secrets.GITEA_TOKEN est absent de ce dépôt. L'étape suivante clonerait stackops/ghostsuite sans identifiant et échouerait sur « not found », ce qui se lit comme « dépôt inexistant »."
+            exit 1
+          fi
+          # Le jeton passe par stdin, jamais en argument : sur un exécutant partagé,
+          # `ps` montre l'argv de tous les processus, y compris ceux des autres.
+          code=$(printf 'header = "Authorization: token %s"\n' "$JETON" \
+            | curl -sS -K - -o /dev/null -w '%{http_code}' \
+              "https://git.stackops.ch/api/v1/repos/stackops/ghostsuite" || echo "000")
+          case "$code" in
+            200) echo "Le cœur commun est accessible." ;;
+            401|403|404)
+              echo "::error::Accès refusé à stackops/ghostsuite (HTTP $code). Le dépôt existe ; la forge masque son existence à un jeton sans droit de lecture. Vérifiez la portée de secrets.GITEA_TOKEN dans les paramètres du dépôt ou de l'organisation."
+              exit 1 ;;
+            *) echo "::warning::N'a pas pu vérifier l'accès au cœur commun (HTTP $code) — réseau, ou curl absent. L'étape suivante tranchera." ;;
+          esac
       - name: Cœur commun de la suite
         uses: actions/checkout@v4
         with:
