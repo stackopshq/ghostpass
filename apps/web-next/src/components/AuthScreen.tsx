@@ -268,13 +268,21 @@ export function AuthScreen() {
                 <Bouton variante="discret" onClick={versSso} disabled={occupe} className="w-full">
                   {t("auth.sso")}
                 </Bouton>
-                <button
-                  type="button"
-                  className="cursor-pointer text-xs text-muted hover:text-foreground"
-                  onClick={() => { setMode(mode === "login" ? "register" : "login"); setErreur(null); }}
-                >
-                  {mode === "login" ? t("auth.needAccount") : t("auth.haveAccount")}
-                </button>
+                {/* La question reste du texte, l'action seule est le bouton.
+                    Avant, la phrase entière était le bouton, en `text-muted`,
+                    et son unique signal d'interactivité était `hover:` — un
+                    état qu'un écran tactile n'atteint jamais. Sur téléphone,
+                    rien ne distinguait donc « En créer un » d'un gris inerte. */}
+                <p className="text-xs text-muted">
+                  {mode === "login" ? t("auth.needAccount") : t("auth.haveAccount")}{" "}
+                  <button
+                    type="button"
+                    className="cursor-pointer font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
+                    onClick={() => { setMode(mode === "login" ? "register" : "login"); setErreur(null); }}
+                  >
+                    {mode === "login" ? t("auth.needAccountAction") : t("auth.haveAccountAction")}
+                  </button>
+                </p>
               </div>
             </>
           )}
