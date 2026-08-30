@@ -16,7 +16,7 @@ art. 9 de la loi fédérale suisse sur la protection des données (nLPD).*
 | | |
 |---|---|
 | **Responsable du traitement** | Le Client, personne morale souscrivant à GhostPass |
-| **Sous-traitant** | StackOps Sàrl (« StackOps »), éditeur de GhostPass |
+| **Sous-traitant** | **StackOps, entreprise individuelle de Kevin Allioli** (« StackOps »), éditeur de GhostPass |
 
 **Deux régimes coexistent dans le produit, et les confondre serait une faute :**
 
@@ -27,6 +27,18 @@ art. 9 de la loi fédérale suisse sur la protection des données (nLPD).*
 
 Le présent accord régit le second cas. Le premier relève des conditions
 générales d'utilisation.
+
+**StackOps est une entreprise individuelle, pas une société de capitaux**, et un
+Client a le droit de le savoir avant de confier ses données : l'exploitant
+répond des engagements de cet accord sur son patrimoine propre, sans écran de
+responsabilité. C'est une garantie inhabituellement forte pour le Client — et
+une exposition inhabituellement forte pour l'exploitant, dont l'art. 61 nLPD
+fait par ailleurs une amende **personnelle** pouvant atteindre 250 000 francs.
+
+Cette ligne appelle deux vérifications qui ne sont pas techniques : que la forme
+reste adaptée au volume de données confiées, et qu'une assurance en
+responsabilité professionnelle couvre le risque. Ni l'une ni l'autre n'est
+tranchée à ce jour.
 
 ## 2. Ce qui est traité
 
