@@ -1,4 +1,5 @@
 import type { DB } from "./database.js";
+import { chiffrerAuRepos } from "../services/secretAtRest.js";
 import type {
   AuditLogRow,
   CollectionAccessRow,
@@ -76,9 +77,13 @@ export const users = {
 
   async setMfaSecret(db: DB, userId: string, secret: string): Promise<void> {
     // (Re)configure le secret, repasse en non activé et réinitialise l'anti-rejeu.
+    //
+    // Le chiffrement au repos se fait ICI, à l'unique point d'écriture, et non
+    // chez l'appelant : un secret TOTP qui arriverait en base par un autre
+    // chemin serait alors en clair sans que rien ne le signale.
     await db
       .updateTable("users")
-      .set({ mfa_secret: secret, mfa_enabled: 0, mfa_last_counter: 0 })
+      .set({ mfa_secret: chiffrerAuRepos(secret), mfa_enabled: 0, mfa_last_counter: 0 })
       .where("id", "=", userId)
       .execute();
   },
