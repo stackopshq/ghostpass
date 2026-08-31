@@ -46,6 +46,16 @@ struct LoginResponse: Decodable {
     let encryptedPrivateKey: String
 }
 
+/// La session rendue par l'échange SSO — `LoginResponse` plus l'adresse, que le client
+/// n'a pas saisie puisque c'est le fournisseur d'identité qui l'a établie.
+struct SsoSessionResponse: Decodable {
+    let token: String
+    let email: String
+    let kdfParams: String
+    let encryptedUserKey: String
+    let encryptedPrivateKey: String
+}
+
 struct EncryptedItemDTO: Codable, Identifiable {
     let id: String
     let encryptedKey: String
@@ -426,6 +436,34 @@ struct APIClient {
         let body = try JSONEncoder().encode(payload)
         return try decode(
             LoginResponse.self, from: await request("POST", "api/auth/login", body: body))
+    }
+
+    /// Le SSO est-il actif sur ce serveur ?
+    ///
+    /// Rien d'autre que ce booléen : le client ne fait aucune découverte OIDC. Un bouton
+    /// qui promet une fonction absente du déploiement est pire que son absence — il
+    /// déplace l'échec du moment où l'on configure au moment où quelqu'un essaie.
+    func ssoActif() async -> Bool {
+        struct Etat: Decodable { let enabled: Bool }
+        guard let brut = try? await request("GET", "api/auth/sso/status"),
+            let etat = try? decode(Etat.self, from: brut)
+        else {
+            // Un serveur qui ne connaît pas la route est un serveur sans SSO : on masque
+            // le bouton plutôt que d'afficher une erreur pour une fonction non demandée.
+            return false
+        }
+        return etat.enabled
+    }
+
+    /// Échange le code à usage unique contre une session.
+    ///
+    /// La réponse a exactement la forme du callback web, `email` en plus : un seul chemin
+    /// de session à écrire côté client.
+    func ssoEchanger(code: String, verificateur: String) async throws -> SsoSessionResponse {
+        let body = try JSONEncoder().encode(["code": code, "codeVerifier": verificateur])
+        return try decode(
+            SsoSessionResponse.self,
+            from: await request("POST", "api/auth/sso/exchange", body: body))
     }
 
     func logout(token: String) async throws {

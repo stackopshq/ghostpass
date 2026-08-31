@@ -1,3 +1,4 @@
+import AuthenticationServices
 import Foundation
 
 /// État de l'application : session, coffre déchiffré, opérations CRUD.
@@ -129,6 +130,47 @@ final class VaultStore: ObservableObject {
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Ouvre une session par SSO, puis **s'arrête là**.
+    ///
+    /// Le SSO authentifie ; il n'ouvre pas le coffre, qui reste scellé sous le mot de passe
+    /// maître. Cette méthode dépose donc la session comme le ferait une connexion réussie,
+    /// et l'écran bascule sur « coffre enregistré » — il ne reste que la phrase à taper.
+    ///
+    /// Confondre les deux enverrait quelqu'un d'authentifié devant un formulaire de
+    /// connexion complet, sans lui dire ce qui manque.
+    @MainActor
+    func connecterParSSO(server: String, ancre: ASPresentationAnchor) async -> Bool {
+        guard let url = ServerAddress.normaliser(server) else {
+            errorMessage = APIError.badURL.localizedDescription
+            return false
+        }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let pkce = SsoMobile.Pkce()
+            let code = try await SsoMobile.obtenirUnCode(serveur: url, pkce: pkce, ancre: ancre)
+            let session = try await APIClient(baseURL: url).ssoEchanger(
+                code: code, verificateur: pkce.verificateur)
+
+            Keychain.set(session.token, for: Keychain.Key.token)
+            SharedStore.save(
+                SharedStore.Session(
+                    serverURL: url.absoluteString, email: session.email,
+                    kdfParams: session.kdfParams,
+                    encryptedUserKey: session.encryptedUserKey,
+                    encryptedPrivateKey: session.encryptedPrivateKey))
+            errorMessage = nil
+            return true
+        } catch is ASWebAuthenticationSessionError {
+            // L'utilisateur a fermé la fenêtre. Ce n'est pas un incident : afficher une
+            // erreur reviendrait à reprocher un renoncement.
+            return false
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 

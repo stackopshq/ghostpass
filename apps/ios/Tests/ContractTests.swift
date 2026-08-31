@@ -2190,3 +2190,125 @@ final class CibleDEditionTests: XCTestCase {
         XCTAssertNotEqual(a.id, EditTarget.new.id)
     }
 }
+
+/// Le SSO mobile : le calcul PKCE et la lecture du retour.
+///
+/// Ces deux-là sont la sécurité du dispositif côté client. Le reste — l'échange, la liste
+/// blanche, l'usage unique du code — est éprouvé côté serveur ; ici on vérifie ce que
+/// l'application fait, et ce qu'elle refuse.
+final class SsoMobileTests: XCTestCase {
+    /// Le vecteur de la RFC 7636, annexe B. Il vient de la norme et non de notre code :
+    /// il vérifie qu'on calcule ce que le monde calcule, pas qu'on est cohérent avec soi.
+    func testLeDefiSuitLeVecteurDeLaNorme() {
+        let pkce = SsoMobile.Pkce(verificateur: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
+        XCTAssertEqual(pkce.defi, "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
+    }
+
+    /// Le serveur exige 43 caractères base64url et refuse au `start`. Un défi avec
+    /// remplissage en ferait 44 — l'erreur serait renvoyée avant même l'ouverture du
+    /// navigateur, ce qui est le bon endroit, mais autant ne pas la provoquer.
+    func testLeDefiFait43CaracteresSansRemplissage() {
+        for _ in 0..<20 {
+            let defi = SsoMobile.Pkce().defi
+            XCTAssertEqual(defi.count, 43, defi)
+            XCTAssertFalse(defi.contains("="), defi)
+            XCTAssertFalse(defi.contains("+"), defi)
+            XCTAssertFalse(defi.contains("/"), defi)
+        }
+    }
+
+    func testDeuxTiragesDifferent() {
+        // Un vérificateur prévisible annulerait tout le dispositif : c'est lui seul qui
+        // rend inutile un code intercepté.
+        XCTAssertNotEqual(SsoMobile.Pkce().verificateur, SsoMobile.Pkce().verificateur)
+    }
+
+    // ─── La lecture du retour ───
+
+    private func retour(_ requete: String) -> URL {
+        URL(string: "ch.stackops.ghostpass://sso?\(requete)")!
+    }
+
+    func testUnRetourCompletDonneLeCode() {
+        let resultat = SsoMobile.codeDuRetour(
+            retour("code=abc123&state=etat-1"), etatAttendu: "etat-1")
+        XCTAssertEqual(try? resultat.get(), "abc123")
+    }
+
+    /// **L'échec est l'absence de code, pas la présence d'`error`.**
+    ///
+    /// Un client qui teste `error` et poursuit sinon appellerait l'échange avec un code
+    /// vide, et lirait le refus du serveur comme une panne réseau plutôt que comme un rejet
+    /// d'authentification. C'est une confusion qui coûte une soirée.
+    func testUnRetourSansCodeNiErreurEstUnEchec() {
+        let resultat = SsoMobile.codeDuRetour(retour("state=etat-1"), etatAttendu: "etat-1")
+        guard case .failure(.sansCode(let motif)) = resultat else {
+            return XCTFail("Un retour sans code doit échouer.")
+        }
+        XCTAssertNil(motif)
+    }
+
+    func testUnCodeVideNestPasUnCode() {
+        // Une valeur présente mais vide passerait un test d'existence naïf.
+        let resultat = SsoMobile.codeDuRetour(
+            retour("code=&state=etat-1"), etatAttendu: "etat-1")
+        guard case .failure(.sansCode) = resultat else {
+            return XCTFail("Un code vide doit échouer.")
+        }
+    }
+
+    func testLeMotifDuRefusEstRendu() {
+        let resultat = SsoMobile.codeDuRetour(
+            retour("error=not_provisioned&state=etat-1"), etatAttendu: "etat-1")
+        guard case .failure(.sansCode(let motif)) = resultat else {
+            return XCTFail("Un retour en erreur doit échouer.")
+        }
+        // Ce motif-là mérite son propre message : « cette adresse n'a pas de compte »
+        // n'envoie pas chercher au même endroit que « l'authentification a échoué ».
+        XCTAssertEqual(motif, "not_provisioned")
+    }
+
+    /// L'état est notre moitié de la protection contre la requête forgée. Le serveur le
+    /// porte de bout en bout, mais c'est au client de le comparer.
+    func testUnEtatQuiNeCorrespondPasEstRefuse() {
+        let resultat = SsoMobile.codeDuRetour(
+            retour("code=abc123&state=celui-d-un-autre"), etatAttendu: "etat-1")
+        XCTAssertEqual(try? resultat.get(), nil)
+        guard case .failure(.etatInattendu) = resultat else {
+            return XCTFail("Un état étranger doit être refusé.")
+        }
+    }
+
+    func testLEtatEstVerifieAvantLeCode() {
+        // Un retour qui n'est pas le nôtre ne mérite pas qu'on lise ce qu'il transporte.
+        //
+        // Le cas qui distingue les deux ordres est celui-ci : **ni code, ni le bon état**.
+        // Avec le code vérifié en premier, on rendrait « authentification échouée » ; avec
+        // l'état en premier, on rend « cette réponse n'est pas la vôtre ». Les deux
+        // n'envoient pas chercher au même endroit.
+        //
+        // La première version de ce test portait un code *et* un état étranger — les deux
+        // ordres y donnent le même refus, et il ne mesurait donc rien. Trouvé en cassant
+        // délibérément l'ordre et en constatant qu'aucun test ne tombait.
+        let resultat = SsoMobile.codeDuRetour(
+            retour("error=sso_failed&state=celui-d-un-autre"), etatAttendu: "etat-1")
+        guard case .failure(.etatInattendu) = resultat else {
+            return XCTFail("L'état doit être vérifié avant le code.")
+        }
+    }
+
+    // ─── L'adresse de départ ───
+
+    func testLAdresseDeDepartPorteCeQueLeServeurExige() {
+        let url = SsoMobile.adresseDeDepart(
+            serveur: URL(string: "https://ghostpass.example.com")!,
+            defi: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", etat: "etat-1")
+        let elements = URLComponents(url: url!, resolvingAgainstBaseURL: false)!.queryItems ?? []
+        func valeur(_ nom: String) -> String? { elements.first { $0.name == nom }?.value }
+
+        XCTAssertEqual(url?.path, "/api/auth/sso/mobile/start")
+        XCTAssertEqual(valeur("code_challenge_method"), "S256")
+        XCTAssertEqual(valeur("state"), "etat-1")
+        XCTAssertEqual(valeur("redirect_uri"), "ch.stackops.ghostpass://sso")
+    }
+}

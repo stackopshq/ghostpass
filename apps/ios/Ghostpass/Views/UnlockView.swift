@@ -21,6 +21,9 @@ struct UnlockView: View {
     /// formulaire de connexion sans savoir si quelque chose s'est passé.
     @State private var messageDeReinitialisation = false
     @State private var biometrieDemandee = false
+    /// Le SSO est-il proposé par ce serveur ? Nul tant qu'on n'a pas demandé — un bouton
+    /// affiché puis retiré serait plus déroutant qu'un bouton qui apparaît.
+    @State private var ssoDisponible: Bool?
 
     var body: some View {
         ZStack {
@@ -65,6 +68,35 @@ struct UnlockView: View {
         // appuyer soi-même sur un bouton pour obtenir ce qui devait venir seul.
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { demanderLaBiometrie() }
+        }
+        // L'adresse peut changer sous les doigts : on redemande, mais seulement quand elle
+        // devient plausible, pour ne pas interroger un serveur à chaque caractère tapé.
+        .task(id: serveurEffectif) { await interrogerLeSSO() }
+    }
+
+    /// Demande au serveur s'il propose le SSO.
+    ///
+    /// L'échec est traité comme « pas de SSO » et non comme une erreur : un serveur
+    /// antérieur à cette fonction ne connaît pas la route, et afficher un incident pour une
+    /// fonction que personne n'a demandée serait du bruit.
+    private func interrogerLeSSO() async {
+        guard !useSavedSession, let url = ServerAddress.normaliser(serveurEffectif) else {
+            ssoDisponible = nil
+            return
+        }
+        ssoDisponible = await APIClient(baseURL: url).ssoActif()
+    }
+
+    @MainActor
+    private func connecterParSSO() async {
+        guard let fenetre = UIApplication.shared.connectedScenes
+            .compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first
+        else { return }
+        if await store.connecterParSSO(server: serveurEffectif, ancre: fenetre) {
+            // La session est déposée : il ne reste que la phrase. On bascule sur le visage
+            // qui la demande seule, plutôt que de laisser le formulaire complet affiché.
+            useSavedSession = true
+            password = ""
         }
     }
 
@@ -229,6 +261,18 @@ struct UnlockView: View {
                 // La récupération n'a de sens que sur une connexion complète : elle a
                 // besoin de l'adresse du serveur et du compte, et elle réinitialise pour
                 // de bon. On ne la propose donc pas derrière une session déjà enregistrée.
+                // Le SSO ne se propose que sur une connexion complète : derrière une
+                // session enregistrée, il n'y a plus d'identité à établir, seulement un
+                // coffre à ouvrir — et cela, le SSO ne sait pas le faire.
+                if !useSavedSession && ssoDisponible == true {
+                    Button("Se connecter avec le SSO") {
+                        Task { await connecterParSSO() }
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(store.isBusy)
+                    .accessibilityIdentifier("button.sso")
+                }
+
                 if !useSavedSession {
                     Button("Mot de passe maître oublié ?") {
                         store.errorMessage = nil
