@@ -6,8 +6,10 @@
 > par un professionnel du droit. Les faits techniques qu'il contient sont
 > vérifiables ; les qualifications juridiques ne le sont pas encore.
 
-*Version 0.2 — 2026-08-31. Article 28 du règlement (UE) 2016/679 (RGPD) et
-art. 9 de la loi fédérale suisse sur la protection des données (nLPD).*
+*Version 0.3 — 2026-08-31. Article 28 du règlement (UE) 2016/679 (RGPD).
+L'art. 9 de la loi fédérale suisse sur la protection des données (nLPD)
+s'applique en outre lorsque le Client ou les personnes concernées sont en
+Suisse — StackOps est établie en France, le RGPD est donc son régime premier.*
 
 ---
 
@@ -21,7 +23,7 @@ qui a l'air signe et ne l'est pas.
 |---|---|
 | Client (responsable du traitement) | **à compléter** — raison sociale, forme, siège, numéro d'identification |
 | Représentant du Client | **à compléter** — nom, qualité |
-| Sous-traitant | StackOps, entreprise individuelle de Kevin Allioli, Suisse |
+| Sous-traitant | StackOps, entreprise individuelle de Kevin Allioli, siège à Saint-Julien-en-Genevois (Haute-Savoie), France |
 | Représentant du sous-traitant | Kevin Allioli, exploitant |
 | Service concerné | GhostPass — coffre de secrets chiffré de bout en bout |
 | Modèle d'hébergement retenu | **à compléter** — A (mutualisé) ou B (VM dédiée), voir §5 bis |
@@ -51,16 +53,21 @@ Le présent accord régit le second cas. Le premier relève des conditions
 générales d'utilisation.
 
 **StackOps est une entreprise individuelle, pas une société de capitaux**, et un
-Client a le droit de le savoir avant de confier ses données : l'exploitant
-répond des engagements de cet accord sur son patrimoine propre, sans écran de
-responsabilité. C'est une garantie inhabituellement forte pour le Client — et
-une exposition inhabituellement forte pour l'exploitant, dont l'art. 61 nLPD
-fait par ailleurs une amende **personnelle** pouvant atteindre 250 000 francs.
+Client a le droit de le savoir avant de confier ses données : il traite avec une
+personne physique, dont l'engagement n'est pas adossé à un capital social.
 
-Cette ligne appelle deux vérifications qui ne sont pas techniques : que la forme
-reste adaptée au volume de données confiées, et qu'une assurance en
-responsabilité professionnelle couvre le risque. Ni l'une ni l'autre n'est
-tranchée à ce jour.
+**L'étendue de cet engagement est un point ouvert, et ce document ne le
+tranche pas.** Depuis la réforme française du 14 février 2022, l'entrepreneur
+individuel dispose de plein droit d'un patrimoine professionnel séparé de son
+patrimoine personnel, ce dernier n'étant en principe plus saisissable par les
+créanciers professionnels. Écrire ici que l'exploitant répond « sur son
+patrimoine propre » serait donc inexact — et l'écrire dans l'autre sens, sans
+relecture juridique, le serait tout autant.
+
+Ce qui reste vrai quelle que soit l'analyse : la forme sociale appelle deux
+vérifications qui ne sont pas techniques — qu'elle reste adaptée au volume de
+données confiées, et qu'une assurance en responsabilité professionnelle couvre
+le risque. Ni l'une ni l'autre n'est tranchée à ce jour.
 
 ## 2. Ce qui est traité
 
@@ -187,11 +194,19 @@ Client peut s'y opposer ; à défaut d'accord, il peut résilier sans pénalité
 |---|---|---|---|---|
 | **Cloudflare, Inc.** | Tunnel du nom public — rien d'autre | États-Unis | Voit le trafic ; **sert le code qui chiffre** (voir plus bas) | A et B |
 | **Infomaniak Network SA (Swiss Backup)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | Suisse | Aucun accès en clair | A et B |
-| **OVH SAS** | Serveur physique portant la machine virtuelle dédiée du Client | France — centre de données de **Gravelines** (Nord) | Accès physique à la machine ; aucun accès applicatif | **B uniquement** |
+| **OVH SAS** | Serveur physique portant la machine virtuelle dédiée du Client | France — **Gravelines** (Nord) | Accès physique à la machine ; aucun accès applicatif | **B uniquement** |
+| **OVH SAS** | Sauvegarde du serveur physique | France — **Roubaix** (Nord) | Instantanés du serveur, dans l'Union | **B uniquement** |
 
-La dernière ligne n'existe que si le Client a choisi le modèle B. Dans le
-modèle A, l'infrastructure est celle de StackOps et aucun hébergeur tiers n'est
-sur le chemin des données.
+Les deux lignes OVH n'existent que si le Client a choisi le modèle B : la
+machine est à Gravelines, sa sauvegarde à Roubaix, les deux dans l'Union. Dans
+le modèle A, l'infrastructure est celle de StackOps et aucun hébergeur tiers
+n'est sur le chemin des données.
+
+*La sauvegarde de Roubaix ne figurait dans aucun document du dépôt avant cette
+version — elle a été portée à ma connaissance par l'exploitante. Une destination
+de sauvegarde qui n'existe que dans la tête de quelqu'un est exactement ce que
+la règle « tout est versionné » vise, et c'est aussi une ligne qui manquait à un
+registre de transferts.*
 
 **Deux lignes ont été retirées de ce tableau, et il faut dire pourquoi**, sans
 quoi une version antérieure de ce document contredirait celle-ci.
@@ -222,10 +237,16 @@ Client la vérifie.
 Elles vont désormais chez **Swiss Backup** (Infomaniak), en Suisse. Le tableau
 ci-dessus décrit l'état après cette bascule, faite le 2026-08-30.
 
-Ce qu'elle **retire** : un transfert vers les États-Unis. Les instantanés étaient
-déjà chiffrés par restic avant de quitter la machine dans les deux cas — ce qui
-change n'est pas la confidentialité du contenu, c'est la juridiction du dépôt et
-donc le régime d'accès dont il relève.
+Ce qu'elle **retire** : un transfert vers les États-Unis, sous clauses
+contractuelles types. Ce qu'elle **laisse** : un transfert hors de l'Union, vers
+la Suisse, cette fois couvert par une décision d'adéquation. Les instantanés
+étaient déjà chiffrés par restic avant de quitter la machine dans les deux cas —
+ce qui change n'est pas la confidentialité du contenu, c'est la juridiction du
+dépôt et donc le régime d'accès dont il relève.
+
+**Le gain est réel et il n'est pas celui d'une sortie de l'Union.** Le dire
+autrement laisserait croire que la question du transfert est close, alors qu'elle
+change seulement de fondement.
 
 *Note de rédaction : cette version du document est écrite le jour même de la
 bascule. Si la relecture juridique intervient avant qu'elle soit effective, la
@@ -247,11 +268,22 @@ infrastructure. La confiance ne disparaît pas — elle passe de Cloudflare au
 Client, ce qui est exactement ce que doit vouloir un Client que la question
 préoccupe.
 
-### Transferts hors de Suisse et de l'Union européenne
+### Transferts hors de l'Union européenne
 
-Depuis la bascule des sauvegardes vers la Suisse, **le tunnel Cloudflare est le
-seul transfert hors de Suisse et de l'Union européenne** qui subsiste pour
-GhostPass. Il s'appuie sur les clauses contractuelles types.
+StackOps est établie en France : le point de départ de tout transfert est donc
+l'Union, et non la Suisse. Deux destinations sortent de l'Union :
+
+| Destination | Pays | Fondement du transfert |
+|---|---|---|
+| **Cloudflare, Inc.** | États-Unis | Clauses contractuelles types |
+| **Infomaniak (Swiss Backup)** | Suisse | **Décision d'adéquation** de la Commission européenne du 26 juillet 2000, maintenue |
+
+**La Suisse est un pays tiers vu de France**, même si c'est le pays tiers le
+mieux traité par le droit européen : la décision d'adéquation dispense de
+garanties supplémentaires. Une version antérieure de ce document, écrite quand
+l'établissement était cru suisse, présentait Swiss Backup comme *l'absence* d'un
+transfert. C'était l'inverse — et c'est une correction qui compte, parce qu'un
+transfert non déclaré est précisément ce qu'une autorité cherche.
 
 Le Client qui souhaite le supprimer entièrement le peut : il auto-héberge, et
 plus aucune donnée ne quitte son périmètre.
@@ -317,9 +349,12 @@ trente jours ouvrés.
 
 ## 11. Droit applicable et for
 
-Droit suisse. For juridique : le siège de l'exploitant — **à compléter**, comme
-dans les conditions générales, et pour la même raison : l'écrire faux serait pire
-que de le laisser vide.
+Droit français, sans préjudice de l'application du RGPD, qui prime en tout
+état de cause. For juridique : les tribunaux compétents du siège de
+l'exploitant, à **Saint-Julien-en-Genevois (Haute-Savoie)**.
+
+Lorsque le Client ou les personnes concernées sont établis en Suisse, la nLPD
+s'applique en outre, et les compétences qu'elle prévoit demeurent.
 
 Les règles de compétence protectrices des consommateurs et celles du RGPD à
 l'égard des personnes concernées demeurent réservées.

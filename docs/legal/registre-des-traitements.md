@@ -6,8 +6,10 @@
 > déploiement. Les faits techniques sont vérifiables ; les qualifications
 > juridiques ne sont pas encore relues.
 
-*Version 0.1 — 2026-08-31. Article 30 du règlement (UE) 2016/679 (RGPD) et
-art. 12 de la loi fédérale suisse sur la protection des données (nLPD).*
+*Version 0.2 — 2026-08-31. Article 30 du règlement (UE) 2016/679 (RGPD).
+StackOps est établie en France : le RGPD est son régime premier. L'art. 12 nLPD
+s'applique en outre lorsque le Client ou les personnes concernées sont en
+Suisse.*
 
 ---
 
@@ -16,8 +18,7 @@ art. 12 de la loi fédérale suisse sur la protection des données (nLPD).*
 L'article 30.5 dispense les organisations de moins de 250 personnes de tenir un
 registre — **sauf**, notamment, lorsque le traitement n'est pas occasionnel.
 Héberger en continu les coffres de secrets de clients n'est pas occasionnel.
-La dispense ne s'applique donc pas, et l'art. 12 al. 5 nLPD conduit au même
-résultat par un chemin différent.
+La dispense ne s'applique donc pas.
 
 Ce document est aussi ce qu'une autorité demande **en premier** lors d'un
 contrôle. Ne pas l'avoir se remarque avant tout le reste.
@@ -40,10 +41,10 @@ Les mélanger produirait un registre qui n'est ni l'un ni l'autre.
 
 | | |
 |---|---|
-| **Responsable** | StackOps, entreprise individuelle de Kevin Allioli, Suisse |
+| **Responsable** | StackOps, entreprise individuelle de Kevin Allioli, siège à Saint-Julien-en-Genevois (Haute-Savoie), France |
 | **Contact** | privacy@stackops.ch |
 | **Délégué à la protection des données** | Aucun. Ni l'art. 37 RGPD ni l'art. 10 nLPD n'en imposent un ici : pas d'autorité publique, pas de suivi systématique à grande échelle, pas de traitement à grande échelle de données sensibles. **À réexaminer si le volume de clients change** |
-| **Représentant dans l'Union** (art. 27) | **À trancher.** StackOps est établie en Suisse et propose le service à des personnes dans l'Union : la désignation d'un représentant est probablement due. Point ouvert, non résolu par ce document |
+| **Représentant dans l'Union** (art. 27) | **Sans objet.** StackOps est établie en France, donc dans l'Union : l'article 27 ne vise que les responsables établis hors de l'Union |
 
 ### Finalités et bases légales
 
@@ -82,7 +83,7 @@ détruirait celles des autres.
 
 | | |
 |---|---|
-| **Sous-traitant** | StackOps, entreprise individuelle de Kevin Allioli, Suisse |
+| **Sous-traitant** | StackOps, entreprise individuelle de Kevin Allioli, siège à Saint-Julien-en-Genevois (Haute-Savoie), France |
 | **Contact** | privacy@stackops.ch |
 
 ### Responsables du traitement pour le compte desquels StackOps agit
@@ -116,16 +117,22 @@ DPA).
 
 ---
 
-## Transferts hors de Suisse et de l'Union européenne
+## Transferts hors de l'Union européenne
 
-| Destinataire | Pays | Ce qui transite | Garantie | Modèle |
+Le point de départ est la France. **Deux destinations sortent de l'Union**, et
+la seconde l'a longtemps été sans être vue comme telle.
+
+| Destinataire | Pays | Ce qui transite | Fondement du transfert | Modèle |
 |---|---|---|---|---|
 | **Cloudflare, Inc.** | États-Unis | Le trafic du nom public ; sert le code qui chiffre | Clauses contractuelles types | A et B |
-| **Infomaniak Network SA** (Swiss Backup) | Suisse | Sauvegardes, chiffrées par restic avant envoi | Pas de transfert hors Suisse ; décision d'adéquation pour l'UE | A et B |
-| **OVH SAS** | France — **Gravelines** (Nord) | Rien en clair — l'hébergeur porte la machine, pas les données applicatives | Union européenne, pas de transfert hors UE | B uniquement |
+| **Infomaniak Network SA** (Swiss Backup) | **Suisse — pays tiers** | Sauvegardes, chiffrées par restic avant envoi | **Décision d'adéquation** du 26 juillet 2000 | A et B |
+| **OVH SAS** | France — Gravelines (Nord) | Rien en clair — l'hébergeur porte la machine, pas les données applicatives | Dans l'Union, pas un transfert | B uniquement |
+| **OVH SAS** | France — Roubaix (Nord) | Instantanés du serveur physique | Dans l'Union, pas un transfert | B uniquement |
 
-**Le tunnel Cloudflare est le seul transfert hors de Suisse et de l'Union.** Il
-disparaît si le Client auto-héberge.
+**La Suisse est un pays tiers vu de France.** La décision d'adéquation dispense
+de garanties supplémentaires, mais le transfert existe et doit être déclaré : une
+version antérieure de ce registre, écrite quand l'établissement était cru suisse,
+présentait Swiss Backup comme l'absence d'un transfert. C'était l'inverse.
 
 ---
 
@@ -172,3 +179,4 @@ réponse datée et signée, ce qu'un document bureautique ne donne pas.
 | Version | Date | Modification |
 |---|---|---|
 | 0.1 | 2026-08-31 | Création. Aucun responsable du traitement en fiche B — aucun DPA n'est signé |
+| 0.2 | 2026-08-31 | **L'établissement est français**, siège à Saint-Julien-en-Genevois, et non suisse comme l'écrivaient les conditions générales. Trois conséquences : le représentant art. 27 devient sans objet, la Suisse devient un pays tiers de destination, et la sauvegarde OVH de Roubaix entre au tableau des transferts |
