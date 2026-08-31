@@ -182,9 +182,40 @@ struct VaultEntry: Identifiable, Hashable {
     var updatedAt: Int?
     var origine: OrigineDuCoffre = .personnel
 
+    /// A-t-on su ouvrir cet élément ?
+    ///
+    /// **Faux ne veut pas dire absent.** Un élément scellé sous une clé qu'on n'a pas —
+    /// une génération retirée, une organisation dont la clé n'a pas été déballée — garde sa
+    /// place dans la liste et dit pourquoi. Le faire disparaître serait pire : le coffre
+    /// paraîtrait simplement plus petit, et personne ne chercherait ce qui manque.
+    ///
+    /// C'était le comportement jusqu'au 2026-08-31, trouvé par l'agent qui portait le
+    /// client Android : `try? decrypt(…) else { continue }`, deux fois. La règle était
+    /// écrite partout et appliquée nulle part.
+    ///
+    /// `item` porte alors un substitut d'affichage. Tout ce qui **écrit** doit refuser une
+    /// entrée illisible — enregistrer écraserait un contenu qu'on n'a jamais lu.
+    var lisible = true
+
     var login: Login? {
         if case .login(let l) = item.data { return l }
         return nil
+    }
+
+    /// L'entrée d'un élément qu'on n'a pas su ouvrir.
+    ///
+    /// Le substitut est une note vide : il n'a pas de mot de passe à offrir, donc rien qui
+    /// puisse être rempli ou exporté par mégarde.
+    static func illisible(id: String, updatedAt: Int?, origine: OrigineDuCoffre = .personnel)
+        -> VaultEntry
+    {
+        VaultEntry(
+            id: id,
+            item: VaultItem(
+                name: String(localized: "Élément illisible"),
+                notes: nil, folder: nil,
+                data: .secureNote(SecureNote(content: ""))),
+            updatedAt: updatedAt, origine: origine, lisible: false)
     }
 }
 

@@ -481,6 +481,16 @@ final class VaultStore: ObservableObject {
         entries.filter { !$0.origine.estPartage }
     }
 
+    /// Ce qui peut être exporté, ou plus généralement **recopié**.
+    ///
+    /// Une entrée illisible en est exclue : son substitut d'affichage n'a pas de contenu,
+    /// et l'écrire dans un fichier produirait une ligne « Élément illisible » vide que
+    /// n'importe quel import prendrait pour une vraie entrée. On perdrait ce qu'on ne
+    /// savait déjà pas lire, en croyant l'avoir sauvegardé.
+    var exportables: [VaultEntry] {
+        personnelles.filter { $0.lisible }
+    }
+
     /// Ajoute à la liste les éléments des collections d'équipe auxquelles on a accès.
     ///
     /// Sans eux, quelqu'un dont tout le contenu vit dans une organisation voyait « aucun
@@ -555,7 +565,19 @@ final class VaultStore: ObservableObject {
         var resultat = Lecture()
 
         for dto in dtos {
-            guard let item = try? decrypt(dto, with: account) else { continue }
+            // Ce qui ne s'ouvre pas garde sa place. Un élément scellé sous une clé qu'on
+            // n'a pas — génération retirée, organisation dont la clé n'est pas déballée —
+            // disparaissait ici jusqu'au 2026-08-31 : le coffre paraissait simplement plus
+            // petit, et personne ne cherchait ce qui manquait.
+            //
+            // Un registre, lui, ne s'affiche jamais : illisible, il n'a rien à dire à
+            // l'utilisateur, et une ligne « élément illisible » sans nom l'inquiéterait
+            // pour une convention de stockage.
+            guard let item = try? decrypt(dto, with: account) else {
+                resultat.entries.append(
+                    VaultEntry.illisible(id: dto.id, updatedAt: dto.updatedAt))
+                continue
+            }
             if isRegistry(item) {
                 resultat.registryIDs[item.name] = dto.id
                 // Le registre des partages ne contient pas des chaînes mais des objets :
@@ -1332,8 +1354,14 @@ final class VaultStore: ObservableObject {
         do {
             let dtos = try await api.orgItems(
                 token: token, org: ouvert.organisation.id, collection: collection)
-            return dtos.compactMap { dto -> VaultEntry? in
-                guard let item = try? ouvert.org.ouvrir(dto) else { return nil }
+            return dtos.map { dto -> VaultEntry in
+                // Même règle que le coffre personnel : une collection d'équipe dont une
+                // ligne ne s'ouvre pas doit montrer le trou. C'est même plus vrai ici —
+                // l'élément a été scellé par quelqu'un d'autre, et son absence se lirait
+                // comme « cette personne ne l'a pas encore créé ».
+                guard let item = try? ouvert.org.ouvrir(dto) else {
+                    return VaultEntry.illisible(id: dto.id, updatedAt: dto.updatedAt)
+                }
                 return VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt)
             }
             .sorted {

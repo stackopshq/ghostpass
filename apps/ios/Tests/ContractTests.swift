@@ -2312,3 +2312,80 @@ final class SsoMobileTests: XCTestCase {
         XCTAssertEqual(valeur("redirect_uri"), "ch.stackops.ghostpass://sso")
     }
 }
+
+/// Ce qu'on ne sait pas ouvrir garde sa place.
+///
+/// La règle est écrite dans tous les documents de la suite depuis des mois. Elle n'était
+/// appliquée nulle part sur iOS : `lecture(_:_:)` et `itemsPartages` écartaient en silence,
+/// et le coffre paraissait simplement plus petit. Trouvé le 2026-08-31 par l'agent qui
+/// portait le client Android, en constatant que le brief présentait comme un portage une
+/// règle qui n'existait pas encore.
+final class ElementIllisibleTests: XCTestCase {
+    private func compte() throws -> Account {
+        try register(password: "un mot de passe de banc", email: "clara@example.com").account()
+    }
+
+    /// Un chiffré qui n'est pas destiné à ce compte : le déchiffrement échoue, ce qui est
+    /// exactement le cas qu'on veut voir arriver à l'écran.
+    private func intrus(_ id: String = "intrus") -> EncryptedItemDTO {
+        EncryptedItemDTO(
+            id: id, encryptedKey: "pas un chiffré de ce compte",
+            encryptedData: "pas un chiffré non plus", updatedAt: 1_788_000_000_000)
+    }
+
+    private func lisible(_ id: String, _ compte: Account) throws -> EncryptedItemDTO {
+        let item = VaultItem(
+            name: "Forgejo", notes: nil, folder: nil,
+            data: .login(Login(username: "clara", password: "s3cret", uris: [], totp: nil)))
+        let (cle, donnees) = try VaultStore.encrypt(item, with: compte)
+        return EncryptedItemDTO(
+            id: id, encryptedKey: cle, encryptedData: donnees, updatedAt: 1_788_000_000_000)
+    }
+
+    func testUnElementIllisibleResteDansLaListe() throws {
+        let lecture = VaultStore.lecture([intrus()], try compte())
+        // Le cas qui distingue les deux implémentations est celui-ci : **rien que**
+        // l'illisible. Avec l'ancien `continue`, la liste est vide ; avec l'entrée
+        // illisible, elle porte une ligne. Un coffre mixte passerait des deux façons si
+        // l'on ne comptait que les lisibles.
+        XCTAssertEqual(lecture.entries.count, 1)
+        XCTAssertFalse(try XCTUnwrap(lecture.entries.first).lisible)
+    }
+
+    func testSonIdentiteEstConservee() throws {
+        // Sans l'identifiant serveur on ne pourrait ni le supprimer, ni le retrouver
+        // quand la clé qui l'ouvre redeviendra disponible.
+        XCTAssertEqual(
+            VaultStore.lecture([intrus("abc-123")], try compte()).entries.first?.id, "abc-123")
+    }
+
+    func testIlNestPasModifiable() throws {
+        // Enregistrer par-dessus écraserait un contenu qu'on n'a jamais lu — la seule
+        // façon de perdre pour de bon ce qui n'était que temporairement inaccessible.
+        // `first` et non `[0]` : sous mutation la liste est vide, et indexer ferait
+        // **planter** le test au lieu de l'échouer — un plantage interrompt la suite et
+        // masque les tests suivants.
+        let entree = try XCTUnwrap(VaultStore.lecture([intrus()], try compte()).entries.first)
+        XCTAssertFalse(entree.lisible)
+    }
+
+    func testIlNeSeMelePasAuxLisibles() throws {
+        let compte = try compte()
+        let lecture = VaultStore.lecture(
+            [try lisible("vrai", compte), intrus()], compte)
+        XCTAssertEqual(lecture.entries.count, 2)
+        XCTAssertEqual(lecture.entries.filter { $0.lisible }.count, 1)
+        XCTAssertEqual(lecture.entries.first { $0.lisible }?.item.name, "Forgejo")
+    }
+
+    func testUnElementLisibleResteLisible() throws {
+        // Le contrôle négatif : sans lui, une implémentation qui marquerait **tout** comme
+        // illisible passerait les tests précédents.
+        let compte = try compte()
+        let lecture = VaultStore.lecture([try lisible("vrai", compte)], compte)
+        XCTAssertEqual(lecture.entries.count, 1)
+        let entree = try XCTUnwrap(lecture.entries.first)
+        XCTAssertTrue(entree.lisible)
+        XCTAssertEqual(entree.item.name, "Forgejo")
+    }
+}

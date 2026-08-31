@@ -72,7 +72,7 @@ struct ExportView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             Text(
-                "Le fichier contiendra vos \(store.personnelles.count) entrées, mots de passe compris, en clair. Il se relit dans n'importe quel gestionnaire — et par n'importe qui."
+                "Le fichier contiendra vos \(store.exportables.count) entrées, mots de passe compris, en clair. Il se relit dans n'importe quel gestionnaire — et par n'importe qui."
             )
             .foregroundStyle(Color.gpMuted)
             .fixedSize(horizontal: false, vertical: true)
@@ -97,9 +97,9 @@ struct ExportView: View {
 
             Button("Préparer le fichier") { preparer() }
                 .buttonStyle(
-                    PrimaryButtonStyle(enabled: !motDePasse.isEmpty && !store.personnelles.isEmpty)
+                    PrimaryButtonStyle(enabled: !motDePasse.isEmpty && !store.exportables.isEmpty)
                 )
-                .disabled(motDePasse.isEmpty || store.personnelles.isEmpty)
+                .disabled(motDePasse.isEmpty || store.exportables.isEmpty)
                 .accessibilityIdentifier("button.prepareExport")
         }
         .glassCard()
@@ -131,7 +131,7 @@ struct ExportView: View {
     private func preparer() {
         guard store.verifyMasterPassword(motDePasse) else { return }
         motDePasse = ""
-        document = DocumentCsv(texte: CsvExport.texte(store.personnelles))
+        document = DocumentCsv(texte: CsvExport.texte(store.exportables))
         enregistrement = true
     }
 

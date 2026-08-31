@@ -126,7 +126,12 @@ struct VaultListView: View {
                 // faisait déjà ; la liste, non, parce qu'elle ignorait ces éléments.
                 ItemDetailView(
                     entry: entry,
-                    lectureSeule: entry.origine.appartenance.map { !$0.peutEcrire } ?? false
+                    // Une entrée illisible est en lecture seule, quels que soient les
+                    // droits : enregistrer écraserait un contenu qu'on n'a jamais lu, et
+                    // ce serait la seule façon de perdre pour de bon ce qui n'était que
+                    // temporairement inaccessible.
+                    lectureSeule: !entry.lisible
+                        || (entry.origine.appartenance.map { !$0.peutEcrire } ?? false)
                 ) {
                     sheet = .editItem(store.entries.first { $0.id == entry.id } ?? entry)
                 }
