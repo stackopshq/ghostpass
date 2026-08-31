@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GhostPass</string>
+    <string name="remplissage_deverrouiller">Déverrouiller GhostPass</string>
+    <string name="remplissage_ce_site">Pour ce site</string>
+    <string name="remplissage_enregistrement_indisponible">L\'enregistrement depuis une autre application n\'est pas encore disponible.</string>
+    <!-- Décrit le service dans les réglages du système. Aucun tarif, aucun renvoi vers un
+         achat : l\'application est gratuite et doit le rester jusque dans ses chaînes (§7). -->
+    <string name="service_de_remplissage">GhostPass remplit vos identifiants, après déverrouillage.</string>
+</resources>

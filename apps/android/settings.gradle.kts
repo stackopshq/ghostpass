@@ -18,8 +18,13 @@ dependencyResolutionManagement {
 
 rootProject.name = "ghostpass-android"
 
-// `app`       : l'APK et son test instrumenté — ce qui s'exécute sur un appareil.
-// `coeur-hote`: les mêmes liaisons et le même test, compilés pour la JVM du poste.
-//               C'est ce qui permet d'éprouver la traversée sans appareil ni émulateur.
+// `noyau`     : les liaisons UniFFI et toute la logique qui n'a besoin d'aucune API
+//               Android — adresse du serveur, client HTTP, registres, couleurs, hôtes.
+//               Elles y sont compilées **une seule fois**, et les deux autres modules
+//               les consomment.
+// `app`       : l'APK, ses écrans, son service de remplissage, et son test instrumenté.
+// `coeur-hote`: le même noyau et les mêmes tests, exécutés sur la JVM du poste. C'est ce
+//               qui permet d'éprouver le contrat sans appareil ni émulateur.
+include(":noyau")
 include(":app")
 include(":coeur-hote")

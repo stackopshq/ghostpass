@@ -1,5 +1,9 @@
 plugins {
     id("org.jetbrains.kotlin.jvm")
+    // Le test de contrat déclare ses propres formes de charge utile : sans ce greffon,
+    // `@Serializable` n'engendre rien et les erreurs pointent la ligne d'appel, jamais
+    // le greffon manquant.
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 val genere = rootProject.file("generated")
@@ -12,8 +16,14 @@ val genere = rootProject.file("generated")
 // des `.so` dans l'APK, ni le chargeur de bibliothèques d'Android. Pour cela il faut
 // `:app:connectedAndroidTest`, et donc un appareil.
 sourceSets {
-    named("main") { kotlin.srcDir(File(genere, "kotlin")) }
-    named("test") { kotlin.srcDir(rootProject.file("shared-test/kotlin")) }
+    named("test") {
+        kotlin.srcDir(rootProject.file("shared-test/kotlin"))
+        // Les vecteurs de contrat de la suite, copie vendorée du dépôt `suite`
+        // (ADR-0002). Ils sont *lus* par `ContratTest`, pas recopiés dans son source :
+        // un client qui garderait ses valeurs en dur à côté resterait vert avec un
+        // fichier corrompu, ce qui est exactement la duplication que l'ADR combat.
+        resources.srcDir(rootProject.file("../../assets/vecteurs"))
+    }
 }
 
 kotlin {
@@ -21,6 +31,8 @@ kotlin {
 }
 
 dependencies {
+    // Les liaisons et la logique viennent de `:noyau`, qui les compile pour tout le monde.
+    implementation(project(":noyau"))
     // Ici le `.jar` et non l'`@aar` : c'est lui qui porte le `libjnidispatch` de macOS et
     // de Linux. L'inverse de ce que demande Android, pour la même raison.
     implementation("net.java.dev.jna:jna:5.17.0")
@@ -35,5 +47,19 @@ tasks.test {
     testLogging {
         events("passed", "failed", "skipped")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
+// Sème un serveur local pour éprouver l'application à la main. Voir SemerLeServeur.kt.
+//
+//   ./gradlew :coeur-hote:semerLeServeur -Pserveur=http://127.0.0.1:3111
+tasks.register<JavaExec>("semerLeServeur") {
+    group = "verification"
+    description = "Crée un compte et quelques éléments sur un serveur GhostPass local."
+    mainClass.set("ch.stackops.ghostpass.SemerLeServeur")
+    classpath = sourceSets["main"].runtimeClasspath
+    systemProperty("jna.library.path", File(genere, "jvmLibs").absolutePath)
+    for (nom in listOf("serveur", "email", "motdepasse")) {
+        if (project.hasProperty(nom)) systemProperty(nom, project.property(nom)!!)
     }
 }
