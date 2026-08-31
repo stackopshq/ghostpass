@@ -69,7 +69,8 @@ enum Totp {
 
         let parametre = composants.queryItems?.first { $0.name == "issuer" }?.value
         // `URLComponents` rend le chemin déjà déséchappé : « /GitHub:clara ».
-        let chemin = composants.path.hasPrefix("/")
+        let chemin =
+            composants.path.hasPrefix("/")
             ? String(composants.path.dropFirst()) : composants.path
 
         var service = parametre

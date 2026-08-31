@@ -89,8 +89,9 @@ struct UnlockView: View {
 
     @MainActor
     private func connecterParSSO() async {
-        guard let fenetre = UIApplication.shared.connectedScenes
-            .compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first
+        guard
+            let fenetre = UIApplication.shared.connectedScenes
+                .compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first
         else { return }
         if await store.connecterParSSO(server: serveurEffectif, ancre: fenetre) {
             // La session est déposée : il ne reste que la phrase. On bascule sur le visage

@@ -92,7 +92,8 @@ enum SsoMobile {
                     // Le serveur ne crée jamais de compte par SSO : le coffre est scellé
                     // sous le mot de passe maître, donc un compte provisionné à la volée
                     // n'aurait rien à ouvrir.
-                    return String(localized: "Cette adresse n'a pas de compte GhostPass sur ce serveur.")
+                    return String(
+                        localized: "Cette adresse n'a pas de compte GhostPass sur ce serveur.")
                 default:
                     return String(localized: "L'authentification a échoué.")
                 }

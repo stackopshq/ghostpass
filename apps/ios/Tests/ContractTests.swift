@@ -2136,8 +2136,9 @@ final class EtiquetteOtpauthTests: XCTestCase {
         let e = Totp.etiquette("otpauth://totp/?secret=GEZDGNBVGY3TQOJQ")
         XCTAssertNil(e.service)
         XCTAssertNil(e.compte)
-        XCTAssertEqual(Totp.parse("otpauth://totp/?secret=GEZDGNBVGY3TQOJQ")?.secret,
-                       "GEZDGNBVGY3TQOJQ")
+        XCTAssertEqual(
+            Totp.parse("otpauth://totp/?secret=GEZDGNBVGY3TQOJQ")?.secret,
+            "GEZDGNBVGY3TQOJQ")
     }
 
     func testCeQuiNEstPasUnLienOtpauthNaPasDEtiquette() {
@@ -2452,39 +2453,44 @@ final class EnveloppeDePartageTests: XCTestCase {
 /// « code incorrect », et rien ne désignerait l'application.
 final class TypeDeLienOtpauthTests: XCTestCase {
     func testUnLienDeTotpEstRetenu() {
-        guard case .totp = Totp.depuisUnQrCode(
-            "otpauth://totp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        guard
+            case .totp = Totp.depuisUnQrCode(
+                "otpauth://totp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
         else { return XCTFail("un lien de TOTP doit être retenu") }
     }
 
     func testLeTypeSeLitSansEgardALaCasse() {
         // Les générateurs de QR code ne s'accordent pas sur la casse.
-        guard case .totp = Totp.depuisUnQrCode(
-            "OTPAUTH://TOTP/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        guard
+            case .totp = Totp.depuisUnQrCode(
+                "OTPAUTH://TOTP/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
         else { return XCTFail("la casse ne doit pas décider") }
     }
 
     func testUnLienDeHotpEstRefuse() {
         // Le cas qui distingue les deux implémentations : avec le seul contrôle du
         // schéma, celui-ci passait et produisait des codes faux en silence.
-        guard case .autreChose = Totp.depuisUnQrCode(
-            "otpauth://hotp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ&counter=1")
+        guard
+            case .autreChose = Totp.depuisUnQrCode(
+                "otpauth://hotp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ&counter=1")
         else { return XCTFail("un lien de HOTP doit être refusé") }
     }
 
     func testUnTypeInconnuEstRefuse() {
         // Un type qu'on ne connaît pas n'est pas un TOTP. Le retenir par défaut serait le
         // même défaut, déplacé d'un cran.
-        guard case .autreChose = Totp.depuisUnQrCode(
-            "otpauth://steam/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        guard
+            case .autreChose = Totp.depuisUnQrCode(
+                "otpauth://steam/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
         else { return XCTFail("un type inconnu doit être refusé") }
     }
 
     func testLExportDApplicationGardeSonMessage() {
         // Il ne doit pas se confondre avec « autre chose » : son message dit quoi faire,
         // là où l'autre dit seulement que ça ne va pas.
-        guard case .exportDApplication = Totp.depuisUnQrCode(
-            "otpauth-migration://offline?data=AAAA")
+        guard
+            case .exportDApplication = Totp.depuisUnQrCode(
+                "otpauth-migration://offline?data=AAAA")
         else { return XCTFail("un export doit rester distinct") }
     }
 }
