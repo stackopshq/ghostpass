@@ -49,6 +49,11 @@ Si le service d'icônes est activé, notre serveur récupère le logo des sites 
 vous enregistrez, et **voit donc leur domaine à ce moment-là**. Il ne les
 conserve pas, et le service peut être désactivé.
 
+Le détail complet — finalités, bases légales, durées, destinataires, transferts
+hors de l'Union et voies de recours — vit dans la
+**[politique de confidentialité](politique-de-confidentialite.md)**, qui fait
+partie de ces conditions. Ce tableau en est le résumé, pas la substitution.
+
 ## 5. Votre compte
 
 Vous êtes responsable de la confidentialité de votre mot de passe maître et de
