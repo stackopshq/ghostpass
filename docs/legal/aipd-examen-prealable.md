@@ -5,7 +5,7 @@
 > qu'**au vu de ce qui est mesurable aujourd'hui**, elle ne l'est pas, et il
 > nomme précisément ce qui renverserait cette conclusion.
 
-*Version 0.1 — 2026-08-31. Article 35 du règlement (UE) 2016/679 (RGPD).*
+*Version 0.2 — 2026-08-31. Article 35 du règlement (UE) 2016/679 (RGPD).*
 
 ---
 
@@ -69,8 +69,10 @@ personnelle** au sens le plus fort du terme.
 Ce qui empêche de conclure au risque élevé n'est pas que la donnée serait
 anodine, c'est que **StackOps ne la traite pas**. Elle transite chiffrée, se
 range chiffrée, ressort chiffrée, et aucune clé n'existe de notre côté — le
-serveur ne contient aucune primitive de déchiffrement, ce qui est vérifiable
-dans un dépôt public.
+serveur ne contient aucune primitive capable d'ouvrir un coffre, ce qui est
+vérifiable dans un dépôt public. Il détient **une** opération de déchiffrement,
+et une seule : celle qui lit le secret du second facteur pour vérifier un code.
+Elle n'ouvre rien d'autre, et surtout aucun contenu.
 
 **C'est un raisonnement qui tient tant que le zero-knowledge tient.** Le jour où
 une fonctionnalité demanderait au serveur de lire un secret, ce critère
@@ -88,6 +90,7 @@ devient vraie :
 | **Passage à grande échelle** | Le critère « grande échelle » n'a pas de seuil chiffré dans le règlement. Nous en fixons un **interne** pour ne pas décider à l'aveugle : au-delà de **5 000 comptes** ou d'un Client de plus de **500 membres**, on refait l'examen. Ce seuil n'a aucune valeur légale ; il sert à ce que la question soit posée avant qu'il soit tard |
 | **Ajout d'une donnée sensible en clair** — santé, biométrie, opinions | Ferait entrer dans l'art. 35.3.b si l'échelle suit |
 | **Une nouvelle catégorie de personnes concernées** — mineurs, patients, usagers d'un service public | Change le profil de vulnérabilité |
+| **Représentation en Suisse** (art. 14 de la loi suisse révisée) | Elle suppose **quatre** conditions **cumulatives** : traiter des données de personnes en Suisse, **à grande échelle**, de manière **régulière**, **et** avec un **risque élevé**. Les deux dernières ne sont pas remplies aujourd'hui, et la dernière tombe précisément avec la conclusion du §3 — ce qui lie ce déclencheur au premier de ce tableau. À réexaminer au même seuil que les autres : **5 000 comptes**, ou un Client de plus de **500 membres**. C'est l'obligation que l'on croit à tort déclenchée dès qu'un utilisateur suisse existe |
 
 **Un examen préalable qui ne dit pas quand le refaire ne sert qu'une fois.**
 C'est pourquoi ce tableau existe, et pourquoi il est plus long que la conclusion.
@@ -124,3 +127,4 @@ CNIL — n'a pas encore été faite.
 | Version | Date | Modification |
 |---|---|---|
 | 0.1 | 2026-08-31 | Création. Conclusion : pas d'AIPD requise, sous les cinq réserves du §4 |
+| 0.2 | 2026-08-31 | Le §3 dit désormais ce que le serveur déchiffre *réellement* — le secret du second facteur, et rien d'autre — plutôt qu'« aucune primitive de déchiffrement », que le code réfute. La représentation en Suisse (art. 14 de la loi révisée) entre au tableau des déclencheurs du §4, au même seuil que les autres. La conclusion est inchangée |
