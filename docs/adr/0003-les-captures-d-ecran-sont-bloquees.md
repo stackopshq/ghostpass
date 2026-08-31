@@ -41,13 +41,40 @@ Le drapeau vaut pour toute l'activité et non pour les seuls écrans qui montren
 secrets. Une fenêtre qui le gagne et le perd au fil de la navigation finit par le perdre au
 mauvais moment — pendant une transition, une reprise, un écran qu'on n'avait pas prévu.
 
-## L'asymétrie avec iOS, qui n'est pas un oubli
+## iOS y arrive aussi — corrigé le 2026-08-31, après mesure
 
-**iOS ne sait pas faire ça.** Aucune API n'y empêche une capture d'écran, et c'est un choix
-d'Apple. GhostPass iOS fait ce qu'il peut : `VoileDeConfidentialite` recouvre l'interface
-dès que la scène quitte l'état actif, ce qui protège la vignette du sélecteur — mais **pas
-la capture, ni l'enregistrement, ni le partage d'écran**.
+**Ce paragraphe disait « iOS ne sait pas faire ça ». C'était faux**, et il valait mieux
+l'apprendre par une idée de Kevin que par un utilisateur.
 
-Les deux plateformes n'offrent donc pas la même garantie, et c'est structurel. Il ne faut ni
-présenter cette protection comme une propriété du produit dans une page publique, ni
-conclure qu'iOS a un défaut à corriger.
+Il est exact qu'iOS n'offre **aucune API** pour interdire une capture. Mais la couche de
+rendu d'un `UITextField` en saisie sécurisée est exclue des captures, des enregistrements
+et du partage d'écran. On y range le contenu de l'application, et le système rend du noir à
+sa place. C'est ce que fait `ProtectionDesCaptures`.
+
+Mesuré sur iPhone, capture de l'utilisateur, **avec son contrôle négatif** :
+
+| | Ce que l'image contient |
+|---|---|
+| avec la protection | noir |
+| sans la protection | l'écran, lisible |
+
+L'écart entre les deux est ce qui prouve. Le noir seul ne prouvait rien : une image vide
+pour une autre raison — écran verrouillé, application passée en arrière-plan pendant le
+geste — aurait passé pour un succès.
+
+### Ce que cette version-ci coûte, et qu'Android ne coûte pas
+
+`FLAG_SECURE` est une API publique et garantie. La couche sécurisée d'iOS ne l'est pas : on
+n'appelle rien de privé, mais on s'appuie sur une structure de vues qu'Apple ne documente
+pas. **Le jour où elle change, la protection échoue en s'ouvrant** — les captures
+redeviennent lisibles, sans erreur ni signe, et l'on continue de compter dessus.
+
+D'où `ProtectionDesCapturesTests`, dont c'est l'unique raison d'être : il vérifie que le
+détournement a encore une prise. Il ne mesure pas la couleur de l'image — cela ne se fait
+que sur un appareil — mais il tombera avant qu'un utilisateur ne découvre la régression.
+
+### Ce qui reste vrai des deux côtés
+
+Aucune des deux plateformes n'empêche une photographie de l'écran avec un second appareil,
+et il ne faut pas présenter cette protection comme une propriété du produit sans dire
+laquelle.

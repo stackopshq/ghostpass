@@ -2494,3 +2494,25 @@ final class TypeDeLienOtpauthTests: XCTestCase {
         else { return XCTFail("un export doit rester distinct") }
     }
 }
+
+/// La protection des captures existe-t-elle encore ?
+///
+/// Elle s'appuie sur la structure interne d'un `UITextField` en saisie sécurisée, qu'Apple
+/// ne documente ni ne garantit. Le jour où cette structure change, **la protection échoue
+/// en s'ouvrant** : les captures redeviennent lisibles, sans erreur, sans plantage, sans le
+/// moindre signe. On continuerait de compter dessus.
+///
+/// Ce test est donc le seul avertissement qui existera. Il ne prouve pas que l'image est
+/// noire — cela ne se mesure que sur un appareil — mais que le détournement a une prise.
+final class ProtectionDesCapturesTests: XCTestCase {
+    func testLaCoucheSecuriseeEstToujoursTrouvable() throws {
+        let couche = ControleurProtege.couchePrivee()
+        XCTAssertNotNil(
+            couche,
+            """
+            La couche de rendu du champ sécurisé est introuvable : iOS a changé sa \
+            hiérarchie de vues. Les captures d'écran sont probablement redevenues \
+            lisibles. Voir ProtectionDesCaptures et refaire la mesure sur appareil.
+            """)
+    }
+}

@@ -35,28 +35,34 @@ struct GhostpassApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if store.isUnlocked {
-                    VaultListView()
-                } else {
-                    UnlockView()
+            // Les captures d'écran de l'utilisateur rendent du noir. iOS n'a aucune API
+            // pour les interdire ; celle-ci range le contenu dans la couche exclue d'un
+            // champ en saisie sécurisée. Mesuré sur iPhone le 2026-08-31, contrôle
+            // négatif compris — voir ProtectionDesCaptures.
+            ProtectionDesCaptures {
+                Group {
+                    if store.isUnlocked {
+                        VaultListView()
+                    } else {
+                        UnlockView()
+                    }
                 }
-            }
-            // Le sélecteur d'applications photographie l'écran à la sortie. Si le coffre
-            // reste ouvert derrière, son contenu se retrouverait dans cette vignette, et
-            // dans les captures que le système garde sur disque.
-            .overlay {
-                if scenePhase != .active && store.isUnlocked {
-                    VoileDeConfidentialite()
+                // Le sélecteur d'applications photographie l'écran à la sortie. Si le coffre
+                // reste ouvert derrière, son contenu se retrouverait dans cette vignette, et
+                // dans les captures que le système garde sur disque.
+                .overlay {
+                    if scenePhase != .active && store.isUnlocked {
+                        VoileDeConfidentialite()
+                    }
                 }
+                .environmentObject(store)
+                .environmentObject(prefs)
+                // « Configurer les codes dans » désigne l'application qui ouvre les liens et
+                // les QR codes de second facteur. Déclarer le schéma sans traiter ce qui
+                // arrive serait pire que ne rien déclarer : le système enverrait ces liens à
+                // une application qui les avale en silence.
+                .onOpenURL { store.recevoirUnLien($0) }
             }
-            .environmentObject(store)
-            .environmentObject(prefs)
-            // « Configurer les codes dans » désigne l'application qui ouvre les liens et
-            // les QR codes de second facteur. Déclarer le schéma sans traiter ce qui
-            // arrive serait pire que ne rien déclarer : le système enverrait ces liens à
-            // une application qui les avale en silence.
-            .onOpenURL { store.recevoirUnLien($0) }
             // Les deux réglages s'appliquent à la racine : tout ce qui est présenté
             // par-dessus — feuilles, alertes — en hérite, alors qu'un réglage posé
             // écran par écran laisserait des îlots dans l'autre thème ou l'autre langue.

@@ -3,38 +3,23 @@ import UIKit
 
 /// Rendre les captures d'écran vides, là où iOS ne permet pas de les interdire.
 ///
-/// # ⚠︎ NON ACTIVÉ, ET NON VÉRIFIÉ
+/// # Mesuré sur appareil, le 2026-08-31
 ///
-/// Ce fichier n'est branché nulle part. Il attend une mesure **sur un vrai iPhone**, et il
-/// ne doit pas être activé avant.
+/// Sur un iPhone 17 Pro, capture de l'utilisateur — bouton latéral + volume haut :
 ///
-/// Pourquoi le simulateur ne suffit pas : `xcrun simctl io screenshot` lit la mémoire
-/// d'affichage, et rend l'écran **complet** même avec la couche en place. On ne peut donc
-/// pas y distinguer « la protection ne prend pas » de « le simulateur ne la simule pas ».
-/// Les deux rendent la même image, et conclure de l'une à l'autre serait précisément la
-/// faute que cette base de code passe sa journée à traquer.
+/// | | Ce que l'image contient |
+/// |---|---|
+/// | avec la protection | **noir** |
+/// | sans la protection (contrôle négatif) | l'écran, lisible |
 ///
-/// ## Le protocole, quand un iPhone sera branché
+/// Le contrôle négatif n'était pas une formalité : une image vide obtenue pour une autre
+/// raison — écran verrouillé, application passée en arrière-plan pendant le geste — aurait
+/// passé pour un succès. C'est l'écart entre les deux qui prouve, pas le noir seul.
 ///
-/// 1. rebrancher `ProtectionDesCaptures { … }` autour du `Group` de `GhostpassApp` ;
-/// 2. installer sur l'appareil, ouvrir le coffre ;
-/// 3. **bouton latéral + volume haut**, la capture de l'utilisateur ;
-/// 4. regarder l'image dans Photos : elle doit être vide.
-///
-/// Et le contrôle négatif, sans lequel l'étape 4 ne prouve rien : refaire la même chose
-/// **sans** la protection, et vérifier que l'image montre bien le coffre. Une capture vide
-/// pour une autre raison — écran verrouillé, application en arrière-plan — passerait pour
-/// un succès.
-///
-/// Android a `FLAG_SECURE` (voir `docs/adr/0003`). iOS n'a **aucune API** pour empêcher une
-/// capture — c'est un choix d'Apple, et il ne changera pas parce qu'on le souhaite.
-///
-/// Il existe en revanche un comportement du système qu'on peut détourner : la couche de
-/// rendu d'un `UITextField` en **saisie sécurisée** est exclue des captures, des
-/// enregistrements d'écran et du partage d'écran. On y range le contenu de l'application,
-/// et le système rend du vide à sa place.
-///
-/// Idée de Kevin, le 2026-08-31 : « ok ça screenshot, mais c'est juste une image blanche ».
+/// **Le simulateur ne sait pas répondre à cette question.** `xcrun simctl io screenshot`
+/// rend l'écran complet, protection en place, parce qu'il lit la mémoire d'affichage. On
+/// n'y distingue donc pas « la protection ne prend pas » de « le simulateur ne la simule
+/// pas » — les deux donnent la même image.
 ///
 /// ─── Ce que ça coûte, et qu'il faut savoir avant de s'en servir ───
 ///
