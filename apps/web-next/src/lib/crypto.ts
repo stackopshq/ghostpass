@@ -391,6 +391,11 @@ export function decryptVaultItem(
       kind: "item",
       item: {
         ...emptyItem("card", raw.name, folder),
+        // La charge chiffrée écrit `notes`, le modèle déchiffré expose `note` :
+        // asymétrie réelle du schéma d'item, à respecter des deux côtés. La
+        // relire ici est ce qui rend la note visible après un aller-retour ;
+        // `decryptItem`, côté organisations, la relit depuis toujours.
+        note: raw.notes ?? "",
         cardholder: c.cardholder ?? "",
         cardNumber: c.number ?? "",
         cardExp: [c.exp_month, c.exp_year].filter(Boolean).join("/"),
@@ -403,6 +408,8 @@ export function decryptVaultItem(
     kind: "item",
     item: {
       ...emptyItem("login", raw.name, folder),
+      // Même asymétrie que pour la carte : `notes` chiffré, `note` déchiffré.
+      note: raw.notes ?? "",
       username: l.username ?? "",
       password: l.password ?? "",
       url: l.uris?.[0] ?? "",
@@ -444,7 +451,16 @@ export function encryptItem(
       },
     };
   }
-  const item = { name: input.name, notes: null, folder: input.folder || null, data };
+  // `notes` porte la note d'un identifiant ou d'une carte, comme le fait déjà
+  // `encryptOrgLogin` pour les secrets d'équipe. Ce champ valait `null` en dur :
+  // le formulaire et l'import CSV passaient bien une note, elle était jetée ici.
+  // Silencieux des deux côtés : l'import annonçait le bon nombre d'entrées, et
+  // aucune n'avait gardé sa note.
+  //
+  // Un item de type « note » range la sienne dans `data.content`, pas ici : l'y
+  // répéter en ferait deux copies, dont une qu'aucun écran ne lit.
+  const notes = input.kind === "note" ? null : input.note || null;
+  const item = { name: input.name, notes, folder: input.folder || null, data };
   const enc = JSON.parse(account.encrypt_item(JSON.stringify(item)));
   return { encryptedKey: enc.encrypted_key, encryptedData: enc.encrypted_data };
 }

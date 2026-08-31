@@ -240,6 +240,16 @@ export function FormulaireEntree({
         </>
       )}
 
+      {/* La note d'un identifiant ou d'une carte, éditable comme le reste.
+          L'afficher sans pouvoir la corriger ferait d'une note importée depuis
+          un autre gestionnaire une donnée qu'on subit. Le type « note » a son
+          propre champ de contenu, juste au-dessus. */}
+      {v.kind !== "note" && (
+        <Champ label={t("app.secureNote")}>
+          <Zone value={v.note} onChange={(e) => maj("note", e.target.value)} rows={3} placeholder={t("app.notePh")} />
+        </Champ>
+      )}
+
       <div className="mt-4 flex gap-2">
         <Bouton type="submit" disabled={occupe}>
           {edition ? t("app.save") : t("app.encryptAndSave")}
