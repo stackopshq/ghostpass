@@ -87,16 +87,18 @@ extension UIColor {
 /// Mesures partagées. Les mêmes que sur le web : contrôles à 8, cartes à 16.
 enum GP {
     /// Les rayons de la charte partagée — `ghost-theme.css` de la suite, jetons
-    /// `--radius`, `--radius-lg`, `--radius-pill`.
+    /// `--radius` et `--radius-lg`.
     ///
-    /// Relevé le 2026-08-31 : iOS avait divergé du web sans que rien ne le signale. Les
-    /// cartes y étaient à 16 au lieu de 18, et **les boutons à 12 au lieu d'une pilule**.
-    /// Ce n'est pas un détail : la pilule est ce qu'on reconnaît d'un produit à l'autre,
-    /// et un rectangle arrondi à sa place fait douter qu'il s'agisse de la même famille.
+    /// **Les boutons ne suivent pas `--radius-pill`, et c'est délibéré.** Le web les
+    /// arrondit en pilule ; iOS les garde rectangulaires, décidé le 2026-08-31 en
+    /// regardant l'écran : la barre de recherche appartient au système, elle ne peut pas
+    /// devenir une pilule, et un bouton en pilule à côté d'un champ qui n'en est pas une
+    /// jure davantage que l'écart avec le web.
+    ///
+    /// Une exception assumée et écrite n'est pas une dérive. Ce qui rendait l'ancien
+    /// écart nuisible, c'est que personne ne savait qu'il existait.
     static let radius: CGFloat = 12
     static let radiusCard: CGFloat = 18
-    // La pilule n'a pas de constante : SwiftUI la nomme `Capsule`, et un rayon de 999
-    // posé à côté finirait par diverger de la forme réellement dessinée.
     static let gap: CGFloat = 12
     static let padding: CGFloat = 16
     static let paddingCard: CGFloat = 24
@@ -202,12 +204,12 @@ struct PrimaryButtonStyle: ButtonStyle {
             .background(
                 (configuration.role == .destructive ? Color.gpDanger : Color.gpAccent)
                     .opacity(enabled ? (configuration.isPressed ? 0.8 : 1) : 0.35),
-                in: Capsule()
+                in: RoundedRectangle(cornerRadius: GP.radius)
             )
             // Seule l'action disponible rayonne. Faire luire un bouton inerte reviendrait
             // à appeler l'œil vers ce sur quoi on ne peut pas appuyer.
             .neon(enabled ? (configuration.isPressed ? 0.5 : 0.85) : 0)
-            .contentShape(Capsule())
+            .contentShape(RoundedRectangle(cornerRadius: GP.radius))
     }
 }
 
@@ -233,9 +235,11 @@ struct SecondaryButtonStyle: ButtonStyle {
             .padding(.vertical, 12)
             .background(
                 Color.gpSurface2.opacity(configuration.isPressed ? 0.6 : 1),
-                in: Capsule()
+                in: RoundedRectangle(cornerRadius: GP.radius)
             )
-            .overlay(Capsule().strokeBorder(Color.gpBorder, lineWidth: 1))
+            .overlay(
+                RoundedRectangle(cornerRadius: GP.radius)
+                    .strokeBorder(Color.gpBorder, lineWidth: 1))
     }
 }
 
