@@ -1,6 +1,7 @@
 // Couche crypto côté client : encapsule le module WASM.
 // Les clés en clair restent DANS le WASM ; ce module n'expose que des données chiffrées.
 import init, { Account, type EmergencyVault, type Org } from "ghostpass-crypto-wasm";
+import { lireRegistreCouleurs, ORG_COLORS_ITEM_NAME, type RegistreCouleurs } from "./couleursOrg";
 // Le module WASM est servi depuis `public/`, pas importé par le empaqueteur.
 //
 // Vite acceptait `import wasmUrl from "….wasm?url"` — un suffixe qui lui est
@@ -124,6 +125,17 @@ export const FOLDERS_ITEM_NAME = "\u0000gp:folders";
 /// liste lui apprendrait qui partage quoi et quand. C'est la décision du
 /// 2026-08-29 : le registre est chiffré, côté client.
 export const SHARES_ITEM_NAME = "\u0000gp:shares";
+
+/// Le registre des couleurs d'organisation, rangé comme les deux précédents :
+/// une note sécurisée à nom réservé, chiffrée par la clé du coffre.
+///
+/// Il ne contient aucun secret — seulement des teintes — mais il vit là parce
+/// que c'est le seul endroit que le web, iOS et l'extension lisent tous les
+/// trois.
+///
+/// Le nom lui-même est déclaré dans `couleursOrg`, avec le reste du contrat
+/// partagé avec iOS, et réexporté ici pour se lire auprès de ses deux voisins.
+export { ORG_COLORS_ITEM_NAME };
 
 /// Un partage en cours, tel que son créateur le retient.
 export interface PartageEnCours {
@@ -315,7 +327,8 @@ export function decryptItem(
 export type VaultDecryptResult =
   | { kind: "item"; item: DecryptedItem }
   | { kind: "shares"; shares: PartageEnCours[] }
-  | { kind: "folders"; paths: string[] };
+  | { kind: "folders"; paths: string[] }
+  | { kind: "orgcolors"; couleurs: RegistreCouleurs };
 
 export function decryptVaultItem(
   account: Account,
@@ -342,6 +355,21 @@ export function decryptVaultItem(
       partages = [];
     }
     return { kind: "shares", shares: Array.isArray(partages) ? (partages as PartageEnCours[]) : [] };
+  }
+
+  if (raw.name === ORG_COLORS_ITEM_NAME && d.kind === "SecureNote") {
+    let couleurs: unknown = {};
+    try {
+      couleurs = JSON.parse(d.data.content);
+    } catch {
+      // Comme les deux registres voisins : illisible vaut vide, pas panne. Ce
+      // fichier ne porte que des teintes, et faire échouer le chargement du
+      // coffre pour une teinte serait hors de proportion.
+      couleurs = {};
+    }
+    // La normalisation vit dans `couleursOrg` : ce qui entre ici a pu être
+    // écrit par iOS, par l'extension, ou par une version qu'on ne connaît pas.
+    return { kind: "orgcolors", couleurs: lireRegistreCouleurs(couleurs) };
   }
 
   if (raw.name === FOLDERS_ITEM_NAME && d.kind === "SecureNote") {
@@ -431,6 +459,25 @@ export function encryptShares(
     notes: null,
     folder: null,
     data: { kind: "SecureNote", data: { content: JSON.stringify(partages) } },
+  };
+  const enc = JSON.parse(account.encrypt_item(JSON.stringify(item)));
+  return { encryptedKey: enc.encrypted_key, encryptedData: enc.encrypted_data };
+}
+
+/// Chiffre le registre des couleurs d'organisation.
+///
+/// L'objet est écrit PLAT, tel quel : ni enveloppe, ni champ de version. iOS
+/// lit exactement cette forme, et l'entourer de quoi que ce soit reviendrait à
+/// lui faire lire un registre vide.
+export function encryptOrgColors(
+  account: Account,
+  couleurs: RegistreCouleurs,
+): { encryptedKey: string; encryptedData: string } {
+  const item = {
+    name: ORG_COLORS_ITEM_NAME,
+    notes: null,
+    folder: null,
+    data: { kind: "SecureNote", data: { content: JSON.stringify(couleurs) } },
   };
   const enc = JSON.parse(account.encrypt_item(JSON.stringify(item)));
   return { encryptedKey: enc.encrypted_key, encryptedData: enc.encrypted_data };

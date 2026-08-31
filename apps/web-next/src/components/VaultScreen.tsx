@@ -15,9 +15,11 @@ import {
   decryptVaultItem,
   encryptFolders,
   encryptItem,
+  encryptOrgColors,
   encryptShares,
   type PartageEnCours,
 } from "@/lib/crypto";
+import { definirCouleur, effacerCouleur, type RegistreCouleurs } from "@/lib/couleursOrg";
 import { useI18n } from "@/lib/i18n";
 import { approuverLHote, examinerLienDePartage, hotesApprouves } from "@/lib/lienDePartage";
 import { useSession } from "@/lib/session";
@@ -53,6 +55,11 @@ export function VaultScreen() {
   // Chiffré comme le reste, jamais confié au serveur.
   const [registrePartagesId, setRegistrePartagesId] = useState<string | null>(null);
   const [partages, setPartages] = useState<PartageEnCours[]>([]);
+  // Le registre des couleurs d'organisation : un objet plat `{ orgId: "#RRGGBB" }`,
+  // partagé avec iOS. Il ne porte aucun secret, mais il vit dans le coffre
+  // parce que c'est le seul endroit que les deux clients lisent.
+  const [registreCouleursId, setRegistreCouleursId] = useState<string | null>(null);
+  const [couleursOrg, setCouleursOrg] = useState<RegistreCouleurs>({});
   const [choisi, setChoisi] = useState<VaultEntry | null>(null);
   const [dossier, setDossier] = useState<string | null>(null);
   const [recherche, setRecherche] = useState("");
@@ -145,6 +152,8 @@ export function VaultScreen() {
       let regChemins: string[] = [];
       let regPartagesId: string | null = null;
       let regPartages: PartageEnCours[] = [];
+      let regCouleursId: string | null = null;
+      let regCouleurs: RegistreCouleurs = {};
       for (const d of dtos) {
         const r = decryptVaultItem(account, d.encryptedKey, d.encryptedData);
         if (r.kind === "folders") {
@@ -153,6 +162,9 @@ export function VaultScreen() {
         } else if (r.kind === "shares") {
           regPartagesId = d.id;
           regPartages = r.shares;
+        } else if (r.kind === "orgcolors") {
+          regCouleursId = d.id;
+          regCouleurs = r.couleurs;
         } else {
           entrees.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
         }
@@ -166,6 +178,8 @@ export function VaultScreen() {
       setDossiersVides(regChemins);
       setRegistrePartagesId(regPartagesId);
       setPartages(regPartages);
+      setRegistreCouleursId(regCouleursId);
+      setCouleursOrg(regCouleurs);
       setErreur(null);
       return entrees;
     } catch (e) {
@@ -195,6 +209,30 @@ export function VaultScreen() {
       else setRegistreId((await api.createItem(token, enc)).id);
     },
     [token, account, registreId],
+  );
+
+  /// Choisir — ou reprendre — la couleur d'une organisation.
+  ///
+  /// L'écran est peint AVANT l'aller-retour réseau : la teinte est un repère,
+  /// pas une donnée, et la faire attendre le serveur donnerait l'impression
+  /// que le clic n'a pas porté. Un échec repeint l'ancienne valeur et le dit.
+  const changerCouleurOrg = useCallback(
+    async (orgId: string, couleur: string | null) => {
+      if (!token || !account) return;
+      const precedent = couleursOrg;
+      const suivant =
+        couleur === null ? effacerCouleur(precedent, orgId) : definirCouleur(precedent, orgId, couleur);
+      setCouleursOrg(suivant);
+      try {
+        const enc = encryptOrgColors(account, suivant);
+        if (registreCouleursId) await api.updateItem(token, registreCouleursId, enc);
+        else setRegistreCouleursId((await api.createItem(token, enc)).id);
+      } catch (e) {
+        setCouleursOrg(precedent);
+        setErreur(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [token, account, couleursOrg, registreCouleursId],
   );
 
   const creerDossier = async (path: string) => {
@@ -588,7 +626,11 @@ export function VaultScreen() {
             orgOuverte ? (
               <DetailOrg org={orgOuverte} onRetour={() => setOrgOuverte(null)} />
             ) : (
-              <ListeOrgs onOuvrir={setOrgOuverte} />
+              <ListeOrgs
+                onOuvrir={setOrgOuverte}
+                couleurs={couleursOrg}
+                onCouleur={changerCouleurOrg}
+              />
             )
           ) : section === "corbeille" ? (
             <Corbeille onRestaure={() => void charger().then(() => setChoisi(null))} />

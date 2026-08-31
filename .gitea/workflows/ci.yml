@@ -77,6 +77,13 @@ jobs:
       - name: Type-check (tsc)
         working-directory: apps/web-next
         run: npm run typecheck
+      # Ces tests existaient et n'étaient LANCÉS NULLE PART. `apps/web-next`
+      # portait un script `test` et deux fichiers depuis le 2026-08-30 ; ce job
+      # ne faisait que compiler et construire. Une suite qu'aucune CI n'exécute
+      # ne protège de rien : elle passe pour un filet, et n'en est pas un.
+      - name: Tests
+        working-directory: apps/web-next
+        run: npm test
       - name: Build
         working-directory: apps/web-next
         run: npm run build
