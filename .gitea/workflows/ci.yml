@@ -236,6 +236,14 @@ jobs:
         env:
           GHOSTSUITE: ${{ github.workspace }}/ghostsuite
         run: ./tools/ios/run-ios-tests.sh
+      # L'application est gratuite, et ce qui se paie chez StackOps est la mise à
+      # disposition d'une VM, pas le logiciel. Cette qualification ne protège de rien si le
+      # paquet soumis contient une vitrine : le relecteur juge sur ce que contient
+      # l'application. On le mesure sur le paquet construit juste au-dessus, plutôt que de
+      # supposer qu'il restera propre — quelqu'un ajoutera un écran d'accueil dans six
+      # mois, et personne ne reliera ça au rejet qui suivra.
+      - name: L'application ne vend rien
+        run: ./tools/ios/verifier-l-autonomie.sh
       # Un échec ne laisse qu'un nom de test : les rapports portent les captures d'écran
       # et le journal du serveur, seuls moyens de comprendre sans reproduire localement.
       - name: Rapports de test

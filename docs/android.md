@@ -150,7 +150,46 @@ Deux choses apprises côté iOS qui devraient transposer :
 - **rien ne se remplit sans interaction.** L'extension iOS refuse systématiquement le
   remplissage sans intervention de l'utilisateur.
 
-## 7. Ce qui reste à décider
+## 7. L'application est gratuite, et doit le prouver
+
+StackOps met GhostPass à disposition gratuitement. Ce qui se paie, chez ceux qui ne
+veulent pas auto-héberger, est la **mise à disposition d'une VM** — pas le logiciel.
+
+C'est une qualification juridique, et aucun relecteur ne juge sur la qualification : il
+juge sur ce que **contient l'application**. Trois choses décident, et les trois doivent
+rester vraies sans que personne n'ait à s'en souvenir :
+
+- aucun tarif affiché, aucun renvoi vers un achat ;
+- aucun point de terminaison de l'éditeur en dur ;
+- un premier lancement qui aboutit à un coffre utilisable **contre une instance
+  quelconque**, sans jamais toucher `stackops.ch`.
+
+Côté iOS, `tools/ios/verifier-l-autonomie.sh` mesure les deux premiers **sur le paquet
+construit**, jamais sur les sources : la fiche App Store parle légitimement de tarif, les
+ADR d'abonnement, et un `grep` sur le dépôt demanderait une liste d'exclusions qui
+pourrit. C'est ainsi qu'un garde-fou de la suite a expédié en production la classe CSS
+qu'il interdisait — il a scanné son propre texte.
+
+**Écrire l'équivalent pour l'APK**, et le brancher dans la CI. Deux pièges mesurés en
+l'écrivant pour iOS, qui transposeront :
+
+- une recherche insensible à la casse sur `EUR` trouve « eur » dans `erreur33` et fait
+  rougir toute l'application. Les codes de devise se cherchent **en capitales, bornés par
+  des limites de mot** ;
+- le troisième point n'est prouvé par aucun scan de chaînes. Ce qui le prouve est un test
+  de bout en bout contre une instance locale. Sans lui, le contrôle reste vert et ne veut
+  plus rien dire.
+
+Et le contrôle doit **savoir tomber** : ajoutez une chaîne de tarif dans une branche
+jetable, reconstruisez, et vérifiez qu'il rougit. Injecter les octets à la fin du binaire
+ne suffit pas — mesuré sur iOS : `strings` ne lit pas ce qui suit le dernier segment d'un
+Mach-O, et le témoin passait au vert en croyant prouver quelque chose.
+
+Enfin : les règles de Google sur les paiements hors application sont **voisines de celles
+d'Apple, pas identiques**, et les deux ont bougé plusieurs fois. Elles sont à relire sur
+le texte en vigueur avant chaque soumission, pas à transposer.
+
+## 8. Ce qui reste à décider
 
 - Le partage du trousseau entre l'application et le service d'autofill. Sur iOS, la
   décision est prise et documentée (`docs/adr/0001`) : on partage, parce qu'un mot de passe
