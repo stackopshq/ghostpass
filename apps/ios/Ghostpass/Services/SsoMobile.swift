@@ -20,7 +20,21 @@ enum SsoMobile {
     /// Il n'est **pas** déclaré dans `Info.plist`, et c'est voulu : le déclarer ferait de
     /// GhostPass un gestionnaire général de ce schéma, alors que seule la session
     /// d'authentification en cours doit le recevoir.
-    static let schema = "ch.stackops.ghostpass"
+    /// Le schéma **suit l'identifiant du paquet**, il n'est pas écrit à côté.
+    ///
+    /// Deux raisons, et la seconde compte plus que la première :
+    ///
+    /// - la variante d'essai signée par une équipe personnelle s'appelle
+    ///   `ch.stackops.ghostpass.essai`. Avec un schéma figé, le retour ne lui parvenait
+    ///   pas et le SSO ne pouvait pas s'éprouver sur un appareil ;
+    /// - **et un identifiant qui changerait casserait le SSO en silence.** Le navigateur
+    ///   renverrait vers un schéma que plus personne ne réclame, la session resterait
+    ///   ouverte sur une page morte, et rien ne dirait pourquoi. Deux descriptions d'une
+    ///   même chose finissent toujours par diverger ; ici il n'y en a plus qu'une.
+    ///
+    /// Le repli n'est là que pour satisfaire le compilateur : un paquet sans identifiant
+    /// n'existe pas sur un appareil.
+    static let schema = Bundle.main.bundleIdentifier ?? "ch.stackops.ghostpass"
     static let adresseDeRetour = "\(schema)://sso"
 
     // ─── PKCE ───

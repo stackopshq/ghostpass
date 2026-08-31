@@ -2516,3 +2516,34 @@ final class ProtectionDesCapturesTests: XCTestCase {
             """)
     }
 }
+
+/// Le schéma de retour du SSO suit l'identifiant du paquet.
+///
+/// Écrit à côté, il se désynchronise sans bruit : le navigateur renvoie vers un schéma que
+/// plus personne ne réclame, la session reste ouverte sur une page morte, et rien ne dit
+/// pourquoi. C'est arrivé sur la variante d'essai, dont l'identifiant se termine par
+/// `.essai` — le SSO n'y était pas éprouvable.
+final class SchemaDeRetourTests: XCTestCase {
+    func testLeSchemaSuitLIdentifiantDuPaquet() {
+        XCTAssertEqual(SsoMobile.schema, Bundle.main.bundleIdentifier)
+    }
+
+    func testLAdresseDeRetourEnDecoule() throws {
+        let url = try XCTUnwrap(URL(string: SsoMobile.adresseDeRetour))
+        XCTAssertEqual(url.scheme, Bundle.main.bundleIdentifier)
+        XCTAssertEqual(url.host, "sso")
+    }
+
+    func testLAdresseDeDepartAnnonceLeMemeSchema() throws {
+        // Le serveur valide cette adresse contre sa liste blanche, et
+        // `ASWebAuthenticationSession` attend le même schéma en retour. Les deux viennent
+        // de la même source : ils ne peuvent pas diverger.
+        let url = try XCTUnwrap(
+            SsoMobile.adresseDeDepart(
+                serveur: URL(string: "https://ghostpass.example.com")!,
+                defi: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", etat: "etat-1"))
+        let elements = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let retour = elements.first { $0.name == "redirect_uri" }?.value
+        XCTAssertEqual(retour, "\(Bundle.main.bundleIdentifier ?? "")://sso")
+    }
+}
