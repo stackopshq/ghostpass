@@ -976,6 +976,21 @@ export const ephemeral = {
     return row.value;
   },
 
+  /// Variante ATOMIQUE de `take` : le `DELETE … RETURNING` lit et supprime en une seule
+  /// instruction. `take` ci-dessus fait un `SELECT` puis un `DELETE` — deux requêtes concurrentes
+  /// peuvent donc lire la même valeur avant que l'une n'efface, et la dépenser deux fois. C'est
+  /// sans conséquence pour un challenge WebAuthn (la signature échouerait), mais un code SSO à
+  /// usage unique DOIT être indépensable deux fois, y compris sous course.
+  async takeOnce(db: DB, key: string): Promise<string | null> {
+    const row = await db
+      .deleteFrom("auth_ephemeral")
+      .where("key", "=", key)
+      .returning(["value", "expires_at"])
+      .executeTakeFirst();
+    if (!row || row.expires_at < Date.now()) return null;
+    return row.value;
+  },
+
   /// Balaye les entrées expirées (à appeler périodiquement).
   async purgeExpired(db: DB): Promise<void> {
     await db.deleteFrom("auth_ephemeral").where("expires_at", "<", Date.now()).execute();

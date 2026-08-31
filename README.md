@@ -147,6 +147,7 @@ cd apps/web-next && npx tsc --noEmit       # types
 | `apps/server` | Fastify API — auth, vault, MFA, organisations, sharing |
 | `apps/web-next` | The web app (Next, static export, served by nginx) |
 | `docs/legal/` | Data processing agreement and terms |
+| [`docs/sso-mobile.md`](docs/sso-mobile.md) | Mobile SSO: the contract the iOS client calls, and why PKCE sits app↔server |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, data flows, threat model |
 | [`SECURITY.md`](SECURITY.md) | Guarantees, scope, and what is *not* covered |
 
