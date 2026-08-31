@@ -11,7 +11,7 @@ version = "0.0.1"
 edition.workspace = true
 # Explicit string (not inherited from the workspace): some wasm-pack versions don't resolve
 # `license.workspace = true` and reject the manifest ("expected a string").
-license = "MIT"
+license = "Elastic-2.0"
 publish = false
 description = "Binding WASM (web + extension navigateur) du cœur crypto GhostPass"
 
