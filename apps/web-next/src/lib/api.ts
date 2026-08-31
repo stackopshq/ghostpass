@@ -1,6 +1,83 @@
 // Client HTTP vers le backend. En dev, `/api` est relayé par le proxy Vite (voir vite.config.ts).
 import type { RegistrationData } from "./crypto.js";
 
+/// Ce qu'une réponse a le droit de peser : 32 Mio, la borne du client iOS.
+///
+/// Le chiffre est le même des deux côtés à dessein — deux bornes différentes
+/// pour un même serveur, c'est une réponse qu'un client accepte et que l'autre
+/// refuse, et un rapport de bogue impossible à reproduire.
+///
+/// Nommée plutôt qu'écrite au milieu du code : c'est la seule façon de la
+/// changer sans en oublier une occurrence, et de la lire depuis un test.
+export const TAILLE_MAX_REPONSE = 32 * 1024 * 1024;
+
+/// Levée quand une réponse dépasse la borne, avant qu'elle ne soit entière en
+/// mémoire. Un type à part plutôt qu'un `Error` nu : l'appelant qui voudra un
+/// jour distinguer « le serveur déborde » de « le serveur a répondu 500 » n'aura
+/// pas à comparer des chaînes.
+export class ReponseTropVolumineuse extends Error {
+  constructor(octets: number, annoncee = false) {
+    super(
+      annoncee
+        ? `réponse trop volumineuse : ${octets} octets annoncés, borne ${TAILLE_MAX_REPONSE}`
+        : `réponse trop volumineuse : plus de ${TAILLE_MAX_REPONSE} octets reçus`,
+    );
+    this.name = "ReponseTropVolumineuse";
+  }
+}
+
+/// Lit un corps de réponse en comptant les octets AU FUR ET À MESURE.
+///
+/// C'est tout le sujet, et la remarque du pair iOS qui l'a ouvert : une borne
+/// posée au décodage ne borne rien. `await res.json()` rapatrie le corps entier
+/// avant de rendre la main ; mesurer sa taille ensuite ne fait que constater ce
+/// qui est déjà arrivé — la mémoire est prise, et un serveur qui émet sans
+/// s'arrêter a déjà gagné.
+///
+/// Le cas qui compte est celui du serveur qui N'ANNONCE PAS `Content-Length`.
+/// L'en-tête est une déclaration, pas une mesure : un serveur hostile ne le
+/// remplit pas, ou le remplit faux. On l'utilise donc comme un refus précoce
+/// — inutile d'ouvrir un flux dont on nous dit qu'il déborde — et jamais comme
+/// une garantie. Le compteur, lui, ne dépend de personne.
+///
+/// Au franchissement, on ANNULE : `abandonner()` avorte la requête et le
+/// lecteur est annulé. Se contenter d'arrêter de lire laisserait la connexion
+/// ouverte et le serveur continuer d'émettre dans un tampon que personne ne
+/// vide — ce n'est pas une protection, c'est un déni de service poli.
+async function lireCorpsBorne(res: Response, abandonner: () => void): Promise<string> {
+  const annonce = Number(res.headers.get("content-length"));
+  if (Number.isFinite(annonce) && annonce > TAILLE_MAX_REPONSE) {
+    abandonner();
+    await res.body?.cancel().catch(() => {});
+    throw new ReponseTropVolumineuse(annonce, true);
+  }
+
+  // Pas de flux : réponse sans corps (204, HEAD) ou environnement qui n'en
+  // expose pas. Rien à borner, et `text()` rend la chaîne vide.
+  if (!res.body) return await res.text();
+
+  const lecteur = res.body.getReader();
+  // Mode incrémental : un caractère multi-octets à cheval sur deux morceaux se
+  // recolle. Sans `{ stream: true }` il deviendrait « � » et le JSON serait
+  // illisible — un défaut qui n'apparaît qu'en production, où les corps
+  // arrivent découpés.
+  const decodeur = new TextDecoder();
+  let recus = 0;
+  let texte = "";
+  for (;;) {
+    const { done, value } = await lecteur.read();
+    if (done) break;
+    recus += value.byteLength;
+    if (recus > TAILLE_MAX_REPONSE) {
+      abandonner();
+      await lecteur.cancel().catch(() => {});
+      throw new ReponseTropVolumineuse(recus);
+    }
+    texte += decodeur.decode(value, { stream: true });
+  }
+  return texte + decodeur.decode();
+}
+
 export interface ItemDto {
   id: string;
   encryptedKey: string;
@@ -39,16 +116,25 @@ async function http<T>(
     headers[k] = v;
   }
 
+  // Le contrôleur sert à AVORTER la requête si la réponse déborde. Sans lui,
+  // annuler le lecteur cesserait de lire sans fermer la connexion.
+  const controle = new AbortController();
   const res = await fetch(path, {
     method: opts.method ?? "GET",
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    signal: controle.signal,
   });
 
   if (!res.ok) {
+    // Le corps d'une erreur se lit lui aussi, donc il se borne lui aussi : un
+    // 500 dont le corps ne s'arrête jamais coûte exactement autant qu'un 200.
+    // La lecture est HORS du `try` : un dépassement doit remonter tel quel,
+    // pas être avalé comme un « corps non JSON » et rendu en « HTTP 500 ».
+    const brut = await lireCorpsBorne(res, () => controle.abort());
     let message = `HTTP ${res.status}`;
     try {
-      const data = await res.json();
+      const data = JSON.parse(brut);
       if (data?.error) message = data.error;
     } catch {
       /* corps non JSON */
@@ -56,7 +142,7 @@ async function http<T>(
     throw new Error(message);
   }
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  return JSON.parse(await lireCorpsBorne(res, () => controle.abort())) as T;
 }
 
 export const api = {
@@ -117,6 +203,11 @@ export const api = {
       }
     | { ok: false; mfaRequired: boolean; mfaType?: string; options?: unknown; error: string }
   > {
+    // `login` fait son propre `fetch` pour distinguer « 2FA requise » d'un
+    // refus — mais il lit un corps comme les autres, et se borne comme eux.
+    // Un chemin de côté est exactement ce qu'une protection posée au seul
+    // endroit évident laisse dehors.
+    const controle = new AbortController();
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -126,8 +217,16 @@ export const api = {
         totpCode: opts.totpCode,
         webauthnResponse: opts.webauthnResponse,
       }),
+      signal: controle.signal,
     });
-    const data = await res.json().catch(() => ({}) as Record<string, unknown>);
+    const brut = await lireCorpsBorne(res, () => controle.abort());
+    let data: Record<string, unknown> = {};
+    try {
+      const analyse = JSON.parse(brut);
+      if (analyse && typeof analyse === "object") data = analyse as Record<string, unknown>;
+    } catch {
+      /* corps non JSON : on garde le code de statut comme seule information */
+    }
     if (res.ok) return { ok: true, ...(data as Record<string, never>) } as never;
     return {
       ok: false,
