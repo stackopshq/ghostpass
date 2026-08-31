@@ -252,10 +252,7 @@ struct ItemEditView: View {
         Text(texte).foregroundColor(Color.gpMuted.opacity(0.7))
     }
 
-    private var isNew: Bool {
-        if case .new = target { return true }
-        return false
-    }
+    private var isNew: Bool { target.estNeuf }
 
     private var existingID: String? {
         if case .existing(let entry) = target { return entry.id }
@@ -263,6 +260,16 @@ struct ItemEditView: View {
     }
 
     private func load() {
+        if case .nouveauDepuisUnLien(let uri) = target {
+            // Le secret d'abord : c'est la seule chose que le lien garantisse. Le nom et
+            // le compte sont une commodité, et leur absence ne doit rien empêcher.
+            kind = .login
+            totp = uri
+            let etiquette = Totp.etiquette(uri)
+            name = etiquette.service ?? etiquette.compte ?? ""
+            username = etiquette.compte ?? ""
+            return
+        }
         guard case .existing(let entry) = target else { return }
         name = entry.item.name
         notes = entry.item.notes ?? ""

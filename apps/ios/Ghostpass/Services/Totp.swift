@@ -53,6 +53,43 @@ enum Totp {
         return config
     }
 
+    /// Qui délivre le code, et pour quel compte.
+    ///
+    /// Une URI `otpauth` porte cela dans son chemin — `otpauth://totp/GitHub:clara` — et
+    /// parfois en double dans le paramètre `issuer`. Les deux sources se contredisent
+    /// dans la nature ; le paramètre fait foi, parce qu'il n'a pas à être échappé.
+    ///
+    /// Sert à pré-remplir un élément créé depuis un lien. Rien de tout cela n'entre dans
+    /// le calcul du code : c'est de l'affichage, et une étiquette absente ne doit donc
+    /// jamais empêcher d'enregistrer un secret parfaitement valide.
+    static func etiquette(_ uri: String) -> (service: String?, compte: String?) {
+        guard uri.lowercased().hasPrefix("otpauth://"),
+            let composants = URLComponents(string: uri)
+        else { return (nil, nil) }
+
+        let parametre = composants.queryItems?.first { $0.name == "issuer" }?.value
+        // `URLComponents` rend le chemin déjà déséchappé : « /GitHub:clara ».
+        let chemin = composants.path.hasPrefix("/")
+            ? String(composants.path.dropFirst()) : composants.path
+
+        var service = parametre
+        var compte: String?
+        if let separateur = chemin.firstIndex(of: ":") {
+            service = service ?? String(chemin[chemin.startIndex..<separateur])
+            compte = String(chemin[chemin.index(after: separateur)...])
+        } else if !chemin.isEmpty {
+            // Sans deux-points, le chemin est le compte — sauf s'il est le seul indice
+            // qu'on ait du service, auquel cas il vaut mieux le montrer que rien.
+            compte = chemin
+        }
+
+        func nettoyer(_ v: String?) -> String? {
+            let t = v?.trimmingCharacters(in: .whitespaces)
+            return (t?.isEmpty ?? true) ? nil : t
+        }
+        return (nettoyer(service), nettoyer(compte))
+    }
+
     /// Ce qu'un QR code s'est révélé contenir.
     enum LectureDeQrCode: Equatable {
         case totp(String)

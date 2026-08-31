@@ -2092,3 +2092,101 @@ final class ProtocoleDEssai: URLProtocol {
         client?.urlProtocolDidFinishLoading(self)
     }
 }
+
+/// L'étiquette d'un lien `otpauth://`, et ce qu'on en fait.
+///
+/// Ces liens viennent du dehors — un QR code photographié, un lien touché dans un
+/// courriel — et « Configurer les codes dans » désigne désormais GhostPass pour les
+/// ouvrir. Ce qui vient du dehors est malformé plus souvent qu'à son tour.
+final class EtiquetteOtpauthTests: XCTestCase {
+    func testServiceEtCompteDepuisLeChemin() {
+        let e = Totp.etiquette("otpauth://totp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        XCTAssertEqual(e.service, "GitHub")
+        XCTAssertEqual(e.compte, "clara")
+    }
+
+    func testLeParametreIssuerLEmporteSurLeChemin() {
+        // Les deux sources se contredisent dans la nature — un service renommé met à jour
+        // le paramètre et laisse le chemin d'origine. Le paramètre fait foi : il n'a pas à
+        // être échappé, donc il ne peut pas être coupé par un deux-points du nom.
+        let e = Totp.etiquette(
+            "otpauth://totp/Ancien:clara?secret=GEZDGNBVGY3TQOJQ&issuer=Nouveau")
+        XCTAssertEqual(e.service, "Nouveau")
+        XCTAssertEqual(e.compte, "clara")
+    }
+
+    func testUnCheminSansDeuxPointsEstUnCompte() {
+        let e = Totp.etiquette("otpauth://totp/clara@example.com?secret=GEZDGNBVGY3TQOJQ")
+        XCTAssertNil(e.service)
+        XCTAssertEqual(e.compte, "clara@example.com")
+    }
+
+    func testLesEspacesEchappesSontRendusLisibles() {
+        // « Site%20local » doit s'afficher « Site local », pas tel quel : c'est le nom que
+        // l'utilisateur verra dans son coffre.
+        let e = Totp.etiquette(
+            "otpauth://totp/Site%20local:clara?secret=GEZDGNBVGY3TQOJQ&issuer=Site%20local")
+        XCTAssertEqual(e.service, "Site local")
+        XCTAssertEqual(e.compte, "clara")
+    }
+
+    func testUneEtiquetteVideNEmpecheRien() {
+        // Le secret est la seule chose qu'un lien garantisse. Une étiquette absente ou
+        // vide ne doit jamais empêcher d'enregistrer un second facteur valide.
+        let e = Totp.etiquette("otpauth://totp/?secret=GEZDGNBVGY3TQOJQ")
+        XCTAssertNil(e.service)
+        XCTAssertNil(e.compte)
+        XCTAssertEqual(Totp.parse("otpauth://totp/?secret=GEZDGNBVGY3TQOJQ")?.secret,
+                       "GEZDGNBVGY3TQOJQ")
+    }
+
+    func testCeQuiNEstPasUnLienOtpauthNaPasDEtiquette() {
+        for entree in ["GEZDGNBVGY3TQOJQ", "", "https://example.com/totp/x", "otpauth:/"] {
+            let e = Totp.etiquette(entree)
+            XCTAssertNil(e.service, entree)
+            XCTAssertNil(e.compte, entree)
+        }
+    }
+
+    /// Ce que le système a le droit de nous faire ouvrir.
+    func testSeulUnLienDeTotpEstRetenu() {
+        let accepte = URL(string: "otpauth://totp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")!
+        XCTAssertTrue(VaultStore.estUnLienDeTotp(accepte))
+
+        for refuse in [
+            // L'export d'une application d'authentification : plusieurs comptes dans un
+            // protobuf compressé, que nous ne savons pas lire.
+            "otpauth-migration://offline?data=AAAA",
+            // Un lien sans secret ne configure rien — l'accepter ouvrirait un formulaire
+            // vide en laissant croire qu'un code a été importé.
+            "otpauth://totp/GitHub:clara",
+            "https://example.com/otpauth",
+        ] {
+            XCTAssertFalse(VaultStore.estUnLienDeTotp(URL(string: refuse)!), refuse)
+        }
+    }
+}
+
+/// Ce que l'écran d'édition annonce à l'utilisateur.
+final class CibleDEditionTests: XCTestCase {
+    /// Un élément créé depuis un lien est **neuf**.
+    ///
+    /// Il s'est affiché « Modifier » le jour où le cas a été ajouté : la question posée
+    /// était « est-ce le cas `.new` ? » plutôt que « existe-t-il déjà ? ». Rien ne
+    /// tombait, et l'écran disait simplement le contraire de la vérité.
+    func testUnElementVenuDUnLienEstNeuf() {
+        XCTAssertTrue(EditTarget.new.estNeuf)
+        XCTAssertTrue(
+            EditTarget.nouveauDepuisUnLien("otpauth://totp/A:b?secret=GEZDGNBVGY3TQOJQ")
+                .estNeuf)
+    }
+
+    /// Deux liens différents doivent ouvrir deux feuilles différentes : SwiftUI réutilise
+    /// une feuille dont l'identité n'a pas changé, et le second lien n'arriverait jamais.
+    func testDeuxLiensNOntPasLaMemeIdentite() {
+        let a = EditTarget.nouveauDepuisUnLien("otpauth://totp/A:b?secret=GEZDGNBVGY3TQOJQ")
+        let b = EditTarget.nouveauDepuisUnLien("otpauth://totp/C:d?secret=GEZDGNBVGY3TQOJQ")
+        XCTAssertNotEqual(a.id, b.id)
+        XCTAssertNotEqual(a.id, EditTarget.new.id)
+    }
+}

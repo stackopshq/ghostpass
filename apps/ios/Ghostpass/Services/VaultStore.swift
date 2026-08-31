@@ -11,6 +11,33 @@ final class VaultStore: ObservableObject {
     @Published private(set) var isUnlocked = false
     @Published private(set) var isBusy = false
     @Published var errorMessage: String?
+
+    /// Un lien `otpauth://` reçu du système, en attente d'un écran capable de l'afficher.
+    ///
+    /// Il arrive souvent **coffre fermé** : on scanne un QR code depuis l'appareil photo,
+    /// et iOS réveille GhostPass qui demande d'abord le mot de passe maître. Le jeter à ce
+    /// moment-là serait le défaut classique — l'utilisateur déverrouille, et rien ne s'est
+    /// passé. On le garde donc jusqu'à ce que la liste s'affiche et le consomme.
+    ///
+    /// Rien n'est écrit dans le coffre par ce chemin : le lien pré-remplit un formulaire
+    /// que l'utilisateur doit enregistrer lui-même. Une entrée créée sans geste par une
+    /// URL venue du dehors serait un moyen d'écrire dans le coffre de quelqu'un d'autre.
+    @Published var lienDeTotpEnAttente: String?
+
+    /// Retient un lien, s'il en est un.
+    ///
+    /// Le contrôle est celui du scanner, plus strict que `Totp.parse` : il exige le
+    /// schéma `otpauth://`, là où `parse` accepte aussi un secret nu. Ce qui vient du
+    /// dehors n'a pas droit au même bénéfice du doute qu'un champ saisi à la main.
+    nonisolated static func estUnLienDeTotp(_ url: URL) -> Bool {
+        if case .totp = Totp.depuisUnQrCode(url.absoluteString) { return true }
+        return false
+    }
+
+    func recevoirUnLien(_ url: URL) {
+        guard Self.estUnLienDeTotp(url) else { return }
+        lienDeTotpEnAttente = url.absoluteString
+    }
     /// Le coffre affiché vient du disque, faute d'avoir pu joindre le serveur.
     @Published private(set) var isOffline = false
     /// Dossiers **vides**, ceux qu'aucun élément n'habite. Les autres se déduisent des

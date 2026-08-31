@@ -240,10 +240,18 @@ struct VaultListView: View {
                     .accessibilityIdentifier("button.add")
                 }
             }
+            // Un lien de second facteur peut arriver avant que cet écran existe — le
+            // coffre était fermé quand le système l'a transmis. On le consomme donc à
+            // l'apparition **et** au changement, sinon le cas le plus courant, celui du
+            // QR code scanné depuis l'appareil photo, serait précisément celui qui échoue.
+            .onAppear(perform: consommerLeLienEnAttente)
+            .onChange(of: store.lienDeTotpEnAttente) { _, _ in consommerLeLienEnAttente() }
             .sheet(item: $sheet, onDismiss: ouvrirLElementDemande) { destination in
                 switch destination {
                 case .newItem:
                     ItemEditView(target: .new).environmentObject(store)
+                case .lienDeTotp(let uri):
+                    ItemEditView(target: .nouveauDepuisUnLien(uri)).environmentObject(store)
                 case .editItem(let entry):
                     ItemEditView(target: .existing(entry)).environmentObject(store)
                 case .biometrics:
@@ -414,6 +422,14 @@ struct VaultListView: View {
         }
     }
 
+    /// Prend le lien retenu, l'affiche, et le retire. Le retirer importe : sans cela il
+    /// rouvrirait le formulaire à chaque retour sur la liste.
+    private func consommerLeLienEnAttente() {
+        guard let uri = store.lienDeTotpEnAttente else { return }
+        store.lienDeTotpEnAttente = nil
+        sheet = .lienDeTotp(uri)
+    }
+
     private func ouvrirLElementDemande() {
         guard let entry = aOuvrir else { return }
         aOuvrir = nil
@@ -507,6 +523,9 @@ struct VaultListView: View {
 /// Ce que la liste peut présenter par-dessus elle.
 enum VaultSheet: Identifiable {
     case newItem
+    /// Un lien `otpauth://` ouvert depuis l'extérieur — un QR code photographié par
+    /// l'appareil, un lien touché dans un courriel.
+    case lienDeTotp(String)
     case editItem(VaultEntry)
     case biometrics
     case trash
@@ -526,6 +545,7 @@ enum VaultSheet: Identifiable {
     var id: String {
         switch self {
         case .newItem: return "new"
+        case .lienDeTotp(let uri): return "lien:" + uri
         case .editItem(let entry): return entry.id
         case .biometrics: return "biometrics"
         case .trash: return "trash"
@@ -549,12 +569,29 @@ enum VaultSheet: Identifiable {
 enum EditTarget: Identifiable {
     case new
     case existing(VaultEntry)
+    /// Un élément neuf, pré-rempli depuis un lien `otpauth://` que le système nous a
+    /// confié. Distinct de `.new` : l'identité doit changer avec le lien, sinon SwiftUI
+    /// réutiliserait la feuille déjà affichée et le second lien n'arriverait jamais.
+    case nouveauDepuisUnLien(String)
 
     var id: String {
         switch self {
         case .new: return "new"
         case .existing(let entry): return entry.id
+        case .nouveauDepuisUnLien(let uri): return "lien:" + uri
         }
+    }
+
+    /// Cet élément existe-t-il déjà ?
+    ///
+    /// C'est cette question, et non « est-ce le cas `.new` ? », qui gouverne le titre de
+    /// l'écran et le bouton d'enregistrement. La formuler par la négative — tout ce qui
+    /// n'est pas `.existing` est neuf — fait que le prochain cas ajouté sera correct par
+    /// défaut. La version positive ne l'était pas : `.nouveauDepuisUnLien` s'est affiché
+    /// « Modifier », et disait ainsi qu'on corrigeait un élément qui n'existait pas.
+    var estNeuf: Bool {
+        if case .existing = self { return false }
+        return true
     }
 }
 

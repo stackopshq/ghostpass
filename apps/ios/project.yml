@@ -73,6 +73,9 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_ENTITLEMENTS: Ghostpass/Ghostpass.entitlements
         GENERATE_INFOPLIST_FILE: YES
+        # Un tableau ne s'exprime pas en `INFOPLIST_KEY_*`. Ce fichier ne porte donc que
+        # `CFBundleURLTypes` ; Xcode le prend pour base et pose les clés générées dessus.
+        INFOPLIST_FILE: Ghostpass/Info.plist
         # Icône : la déclinaison GhostPass de la charte ghost-suite, variante « remplie »
         # (assets/logo/ghostpass-icon.svg) — celle que les autres produits emploient
         # comme icône, le trait du logo disparaissant aux petites tailles.

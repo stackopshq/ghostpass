@@ -52,6 +52,11 @@ struct GhostpassApp: App {
             }
             .environmentObject(store)
             .environmentObject(prefs)
+            // « Configurer les codes dans » désigne l'application qui ouvre les liens et
+            // les QR codes de second facteur. Déclarer le schéma sans traiter ce qui
+            // arrive serait pire que ne rien déclarer : le système enverrait ces liens à
+            // une application qui les avale en silence.
+            .onOpenURL { store.recevoirUnLien($0) }
             // Les deux réglages s'appliquent à la racine : tout ce qui est présenté
             // par-dessus — feuilles, alertes — en hérite, alors qu'un réglage posé
             // écran par écran laisserait des îlots dans l'autre thème ou l'autre langue.
