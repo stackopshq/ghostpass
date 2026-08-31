@@ -202,6 +202,30 @@ export function DetailSecret({
           </>
         )}
 
+        {/* La note d'un identifiant ou d'une carte. Un coffre migré depuis un
+            autre gestionnaire arrive presque toujours avec des notes : sans cet
+            écran elles seraient stockées et jamais montrées, ce qui se lit comme
+            une perte. Le type « note » a déjà son propre affichage plus haut. */}
+        {item.kind !== "note" && item.note && (
+          <div className="border-t border-border p-4">
+            <p className="mb-2 text-2xs text-muted">{t("app.secureNote")}</p>
+            <div className="relative rounded border border-border bg-surface-2 p-3">
+              <button
+                type="button"
+                onClick={() => copier(item.note, "note")}
+                title={t("app.copy")}
+                aria-label={`${t("app.copy")} (${t("app.secureNote")})`}
+                className={`absolute right-2 top-2 cursor-pointer rounded p-1 transition-colors ${copie === "note" ? "text-accent" : "text-muted hover:text-foreground"}`}
+              >
+                {copie === "note" ? <Coche className="size-4" /> : <Copier className="size-4" />}
+              </button>
+              <pre className="whitespace-pre-wrap break-words pr-8 font-sans text-sm text-foreground">
+                {item.note}
+              </pre>
+            </div>
+          </div>
+        )}
+
         </div>
         <p className="px-1 pt-3 text-2xs text-muted">{formatDate(item.updatedAt, locale)}</p>
       </div>
