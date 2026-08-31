@@ -2389,3 +2389,58 @@ final class ElementIllisibleTests: XCTestCase {
         XCTAssertEqual(entree.item.name, "Forgejo")
     }
 }
+
+/// L'enveloppe d'un partage, vue depuis l'application.
+///
+/// Le cœur porte déjà ses propres témoins croisés. Celui-ci existe pour une autre raison :
+/// **l'application est ce qui casse quand le cœur change**, et elle doit s'en apercevoir
+/// chez elle. Pendant plusieurs jours, `partager` a pris un 502 sans qu'aucun test iOS ne
+/// le voie — le format était éprouvé nulle part de ce côté-ci de la frontière.
+final class EnveloppeDePartageTests: XCTestCase {
+    func testLeNonceFaitDouzeOctets() throws {
+        // Le relais refuse tout le reste, et le serveur traduit son refus en 502. Douze
+        // octets, parce que c'est ce que WebCrypto attend dans le navigateur qui ouvrira
+        // le lien — et non un choix qu'on pourrait revisiter côté produit.
+        let scelle = try sealSend(plaintext: "un secret")
+        let nonce = try XCTUnwrap(Data(base64Encoded: scelle.nonce))
+        XCTAssertEqual(nonce.count, 12)
+    }
+
+    func testLaCleFaitTrenteDeuxOctets() throws {
+        let scelle = try sealSend(plaintext: "un secret")
+        XCTAssertEqual(try XCTUnwrap(Data(base64Encoded: scelle.key)).count, 32)
+    }
+
+    func testDeuxPartagesNePartagentNiCleNiNonce() throws {
+        // L'invariant qui rend un nonce de 96 bits acceptable : une clé neuve par partage,
+        // utilisée une fois. Sous GCM, une réutilisation de nonce livre la clé
+        // d'authentification — ce n'est pas une dégradation, c'est une perte.
+        let a = try sealSend(plaintext: "x")
+        let b = try sealSend(plaintext: "x")
+        XCTAssertNotEqual(a.key, b.key)
+        XCTAssertNotEqual(a.nonce, b.nonce)
+    }
+
+    func testUnAllerRetourDepuisLApplication() throws {
+        let scelle = try sealSend(plaintext: "un mot de passe partagé")
+        let clair = try openSend(
+            key: scelle.key, nonce: scelle.nonce, ciphertext: scelle.ciphertext)
+        XCTAssertEqual(clair, "un mot de passe partagé")
+    }
+
+    func testUneCleDuFragmentSOuvreAussi() throws {
+        // La clé arrive du fragment d'une URL, en base64url sans remplissage. Ne pas
+        // l'accepter échouait sur « Invalid padding » — un message qui accuse le format et
+        // laisse croire à une clé corrompue.
+        let scelle = try sealSend(plaintext: "secret")
+        let versFragment = { (s: String) in
+            s.replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: "")
+        }
+        let clair = try openSend(
+            key: versFragment(scelle.key), nonce: versFragment(scelle.nonce),
+            ciphertext: scelle.ciphertext)
+        XCTAssertEqual(clair, "secret")
+    }
+}

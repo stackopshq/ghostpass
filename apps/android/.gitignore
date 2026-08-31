@@ -1,0 +1,16 @@
+# Sorties de construction. Rien de tout cela ne se versionne : ce sont des produits, et
+# `git add -A` les emporterait sans un mot — plusieurs centaines de mégaoctets, dont un APK.
+#
+# Aucune règle ne les couvrait jusqu'au 2026-08-31. Les commits passés y ont échappé parce
+# que leurs `git add` nommaient des chemins précis, ce qui est une chance et non une garantie.
+build/
+.gradle/
+.cxx/
+
+# Le chemin du SDK, propre à chaque poste. C'est aussi ce dont l'absence fait dire à Gradle
+# « SDK location not found », ce qui se lit comme un SDK manquant alors qu'il est là.
+local.properties
+
+# Produits de tools/android/build-jni.sh : bibliothèques natives et liaisons Kotlin,
+# régénérées à chaque construction depuis le cœur commun.
+generated/
