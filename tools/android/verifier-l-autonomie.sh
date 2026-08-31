@@ -52,8 +52,13 @@ if [[ -z "$APK" ]]; then
   # `app-debug-androidTest.apk` et signalé deux fautes inexistantes.
   #
   # C'est le pendant exact de l'exclusion `*Tests*` du script iOS, pour la même raison.
+  #
+  # `|| true` n'est pas de la complaisance : sous `set -euo pipefail`, un `find` sur un
+  # dossier inexistant fait échouer la substitution, et le script **sort avant d'atteindre
+  # son propre message d'aide**. Constaté en répétant la tâche de CI : le contrôle sortait
+  # en 1 sans une ligne, là où il avait tout ce qu'il fallait pour dire quoi faire.
   APK="$(find "$ROOT/apps/android/app/build/outputs/apk" -name '*.apk' \
-    ! -name '*androidTest*' ! -path '*/androidTest/*' 2>/dev/null | head -1)"
+    ! -name '*androidTest*' ! -path '*/androidTest/*' 2>/dev/null | head -1 || true)"
 fi
 if [[ -z "$APK" || ! -f "$APK" ]]; then
   echo "Aucun APK à examiner. Construisez d'abord :" >&2

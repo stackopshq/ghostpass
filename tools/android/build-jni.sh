@@ -121,46 +121,22 @@ cargo run --release --bin uniffi-bindgen -- generate \
   --language kotlin \
   --out-dir "$KOTLIN"
 
-# ─── Le rattrapage d'un défaut d'UniFFI ───────────────────────────────────────
+# ─── La collision Kotlin, corrigée en amont le 2026-08-31 ─────────────────────
 #
-# `GhostCryptoError` porte un champ nommé `message`. Côté Swift cela ne gêne personne ;
-# côté Kotlin, le générateur produit une classe qui étend `Exception` avec un
-# `val message` **et** un `override val message`, et le compilateur refuse le fichier :
+# Il y avait ici un rattrapage : `GhostCryptoError` portait un champ nommé `message`, et
+# le générateur Kotlin produisait une classe étendant `Exception` avec un `val message`
+# **et** un `override val message` — que le compilateur refuse. Côté Swift, le même code
+# compilait parfaitement.
 #
-#   Conflicting declarations: val message: String
-#   'message' hides member of supertype 'Throwable' and needs an 'override' modifier
+# C'est la classe d'erreur qui vaut d'être retenue : **un contrôle qui ne regarde qu'une
+# plateforme est vert pendant que l'autre est cassée.** Les noms pris par `Throwable` —
+# `message`, `cause`, `stackTrace`, `suppressed` — sont à éviter dans les types d'erreur
+# du cœur, et rien du côté Swift ne le signalera.
 #
-# La correction propre est en amont — renommer ce champ dans le cœur commun, ou corriger
-# le générateur — et n'appartient pas à ce dépôt. En attendant, on marque la propriété du
-# constructeur `override` et on retire le getter redondant. Le message rendu devient le
-# message lui-même au lieu de « message=… », ce qui est aussi ce que rend Swift.
-#
-# Le rattrapage échoue bruyamment si le motif disparaît : le jour où UniFFI corrigera
-# cela, il faut le savoir et supprimer ces lignes, pas les laisser s'appliquer à vide.
-python3 - "$KOTLIN/uniffi/ghost_crypto_ffi/ghost_crypto_ffi.kt" <<'PYTHON'
-import sys
-
-chemin = sys.argv[1]
-source = open(chemin, encoding="utf-8").read()
-
-avant = """        val `message`: kotlin.String
-        ) : GhostCryptoException() {
-        override val message
-            get() = "message=${ `message` }"
-    }"""
-apres = """        override val `message`: kotlin.String
-        ) : GhostCryptoException() {
-    }"""
-
-if avant not in source:
-    sys.exit(
-        "Le motif rattrapé dans les liaisons Kotlin a changé.\n"
-        "Vérifiez si UniFFI a corrigé la collision sur `message` ; si oui, retirez ce\n"
-        "rattrapage de tools/android/build-jni.sh. Ne le laissez pas s'appliquer à vide."
-    )
-
-open(chemin, "w", encoding="utf-8").write(source.replace(avant, apres, 1))
-PYTHON
+# La correction est allée là où elle devait : le champ s'appelle `raison` dans le cœur
+# commun (ghostsuite, 327581d). Le rattrapage local a donc disparu — et il a disparu
+# parce qu'il **échouait bruyamment** quand son motif s'évanouissait, au lieu de
+# s'appliquer à vide. Sans ce garde, il serait encore là, inutile et invisible.
 
 # ─── La même bibliothèque, pour l'hôte ────────────────────────────────────────
 #

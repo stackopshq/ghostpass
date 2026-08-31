@@ -276,6 +276,121 @@ jobs:
   # permet de dire quelle construction est déployée, et d'y revenir. `main`
   # bouge — c'est une commodité, pas quelque chose depuis quoi déployer.
 
+  # ─── Android ───
+  #
+  # Sur le **même exécutant que la tâche iOS**, et donc derrière le même interrupteur : le
+  # SDK, le NDK et le JDK 21 y sont provisionnés, et c'est le seul exécutant du parc qui
+  # les porte. Un exécutant Linux devrait les installer à chaque exécution — plusieurs
+  # gigaoctets pour trente-deux tests.
+  #
+  # La conséquence se dit plutôt que se cache : **si le Mac est éteint, Android n'est pas
+  # vérifié non plus.** Les deux applications mobiles dépendent d'une même machine allumée.
+  android:
+    name: App Android (Kotlin + UniFFI)
+    needs: ios-gate
+    if: vars.MACOS_RUNNER != 'false'
+    runs-on: macos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Le dépôt du cœur est-il accessible ?
+        env:
+          JETON: ${{ secrets.GHOSTSUITE_TOKEN || secrets.GITEA_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${JETON:-}" ]; then
+            echo "::error::secrets.GHOSTSUITE_TOKEN est absent. Le clone du cœur échouerait sur « not found », ce qui se lit comme « dépôt inexistant »."
+            exit 1
+          fi
+
+      - name: Cœur commun de la suite
+        uses: actions/checkout@v4
+        with:
+          repository: stackops/ghostsuite
+          path: ghostsuite
+          token: ${{ secrets.GHOSTSUITE_TOKEN || secrets.GITEA_TOKEN }}
+
+      # **JDK 21, et on le vérifie.** Le JDK le plus récent casse `jlink` d'AGP, et le Mac
+      # porte les deux. Se contenter de poser JAVA_HOME laisserait passer une version
+      # changée sous nos pieds : l'échec arriverait plus tard, dans Gradle, avec un message
+      # sur `jlink` qui ne nomme pas la cause.
+      - name: JDK 21
+        run: |
+          set -euo pipefail
+          for candidat in /opt/homebrew/opt/openjdk@21 "$(/usr/libexec/java_home -v 21 2>/dev/null || true)"; do
+            [ -n "$candidat" ] && [ -x "$candidat/bin/javac" ] && { echo "JAVA_HOME=$candidat" >> "$GITHUB_ENV"; JH="$candidat"; break; }
+          done
+          if [ -z "${JH:-}" ]; then
+            echo "::error::Aucun JDK 21 sur cet exécutant. AGP casse sur les versions plus récentes (jlink), et le message d'erreur ne le dit pas."
+            exit 1
+          fi
+          version="$("$JH/bin/javac" -version 2>&1 | sed 's/javac //;s/\..*//')"
+          echo "JDK trouvé : $("$JH/bin/javac" -version 2>&1)"
+          [ "$version" = "21" ] || { echo "::error::JDK $version au lieu de 21."; exit 1; }
+
+      # `local.properties` n'est pas versionné — à raison, il porte un chemin propre à
+      # chaque poste. Gradle le cherche pourtant, et sans lui échoue sur « SDK location not
+      # found », ce qui ressemble à un SDK absent alors qu'il est là. Un poste de
+      # développement a ce fichier depuis longtemps ; un exécutant neuf, jamais.
+      - name: SDK Android
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
+          if [ ! -d "$SDK/platform-tools" ]; then
+            echo "::error::SDK Android introuvable sous $SDK. Posez ANDROID_HOME sur l'exécutant."
+            exit 1
+          fi
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "SDK : $SDK"
+          ls -d "$SDK"/ndk/*/ 2>/dev/null | tail -1 | sed 's/^/NDK : /' || {
+            echo "::error::Aucun NDK sous $SDK/ndk — la compilation croisée du cœur en a besoin."
+            exit 1
+          }
+
+      - name: Cibles Rust pour Android
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+
+      # Construit les bibliothèques natives **et** les liaisons Kotlin, générées depuis le
+      # binaire déjà compilé : la surface Kotlin décrit alors ce qui est réellement
+      # embarqué, et non une déclaration qui aurait divergé.
+      - name: Cœur crypto pour Android
+        env:
+          GHOSTSUITE: ${{ github.workspace }}/ghostsuite
+        run: ./tools/android/build-jni.sh
+
+      - name: Tests
+        working-directory: apps/android
+        run: ./gradlew --no-daemon :coeur-hote:test
+
+      # Les deux témoins. Ils ne testent pas le produit mais **les tests eux-mêmes** : que
+      # la suite lise vraiment les vecteurs partagés, et que le paquet ne contienne pas de
+      # vitrine. Un contrôle qui reste vert quand on corrompt ce qu'il surveille ne mesure
+      # rien, et ces deux-là le vérifient en le corrompant.
+      - name: Les tests lisent-ils vraiment les vecteurs ?
+        env:
+          GHOSTSUITE: ${{ github.workspace }}/ghostsuite
+        run: ./tools/android/temoin-des-vecteurs.sh
+
+      # Le contrôle porte sur le **paquet**, pas sur les sources : il faut donc en
+      # construire un. Le variant de debug suffit — ce qu'on cherche est du texte, et il
+      # est le même dans les deux.
+      - name: APK
+        working-directory: apps/android
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: L'application ne vend rien
+        run: ./tools/android/verifier-l-autonomie.sh
+
+      - name: Rapports de test
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-results
+          path: apps/android/**/build/reports/tests/
+          retention-days: 7
+
+
   image:
     name: Images (Podman → ghcr)
     needs: [crypto, server, web]
