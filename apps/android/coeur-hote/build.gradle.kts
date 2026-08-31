@@ -72,6 +72,16 @@ tasks.register<JavaExec>("partageClient") {
     systemProperty("jna.library.path", File(genere, "jvmLibs").absolutePath)
 }
 
+// La rotation de clé d'organisation, provoquée pendant qu'une session est ouverte.
+// Voir RotationDeCle.kt et tools/android/temoin-de-la-rotation.sh.
+tasks.register<JavaExec>("rotationClient") {
+    group = "verification"
+    description = "Provoque une rotation d'Org Key et éprouve le refus d'écrire."
+    mainClass.set("ch.stackops.ghostpass.RotationDeCle")
+    classpath = sourceSets["main"].runtimeClasspath
+    systemProperty("jna.library.path", File(genere, "jvmLibs").absolutePath)
+}
+
 // Le client du SSO mobile, pour le témoin de bout en bout contre un vrai serveur.
 // Voir SsoDeBoutEnBout.kt et tools/android/temoin-du-sso-mobile.sh.
 tasks.register<JavaExec>("ssoClient") {

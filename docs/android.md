@@ -365,10 +365,13 @@ de poser deux réglages sur trois sans le dire.
 
 ## 12. Ce qui reste à faire
 
-- **La rotation de clé d'organisation vue par le client.** `Coffre.exigerLaCleCourante`
-  refuse d'écrire si l'Org Key a changé depuis l'ouverture, et le parcours vérifie que la
-  vérification a lieu. Ce qui manque est un témoin qui **provoque** la rotation au milieu :
-  il demande une route d'administration que le client n'appelle pas.
+- **La rotation de clé, côté écriture, est éprouvée** ; ce qui reste est le reste de
+  l'administration. `tools/android/temoin-de-la-rotation.sh` fait tourner l'Org Key par
+  `POST /api/orgs/:id/rotate` pendant qu'une session est ouverte, et vérifie que l'écriture
+  est refusée — le chemin nominal continuant d'écrire, sans quoi le refus ne prouverait
+  rien. Ce que le témoin **ne** couvre pas : la suppression, qui ne revérifie pas la clé
+  (elle ne scelle rien), et la fenêtre de course entre la vérification et l'envoi, que la
+  garde ne ferme pas.
 - **La corbeille des collections d'équipe n'existe pas côté serveur** : `DELETE` y efface.
   L'écran le dit — « Supprimer définitivement » — mais un membre qui se trompe n'a aucun
   recours.
@@ -384,6 +387,7 @@ de poser deux réglages sur trois sans le dire.
 |---|---|
 | `tools/android/parcours-de-bout-en-bout.sh` | Onze étapes sur appareil, **résolution de noms coupée** : connexion, coffre personnel, coffre d'équipe **en lecture et en écriture**, registres, partage traversé jusqu'à WebCrypto, corbeille, verrouillage à l'arrière-plan, lien `otpauth` reçu coffre fermé, remplissage |
 | `tools/android/temoin-du-parcours.sh` | Le parcours sait rougir : mot de passe faux, remplissage désactivé |
+| `tools/android/temoin-de-la-rotation.sh` | **La rotation provoquée** : l'Org Key tourne sous une session ouverte, l'écriture est refusée, et le chemin sans rotation écrit toujours |
 | `tools/android/temoin-de-la-destination.sh` | **Le §4** : domaine étranger confirmé et jamais remis en silence, refus qui **révoque** chez ghostbit, approbations par serveur et non globales |
 | `tools/android/temoin-du-sso-a-l-ecran.sh` | Le SSO du bouton au coffre, navigateur compris ; rougit si le schéma de retour ne suit pas l'identifiant du paquet |
 | `tools/android/temoin-du-sso-mobile.sh` | Le client mène le PKCE et obtient une session du vrai serveur ; état étranger et rejeu refusés |
