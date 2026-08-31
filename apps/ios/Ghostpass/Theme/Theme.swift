@@ -86,8 +86,17 @@ extension UIColor {
 
 /// Mesures partagées. Les mêmes que sur le web : contrôles à 8, cartes à 16.
 enum GP {
+    /// Les rayons de la charte partagée — `ghost-theme.css` de la suite, jetons
+    /// `--radius`, `--radius-lg`, `--radius-pill`.
+    ///
+    /// Relevé le 2026-08-31 : iOS avait divergé du web sans que rien ne le signale. Les
+    /// cartes y étaient à 16 au lieu de 18, et **les boutons à 12 au lieu d'une pilule**.
+    /// Ce n'est pas un détail : la pilule est ce qu'on reconnaît d'un produit à l'autre,
+    /// et un rectangle arrondi à sa place fait douter qu'il s'agisse de la même famille.
     static let radius: CGFloat = 12
-    static let radiusCard: CGFloat = 16
+    static let radiusCard: CGFloat = 18
+    // La pilule n'a pas de constante : SwiftUI la nomme `Capsule`, et un rayon de 999
+    // posé à côté finirait par diverger de la forme réellement dessinée.
     static let gap: CGFloat = 12
     static let padding: CGFloat = 16
     static let paddingCard: CGFloat = 24
@@ -193,12 +202,12 @@ struct PrimaryButtonStyle: ButtonStyle {
             .background(
                 (configuration.role == .destructive ? Color.gpDanger : Color.gpAccent)
                     .opacity(enabled ? (configuration.isPressed ? 0.8 : 1) : 0.35),
-                in: RoundedRectangle(cornerRadius: GP.radius)
+                in: Capsule()
             )
             // Seule l'action disponible rayonne. Faire luire un bouton inerte reviendrait
             // à appeler l'œil vers ce sur quoi on ne peut pas appuyer.
             .neon(enabled ? (configuration.isPressed ? 0.5 : 0.85) : 0)
-            .contentShape(RoundedRectangle(cornerRadius: GP.radius))
+            .contentShape(Capsule())
     }
 }
 
@@ -224,11 +233,9 @@ struct SecondaryButtonStyle: ButtonStyle {
             .padding(.vertical, 12)
             .background(
                 Color.gpSurface2.opacity(configuration.isPressed ? 0.6 : 1),
-                in: RoundedRectangle(cornerRadius: GP.radius)
+                in: Capsule()
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: GP.radius)
-                    .strokeBorder(Color.gpBorder, lineWidth: 1))
+            .overlay(Capsule().strokeBorder(Color.gpBorder, lineWidth: 1))
     }
 }
 

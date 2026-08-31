@@ -9,9 +9,20 @@ Ce document rassemble ce qui ne se devine pas. Chacun des points ci-dessous a la
 propriété désagréable : **un écart ne produit aucune erreur**. Il rend simplement des
 données illisibles chez un autre client, ou plus tard, ou chez quelqu'un d'autre.
 
-## 0. Le prérequis, avant tout le reste
+## 0. Le prérequis — **levé le 2026-08-31**
 
-**Rien ne compile le cœur pour Android aujourd'hui.** `tools/ios/build-xcframework.sh`
+La chaîne Rust → Kotlin fonctionne : `tools/android/build-jni.sh` compile
+`ghost-crypto-ffi` pour les trois architectures, génère les liaisons, et
+`apps/android/shared-test/kotlin/ch/stackops/ghostpass/CoeurTest.kt` traverse la frontière
+avec le vecteur ci-dessous — 12 tests sur émulateur, avec un contrôle négatif qui prouve
+qu'ils ne sont pas creux (retirer la bibliothèque partagée les fait tomber).
+
+**Ce qui existe s'arrête là.** Deux fichiers Kotlin, aucune application : ni écran, ni
+coffre, ni service de remplissage. Tout ce qui suit est à écrire.
+
+Le paragraphe d'origine, conservé parce qu'il dit pourquoi ce jalon comptait :
+
+**Rien ne compilait le cœur pour Android.** `tools/ios/build-xcframework.sh`
 appelle `uniffi-bindgen --language swift` ; personne n'a jamais lancé l'équivalent Kotlin,
 et aucune cible Android n'est configurée pour ce produit.
 
@@ -189,7 +200,79 @@ Enfin : les règles de Google sur les paiements hors application sont **voisines
 d'Apple, pas identiques**, et les deux ont bougé plusieurs fois. Elles sont à relire sur
 le texte en vigueur avant chaque soumission, pas à transposer.
 
-## 8. Ce qui reste à décider
+## 8. Le SSO — et le piège que GhostCal nous a montré
+
+**Un compte peut n'avoir aucun mot de passe.** Sur une instance où l'authentification passe
+par un fournisseur d'identité, `password_hash` est nul, et la route de connexion classique
+rend « identifiants invalides » — le même message que pour un mauvais mot de passe, et
+volontairement, pour ne pas révéler quels comptes existent.
+
+Mesuré ce matin : Clara n'a pas pu se connecter à GhostCal depuis mobile, et le message ne
+disait rien de la vraie cause. **Un client mobile sans SSO est inutilisable sur ces
+instances-là**, sans qu'aucun message ne l'explique.
+
+Le serveur GhostPass reçoit en ce moment (autre session) une route `POST
+/api/auth/sso/exchange` acceptant `{ code, codeVerifier, nonce, redirectUri }` et rendant la
+même charge que le callback web — `{ token, email, kdfParams, encryptedUserKey,
+encryptedPrivateKey }`. Alignez-vous sur ces noms ; ne les réinventez pas.
+
+**Le point de sécurité, et il n'est pas négociable** : flux à code d'autorisation **avec
+PKCE mené par l'application** (RFC 8252). Pas de redirection finale du serveur portant le
+jeton : sur Android comme sur iOS, une autre application peut revendiquer un schéma
+personnalisé et intercepter cette redirection. Avec PKCE, un code intercepté ne vaut rien
+sans le vérificateur, qui ne quitte jamais l'application.
+
+Côté Android : **Custom Tabs**, jamais une WebView — une WebView donne à l'application
+l'accès au mot de passe saisi chez le fournisseur d'identité, ce qui annule l'intérêt du
+SSO. Et préférez un **App Link vérifié** (`https://`) au schéma personnalisé quand
+l'instance le permet : lui seul est réellement exclusif.
+
+Le SSO **authentifie** ; il n'ouvre pas le coffre. Celui-ci s'ouvre ensuite avec le mot de
+passe maître, qui dérive la clé. Ces deux rôles sont distincts et les confondre est la
+première erreur de conception d'un client à connaissance nulle.
+
+## 9. Les liens de second facteur — déclarer sans traiter est pire que se taire
+
+Mesuré sur iOS ce matin : GhostPass n'apparaissait pas sous « Configurer les codes dans »
+alors que l'extension déclarait bien fournir des codes à usage unique. La cause était
+ailleurs — **l'application ne déclarait pas savoir ouvrir les liens `otpauth:`**. Ce
+réglage désigne l'application qui *ouvre les liens*, pas celle qui *remplit les champs*.
+
+L'équivalent Android est un `intent-filter` sur le schéma `otpauth`. Trois règles, apprises
+en le câblant :
+
+- **le lien arrive souvent coffre fermé** — on scanne un QR code, le système réveille
+  l'application, qui demande d'abord le mot de passe maître. Le jeter à ce moment-là fait
+  qu'on déverrouille pour rien. Il faut le **retenir** jusqu'à ce qu'un écran sache
+  l'afficher ;
+- **rien ne s'écrit sans geste** : le lien pré-remplit un formulaire, il ne crée pas
+  d'entrée. Une URL venue du dehors qui écrirait seule serait un moyen d'ajouter des lignes
+  dans le coffre de quelqu'un d'autre ;
+- le paramètre `issuer` l'emporte sur le chemin quand les deux se contredisent — un service
+  renommé met à jour le paramètre et laisse le chemin d'origine.
+
+Les vecteurs sont dans `apps/ios/Tests/ContractTests.swift`, classe `EtiquetteOtpauthTests`.
+À porter tels quels.
+
+## 10. L'apparence — l'application est le petit frère, pas un cousin
+
+Deux règles, toutes deux issues d'un retour de Clara sur le portage Flutter de GhostCal
+(« oh c'est moche comparé à l'app de ghostpass ») :
+
+**L'écran d'entrée se copie structure par structure**, pas « dans l'esprit » : enseigne sur
+plaque avec son halo, titre, sous-titre, puis une carte de verre portant les champs et les
+actions. Reprendre la palette sans le langage visuel donne des composants du système
+simplement recolorés — et ça se voit immédiatement.
+
+**L'icône ne se rend pas naïvement.** Les SVG de charte sont cadrés pour un favicon, où la
+silhouette touche les bords sans conséquence à 16 px. `suite/tools/brand/icone-ios.py`
+mesure la silhouette et la ramène à **80 % de la hauteur, centrée** — la proportion de
+l'icône iOS de GhostPass. Sans cette correction, deux produits de la suite ont des
+silhouettes de tailles différentes : invisible sur une capture isolée, flagrant sur
+l'écran d'accueil. L'outil est écrit pour iOS ; **l'équivalent adaptatif Android reste à
+écrire**, et doit viser la même proportion dans la zone sûre de l'icône adaptative.
+
+## 11. Ce qui reste à décider
 
 - Le partage du trousseau entre l'application et le service d'autofill. Sur iOS, la
   décision est prise et documentée (`docs/adr/0001`) : on partage, parce qu'un mot de passe
