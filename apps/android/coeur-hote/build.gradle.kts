@@ -82,6 +82,16 @@ tasks.register<JavaExec>("rotationClient") {
     systemProperty("jna.library.path", File(genere, "jvmLibs").absolutePath)
 }
 
+// L'administration d'organisation : inviter, accorder une permission.
+// Voir AdministrationDOrg.kt et tools/android/temoin-de-l-administration.sh.
+tasks.register<JavaExec>("administrationClient") {
+    group = "verification"
+    description = "Invite un membre et lui accorde une permission, contre un vrai serveur."
+    mainClass.set("ch.stackops.ghostpass.AdministrationDOrg")
+    classpath = sourceSets["main"].runtimeClasspath
+    systemProperty("jna.library.path", File(genere, "jvmLibs").absolutePath)
+}
+
 // Le client du SSO mobile, pour le témoin de bout en bout contre un vrai serveur.
 // Voir SsoDeBoutEnBout.kt et tools/android/temoin-du-sso-mobile.sh.
 tasks.register<JavaExec>("ssoClient") {

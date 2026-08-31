@@ -502,6 +502,145 @@ class Coffre {
         api.supprimerUnElementDOrganisation(j, ouvert.organisation.id, collection, entree.id)
     }
 
+    // ─── L'administration d'organisation ───
+
+    /**
+     * Les membres de l'organisation. **Réservé à l'administrateur** : un autre rôle reçoit
+     * un 403, qui remonte tel quel plutôt que d'être traduit en liste vide — « je ne peux
+     * pas voir » et « il n'y a personne » sont deux phrases différentes.
+     */
+    fun membresDe(ouvert: CoffreDOrganisation): List<MembreDto> {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return api.membresDOrganisation(j, ouvert.organisation.id)
+    }
+
+    /** Ce qu'une invitation exige avant d'être posée. */
+    sealed interface Invitation {
+        /**
+         * **La clé publique du destinataire, telle que le serveur l'annonce — à confirmer.**
+         *
+         * Rien ne l'authentifie. Sceller l'Org Key vers elle sans contrôle, c'est laisser le
+         * serveur désigner qui recevra la clé de l'équipe : la faute du §4, vue du côté de
+         * l'émetteur. Un serveur actif qui substitue sa propre clé lit tout ce que l'équipe
+         * écrira ensuite, et l'invité verrait seulement une organisation qui ne s'ouvre pas
+         * — ce qui ressemble à une erreur ordinaire.
+         *
+         * On ne peut pas le vérifier depuis le client ; on peut refuser de le faire en
+         * silence. [clePubliqueAnnoncee] doit être repassée à [poserLInvitation], et le nom
+         * du champ voyage avec la valeur jusqu'à l'écran.
+         */
+        data class AConfirmer(
+            val email: String,
+            val userId: String,
+            val clePubliqueAnnoncee: String,
+        ) : Invitation
+
+        /** Aucun compte pour cet email, ou le serveur refuse de le dire. */
+        data class Inconnu(val email: String) : Invitation
+    }
+
+    /**
+     * Première moitié d'une invitation : demander au serveur qui est cet email.
+     *
+     * **Elle ne scelle rien et n'écrit rien.** La séparation en deux temps est le seul
+     * endroit où une confirmation humaine peut se glisser, et elle doit se glisser avant le
+     * scellement — après, la clé est partie.
+     */
+    fun preparerUneInvitation(email: String): Invitation {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val trouve = try {
+            api.clePubliqueAnnoncee(j, email)
+        } catch (e: ErreurApi.Http) {
+            if (e.statut == 404) return Invitation.Inconnu(email) else throw e
+        }
+        return Invitation.AConfirmer(email, trouve.userId, trouve.publicKey)
+    }
+
+    /**
+     * Seconde moitié : sceller l'Org Key vers la clé confirmée, et poser l'invitation.
+     *
+     * **Le paramètre est l'[Invitation.AConfirmer] et non un email.** Même idiome que les
+     * écritures d'équipe : le type interdit d'inviter sans être passé par la préparation,
+     * donc sans que la clé annoncée ait pu être montrée. Un email nu aurait suffi au
+     * serveur — c'est pour cela qu'on ne le prend pas.
+     *
+     * La clé est scellée par le cœur (`sealOrgKeyForMember`), de façon authentifiée : le
+     * destinataire vérifiera qu'elle vient bien de la clé publique de l'admin. Cette
+     * moitié-là du contrôle existe déjà ; c'est l'autre qui manque.
+     */
+    fun poserLInvitation(
+        ouvert: CoffreDOrganisation,
+        invitation: Invitation.AConfirmer,
+        role: RoleDOrganisation,
+    ) {
+        val compteOuvert = compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        exigerLaCleCourante(ouvert)
+        val scellee = compteOuvert.sealOrgKeyForMember(ouvert.org, invitation.clePubliqueAnnoncee)
+        api.ajouterUnMembre(
+            j, ouvert.organisation.id, invitation.email, versLeServeur(role), scellee)
+    }
+
+    /**
+     * Accorde à un groupe une permission sur une collection.
+     *
+     * ─── Pourquoi un groupe, et pas le rôle du membre ───
+     *
+     * Le serveur expose aussi `PATCH /api/orgs/:id/members/:userId` pour changer un rôle.
+     * **Cette route est hors d'atteinte de ce client** : `HttpURLConnection` — la pile HTTP
+     * d'Android comme de la JVM — refuse le verbe `PATCH` par un
+     * `ProtocolException: Invalid HTTP method: PATCH`, mesuré et non déduit. Il n'y a pas de
+     * contournement honnête côté client : le détour classique par réflexion sur le champ
+     * privé `method` casse selon la version, et poser un en-tête de substitution suppose un
+     * greffon que le serveur n'a pas.
+     *
+     * On expose donc l'octroi qui existe réellement, plutôt qu'un changement de rôle qui
+     * échouerait au moment de s'en servir. Le manque est écrit dans `docs/android.md`.
+     */
+    fun accorderSurUneCollection(
+        ouvert: CoffreDOrganisation,
+        groupe: String,
+        collection: String,
+        permission: PermissionDeCollection,
+    ) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.accorderAuGroupe(
+            j, ouvert.organisation.id, groupe, collection, permission.versLeServeur())
+    }
+
+    /** Crée un groupe, et rend son identifiant. */
+    fun creerUnGroupe(ouvert: CoffreDOrganisation, nom: String): String {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return api.creerUnGroupe(j, ouvert.organisation.id, nom)
+    }
+
+    /** Place un membre dans un groupe. */
+    fun ajouterAuGroupe(ouvert: CoffreDOrganisation, groupe: String, utilisateur: String) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.ajouterAuGroupe(j, ouvert.organisation.id, groupe, utilisateur)
+    }
+
+    /**
+     * Le nom que le serveur attend pour un rôle.
+     *
+     * [RoleDOrganisation.Inconnu] ne s'envoie pas : on refuse plutôt que d'inventer. Le
+     * traduire en `readonly` — le défaut sûr **en lecture** — serait ici un défaut
+     * silencieux en **écriture**, puisqu'on poserait un rôle que personne n'a demandé.
+     */
+    private fun versLeServeur(role: RoleDOrganisation): String = when (role) {
+        RoleDOrganisation.Admin -> "admin"
+        RoleDOrganisation.Membre -> "member"
+        RoleDOrganisation.LectureSeule -> "readonly"
+        RoleDOrganisation.Inconnu ->
+            throw ErreurApi.Reseau("Rôle inconnu : cette version ne sait pas l'attribuer.")
+    }
+
     /** Accepte une invitation. Le contenu ne devient lisible qu'ensuite. */
     fun accepterLOrganisation(id: String) {
         val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")

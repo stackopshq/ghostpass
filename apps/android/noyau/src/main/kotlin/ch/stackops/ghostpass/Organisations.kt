@@ -72,6 +72,52 @@ data class CollectionDto(
 @Serializable
 internal data class EnveloppeDeCollections(val collections: List<CollectionDto> = emptyList())
 
+/**
+ * Un membre de l'organisation, tel que le serveur le liste (route réservée à l'admin).
+ *
+ * `publicKey` est **la clé que le serveur annonce**, et le nom de ce champ le dit exprès.
+ * Voir [UtilisateurDto] : le client ne peut pas la vérifier, et c'est une propriété du
+ * protocole, pas de cette classe.
+ */
+@Serializable
+data class MembreDto(
+    val userId: String,
+    val email: String? = null,
+    val publicKey: String? = null,
+    val role: String = "",
+    val status: String = "",
+)
+
+@Serializable
+internal data class EnveloppeDeMembres(val members: List<MembreDto> = emptyList())
+
+/**
+ * Ce que rend `/api/users/lookup` : l'identifiant et **la clé publique annoncée par le
+ * serveur** pour un email.
+ *
+ * ─── Ce que cette valeur n'est pas ───
+ *
+ * Ce n'est pas une preuve d'identité. Sceller l'Org Key vers cette clé sans autre contrôle
+ * revient à **laisser le serveur désigner qui recevra la clé de l'équipe** — la même faute
+ * que le §4 refuse pour la destination d'un partage, du côté de l'émetteur cette fois. Un
+ * serveur actif qui substitue sa propre clé publique lit tout ce que l'équipe écrira
+ * ensuite, et personne ne s'en apercevrait : le membre invité verrait simplement une
+ * organisation qu'il ne peut pas ouvrir, ce qui ressemble à une erreur ordinaire.
+ *
+ * Le cœur protège déjà le **destinataire** — `openOrg` vérifie que l'Org Key vient bien de
+ * la clé publique annoncée de l'émetteur. Rien ne protège l'**émetteur**, et c'est cette
+ * moitié-là qui manque, sur toutes les plateformes.
+ *
+ * D'où la forme de [Coffre.preparerUneInvitation] : la clé traverse l'API en clair, sous un
+ * nom qui dit d'où elle vient, et l'appelant doit la repasser pour poser l'invitation.
+ */
+@Serializable
+data class UtilisateurDto(val userId: String, val publicKey: String)
+
+/** Un groupe d'organisation, tel que sa création le rend. */
+@Serializable
+data class GroupeDto(val id: String, val name: String = "")
+
 // ─── Ce que l'application en fait ───
 
 /** Le rôle du membre dans l'organisation. */
@@ -141,6 +187,20 @@ enum class PermissionDeCollection {
     Gestion;
 
     val peutEcrire: Boolean get() = this != Lecture
+
+    /**
+     * Le nom que le serveur attend, **pendant exact de [depuis]**.
+     *
+     * Il vit à côté de son inverse pour la raison habituelle : deux tables de correspondance
+     * écrites à deux endroits finissent par diverger, et celle qui diverge en second est
+     * celle qu'on regarde le moins. Ici la divergence accorderait une permission autre que
+     * celle demandée — sans erreur.
+     */
+    fun versLeServeur(): String = when (this) {
+        Lecture -> "read"
+        Ecriture -> "write"
+        Gestion -> "manage"
+    }
 
     companion object {
         /**

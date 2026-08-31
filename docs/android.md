@@ -378,8 +378,21 @@ de poser deux réglages sur trois sans le dire.
 - **Le reste des réglages d'iOS** : import et export, santé du coffre, clé de récupération,
   accès d'urgence, MFA, activité. Rien n'en est grisé — un réglage qui promet une fonction
   inexistante déplace l'échec du moment où l'on configure à celui où quelqu'un essaie.
-- **Les groupes et l'administration d'organisation** : inviter, retirer, accorder une
-  permission. Le client lit ce que le serveur lui donne et n'écrit rien de tout cela.
+- **L'administration d'organisation est partielle.** Inviter un membre et lui accorder une
+  permission sur une collection (par groupe) existent et sont éprouvés. Manquent : retirer un
+  membre — c'est le flux de rotation, que le client ne mène pas — et **changer le rôle d'un
+  membre**, qui est hors d'atteinte : la route est un `PATCH`, et `HttpURLConnection` refuse
+  ce verbe (`ProtocolException: Invalid HTTP method: PATCH`, mesuré). Le détour par réflexion
+  casse selon la version, et l'en-tête de substitution suppose un greffon que le serveur n'a
+  pas. C'est donc l'octroi par groupe qui est exposé, et non le rôle.
+- **Rien n'authentifie la clé publique vers laquelle on scelle.** `/api/users/lookup` rend
+  une clé que le serveur choisit ; sceller l'Org Key vers elle sans contrôle laisse le
+  serveur désigner qui reçoit la clé de l'équipe — la faute du §4, côté émetteur. Le cœur
+  protège le destinataire (`openOrg` vérifie la provenance) ; l'émetteur n'a rien.
+  `preparerUneInvitation` sépare donc la recherche du scellement pour qu'une confirmation
+  humaine puisse s'y glisser, mais **aucune empreinte n'est affichée** : il n'en existe sur
+  aucune plateforme, et en inventer une du seul côté Android donnerait deux empreintes
+  différentes pour la même clé. Cela demande une primitive du cœur et un accord commun.
 
 ## 13. Les outils, et ce que chacun prouve
 
@@ -387,6 +400,7 @@ de poser deux réglages sur trois sans le dire.
 |---|---|
 | `tools/android/parcours-de-bout-en-bout.sh` | Onze étapes sur appareil, **résolution de noms coupée** : connexion, coffre personnel, coffre d'équipe **en lecture et en écriture**, registres, partage traversé jusqu'à WebCrypto, corbeille, verrouillage à l'arrière-plan, lien `otpauth` reçu coffre fermé, remplissage |
 | `tools/android/temoin-du-parcours.sh` | Le parcours sait rougir : mot de passe faux, remplissage désactivé |
+| `tools/android/temoin-de-l-administration.sh` | **Inviter et octroyer** : l'invité ouvre l'organisation avec sa propre clé privée et lit — seule preuve que le scellement visait la bonne clé publique — puis se voit refuser l'écriture, puis l'obtient |
 | `tools/android/temoin-de-la-rotation.sh` | **La rotation provoquée** : l'Org Key tourne sous une session ouverte, l'écriture est refusée, et le chemin sans rotation écrit toujours |
 | `tools/android/temoin-de-la-destination.sh` | **Le §4** : domaine étranger confirmé et jamais remis en silence, refus qui **révoque** chez ghostbit, approbations par serveur et non globales |
 | `tools/android/temoin-du-sso-a-l-ecran.sh` | Le SSO du bouton au coffre, navigateur compris ; rougit si le schéma de retour ne suit pas l'identifiant du paquet |

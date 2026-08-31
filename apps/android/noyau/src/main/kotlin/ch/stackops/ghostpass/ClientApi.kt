@@ -8,6 +8,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.URLEncoder
 import java.net.URL
 
 /**
@@ -364,6 +365,93 @@ class ClientApi(baseUrl: String) {
         id: String,
     ) {
         requete("DELETE", "/api/orgs/$org/collections/$collection/items/$id", jeton = jeton)
+    }
+
+    // ─── L'administration d'organisation ───
+
+    /**
+     * La clé publique que le serveur **annonce** pour un email.
+     *
+     * Le nom de la méthode dit « annoncée » parce que c'est tout ce qu'on en sait : rien ne
+     * l'authentifie. Voir [UtilisateurDto] pour ce que cela coûte.
+     *
+     * La route est fortement limitée en débit côté serveur (vingt par minute) — elle permet
+     * d'énumérer des emails et de récolter des clés publiques.
+     */
+    fun clePubliqueAnnoncee(jeton: String, email: String): UtilisateurDto =
+        json.decodeFromString(
+            UtilisateurDto.serializer(),
+            requete(
+                "GET",
+                "/api/users/lookup?email=" + URLEncoder.encode(email, "UTF-8"),
+                jeton = jeton,
+            ),
+        )
+
+    /** Les membres de l'organisation. Réservé à l'administrateur : un autre rôle reçoit 403. */
+    fun membresDOrganisation(jeton: String, org: String): List<MembreDto> =
+        json.decodeFromString(
+            EnveloppeDeMembres.serializer(),
+            requete("GET", "/api/orgs/$org/members", jeton = jeton),
+        ).members
+
+    /**
+     * Invite un membre, avec l'Org Key **déjà scellée pour lui** par l'administrateur.
+     *
+     * Le serveur ne scelle rien et ne peut rien vérifier : il range un blob et un rôle. Ce
+     * qui décide de la sécurité de cette route s'est joué avant l'appel, au moment de
+     * choisir la clé publique vers laquelle sceller.
+     */
+    fun ajouterUnMembre(
+        jeton: String,
+        org: String,
+        email: String,
+        role: String,
+        cleScellee: String,
+    ) {
+        requete(
+            "POST", "/api/orgs/$org/members", jeton = jeton,
+            corps = json.encodeToString(CHAMPS, mapOf(
+                "email" to email, "role" to role, "encryptedOrgKey" to cleScellee)),
+        )
+    }
+
+    /** Crée un groupe dans l'organisation, et rend son identifiant. */
+    fun creerUnGroupe(jeton: String, org: String, nom: String): String =
+        json.decodeFromString(
+            GroupeDto.serializer(),
+            requete(
+                "POST", "/api/orgs/$org/groups", jeton = jeton,
+                corps = json.encodeToString(CHAMPS, mapOf("name" to nom)),
+            ),
+        ).id
+
+    /** Place un membre dans un groupe. */
+    fun ajouterAuGroupe(jeton: String, org: String, groupe: String, utilisateur: String) {
+        requete(
+            "POST", "/api/orgs/$org/groups/$groupe/members", jeton = jeton,
+            corps = json.encodeToString(CHAMPS, mapOf("userId" to utilisateur)),
+        )
+    }
+
+    /**
+     * Accorde à un groupe une permission sur une collection : `read`, `write` ou `manage`.
+     *
+     * C'est **la** route d'octroi que ce client peut atteindre. Celle qui change le rôle
+     * d'un membre est un `PATCH`, et `HttpURLConnection` refuse ce verbe — voir
+     * [Coffre.accorderSurUneCollection].
+     */
+    fun accorderAuGroupe(
+        jeton: String,
+        org: String,
+        groupe: String,
+        collection: String,
+        permission: String,
+    ) {
+        requete(
+            "POST", "/api/orgs/$org/groups/$groupe/collections/$collection", jeton = jeton,
+            corps = json.encodeToString(CHAMPS, mapOf("permission" to permission)),
+        )
     }
 
     /** Accepte une invitation. Le serveur rend `{ status: "active" }`, qu'on ne lit pas. */
