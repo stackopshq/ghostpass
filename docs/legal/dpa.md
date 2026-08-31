@@ -6,8 +6,30 @@
 > par un professionnel du droit. Les faits techniques qu'il contient sont
 > vérifiables ; les qualifications juridiques ne le sont pas encore.
 
-*Version 0.1 — 2026-08-30. Article 28 du règlement (UE) 2016/679 (RGPD) et
+*Version 0.2 — 2026-08-31. Article 28 du règlement (UE) 2016/679 (RGPD) et
 art. 9 de la loi fédérale suisse sur la protection des données (nLPD).*
+
+---
+
+## 0. Identification du contrat
+
+Les champs marqués **à compléter** le sont à la signature. Ils ne sont pas des
+oublis : les remplir d'avance avec un client hypothetique produirait un document
+qui a l'air signe et ne l'est pas.
+
+| | |
+|---|---|
+| Client (responsable du traitement) | **à compléter** — raison sociale, forme, siège, numéro d'identification |
+| Représentant du Client | **à compléter** — nom, qualité |
+| Sous-traitant | StackOps, entreprise individuelle de Kevin Allioli, Suisse |
+| Représentant du sous-traitant | Kevin Allioli, exploitant |
+| Service concerné | GhostPass — coffre de secrets chiffré de bout en bout |
+| Modèle d'hébergement retenu | **à compléter** — A (mutualisé) ou B (VM dédiée), voir §5 bis |
+| Date de prise d'effet | **à compléter** |
+| Durée | Celle du contrat de service principal, et jusqu'à l'exécution complète de l'article 8 |
+
+**Ce document ne lie personne tant qu'il n'est pas signé.** Il est publié dans le
+dépôt pour être relu, critiqué et repris — pas pour tenir lieu d'engagement.
 
 ---
 
@@ -104,12 +126,56 @@ sur la discipline des personnes ; celle des métadonnées du §2, si.
 | Revue par un pair obligatoire avant fusion | En place depuis le 2026-08-30 |
 | Sauvegardes chiffrées quotidiennes, hors site | En place |
 | Restauration éprouvée | **Éprouvée sur l'infrastructure, pas encore sur ce service en particulier** |
-| Chiffrement des connexions internes à la base | **Non — traité en interne, échéance à convenir** |
 | Secret du second facteur chiffré au repos | En place depuis le 2026-08-30 — AES-256-GCM, clé hors base |
+| Chiffrement des connexions internes à la base | **Dépend du modèle d'hébergement — voir §5 bis** |
 
-Les deux dernières lignes sont des écarts connus, et figurent ici plutôt que
-d'être tues : un DPA qui ne mentionne que ce qui va bien ne vaut rien le jour où
-il faut s'y référer.
+La dernière ligne est un écart connu dans un modèle et sans objet dans l'autre.
+Elle figure ici plutôt que d'être tue : un DPA qui ne mentionne que ce qui va
+bien ne vaut rien le jour où il faut s'y référer. Mais l'écrire sans dire à quel
+modèle il s'applique serait aussi trompeur — dans un sens comme dans l'autre.
+
+## 5 bis. Les deux modèles d'hébergement
+
+Le même produit est exploité de deux façons, et **les mesures de l'article 32 ne
+sont pas les mêmes**. Confondre les deux ferait déclarer au Client une faiblesse
+qu'il n'a pas, ou lui taire celle qu'il a.
+
+### Modèle A — instance mutualisée
+
+Le Client est hébergé sur l'infrastructure de StackOps, aux côtés d'autres
+clients et des services internes de l'exploitant.
+
+| | |
+|---|---|
+| Application | Une machine virtuelle du parc de StackOps |
+| Base de données | Un serveur PostgreSQL **partagé** avec d'autres services de l'exploitant, sur le réseau interne |
+| Connexion à la base | **En clair sur le réseau interne à ce jour.** Le serveur accepte TLS ; l'application ne le demande pas encore. Correctif écrit, non encore déployé |
+| Isolation entre clients | Applicative — une base par produit, des organisations distinctes en son sein |
+
+### Modèle B — machine virtuelle dédiée
+
+Le Client dispose de sa propre machine virtuelle, sur un serveur physique loué
+par StackOps chez OVH.
+
+| | |
+|---|---|
+| Application | Une machine virtuelle dédiée au seul Client |
+| Base de données | **Sur la même machine virtuelle**, dans son propre conteneur |
+| Connexion à la base | **Ne quitte jamais la machine.** Réseau privé de conteneurs, la base est jointe par son nom, et **aucun port n'est publié sur l'hôte** |
+| Isolation entre clients | Par machine virtuelle — mémoire, disque et réseau séparés |
+
+**La ligne « connexion en clair » du §5 ne concerne donc que le modèle A.** Dans
+le modèle B, il n'existe pas de réseau à écouter entre l'application et sa base :
+le trafic reste dans l'espace de noms réseau de la machine, et la base n'est
+atteignable depuis nulle part ailleurs. Chiffrer ce lien n'ajouterait rien contre
+un adversaire qui n'a pas déjà la machine — et un adversaire qui a la machine a
+aussi la clé.
+
+### Modèle C — auto-hébergement
+
+Le Client exploite lui-même le produit. **StackOps n'est alors pas
+sous-traitant** mais fournisseur de logiciel, et le présent accord ne s'applique
+pas (voir §10).
 
 ## 6. Sous-traitants ultérieurs (art. 28.2 et 28.4)
 
@@ -117,10 +183,15 @@ Le Client autorise le recours aux sous-traitants ci-dessous. StackOps informe le
 Client de tout ajout ou remplacement **au moins trente jours avant**, et le
 Client peut s'y opposer ; à défaut d'accord, il peut résilier sans pénalité.
 
-| Sous-traitant | Rôle pour GhostPass | Pays | Accès aux données |
-|---|---|---|---|
-| **Cloudflare, Inc.** | Tunnel du nom public — rien d'autre | États-Unis | Voit le trafic ; **sert le code qui chiffre** (voir plus bas) |
-| **Infomaniak Network SA (Swiss Backup)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | Suisse | Aucun accès en clair |
+| Sous-traitant | Rôle pour GhostPass | Pays | Accès aux données | Modèle |
+|---|---|---|---|---|
+| **Cloudflare, Inc.** | Tunnel du nom public — rien d'autre | États-Unis | Voit le trafic ; **sert le code qui chiffre** (voir plus bas) | A et B |
+| **Infomaniak Network SA (Swiss Backup)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | Suisse | Aucun accès en clair | A et B |
+| **OVH SAS** | Serveur physique portant la machine virtuelle dédiée du Client | France — centre de données **à compléter** | Accès physique à la machine ; aucun accès applicatif | **B uniquement** |
+
+La dernière ligne n'existe que si le Client a choisi le modèle B. Dans le
+modèle A, l'infrastructure est celle de StackOps et aucun hébergeur tiers n'est
+sur le chemin des données.
 
 **Deux lignes ont été retirées de ce tableau, et il faut dire pourquoi**, sans
 quoi une version antérieure de ce document contredirait celle-ci.
@@ -244,6 +315,48 @@ trente jours ouvrés.
 - Les instances auto-hébergées par le Client, où StackOps n'est pas
   sous-traitant mais fournisseur de logiciel.
 
+## 11. Droit applicable et for
+
+Droit suisse. For juridique : le siège de l'exploitant — **à compléter**, comme
+dans les conditions générales, et pour la même raison : l'écrire faux serait pire
+que de le laisser vide.
+
+Les règles de compétence protectrices des consommateurs et celles du RGPD à
+l'égard des personnes concernées demeurent réservées.
+
+## 12. Signatures
+
+Le présent accord entre en vigueur à la date portée au §0, à la signature des
+deux parties. Il prime sur toute stipulation contraire du contrat de service
+principal pour ce qui touche au traitement de données à caractère personnel.
+
+| | Le Client | StackOps |
+|---|---|---|
+| Nom | **à compléter** | Kevin Allioli |
+| Qualité | **à compléter** | Exploitant |
+| Lieu et date | | |
+| Signature | | |
+
+---
+
+## Annexes
+
+Les annexes font partie intégrante de l'accord. Elles vivent dans le dépôt et
+sont datées, de sorte qu'un Client puisse constater ce qui a changé depuis sa
+signature.
+
+| Annexe | Contenu | Où |
+|---|---|---|
+| 1 | Catégories de données et de personnes | §2 du présent document |
+| 2 | Mesures de sécurité, par modèle d'hébergement | §5 et §5 bis |
+| 3 | Sous-traitants ultérieurs | §6 |
+| 4 | Registre des activités de traitement (art. 30) | [`registre-des-traitements.md`](registre-des-traitements.md) |
+
 ---
 
 *Contact protection des données : privacy@stackops.ch*
+
+> **Cette adresse doit exister avant la première signature.** Elle est publiée
+> ici, dans les conditions générales et dans le `security.txt` en ligne. Une
+> voie de recours annoncée qui rebondit vaut moins que pas de voie du tout —
+> elle fait croire qu'on peut nous joindre.
