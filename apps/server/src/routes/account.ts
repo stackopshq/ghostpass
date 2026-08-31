@@ -14,6 +14,7 @@
 /// personne déchiffre avec sa clé, hors du serveur.
 
 import type { FastifyInstance } from "fastify";
+import { sql, type SqlBool } from "kysely";
 import { z } from "zod";
 import type { DB } from "../db/database.js";
 import {
@@ -38,6 +39,14 @@ const suppressionSchema = z.object({
   serverPassword: z.string().min(1),
   totpCode: z.string().optional(),
 });
+
+/// Ce qui remplace l'adresse d'un compte supprimé dans `audit_log.target`.
+///
+/// Un marqueur plutôt qu'une case vide, pour la même raison qui fait qu'on
+/// anonymise au lieu de supprimer la ligne : « la cible a été effacée » et
+/// « cette action n'avait pas de cible » ne sont pas la même information, et
+/// l'administrateur qui relit son journal a besoin de les distinguer.
+const CIBLE_EFFACEE = "(compte supprimé)";
 
 export function registerAccountRoutes(app: FastifyInstance, db: DB): void {
   const authenticate = makeAuthenticate(db);
@@ -167,6 +176,49 @@ export function registerAccountRoutes(app: FastifyInstance, db: DB): void {
       .set({ actor_email: null, ip: "" })
       .where("user_id", "=", u.id)
       .execute();
+
+    // La passe ci-dessus ne couvre que la moitié du problème, et c'est la
+    // moitié la plus visible.
+    //
+    // `audit_log` porte DEUX colonnes nominatives. `actor_email` dit qui a
+    // agi — c'est elle que `WHERE user_id = …` atteint. `target` dit sur qui,
+    // et ces lignes-là appartiennent à L'ADMINISTRATEUR qui a agi : ajout d'un
+    // membre (`orgs.ts`), d'un groupe ou changement de rôle (`orgAdmin.ts`),
+    // invitation d'un contact d'urgence (`emergency.ts`). Elles ne portent
+    // donc pas le `user_id` de la personne, la requête ci-dessus ne les voit
+    // pas, et la cascade `ON DELETE SET NULL` ne les touche pas davantage.
+    // Son adresse y survivait jusqu'à 365 jours après qu'elle a supprimé son
+    // compte — la durée de rétention du journal.
+    //
+    // Le commentaire vingt lignes plus haut décrivait exactement ce défaut,
+    // « un effacement qui n'efface pas », mais pour l'autre colonne.
+    //
+    // DEUX FORMES À COUVRIR, et la seconde est celle qu'une égalité stricte
+    // manque en silence : `org.member.role` écrit `adresse:rôle`. D'où le
+    // `LIKE`, et d'où le recalcul ligne par ligne — le suffixe doit survivre,
+    // sans quoi le journal ne dit plus QUEL rôle a été attribué.
+    //
+    // L'ÉCHAPPEMENT N'EST PAS DU ZÈLE : `_` est un caractère légal d'une partie
+    // locale d'adresse, et c'est le joker « un caractère quelconque » de
+    // `LIKE`. Non échappé, supprimer `a_b@exemple.fr` effacerait aussi les
+    // lignes visant `axb@exemple.fr` — une SUR-anonymisation, qui détruit
+    // précisément l'imputabilité qu'on cherche à préserver. `ESCAPE` est
+    // explicite parce que SQLite n'a aucun caractère d'échappement par défaut,
+    // là où PostgreSQL en a un.
+    const motifCible = u.email.replace(/[\\%_]/g, (c) => `\\${c}`) + ":%";
+    const cibles = await db
+      .selectFrom("audit_log")
+      .select(["id", "target"])
+      .where(sql<SqlBool>`target = ${u.email} OR target LIKE ${motifCible} ESCAPE '\\'`)
+      .execute();
+
+    for (const ligne of cibles) {
+      await db
+        .updateTable("audit_log")
+        .set({ target: CIBLE_EFFACEE + (ligne.target ?? "").slice(u.email.length) })
+        .where("id", "=", ligne.id)
+        .execute();
+    }
 
     // La cascade emporte le reste : coffre, sessions, clés d'accès, seconds
     // facteurs, historique de connexion, appartenances, accès aux collections.
