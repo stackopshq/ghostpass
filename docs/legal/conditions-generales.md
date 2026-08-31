@@ -12,7 +12,7 @@
 ## 1. Qui édite ce service
 
 GhostPass est édité par **StackOps**, entreprise individuelle de Kevin Allioli,
-en Suisse. Contact :
+dont le siège est à **Saint-Julien-en-Genevois (Haute-Savoie), France**. Contact :
 support@stackops.ch. Pour toute question de protection des données :
 privacy@stackops.ch. Pour signaler une faille : security@stackops.ch (voir
 `/.well-known/security.txt`).
@@ -48,6 +48,11 @@ qui vous sert à vous connecter.
 Si le service d'icônes est activé, notre serveur récupère le logo des sites que
 vous enregistrez, et **voit donc leur domaine à ce moment-là**. Il ne les
 conserve pas, et le service peut être désactivé.
+
+Le détail complet — finalités, bases légales, durées, destinataires, transferts
+hors de l'Union et voies de recours — vit dans la
+**[politique de confidentialité](politique-de-confidentialite.md)**, qui fait
+partie de ces conditions. Ce tableau en est le résumé, pas la substitution.
 
 ## 5. Votre compte
 
@@ -120,7 +125,8 @@ pendant ce délai.
 
 ## 12. Droit applicable
 
-Droit suisse. For juridique : le siège de l'exploitant — **à compléter**, il ne
+Droit français. For juridique : les tribunaux compétents du siège de
+l'exploitant, à Saint-Julien-en-Genevois — il ne
 s'invente pas et une clause de for erronée est pire qu'absente. Sous réserve des
 dispositions impératives
 protégeant les consommateurs et, pour les résidents de l'Union européenne, des
