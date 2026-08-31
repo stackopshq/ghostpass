@@ -162,6 +162,16 @@ le modèle B, où le lien ne quitte pas la machine.
 
 ---
 
+## Analyse d'impact (art. 35)
+
+Un examen préalable daté conclut qu'**aucune analyse d'impact n'est requise à ce
+jour** pour les comptes individuels, et nomme les cinq événements qui
+renverseraient cette conclusion :
+[`aipd-examen-prealable.md`](aipd-examen-prealable.md).
+
+Pour les coffres d'organisations, l'AIPD incombe au Client, qui en est le
+responsable ; StackOps l'y assiste.
+
 ## Tenue du registre
 
 | | |

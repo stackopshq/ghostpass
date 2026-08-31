@@ -299,6 +299,11 @@ L'export rend les champs chiffrés **tels quels** : StackOps ne peut pas les
 déchiffrer, et c'est la contrepartie exacte du zero-knowledge, non une limite de
 l'export. La personne les déchiffre avec sa clé, hors du serveur.
 
+**Analyse d'impact (art. 35).** Lorsque le Client mène la sienne, StackOps lui
+fournit sur demande écrite tout ce qui figure au §5 de l'[examen
+préalable](aipd-examen-prealable.md) — dont le code source, public, qui lui
+permet de vérifier lui-même l'affirmation centrale plutôt que de nous croire.
+
 **Violations de données.** StackOps notifie le Client **sans délai indu et au
 plus tard sous 24 heures** après avoir eu connaissance d'une violation
 concernant ses données, avec la nature de l'incident, les catégories et le
@@ -386,6 +391,8 @@ signature.
 | 2 | Mesures de sécurité, par modèle d'hébergement | §5 et §5 bis |
 | 3 | Sous-traitants ultérieurs | §6 |
 | 4 | Registre des activités de traitement (art. 30) | [`registre-des-traitements.md`](registre-des-traitements.md) |
+| 5 | Examen préalable d'analyse d'impact (art. 35) | [`aipd-examen-prealable.md`](aipd-examen-prealable.md) |
+| 6 | Politique de confidentialité remise aux personnes | [`politique-de-confidentialite.md`](politique-de-confidentialite.md) |
 
 ---
 
