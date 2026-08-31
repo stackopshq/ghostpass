@@ -94,8 +94,14 @@ présence de `error`.
 
 ```
 OIDC_MOBILE_REDIRECT_URI=https://<hôte>/api/auth/sso/mobile/callback   # à enregistrer chez l'IdP
-SSO_MOBILE_REDIRECT_URIS=ch.stackops.ghostpass://sso                   # liste blanche (défaut)
+SSO_MOBILE_REDIRECT_URIS=ch.stackops.ghostpass://sso,ch.stackops.ghostpass.essai://sso
 ```
+
+Le défaut, quand `SSO_MOBILE_REDIRECT_URIS` n'est pas posée, porte les deux schémas iOS : celui
+de la build distribuée et celui de la build de recette (`.essai`), qui ne peuvent pas partager un
+identifiant de paquet. Le second n'affaiblit pas le premier : le code rendu à l'application est
+inerte sans le vérificateur PKCE, que seule l'application ayant ouvert la session détient. Poser
+la variable **remplace** le défaut ; une instance qui ne veut que la production l'écrit seule.
 
 Sans `OIDC_MOBILE_REDIRECT_URI`, les trois routes répondent `404` et `status` reste inchangé pour
 le chemin web.
