@@ -105,7 +105,7 @@ sur la discipline des personnes ; celle des métadonnées du §2, si.
 | Sauvegardes chiffrées quotidiennes, hors site | En place |
 | Restauration éprouvée | **Éprouvée sur l'infrastructure, pas encore sur ce service en particulier** |
 | Chiffrement des connexions internes à la base | **Non — traité en interne, échéance à convenir** |
-| Secret du second facteur chiffré au repos | **Non — le secret TOTP est stocké en clair** |
+| Secret du second facteur chiffré au repos | En place depuis le 2026-08-30 — AES-256-GCM, clé hors base |
 
 Les deux dernières lignes sont des écarts connus, et figurent ici plutôt que
 d'être tues : un DPA qui ne mentionne que ce qui va bien ne vaut rien le jour où
