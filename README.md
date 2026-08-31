@@ -16,7 +16,7 @@
   <img alt="Backend" src="https://img.shields.io/badge/backend-Fastify%20%2F%20TypeScript-black?style=flat-square&logo=fastify&logoColor=white">
   <img alt="Web" src="https://img.shields.io/badge/web-Next%2016-black?style=flat-square&logo=nextdotjs&logoColor=white">
   <img alt="Self-hostable" src="https://img.shields.io/badge/self--hostable-yes-3fbf5f?style=flat-square">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-4c8bf5?style=flat-square"></a>
+  <a href="LICENSE"><img alt="License: Elastic-2.0" src="https://img.shields.io/badge/license-Elastic--2.0-4c8bf5?style=flat-square"></a>
 </p>
 
 ---
@@ -188,4 +188,11 @@ Two things worth knowing before you write code:
 
 ## Licence
 
-[MIT](LICENSE) © StackOps
+[Elastic License 2.0](LICENSE). Read it, audit it, self-host it, modify it, run it for your own
+organisation. What it reserves is resale: you may not provide GhostPass to third parties as a hosted
+or managed service. That is *source available*, not open source in the OSI sense.
+
+GhostPass was MIT-licensed until 2026-08-31, and the change is not retroactive: see [NOTICE](NOTICE)
+and [ADR-0001](docs/adr/0001-elastic-license-v2.md).
+
+© StackOps
