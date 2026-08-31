@@ -2444,3 +2444,47 @@ final class EnveloppeDePartageTests: XCTestCase {
         XCTAssertEqual(clair, "secret")
     }
 }
+
+/// Le **type** d'une URI `otpauth`, et non seulement son schéma.
+///
+/// `otpauth://hotp/…` est une URI valide dont le secret compte des événements. L'accepter
+/// ferait calculer des codes sur l'horloge — faux, et sans aucune erreur : le site dirait
+/// « code incorrect », et rien ne désignerait l'application.
+final class TypeDeLienOtpauthTests: XCTestCase {
+    func testUnLienDeTotpEstRetenu() {
+        guard case .totp = Totp.depuisUnQrCode(
+            "otpauth://totp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        else { return XCTFail("un lien de TOTP doit être retenu") }
+    }
+
+    func testLeTypeSeLitSansEgardALaCasse() {
+        // Les générateurs de QR code ne s'accordent pas sur la casse.
+        guard case .totp = Totp.depuisUnQrCode(
+            "OTPAUTH://TOTP/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        else { return XCTFail("la casse ne doit pas décider") }
+    }
+
+    func testUnLienDeHotpEstRefuse() {
+        // Le cas qui distingue les deux implémentations : avec le seul contrôle du
+        // schéma, celui-ci passait et produisait des codes faux en silence.
+        guard case .autreChose = Totp.depuisUnQrCode(
+            "otpauth://hotp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ&counter=1")
+        else { return XCTFail("un lien de HOTP doit être refusé") }
+    }
+
+    func testUnTypeInconnuEstRefuse() {
+        // Un type qu'on ne connaît pas n'est pas un TOTP. Le retenir par défaut serait le
+        // même défaut, déplacé d'un cran.
+        guard case .autreChose = Totp.depuisUnQrCode(
+            "otpauth://steam/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        else { return XCTFail("un type inconnu doit être refusé") }
+    }
+
+    func testLExportDApplicationGardeSonMessage() {
+        // Il ne doit pas se confondre avec « autre chose » : son message dit quoi faire,
+        // là où l'autre dit seulement que ça ne va pas.
+        guard case .exportDApplication = Totp.depuisUnQrCode(
+            "otpauth-migration://offline?data=AAAA")
+        else { return XCTFail("un export doit rester distinct") }
+    }
+}

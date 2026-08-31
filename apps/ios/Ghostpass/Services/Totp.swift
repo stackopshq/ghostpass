@@ -113,7 +113,18 @@ enum Totp {
         if propre.lowercased().hasPrefix("otpauth-migration://") {
             return .exportDApplication
         }
-        guard propre.lowercased().hasPrefix("otpauth://"), parse(propre) != nil else {
+        // Le **type** compte, et pas seulement le schéma. `otpauth://hotp/…` est une URI
+        // parfaitement valide dont le secret compte des événements et non le temps :
+        // acceptée, elle produirait des codes calculés sur l'horloge, donc faux, **sans
+        // aucune erreur**. Le site afficherait « code incorrect » et personne ne saurait
+        // que le tort vient d'ici.
+        //
+        // Trouvé le 2026-08-31 par l'agent qui portait le client Android : le test
+        // annonçait « seul un lien de TOTP est retenu », et rien ne le vérifiait.
+        guard propre.lowercased().hasPrefix("otpauth://"),
+            URLComponents(string: propre)?.host?.lowercased() == "totp",
+            parse(propre) != nil
+        else {
             return .autreChose
         }
         return .totp(propre)

@@ -121,46 +121,26 @@ cargo run --release --bin uniffi-bindgen -- generate \
   --language kotlin \
   --out-dir "$KOTLIN"
 
-# ─── Le rattrapage d'un défaut d'UniFFI ───────────────────────────────────────
+# ─── Le rattrapage d'un défaut d'UniFFI — **retiré le 2026-08-31** ────────────
 #
-# `GhostCryptoError` porte un champ nommé `message`. Côté Swift cela ne gêne personne ;
-# côté Kotlin, le générateur produit une classe qui étend `Exception` avec un
-# `val message` **et** un `override val message`, et le compilateur refuse le fichier :
+# Il existait ici une rustine sur les liaisons générées. `GhostCryptoError` portait un champ
+# nommé `message` ; côté Kotlin le générateur produisait alors un `val message` **et** un
+# `override val message`, et le compilateur refusait le fichier :
 #
 #   Conflicting declarations: val message: String
-#   'message' hides member of supertype 'Throwable' and needs an 'override' modifier
 #
-# La correction propre est en amont — renommer ce champ dans le cœur commun, ou corriger
-# le générateur — et n'appartient pas à ce dépôt. En attendant, on marque la propriété du
-# constructeur `override` et on retire le getter redondant. Le message rendu devient le
-# message lui-même au lieu de « message=… », ce qui est aussi ce que rend Swift.
+# La rustine marquait la propriété `override` et retirait le getter redondant. Elle échouait
+# bruyamment si son motif disparaissait, en demandant qu'on vienne voir plutôt que de la
+# laisser s'appliquer à vide.
 #
-# Le rattrapage échoue bruyamment si le motif disparaît : le jour où UniFFI corrigera
-# cela, il faut le savoir et supprimer ces lignes, pas les laisser s'appliquer à vide.
-python3 - "$KOTLIN/uniffi/ghost_crypto_ffi/ghost_crypto_ffi.kt" <<'PYTHON'
-import sys
-
-chemin = sys.argv[1]
-source = open(chemin, encoding="utf-8").read()
-
-avant = """        val `message`: kotlin.String
-        ) : GhostCryptoException() {
-        override val message
-            get() = "message=${ `message` }"
-    }"""
-apres = """        override val `message`: kotlin.String
-        ) : GhostCryptoException() {
-    }"""
-
-if avant not in source:
-    sys.exit(
-        "Le motif rattrapé dans les liaisons Kotlin a changé.\n"
-        "Vérifiez si UniFFI a corrigé la collision sur `message` ; si oui, retirez ce\n"
-        "rattrapage de tools/android/build-jni.sh. Ne le laissez pas s'appliquer à vide."
-    )
-
-open(chemin, "w", encoding="utf-8").write(source.replace(avant, apres, 1))
-PYTHON
+# **Elle a échoué, et c'était la bonne nouvelle** : le cœur commun a renommé ce champ en
+# `raison`, il n'y a plus de collision, et le générateur produit un fichier qui compile tel
+# quel. La rustine est donc supprimée plutôt que réparée — c'est ce que son propre
+# commentaire demandait de faire ce jour-là.
+#
+# Ce qu'il faut en retenir pour la prochaine : un rattrapage qui ne sait pas échouer aurait
+# continué de s'appliquer à un motif absent, sans effet et sans un mot, et personne
+# n'aurait su que le défaut d'amont était corrigé.
 
 # ─── La même bibliothèque, pour l'hôte ────────────────────────────────────────
 #

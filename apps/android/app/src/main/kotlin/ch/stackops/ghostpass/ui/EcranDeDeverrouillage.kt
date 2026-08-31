@@ -79,7 +79,8 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
         mutableStateOf(modele.sessionEnregistree != null)
     }
 
-    val activite = LocalContext.current as FragmentActivity
+    val contexte = LocalContext.current
+    val activite = contexte as FragmentActivity
     /**
      * La biométrie ne se propose qu'une fois par ouverture d'écran.
      *
@@ -87,6 +88,15 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
      * qui veut taper son mot de passe maître ne pourrait jamais atteindre le clavier.
      */
     var biometrieTentee by rememberSaveable { mutableStateOf(false) }
+
+    // Une identité vérifiée par SSO enregistre une session : l'écran doit alors basculer sur
+    // « compte enregistré, entrez votre mot de passe maître ». Sans cela, l'utilisateur
+    // reviendrait du navigateur devant le même formulaire vide, sans savoir si quelque chose
+    // s'est passé.
+    LaunchedEffect(modele.identitesVerifiees) {
+        if (modele.identitesVerifiees > 0) sessionEnregistree = true
+    }
+
     LaunchedEffect(sessionEnregistree, modele.biometrieActivee) {
         if (sessionEnregistree && modele.biometrieActivee && !biometrieTentee) {
             biometrieTentee = true
@@ -196,6 +206,22 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                                     if (modele.secondFacteurRequis) codeTotp else null,
                                 )
                             }
+                        }
+
+                        // L'authentification unique (§8). Elle n'apparaît que dans le
+                        // formulaire complet : elle a besoin d'une adresse de serveur, et
+                        // une session déjà enregistrée n'a plus rien à authentifier.
+                        //
+                        // Elle **n'ouvre pas le coffre** : au retour, le mot de passe maître
+                        // reste à saisir. Le libellé le dit — « s'identifier », pas
+                        // « se connecter » — parce que confondre les deux est la première
+                        // erreur de conception d'un client à connaissance nulle.
+                        if (!sessionEnregistree) {
+                            LienDiscret(
+                                texte = "S'identifier par authentification unique",
+                                actif = !modele.occupe && serveur.isNotBlank(),
+                                identifiant = "button.sso",
+                            ) { modele.demarrerLeSso(contexte, serveur) }
                         }
 
                         // La biométrie **ne remplace pas** le mot de passe maître : elle

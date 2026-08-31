@@ -28,6 +28,48 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Les liens de second facteur (§9).
+
+                 Ce réglage désigne l'application qui **ouvre les liens**, pas celle qui
+                 remplit les champs. Mesuré sur iOS : GhostPass n'apparaissait pas sous
+                 « Configurer les codes dans » alors que son extension déclarait bien fournir
+                 des codes — la cause était l'absence de cette déclaration-là.
+
+                 Déclarer sans traiter serait pire que se taire : le système proposerait
+                 GhostPass pour ouvrir un QR code, et il ne se passerait rien. C'est
+                 pourquoi cet `intent-filter` n'a été posé qu'une fois l'écran d'édition
+                 écrit, et que le lien est retenu quand le coffre est fermé.
+
+                 Pas de `android:host` : la règle d'acceptation est dans
+                 `LienOtpauth.estUnLienDeTotp`, partagée avec iOS et éprouvée sur ses
+                 vecteurs. Un hôte imposé ici la dédoublerait dans un fichier XML que
+                 personne n'exécute. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="otpauth" />
+            </intent-filter>
+
+            <!-- Le retour du SSO (§8, docs/sso-mobile.md).
+
+                 Le serveur redirige vers `ch.stackops.ghostpass://sso?code=…&state=…` à la
+                 fin du flux, et c'est ce schéma que la liste blanche du serveur autorise.
+
+                 **Ce schéma n'est pas exclusif** : sur Android comme sur iOS, une autre
+                 application peut le revendiquer et recevoir ce retour à notre place. C'est
+                 exactement pourquoi le PKCE est mené par l'application — le code qui
+                 transite ici ne vaut rien sans le vérificateur, qui ne quitte jamais ce
+                 processus. Un App Link vérifié (`https://`) serait exclusif, lui, mais
+                 exigerait un `assetlinks.json` publié sur chaque instance auto-hébergée :
+                 c'est une exigence qu'un produit auto-hébergeable ne peut pas poser. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ch.stackops.ghostpass" android:host="sso" />
+            </intent-filter>
         </activity>
 
         <!-- L'écran du remplissage : biométrie, choix, et rien d'autre.

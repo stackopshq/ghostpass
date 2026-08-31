@@ -20,13 +20,23 @@ import java.net.URL
 @Serializable
 data class ReponseDePrelogin(val kdfParams: String)
 
-/** Ce que le serveur rend à la connexion. Les quatre champs, aux noms exacts du serveur. */
+/**
+ * Ce que le serveur rend à la connexion, **et à l'échange SSO** : `docs/sso-mobile.md` dit
+ * que les deux réponses ont exactement la même forme, « pour que le client n'ait qu'un seul
+ * chemin de session à écrire ». On le prend au mot.
+ *
+ * `email` est **optionnel** parce que les deux routes ne s'accordent pas dessus : l'échange
+ * SSO le rend, la connexion classique non — le client la connaît déjà, puisqu'il vient de
+ * la saisir. Le déclarer obligatoire ferait échouer le décodage de toute connexion
+ * ordinaire, c'est-à-dire tout le produit, pour un champ dont on n'a pas besoin là.
+ */
 @Serializable
 data class ReponseDeConnexion(
     val token: String,
     val kdfParams: String,
     val encryptedUserKey: String,
     val encryptedPrivateKey: String,
+    val email: String = "",
 )
 
 /**
@@ -55,6 +65,10 @@ data class ElementChiffre(
 
 @Serializable
 private data class EnveloppeDElements(val items: List<ElementChiffre>)
+
+/** Ce que rend `GET /api/auth/sso/status`. Un seul champ, et c'est voulu. */
+@Serializable
+private data class StatutSso(val enabled: Boolean = false)
 
 /** Le corps d'erreur du serveur, y compris le signal de second facteur. */
 @Serializable
@@ -205,6 +219,37 @@ class ClientApi(baseUrl: String) {
     fun mettreALaCorbeille(jeton: String, id: String) {
         requete("DELETE", "/api/vault/items/$id", jeton = jeton)
     }
+
+    /**
+     * Le serveur propose-t-il le SSO ?
+     *
+     * `GET /api/auth/sso/status` rend `{ "enabled": true|false }`, et **rien d'autre** : le
+     * client ne fait aucune découverte OIDC. Une instance sans SSO répond `false` ; on ne
+     * propose alors pas le bouton, plutôt que d'ouvrir un navigateur sur un `404`.
+     */
+    fun statutSso(): Boolean =
+        json.decodeFromString(StatutSso.serializer(), requete("GET", "/api/auth/sso/status")).enabled
+
+    /**
+     * L'échange final du SSO mobile : `{ code, codeVerifier }` contre une session.
+     *
+     * La réponse a **exactement la forme du callback web** — c'est écrit dans
+     * `docs/sso-mobile.md`, et c'est ce qui fait qu'il n'y a qu'un seul chemin de session à
+     * écrire côté client. On réutilise donc [ReponseDeConnexion] telle quelle.
+     *
+     * Le `state` n'entre pas ici : le serveur le reprend de l'enregistrement du `start` et
+     * ne le lit jamais depuis ce corps. C'est l'application qui doit l'avoir vérifié, et
+     * elle seule peut le faire.
+     */
+    fun echangerLeCodeSso(code: String, verificateur: String): ReponseDeConnexion =
+        json.decodeFromString(
+            ReponseDeConnexion.serializer(),
+            requete(
+                "POST", "/api/auth/sso/exchange",
+                corps = json.encodeToString(CHAMPS, mapOf(
+                    "code" to code, "codeVerifier" to verificateur)),
+            ),
+        )
 
     /** Déconnexion : révoque la session côté serveur. Sans corps. */
     fun deconnexion(jeton: String) {

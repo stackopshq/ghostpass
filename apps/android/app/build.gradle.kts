@@ -93,6 +93,19 @@ dependencies {
     // empreinte — l'équivalent de `.biometryCurrentSet` d'iOS (§11).
     implementation("androidx.biometric:biometric:1.1.0")
 
+    // Les onglets personnalisés, pour le SSO. **Jamais une WebView** : elle donnerait à
+    // l'application l'accès au mot de passe saisi chez le fournisseur d'identité, ce qui
+    // annule l'intérêt du SSO (§8). Voir OngletSecurise.
+    implementation("androidx.browser:browser:1.8.0")
+
     androidTestImplementation("androidx.test:runner:1.6.2")
+    // UiAutomator pilote l'application **du dehors**, comme le ferait un utilisateur, et
+    // traverse les frontières d'applications — ce qu'exige le parcours de bout en bout :
+    // la suggestion de remplissage est une fenêtre du système, pas de GhostPass.
+    //
+    // Il remplace `adb shell input text`, qui s'est révélé inutilisable pour ce parcours :
+    // sur un champ Compose et un émulateur ARM, il perd ou double des caractères sans
+    // le dire. Un parcours dont la saisie est aléatoire ne mesure pas le produit.
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
     androidTestImplementation("junit:junit:4.13.2")
 }

@@ -140,6 +140,46 @@ class Coffre {
     }
 
     /**
+     * Ouvre une **session** par SSO — et laisse le coffre fermé.
+     *
+     * C'est la distinction que `docs/sso-mobile.md` répète et qu'il faut tenir : **le SSO
+     * authentifie ; il n'ouvre pas le coffre.** Celui-ci reste scellé sous le mot de passe
+     * maître, qui sera demandé ensuite. Les confondre est la première erreur de conception
+     * d'un client à connaissance nulle — et elle serait invisible ici, puisque tout
+     * marcherait jusqu'au premier déchiffrement.
+     *
+     * `compte` n'est donc pas posé. L'appelant enchaîne sur [rouvrirHorsLigne] avec la
+     * session rendue, exactement comme après un verrouillage : un seul chemin de
+     * déverrouillage, pas deux.
+     */
+    fun ouvrirUneSessionParSso(
+        adresseSaisie: String,
+        code: String,
+        verificateur: String,
+    ): Session {
+        val adresse = AdresseServeur.normaliser(adresseSaisie) ?: throw ErreurApi.AdresseInvalide()
+        val api = ClientApi(adresse)
+        val reponse = api.echangerLeCodeSso(code, verificateur)
+
+        // Le serveur rend l'adresse qu'il a vérifiée chez le fournisseur d'identité. La
+        // prendre de lui plutôt que de la demander est le point : l'utilisateur n'a rien
+        // saisi, et lui faire taper son adresse ici permettrait d'en saisir une autre.
+        if (reponse.email.isEmpty()) throw ErreurApi.ReponseIllisible()
+
+        client = api
+        jeton = reponse.token
+        val s = Session(
+            adresseServeur = adresse,
+            email = reponse.email,
+            kdfParams = reponse.kdfParams,
+            encryptedUserKey = reponse.encryptedUserKey,
+            encryptedPrivateKey = reponse.encryptedPrivateKey,
+        )
+        session = s
+        return s
+    }
+
+    /**
      * Rouvre le coffre **sans mot de passe maître**, à partir de l'enveloppe d'appareil.
      *
      * C'est le mécanisme d'`docs/adr/0002` : la clé du coffre (l'USK) a été enveloppée par

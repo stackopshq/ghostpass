@@ -112,6 +112,20 @@ temoin "le piège de suffixe des domaines de partage (share_link_domains.rejecte
   '["https://ghostpass.example.com", "https://ghostpass.example.com.attaquant.example/p/abc"]' \
   '["https://ghostpass.example.com", "https://ghostpass.example.com/p/abc"]'
 
+# §4 bis — l'enveloppe de partage. Le chiffré du vecteur croisé vient du **navigateur** :
+# le perturber doit faire tomber le test qui vérifie que le cœur l'ouvre. C'est le seul
+# témoin de cette classe qui vaille, puisqu'un aller-retour par le cœur seul reste vert
+# quel que soit l'algorithme employé des deux côtés.
+temoin "le chiffré du vecteur croisé (share_envelope.crossed_vector)" \
+  '"ciphertext_b64": "UJCDbjVcfiYfYDM9mCSaLJ1dkpvV8vFzXQ/RugKmkurGUzXj/HrD"' \
+  '"ciphertext_b64": "UJCDbjVcfiYfYDM9mCSaLJ1dkpvV8vFzXQ/RugKmkurGUzXj/HrA"'
+
+# §4 bis — la taille du nonce. 24 est celle du coffre, et c'est l'erreur qui a coûté les
+# jours : elle est parfaitement valide ailleurs dans le même cœur.
+temoin "la taille du nonce de l'enveloppe (share_envelope.nonce_bytes)" \
+  '"nonce_bytes": 12,' \
+  '"nonce_bytes": 24,'
+
 # Horodatages — l'unité du registre des partages.
 temoin "l'écart d'horodatage (timestamps.difference_check)" \
   '"expected_difference_seconds": 86400' \

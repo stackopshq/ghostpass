@@ -1,15 +1,17 @@
 package ch.stackops.ghostpass
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.viewmodel.compose.viewModel
 import ch.stackops.ghostpass.theme.ThemeGhostPass
 import ch.stackops.ghostpass.ui.EcranDeDeverrouillage
 import ch.stackops.ghostpass.ui.EcranDeLElement
@@ -25,8 +27,22 @@ import ch.stackops.ghostpass.ui.EcranDuCoffre
  */
 class ActivitePrincipale : FragmentActivity() {
 
+    /**
+     * Le modèle est tenu par l'activité, et non seulement par la composition.
+     *
+     * [onNewIntent] arrive hors de toute composition : un lien reçu alors que l'application
+     * est déjà ouverte doit pouvoir être rangé quelque part tout de suite. Le récupérer
+     * depuis un `@Composable` demanderait de le stocker en attendant — c'est-à-dire de
+     * réécrire ici ce que le modèle fait déjà.
+     */
+    private val modele: ModeleDuCoffre by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Le lien du lancement à froid. `onNewIntent` ne le donnera pas : il ne concerne
+        // que les intentions reçues par une activité déjà vivante.
+        recevoir(intent?.dataString)
 
         // `FLAG_SECURE` : l'équivalent Android du voile de confidentialité d'iOS.
         //
@@ -41,8 +57,6 @@ class ActivitePrincipale : FragmentActivity() {
 
         setContent {
             ThemeGhostPass {
-                val modele: ModeleDuCoffre = viewModel()
-
                 // Trois écrans et pas de bibliothèque de navigation : l'état tient en une
                 // variable, et une dépendance de navigation pour trois destinations coûte
                 // plus qu'elle ne range.
@@ -54,13 +68,31 @@ class ActivitePrincipale : FragmentActivity() {
                 // n'explique pourquoi.
                 if (!modele.deverrouille && edition != null) edition = null
 
+                // Le lien retenu s'ouvre **dès que le coffre l'est**, et pas avant. C'est
+                // la règle §9 : on retient, on n'écrit rien, et l'utilisateur voit un
+                // formulaire pré-rempli qu'il doit valider.
+                LaunchedEffect(modele.deverrouille, modele.lienEnAttente) {
+                    if (modele.deverrouille && modele.lienEnAttente != null) {
+                        val lien = modele.consommerLeLien()
+                        if (lien != null) edition = Edition(entree = null, lien = lien)
+                    }
+                }
+
                 BackHandler(enabled = edition != null) { edition = null }
 
                 when {
                     !modele.deverrouille -> EcranDeDeverrouillage(modele)
-                    edition != null -> EcranDeLElement(modele, edition!!.entree) {
-                        edition = null
-                    }
+                    edition != null -> EcranDeLElement(
+                        modele,
+                        edition!!.entree,
+                        edition!!.lien,
+                        // `key` : deux liens différents doivent ouvrir deux formulaires
+                        // différents. Sans lui, Compose réutilise l'état de `rememberSaveable`
+                        // de la feuille précédente, et le second lien n'arriverait jamais à
+                        // l'écran — la leçon d'`EditTarget` côté iOS, où deux feuilles de
+                        // même identité n'en font qu'une.
+                        cle = edition!!.identite,
+                    ) { edition = null }
                     else -> EcranDuCoffre(
                         modele,
                         surNouveau = { modele.message = null; edition = Edition(null) },
@@ -71,6 +103,41 @@ class ActivitePrincipale : FragmentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Un lien reçu alors que l'application est déjà ouverte.
+     *
+     * `launchMode="singleTask"` fait que le système ne crée pas une seconde activité : il
+     * livre l'intention ici. Sans cette redéfinition, un QR code scanné sur une application
+     * déjà lancée ramènerait GhostPass au premier plan **sans rien faire du lien** — le
+     * défaut serait invisible au premier essai, quand l'application est fermée, et
+     * n'apparaîtrait qu'au second.
+     *
+     * `setIntent` : `getIntent()` continuerait sinon de rendre celle du lancement, ce qui
+     * compte pour tout ce qui la relira après une rotation.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        recevoir(intent.dataString)
+    }
+
+    /**
+     * Une adresse reçue du dehors, aiguillée vers ce qui sait la traiter.
+     *
+     * Deux schémas entrent par la même porte, et les confondre serait coûteux dans les deux
+     * sens : un retour de SSO traité comme un lien de second facteur ouvrirait un formulaire
+     * absurde, et un lien `otpauth` passé à l'échange enverrait un code inexistant au
+     * serveur.
+     */
+    private fun recevoir(adresse: String?) {
+        if (adresse == null) return
+        if (adresse.startsWith(SsoMobile.ADRESSE_DE_RETOUR)) {
+            modele.terminerLeSso(adresse)
+        } else {
+            modele.retenirLeLien(adresse)
         }
     }
 
@@ -92,10 +159,22 @@ class ActivitePrincipale : FragmentActivity() {
 }
 
 /**
- * L'écran d'édition ouvert : sur un élément existant, ou sur rien pour une création.
+ * L'écran d'édition ouvert : sur un élément existant, sur un lien reçu, ou sur rien.
  *
  * Une classe plutôt qu'un `EntreeDuCoffre.Lisible?` nu, parce que `null` y voudrait dire
  * deux choses à la fois — « aucune édition en cours » et « édition d'un nouvel élément ».
  * Le second `null`, ici, est à l'intérieur.
  */
-private class Edition(val entree: ch.stackops.ghostpass.EntreeDuCoffre.Lisible?)
+private class Edition(
+    val entree: ch.stackops.ghostpass.EntreeDuCoffre.Lisible?,
+    val lien: String? = null,
+) {
+    /**
+     * Ce qui distingue deux éditions l'une de l'autre.
+     *
+     * Deux liens différents doivent donner deux identités différentes, sans quoi Compose
+     * garde l'état du premier formulaire. C'est le défaut qu'iOS a rencontré avec ses
+     * feuilles : « rien ne tombait, et l'écran disait simplement le contraire de la vérité ».
+     */
+    val identite: String = entree?.id ?: lien ?: "nouveau"
+}

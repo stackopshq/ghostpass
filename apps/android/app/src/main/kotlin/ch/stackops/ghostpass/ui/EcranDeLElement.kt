@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -27,6 +28,7 @@ import ch.stackops.ghostpass.ContenuDElement
 import ch.stackops.ghostpass.ElementDuCoffre
 import ch.stackops.ghostpass.EntreeDuCoffre
 import ch.stackops.ghostpass.Identifiants
+import ch.stackops.ghostpass.LienOtpauth
 import ch.stackops.ghostpass.ModeleDuCoffre
 import ch.stackops.ghostpass.Note
 import ch.stackops.ghostpass.theme.BoutonPrincipal
@@ -59,12 +61,33 @@ import ch.stackops.ghostpass.theme.carteDeVerre
 fun EcranDeLElement(
     modele: ModeleDuCoffre,
     entree: EntreeDuCoffre.Lisible?,
+    lien: String? = null,
+    cle: String = entree?.id ?: lien ?: "nouveau",
+    surFin: () -> Unit,
+) {
+    // `key` enferme tout l'état de ce formulaire dans l'identité de ce qu'on édite. Deux
+    // liens reçus coup sur coup ouvrent alors deux formulaires ; sans lui, le second
+    // rouvrirait le premier, pré-rempli avec les valeurs du premier — et rien ne
+    // signalerait l'erreur.
+    key(cle) { CorpsDeLElement(modele, entree, lien, surFin) }
+}
+
+@Composable
+private fun CorpsDeLElement(
+    modele: ModeleDuCoffre,
+    entree: EntreeDuCoffre.Lisible?,
+    lien: String?,
     surFin: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
     val origine = entree?.element
 
-    var nom by rememberSaveable { mutableStateOf(origine?.name ?: "") }
+    // Ce que le lien pré-remplit. **Il ne crée rien** : c'est la deuxième règle du §9. Une
+    // URL venue du dehors qui écrirait seule serait un moyen d'ajouter des lignes dans le
+    // coffre de quelqu'un d'autre — il suffirait de lui faire ouvrir un lien.
+    val etiquette = lien?.let { LienOtpauth.etiquette(it) }
+
+    var nom by rememberSaveable { mutableStateOf(origine?.name ?: etiquette?.service ?: "") }
     var notes by rememberSaveable { mutableStateOf(origine?.notes ?: "") }
     var dossier by rememberSaveable { mutableStateOf(origine?.folder ?: "") }
 
@@ -82,12 +105,17 @@ fun EcranDeLElement(
     }
 
     val connexion = origine?.data as? ContenuDElement.Connexion
-    var identifiant by rememberSaveable { mutableStateOf(connexion?.valeur?.username ?: "") }
+    var identifiant by rememberSaveable {
+        mutableStateOf(connexion?.valeur?.username ?: etiquette?.compte ?: "")
+    }
     var motDePasse by rememberSaveable { mutableStateOf(connexion?.valeur?.password ?: "") }
     var adresses by rememberSaveable {
         mutableStateOf(connexion?.valeur?.uris?.joinToString("\n") ?: "")
     }
-    var totp by rememberSaveable { mutableStateOf(connexion?.valeur?.totp ?: "") }
+    // Le lien **entier**, pas seulement son secret : il porte aussi la période, le nombre
+    // de chiffres et l'algorithme. N'en garder que le secret perdrait ces trois-là en
+    // silence, et les codes seraient faux chez un service qui ne prend pas les défauts.
+    var totp by rememberSaveable { mutableStateOf(connexion?.valeur?.totp ?: lien ?: "") }
 
     val note = origine?.data as? ContenuDElement.NoteSecrete
     var contenu by rememberSaveable { mutableStateOf(note?.valeur?.content ?: "") }

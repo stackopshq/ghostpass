@@ -224,10 +224,24 @@ Mesuré ce matin : Clara n'a pas pu se connecter à GhostCal depuis mobile, et l
 disait rien de la vraie cause. **Un client mobile sans SSO est inutilisable sur ces
 instances-là**, sans qu'aucun message ne l'explique.
 
-Le serveur GhostPass reçoit en ce moment (autre session) une route `POST
-/api/auth/sso/exchange` acceptant `{ code, codeVerifier, nonce, redirectUri }` et rendant la
-même charge que le callback web — `{ token, email, kdfParams, encryptedUserKey,
-encryptedPrivateKey }`. Alignez-vous sur ces noms ; ne les réinventez pas.
+**Le SSO est câblé depuis le 2026-08-31**, contre les routes réelles et non contre une
+description. Trois corrections à ce qui était écrit ici, toutes constatées au contact :
+
+- le corps de l'échange est `{ code, codeVerifier }` — **et rien d'autre**. Ni `nonce` ni
+  `redirectUri` : le serveur les reprend de l'enregistrement du `start`, et ne les lit
+  jamais depuis ce corps. C'est ce qui empêche un appelant de choisir à quel `start` son
+  code se rattache ;
+- il faut **deux** routes, pas une : `GET /api/auth/sso/mobile/start` ouvre le flux, `POST
+  /api/auth/sso/exchange` le termine. Et `GET /api/auth/sso/status` décide de l'affichage
+  du bouton — une instance sans SSO répond `false`, et ouvrir un navigateur sur un `404`
+  laisserait l'utilisateur devant une page qu'il ne peut pas interpréter ;
+- **la réponse porte `email`**, que la connexion classique ne rend pas. Le déclarer
+  obligatoire dans le type partagé ferait échouer le décodage de toute connexion ordinaire.
+
+Le contrat complet est `docs/sso-mobile.md` sur la branche `main` du serveur ; il n'est
+**pas** sur la branche de travail de l'application. Le témoin
+`tools/android/temoin-du-sso-mobile.sh` monte donc un arbre de travail de `main` pour le
+seul serveur, et fait dialoguer le client de la branche de travail avec lui.
 
 **Le point de sécurité, et il n'est pas négociable** : flux à code d'autorisation **avec
 PKCE mené par l'application** (RFC 8252). Pas de redirection finale du serveur portant le
@@ -251,8 +265,19 @@ alors que l'extension déclarait bien fournir des codes à usage unique. La caus
 ailleurs — **l'application ne déclarait pas savoir ouvrir les liens `otpauth:`**. Ce
 réglage désigne l'application qui *ouvre les liens*, pas celle qui *remplit les champs*.
 
-L'équivalent Android est un `intent-filter` sur le schéma `otpauth`. Trois règles, apprises
-en le câblant :
+**Fait depuis le 2026-08-31.** L'`intent-filter` est posé sur `ActivitePrincipale` — et
+seulement maintenant que l'écran d'édition existe, parce que déclarer sans traiter est pire
+que se taire. Les vecteurs d'`EtiquetteOtpauthTests` sont portés dans `LienOtpauthTest`, et
+la rétention coffre fermé est une étape du parcours de bout en bout : on verrouille, le lien
+arrive, on déverrouille, et le formulaire doit s'ouvrir pré-rempli.
+
+**Ce que le brief dit et que le code d'iOS ne fait pas** : le test s'appelle « seul un lien
+de TOTP est retenu », mais `depuisUnQrCode` ne vérifie pas le type — il écarte
+`otpauth-migration://`, exige `otpauth://` et un secret non vide, et rien d'autre. Un
+`otpauth://hotp/…?secret=…` passe donc des deux côtés. C'est porté à l'identique, parce que
+c'était la consigne, et signalé dans `LienOtpauth` plutôt que corrigé d'un seul côté.
+
+Trois règles, apprises en le câblant :
 
 - **le lien arrive souvent coffre fermé** — on scanne un QR code, le système réveille
   l'application, qui demande d'abord le mot de passe maître. Le jeter à ce moment-là fait
@@ -339,13 +364,30 @@ de poser deux réglages sur trois sans le dire.
 
 ## 12. Ce qui reste à faire
 
-- **Les liens `otpauth:`** (§9). L'écran d'édition existe désormais et porte un champ de
-  second facteur ; l'`intent-filter` et la rétention du lien coffre fermé restent à écrire.
-- **Le SSO** (§8). Rien n'en est fait.
-- **Le partage de liens** (§4). `DestinationDePartage` porte la règle de domaine et elle est
-  éprouvée par les vecteurs ; aucun écran ne s'en sert.
+- **Le partage de liens dans l'interface.** Le format d'enveloppe est éprouvé — `contrat.json`
+  bloc `share_envelope`, vecteur croisé lu par `EnveloppeDePartageTest`, et
+  `tools/android/temoin-du-partage-croise.sh` qui fait ouvrir un scellement du cœur par
+  **WebCrypto** et réciproquement. `DestinationDePartage` porte la règle de domaine du §4 et
+  elle est éprouvée par les vecteurs. **Aucun écran ne s'en sert** : rien ne crée ni ne
+  révoque un partage.
+- **Le SSO à l'écran.** Le flux est câblé et éprouvé contre le vrai serveur en ligne de
+  commande ; le chemin passant par l'onglet de navigateur et le retour dans le schéma d'URL
+  **n'a pas été rejoué sur appareil** — il demande un fournisseur d'identité joignable
+  depuis l'émulateur.
 - **Les registres en écriture.** Ils se lisent (dossiers, favoris, partages, couleurs) ;
   rien ne les réécrit, donc mettre un élément en favori n'est pas possible.
-- **Un parcours de premier lancement automatisé**, celui que `verifier-l-autonomie.sh` dit
-  ne pas prouver. Il a été fait **à la main** contre un serveur local sur émulateur le
-  2026-08-31 — connexion, coffre, biométrie, création, remplissage — mais rien ne le rejoue.
+- **La corbeille.** `supprimer` met à la corbeille côté serveur ; aucun écran ne la montre
+  ni ne restaure.
+
+## 13. Les outils, et ce que chacun prouve
+
+| Outil | Ce qu'il établit |
+|---|---|
+| `tools/android/parcours-de-bout-en-bout.sh` | Un premier lancement aboutit à un coffre utilisable contre une instance quelconque, **résolution de noms coupée** — le troisième point du §7 |
+| `tools/android/temoin-du-parcours.sh` | Le parcours ci-dessus sait rougir : mot de passe faux, remplissage désactivé |
+| `tools/android/temoin-de-l-invalidation.sh` | La clé du coffre est vraiment invalidée par un nouvel enrôlement d'empreinte (ADR-0002) |
+| `tools/android/temoin-du-partage-croise.sh` | L'enveloppe de partage traverse dans les deux sens entre le cœur et WebCrypto |
+| `tools/android/temoin-du-sso-mobile.sh` | Le client mène le PKCE et obtient une session du vrai serveur ; état étranger et rejeu refusés |
+| `tools/android/temoin-des-vecteurs.sh` | Chaque vecteur de `contrat.json` est réellement lu par un test |
+| `tools/android/verifier-l-autonomie.sh` | L'APK livré ne vend rien et ne nomme aucun serveur de l'éditeur |
+| `tools/android/temoin-de-l-autonomie.sh` | Le contrôle ci-dessus sait rougir |
