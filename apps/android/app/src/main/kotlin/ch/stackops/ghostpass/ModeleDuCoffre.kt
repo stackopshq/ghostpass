@@ -199,8 +199,14 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 val pkce = SsoMobile.Pkce.tirer()
                 val etat = SsoMobile.chaineAleatoire(16)
                 ssoEnCours = SsoEnCours(adresse, pkce, etat)
+                // Le schéma de retour suit l'identifiant du paquet, jamais une constante
+                // écrite à côté : une variante suffixée ne recevrait pas le retour, et le
+                // navigateur se refermerait sans rien dire.
                 OngletSecurise.ouvrir(
-                    contexte, SsoMobile.adresseDeDepart(adresse, pkce.defi, etat))
+                    contexte,
+                    SsoMobile.adresseDeDepart(
+                        adresse, pkce.defi, etat, paquet = getApplication<Application>().packageName),
+                )
             } catch (e: Exception) {
                 message = messageLisible(e)
             } finally {
@@ -469,20 +475,18 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         get() = collectionOuverte?.permission?.peutEcrire ?: true
 
     /**
-     * L'écriture est-elle **possible** ici, dans cette version ?
+     * Peut-on modifier ce qu'on regarde ?
      *
-     * Distinct de [peutEcrire], et il faut les deux. Un membre peut parfaitement avoir le
-     * droit d'écrire dans une collection que cette application ne sait pas encore modifier :
-     * l'éditeur écrit par `/api/vault/items`, le coffre **personnel**. L'y laisser
-     * enregistrer un élément d'équipe le déplacerait silencieusement dans le coffre privé du
-     * membre — il disparaîtrait pour toute l'équipe, et personne ne saurait où il est passé.
-     *
-     * Les routes d'écriture d'équipe existent côté serveur ; elles ne sont pas câblées. Tant
-     * qu'elles ne le sont pas, on n'offre pas le bouton — plutôt que de l'offrir et
-     * d'échouer, ou pire, de réussir au mauvais endroit.
+     * Aujourd'hui identique à [peutEcrire] : l'écriture d'équipe est câblée, et les deux
+     * notions se rejoignent. Elles restent **deux** propriétés parce qu'elles répondent à
+     * deux questions différentes — « en a-t-il le droit » et « l'application sait-elle le
+     * faire » — et qu'elles se sont déjà séparées une fois : pendant une journée, un membre
+     * avait le droit d'écrire dans une collection que l'application ne savait pas modifier.
+     * Les fondre alors aurait laissé l'éditeur enregistrer par `/api/vault/items`, et
+     * l'élément serait sorti de l'équipe **en silence**.
      */
     val peutModifierIci: Boolean
-        get() = collectionOuverte == null
+        get() = collectionOuverte?.permission?.peutEcrire ?: true
 
     /**
      * Va chercher les organisations.
@@ -862,15 +866,38 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      *   un doublon silencieux. D'où un paramètre explicite plutôt qu'une devinette sur un
      *   identifiant vide.
      */
-    fun enregistrerUnElement(id: String?, element: ElementDuCoffre, surFin: (Boolean) -> Unit = {}) {
+    fun enregistrerUnElement(
+        entree: EntreeDuCoffre.Lisible?,
+        element: ElementDuCoffre,
+        surFin: (Boolean) -> Unit = {},
+    ) {
+        val ouvert = organisationOuverte
+        val collection = collectionOuverte
         viewModelScope.launch {
             occupe = true
             message = null
             try {
                 withContext(Dispatchers.IO) {
-                    if (id == null) coffre.creer(element) else coffre.mettreAJour(id, element)
+                    // L'écriture suit **ce qu'on regarde**. Router sur autre chose — le
+                    // dernier écran, un état retenu ailleurs — ferait enregistrer un élément
+                    // d'équipe dans le coffre personnel, et il sortirait de l'équipe sans
+                    // qu'aucune erreur ne le dise.
+                    if (ouvert != null && collection != null) {
+                        if (entree == null) {
+                            coffre.creerDansCollection(ouvert, collection.id, element)
+                        } else {
+                            coffre.mettreAJourDansCollection(ouvert, collection.id, entree, element)
+                        }
+                    } else {
+                        if (entree == null) coffre.creer(element)
+                        else coffre.mettreAJour(entree.id, element)
+                    }
                 }
-                rafraichir()
+                if (ouvert != null && collection != null) {
+                    ouvrirUneCollection(collection)
+                } else {
+                    rafraichir()
+                }
                 surFin(true)
             } catch (e: Exception) {
                 message = messageLisible(e)
@@ -881,14 +908,33 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Met un élément à la corbeille du serveur. Il n'est pas détruit ; il sort de la liste. */
-    fun supprimerUnElement(id: String, surFin: (Boolean) -> Unit = {}) {
+    /**
+     * Supprime l'élément qu'on regarde.
+     *
+     * **Les deux suppressions ne font pas la même chose**, et l'écran doit le dire : dans le
+     * coffre personnel, le serveur marque la ligne et la range à la corbeille ; dans une
+     * collection d'équipe, il l'efface. Le même mot, le même verbe HTTP, et un filet d'un
+     * côté seulement.
+     *
+     * Le paramètre est l'**entrée lisible** et non un identifiant : une ligne qu'on n'a
+     * jamais su ouvrir ne peut donc pas être détruite depuis ici.
+     */
+    fun supprimerUnElement(entree: EntreeDuCoffre.Lisible, surFin: (Boolean) -> Unit = {}) {
+        val ouvert = organisationOuverte
+        val collection = collectionOuverte
         viewModelScope.launch {
             occupe = true
             message = null
             try {
-                withContext(Dispatchers.IO) { coffre.supprimer(id) }
-                rafraichir()
+                withContext(Dispatchers.IO) {
+                    if (ouvert != null && collection != null) {
+                        coffre.supprimerDansCollection(ouvert, collection.id, entree)
+                    } else {
+                        coffre.supprimer(entree.id)
+                    }
+                }
+                if (ouvert != null && collection != null) ouvrirUneCollection(collection)
+                else rafraichir()
                 surFin(true)
             } catch (e: Exception) {
                 message = messageLisible(e)
@@ -939,6 +985,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             "Adresse de serveur invalide. Exemple : ghostpass.example.com"
         is ErreurApi.Reseau ->
             "Serveur injoignable. Vérifiez l'adresse et votre connexion."
+        is Coffre.CleDOrganisationPerimee -> e.message!!
         is ErreurApi.CoffreVerrouille ->
             "Le coffre est verrouillé. Déverrouillez-le avant d'écrire."
         is ErreurApi.Http -> e.message ?: "Erreur serveur."

@@ -68,7 +68,11 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="ch.stackops.ghostpass" android:host="sso" />
+                <!-- `${applicationId}`, jamais la chaîne écrite en clair. Une variante suffixée
+                     — d'essai, de préproduction — porterait un autre identifiant et ne
+                     recevrait donc pas le retour ; le navigateur se refermerait sur une page
+                     morte, sans que rien n'indique la cause. C'est arrivé sur iOS. -->
+                <data android:scheme="${applicationId}" android:host="sso" />
             </intent-filter>
         </activity>
 

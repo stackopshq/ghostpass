@@ -313,6 +313,59 @@ class ClientApi(baseUrl: String) {
             requete("GET", "/api/orgs/$org/collections/$collection/items", jeton = jeton),
         ).items
 
+    /** Crée un élément dans une collection d'équipe. Le serveur exige la permission d'écriture. */
+    fun creerUnElementDOrganisation(
+        jeton: String,
+        org: String,
+        collection: String,
+        cle: String,
+        donnees: String,
+    ): ElementChiffre =
+        json.decodeFromString(
+            ElementChiffre.serializer(),
+            requete(
+                "POST", "/api/orgs/$org/collections/$collection/items", jeton = jeton,
+                corps = json.encodeToString(CHAMPS, mapOf(
+                    "encryptedKey" to cle, "encryptedData" to donnees)),
+            ),
+        )
+
+    /** Remplace un élément d'équipe. */
+    fun remplacerUnElementDOrganisation(
+        jeton: String,
+        org: String,
+        collection: String,
+        id: String,
+        cle: String,
+        donnees: String,
+    ): ElementChiffre =
+        json.decodeFromString(
+            ElementChiffre.serializer(),
+            requete(
+                "PUT", "/api/orgs/$org/collections/$collection/items/$id", jeton = jeton,
+                corps = json.encodeToString(CHAMPS, mapOf(
+                    "encryptedKey" to cle, "encryptedData" to donnees)),
+            ),
+        )
+
+    /**
+     * Supprime un élément d'équipe — **et c'est une destruction, pas une corbeille**.
+     *
+     * Le coffre personnel a un effacement doux : la ligne reçoit un `deletedAt` et se
+     * retrouve dans `/api/vault/trash`. Les collections d'équipe n'en ont pas ; `orgItems.remove`
+     * efface la ligne. Les deux verbes s'écrivent `DELETE` et ne font pas la même chose, et
+     * l'écran doit le dire — proposer « Supprimer » ici avec la même phrase qu'ailleurs
+     * ferait croire à un filet qui n'existe pas.
+     */
+    fun supprimerUnElementDOrganisation(
+        jeton: String,
+        org: String,
+        collection: String,
+        id: String,
+    ) {
+        requete("DELETE", "/api/orgs/$org/collections/$collection/items/$id", jeton = jeton)
+    }
+
     /** Accepte une invitation. Le serveur rend `{ status: "active" }`, qu'on ne lit pas. */
     fun accepterLOrganisation(jeton: String, org: String) {
         requete("POST", "/api/orgs/$org/accept", jeton = jeton)

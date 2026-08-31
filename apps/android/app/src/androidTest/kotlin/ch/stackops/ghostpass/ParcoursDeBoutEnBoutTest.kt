@@ -139,7 +139,7 @@ class ParcoursDeBoutEnBoutTest {
         }
 
         etape("4. Modification de cet élément") {
-            toucher(By.text(nom), "l'élément créé")
+            ouvrirLElement(nom)
             poser("field.username", "clara.vanacker")
             toucherJusqua("button.save", By.desc("button.settings"), "le retour au coffre")
             attendre(
@@ -195,6 +195,74 @@ class ParcoursDeBoutEnBoutTest {
         }
     }
 
+    /**
+     * **Le SSO, du bouton jusqu'au coffre ouvert.**
+     *
+     * Lancé séparément par `tools/android/temoin-du-sso-a-l-ecran.sh`, parce qu'il exige un
+     * état vierge et un banc à fournisseur d'identité. Ce que les autres témoins du SSO ne
+     * couvrent pas :
+     *
+     *  - `temoin-du-sso-mobile.sh` éprouve le **client** — PKCE, état, échange — mais mène
+     *    lui-même le flux en ligne de commande. Le navigateur n'y entre jamais ;
+     *  - `SsoMobileTest` éprouve le calcul et la lecture du retour, hors de tout appareil.
+     *
+     * Restait le chaînon qui les relie et qu'aucun des deux ne touche : l'onglet de
+     * navigateur s'ouvre-t-il, la chaîne de redirections revient-elle **dans l'application**
+     * par son schéma d'URL, et l'application en fait-elle une session ? C'est là que vit le
+     * défaut qu'iOS a connu — un schéma qui ne correspond pas à l'identifiant du paquet, et
+     * le navigateur se referme sur une page morte sans que rien ne l'explique.
+     *
+     * Le SSO **authentifie, il n'ouvre pas le coffre** : le mot de passe maître reste
+     * demandé ensuite, et ce test l'exige.
+     */
+    @Test
+    fun leSsoDepuisLEcran() {
+        ouvrirLApplication()
+
+        etape("1. Le bouton d'authentification unique") {
+            poser("field.server", serveur)
+            attendre(
+                By.desc("button.sso"),
+                "le bouton d'authentification unique n'apparaît pas alors qu'une adresse de " +
+                    "serveur est saisie",
+            )
+            toucher("button.sso")
+        }
+
+        etape("2. Le navigateur suit la chaîne et revient dans l'application") {
+            // Une minute : l'onglet s'ouvre, l'IdP signe, trois redirections s'enchaînent, et
+            // l'émulateur n'est pas rapide. Un délai court ferait rougir un produit qui
+            // marche — le pire des témoins.
+            attendre(
+                By.textContains("Identité vérifiée"),
+                "le retour du navigateur n'a pas atteint l'application. Le schéma d'URL ne " +
+                    "correspond peut-être pas à l'identifiant du paquet : le navigateur se " +
+                    "referme alors sur une page morte, et rien ne l'explique",
+                90_000,
+            )
+        }
+
+        etape("3. Le SSO n'ouvre pas le coffre : le mot de passe maître reste demandé") {
+            attendre(
+                By.desc("field.master"),
+                "l'écran ne demande pas le mot de passe maître après le SSO",
+            )
+            assertNull(
+                "le coffre s'est ouvert sans mot de passe maître : le SSO authentifie " +
+                    "l'identité, il n'ouvre pas le coffre. Les confondre est la première " +
+                    "erreur de conception d'un client à connaissance nulle",
+                appareil.findObject(By.desc("button.settings")),
+            )
+            poser("field.master", motDePasse)
+            toucher("button.submit")
+            attendre(
+                By.text("Forgejo"),
+                "le coffre ne s'est pas ouvert avec le mot de passe maître après le SSO",
+                40_000,
+            )
+        }
+    }
+
     // ─── Les coffres d'équipe ───
 
     /**
@@ -236,27 +304,85 @@ class ParcoursDeBoutEnBoutTest {
             appareil.findObject(By.text("Élément illisible")),
         )
 
-        // Lecture seule : ni « Nouveau » dans la barre, ni « Enregistrer » dans l'éditeur.
+        // ─── Une ligne illisible n'est pas modifiable ───
+        //
+        // Enregistrer par-dessus écraserait un contenu que **personne n'a jamais lu** —
+        // la seule façon de perdre pour de bon ce qui n'était que temporairement
+        // inaccessible, par exemple en attendant qu'un administrateur remette la bonne clé.
+        //
+        // La garantie est de type dans `Coffre` : les écritures prennent une entrée lisible
+        // et non un identifiant. Ici on vérifie l'autre bout — l'écran ne propose même pas
+        // d'ouvrir la ligne.
+        toucher(By.text("Élément illisible"), "la ligne illisible")
         assertNull(
-            "« Nouveau » est proposé dans une collection d'équipe : l'éditeur écrit dans le " +
-                "coffre personnel, et l'élément sortirait de l'équipe sans que personne ne " +
-                "sache où il est passé",
-            appareil.findObject(By.desc("button.new")),
+            "toucher une ligne illisible a ouvert un éditeur : enregistrer par-dessus " +
+                "détruirait un contenu jamais lu",
+            appareil.wait(Until.findObject(By.desc("button.save")), 3_000),
         )
-        toucher(By.text("Routeur de l'agence"), "l'élément d'équipe")
+
+        // ─── L'écriture d'équipe ───
+        //
+        // Le compte semé est administrateur de son organisation, donc `manage` sur la
+        // collection par défaut : « Nouveau » doit être proposé, et l'enregistrement doit
+        // partir vers `/api/orgs/…/items` et non vers le coffre personnel.
         attendre(
-            By.textContains("pas encore le modifier"),
-            "l'éditeur d'un élément d'équipe ne dit pas qu'il est en lecture seule",
+            By.desc("button.new"),
+            "« Nouveau » manque dans une collection où le membre a le droit d'écrire",
         )
+        toucher("button.new")
+        val nomDEquipe = "Imprimante " + System.currentTimeMillis() % 10000
+        poser("field.name", nomDEquipe)
+        poser("field.username", "operateur")
+        poser("field.password", "papier")
+        toucherJusqua("button.save", By.desc("button.settings"), "le retour à la collection")
+        attendre(
+            By.text(nomDEquipe),
+            "l'élément créé n'est pas revenu de la collection d'équipe. S'il est parti dans " +
+                "le coffre personnel, il a quitté l'équipe sans que rien ne le dise",
+            30_000,
+        )
+
+        // Et il ne doit **pas** être dans le coffre personnel.
+        toucher("chip.personal")
+        attendre(By.text("Forgejo"), "le retour au coffre personnel")
         assertNull(
-            "« Enregistrer » est proposé sur un élément d'équipe",
-            appareil.findObject(By.desc("button.save")),
+            "l'élément d'équipe s'est retrouvé dans le coffre personnel : c'est exactement " +
+                "la fuite silencieuse que le verrouillage précédent empêchait",
+            appareil.findObject(By.text(nomDEquipe)),
         )
-        toucherJusqua("button.cancel", By.desc("button.settings"), "le retour au coffre")
+        toucher(By.descStartsWith("chip.org."), "l'organisation")
+        attendre(By.text(nomDEquipe), "le retour à la collection d'équipe", 30_000)
+
+        // La suppression d'équipe est **définitive**, et le libellé doit le dire — il n'y a
+        // pas de corbeille de ce côté.
+        ouvrirLElement(nomDEquipe)
+        attendre(
+            By.text("Supprimer définitivement"),
+            "le libellé de suppression d'équipe promet une corbeille qui n'existe pas",
+        )
+        toucherJusqua("button.cancel", By.desc("button.settings"), "le retour à la collection")
 
         // Et l'on revient au coffre personnel, qui doit être intact.
         toucher("chip.personal")
         attendre(By.text("Forgejo"), "le retour au coffre personnel")
+    }
+
+    /**
+     * Ouvre un élément du coffre, **en vérifiant que l'éditeur s'ouvre**.
+     *
+     * Un simple toucher ne suffit pas : la liste se recompose après chaque écriture, et le
+     * doigt tombe alors à côté. Le symptôme est trompeur — l'étape suivante cherche un champ
+     * de l'éditeur, ne le trouve pas, et le message accuse ce champ.
+     */
+    private fun ouvrirLElement(nom: String) {
+        repeat(3) {
+            ligneDuCoffre(nom).click()
+            appareil.waitForIdle()
+            if (appareil.wait(Until.hasObject(By.desc("field.name")), 5_000) == true) return
+        }
+        throw AssertionError(
+            "l'élément « $nom » ne s'ouvre pas après trois touchers.\nÉcran : ${ecranActuel()}",
+        )
     }
 
     /**
@@ -394,7 +520,7 @@ class ParcoursDeBoutEnBoutTest {
      * réussirait aussi bien en XChaCha20 qu'en AES-GCM, et aucun partage ne traverserait.
      */
     private fun partager(nomDeLElement: String) {
-        toucher(By.text(nomDeLElement), "l'élément à partager")
+        ouvrirLElement(nomDeLElement)
         toucher("button.share")
         toucher("button.createShare")
 

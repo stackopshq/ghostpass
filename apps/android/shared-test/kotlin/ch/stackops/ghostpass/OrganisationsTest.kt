@@ -71,6 +71,99 @@ class OrganisationsTest {
         assertEquals(3, Coffre.lectureSous(elements) { Coffre.ouvrir(it, moi) }.lisibles.size)
     }
 
+    // ─── L'écriture d'équipe, et la clé sous laquelle on scelle ───
+
+    /**
+     * L'aller-retour sous l'Org Key : ce qu'on scelle pour l'équipe, l'équipe le rouvre.
+     *
+     * `scellerSousOrg` et `ouvrirSousOrg` vivent côte à côte précisément pour cela — deux
+     * conversions camelCase / snake_case écrites à deux endroits finissent par diverger.
+     */
+    @Test
+    fun lAllerRetourSousLOrgKeyRendLElement() {
+        val org = compte("clara@ghostpass.test").createOrg().org()
+        val depart = ElementDuCoffre(
+            name = "Routeur de l'agence", notes = null, folder = null,
+            data = ContenuDElement.Connexion(Identifiants(username = "admin", password = "d3ploy")),
+        )
+        val (cle, donnees) = Coffre.scellerSousOrg(depart, org)
+        val relu = Coffre.ouvrirSousOrg(
+            ElementChiffre(id = "x", encryptedKey = cle, encryptedData = donnees), org)
+        assertEquals(depart, relu)
+    }
+
+    /**
+     * **Un élément scellé sous une autre Org Key est illisible — et c'est pourquoi la
+     * génération de la clé compte.**
+     *
+     * C'est le défaut que `Coffre.exigerLaCleCourante` existe pour empêcher, vu depuis son
+     * effet : une session ouverte avant une rotation détient l'ancienne clé. Si elle
+     * enregistrait, le serveur accepterait, l'écran afficherait « enregistré », et l'élément
+     * serait illisible pour tous ceux qui n'ont que la nouvelle — **y compris son auteur**,
+     * à sa prochaine ouverture. Aucune erreur nulle part.
+     *
+     * Ce test montre la conséquence ; la garde qui l'empêche demande un serveur, et le
+     * parcours de bout en bout la traverse.
+     */
+    @Test
+    fun unElementScelleSousUneAutreCleDEquipeEstIllisible() {
+        val moi = compte("clara@ghostpass.test")
+        val ancienne = moi.createOrg().org()
+        val nouvelle = moi.createOrg().org()
+
+        val element = ElementDuCoffre(
+            name = "Scellé avant la rotation", notes = null, folder = null,
+            data = ContenuDElement.NoteSecrete(Note("secret")),
+        )
+        val (cle, donnees) = Coffre.scellerSousOrg(element, ancienne)
+        val chiffre = ElementChiffre(id = "avant", encryptedKey = cle, encryptedData = donnees)
+
+        // Sous la nouvelle clé, la ligne **garde sa place** et dit pourquoi (§5).
+        val lecture = Coffre.lectureSous(listOf(chiffre)) { Coffre.ouvrirSousOrg(it, nouvelle) }
+        assertEquals(1, lecture.entrees.size)
+        assertEquals(1, lecture.nombreDIllisibles)
+        assertTrue(
+            "la cause doit être un sceau refusé, pas une clé absente : la clé est là, elle " +
+                "n'ouvre pas celui-ci",
+            (lecture.entrees.single() as EntreeDuCoffre.Illisible).raison
+                is RaisonDIllisibilite.SceauRefuse,
+        )
+
+        // Et sous l'ancienne, il s'ouvre — sans quoi ce test passerait sur un élément que
+        // personne ne peut ouvrir.
+        assertEquals(
+            1,
+            Coffre.lectureSous(listOf(chiffre)) { Coffre.ouvrirSousOrg(it, ancienne) }.lisibles.size,
+        )
+    }
+
+    /**
+     * Deux organisations d'un même compte ont bien **deux** clés distinctes.
+     *
+     * Le contrôle du contrôle : si `createOrg` rendait deux fois la même clé, le test
+     * ci-dessus échouerait pour une raison qui n'est pas celle qu'on croit — et un jour où
+     * il passerait, il ne prouverait rien.
+     */
+    @Test
+    fun deuxOrganisationsNOntPasLaMemeCle() {
+        val moi = compte("clara@ghostpass.test")
+        val a = moi.createOrg().org()
+        val b = moi.createOrg().org()
+        val element = ElementDuCoffre(
+            name = "x", notes = null, folder = null,
+            data = ContenuDElement.NoteSecrete(Note("y")),
+        )
+        val (cle, donnees) = Coffre.scellerSousOrg(element, a)
+        var refuse = false
+        try {
+            Coffre.ouvrirSousOrg(
+                ElementChiffre(id = "x", encryptedKey = cle, encryptedData = donnees), b)
+        } catch (_: Exception) {
+            refuse = true
+        }
+        assertTrue("deux organisations doivent avoir deux clés", refuse)
+    }
+
     // ─── Une organisation ne se laisse pas tomber non plus ───
 
     /**

@@ -202,6 +202,11 @@ fi
 echo
 echo "== 5. Le parcours =="
 SORTIE="$BASE/parcours.log"
+# **La méthode est nommée, pas seulement la classe.** La classe porte aussi
+# `leSsoDepuisLEcran`, qui exige un appareil vierge et un banc à fournisseur d'identité :
+# lancé ici, il échouait sur « champ field.server introuvable » — un message qui accuse
+# l'écran d'entrée alors que le tort est de lancer le mauvais test.
+#
 # **Les guillemets sont pour le shell de l'appareil, pas pour le nôtre.** `adb shell`
 # recolle ses arguments et les fait redécouper là-bas : un mot de passe maître qui contient
 # des espaces — c'est-à-dire une phrase de passe, ce que le produit encourage — arrivait
@@ -209,7 +214,7 @@ SORTIE="$BASE/parcours.log"
 # d'emploi. Le message n'a aucun rapport avec la cause, et c'est ce qui le rend coûteux.
 set +e
 "$ADB" shell "am instrument -w \
-  -e class ch.stackops.ghostpass.ParcoursDeBoutEnBoutTest \
+  -e class ch.stackops.ghostpass.ParcoursDeBoutEnBoutTest#leParcoursDePremierLancement \
   -e serveur '$ADRESSE' -e email '$EMAIL' -e motdepasse '$MOTDEPASSE_SAISI' \
   $RUNNER" > "$SORTIE" 2>&1
 set -e
@@ -305,6 +310,25 @@ if grep -q '"method":"POST","url":"/api/send"' "$JOURNAL"; then
   echo "  ✓ partage (POST /api/send)"
 else
   echo "  ✗ aucun partage n'a atteint le serveur" >&2; manquant=1
+fi
+# L'écriture d'équipe doit avoir atteint la route d'équipe, **et pas le coffre personnel**.
+# C'est la seule façon de distinguer « enregistré » de « enregistré au bon endroit » : les
+# deux donnent le même écran.
+if grep -q '"method":"POST","url":"/api/orgs/[^"]*/collections/[^"]*/items"' "$JOURNAL"; then
+  echo "  ✓ écriture d'équipe (POST /api/orgs/…/collections/…/items)"
+else
+  echo "  ✗ aucune écriture d'équipe n'a atteint le serveur : l'élément est peut-être" >&2
+  echo "    parti dans le coffre personnel, où l'équipe ne le retrouvera jamais." >&2
+  manquant=1
+fi
+# Et la clé courante est vérifiée avant chaque écriture d'équipe : le `GET .../membership`
+# en est la trace.
+if grep -q '"url":"/api/orgs/[^"]*/membership"' "$JOURNAL"; then
+  echo "  ✓ clé d'équipe revérifiée avant écriture (GET /api/orgs/…/membership)"
+else
+  echo "  ✗ la clé d'équipe n'a jamais été revérifiée : une rotation passée inaperçue" >&2
+  echo "    ferait sceller sous une génération retirée, illisible pour les autres." >&2
+  manquant=1
 fi
 if grep -q '"url":"/api/vault/trash"' "$JOURNAL"; then
   echo "  ✓ corbeille (GET /api/vault/trash)"

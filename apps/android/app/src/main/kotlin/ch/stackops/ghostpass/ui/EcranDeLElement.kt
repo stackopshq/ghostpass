@@ -312,8 +312,9 @@ private fun CorpsDeLElement(
                         // disparaîtrait pour toute l'équipe.
                         if (lectureSeule) {
                             Text(
-                                "Élément d'un coffre d'équipe : GhostPass sait le lire, pas " +
-                                    "encore le modifier depuis Android.",
+                                "Cette collection d'équipe vous est accessible en lecture " +
+                                    "seule. Un administrateur de l'organisation peut vous y " +
+                                    "donner le droit d'écriture.",
                                 color = couleurs.attenue,
                                 fontSize = 12.sp,
                             )
@@ -348,17 +349,23 @@ private fun CorpsDeLElement(
                                     )
                                 },
                             )
-                            modele.enregistrerUnElement(entree?.id, element) { fait ->
+                            modele.enregistrerUnElement(entree, element) { fait ->
                                 if (fait) surFin()
                             }
                         }
 
                         if (entree != null && !lectureSeule) {
                             BoutonSecondaire(
-                                texte = if (confirmeLaSuppression) {
-                                    "Confirmer la suppression"
-                                } else {
-                                    "Supprimer"
+                                // Le libellé dit **ce qui va se passer**, et ce n'est pas la
+                                // même chose des deux côtés : le coffre personnel range à la
+                                // corbeille, une collection d'équipe efface. Le même mot pour
+                                // les deux ferait croire à un filet qui n'existe pas.
+                                texte = when {
+                                    confirmeLaSuppression && modele.collectionOuverte != null ->
+                                        "Confirmer : suppression définitive"
+                                    confirmeLaSuppression -> "Confirmer la suppression"
+                                    modele.collectionOuverte != null -> "Supprimer définitivement"
+                                    else -> "Mettre à la corbeille"
                                 },
                                 actif = !modele.occupe,
                                 destructif = true,
@@ -371,7 +378,7 @@ private fun CorpsDeLElement(
                                 if (!confirmeLaSuppression) {
                                     confirmeLaSuppression = true
                                 } else {
-                                    modele.supprimerUnElement(entree.id) { fait ->
+                                    modele.supprimerUnElement(entree) { fait ->
                                         if (fait) surFin()
                                     }
                                 }

@@ -151,7 +151,7 @@ class ActivitePrincipale : FragmentActivity() {
      */
     private fun recevoir(adresse: String?) {
         if (adresse == null) return
-        if (adresse.startsWith(SsoMobile.ADRESSE_DE_RETOUR)) {
+        if (adresse.startsWith(SsoMobile.adresseDeRetour(packageName))) {
             modele.terminerLeSso(adresse)
         } else {
             modele.retenirLeLien(adresse)

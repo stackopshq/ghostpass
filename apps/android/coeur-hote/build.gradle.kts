@@ -62,6 +62,16 @@ tasks.register<JavaExec>("partageCroise") {
     systemProperty("jna.library.path", File(genere, "jvmLibs").absolutePath)
 }
 
+// Le client de partage, pour le témoin de destination contre un serveur à relais.
+// Voir PartageDeBoutEnBout.kt et tools/android/temoin-de-la-destination.sh.
+tasks.register<JavaExec>("partageClient") {
+    group = "verification"
+    description = "Exécute le client de partage d'Android contre un serveur donné."
+    mainClass.set("ch.stackops.ghostpass.PartageDeBoutEnBout")
+    classpath = sourceSets["main"].runtimeClasspath
+    systemProperty("jna.library.path", File(genere, "jvmLibs").absolutePath)
+}
+
 // Le client du SSO mobile, pour le témoin de bout en bout contre un vrai serveur.
 // Voir SsoDeBoutEnBout.kt et tools/android/temoin-du-sso-mobile.sh.
 tasks.register<JavaExec>("ssoClient") {

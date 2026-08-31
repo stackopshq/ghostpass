@@ -46,8 +46,30 @@ object SsoMobile {
      *
      * Ce qui rend l'écart acceptable est le PKCE : un code intercepté est inerte.
      */
-    const val SCHEMA = "ch.stackops.ghostpass"
-    const val ADRESSE_DE_RETOUR = "$SCHEMA://sso"
+    /**
+     * Le schéma **par défaut** — et il ne doit pas être celui qu'on emploie.
+     *
+     * Il n'est là que comme repli lisible ; l'adresse de retour se construit à partir de
+     * l'identifiant du paquet ([adresseDeRetour]), exactement comme iOS le tire de son
+     * `bundleIdentifier`.
+     *
+     * Pourquoi : une variante d'essai porte un identifiant suffixé — `…​.essai` sur iOS — et
+     * ne reçoit donc jamais un retour adressé au schéma de la variante de publication. Le
+     * navigateur se referme sur une page morte, l'application ne voit rien, et **rien
+     * n'indique la cause**. Écrire le schéma à côté de l'identifiant, c'est laisser deux
+     * valeurs se désaccorder sans que personne ne l'apprenne.
+     */
+    const val SCHEMA_PAR_DEFAUT = "ch.stackops.ghostpass"
+
+    /**
+     * L'adresse de retour, dérivée de l'identifiant du paquet.
+     *
+     * Le serveur la valide contre sa liste blanche (`SSO_MOBILE_REDIRECT_URIS`) : une
+     * variante dont l'identifiant diffère devra y être ajoutée, et le `start` la refusera
+     * franchement — un `400` à l'ouverture vaut mieux qu'un navigateur qui se referme sans
+     * rien dire.
+     */
+    fun adresseDeRetour(paquet: String = SCHEMA_PAR_DEFAUT): String = "$paquet://sso"
 
     // ─── PKCE ───
 
@@ -98,13 +120,18 @@ object SsoMobile {
      * identifiant de compte y écrirait une donnée personnelle dans un réceptacle qui n'est
      * pas prévu pour en porter — le serveur ne peut pas l'en empêcher.
      */
-    fun adresseDeDepart(serveur: String, defi: String, etat: String): String {
+    fun adresseDeDepart(
+        serveur: String,
+        defi: String,
+        etat: String,
+        paquet: String = SCHEMA_PAR_DEFAUT,
+    ): String {
         val base = serveur.removeSuffix("/")
         return base + "/api/auth/sso/mobile/start" +
             "?code_challenge=" + encoder(defi) +
             "&code_challenge_method=S256" +
             "&state=" + encoder(etat) +
-            "&redirect_uri=" + encoder(ADRESSE_DE_RETOUR)
+            "&redirect_uri=" + encoder(adresseDeRetour(paquet))
     }
 
     // ─── Le retour, et sa lecture ───

@@ -365,31 +365,30 @@ de poser deux réglages sur trois sans le dire.
 
 ## 12. Ce qui reste à faire
 
-- **L'écriture dans les coffres d'équipe.** Les collections se lisent ; l'éditeur écrit par
-  `/api/vault/items`, le coffre **personnel**, et l'y laisser enregistrer un élément d'équipe
-  le sortirait de l'équipe sans que personne ne sache où il est passé. Les éléments d'équipe
-  s'ouvrent donc en lecture, et le disent. Les routes d'écriture existent côté serveur.
-- **Le SSO à l'écran.** Le flux est câblé et éprouvé contre le vrai serveur en ligne de
-  commande ; le chemin passant par l'onglet de navigateur n'a pas été rejoué sur appareil —
-  il demande un fournisseur d'identité joignable depuis l'émulateur.
-- **La confirmation de destination de partage sur un serveur à relais.** La règle et son
-  écran existent ; le serveur de cette branche ne rend qu'un identifiant, donc le lien
-  retombe toujours sur l'hôte saisi et la question ne se pose pas. Le chemin n'est éprouvé
-  que par les vecteurs.
+- **La rotation de clé d'organisation vue par le client.** `Coffre.exigerLaCleCourante`
+  refuse d'écrire si l'Org Key a changé depuis l'ouverture, et le parcours vérifie que la
+  vérification a lieu. Ce qui manque est un témoin qui **provoque** la rotation au milieu :
+  il demande une route d'administration que le client n'appelle pas.
+- **La corbeille des collections d'équipe n'existe pas côté serveur** : `DELETE` y efface.
+  L'écran le dit — « Supprimer définitivement » — mais un membre qui se trompe n'a aucun
+  recours.
 - **Le reste des réglages d'iOS** : import et export, santé du coffre, clé de récupération,
-  accès d'urgence, MFA, activité. Rien n'en est grisé dans le menu — un réglage qui promet
-  une fonction inexistante déplace l'échec du moment où l'on configure à celui où quelqu'un
-  essaie.
+  accès d'urgence, MFA, activité. Rien n'en est grisé — un réglage qui promet une fonction
+  inexistante déplace l'échec du moment où l'on configure à celui où quelqu'un essaie.
+- **Les groupes et l'administration d'organisation** : inviter, retirer, accorder une
+  permission. Le client lit ce que le serveur lui donne et n'écrit rien de tout cela.
 
 ## 13. Les outils, et ce que chacun prouve
 
 | Outil | Ce qu'il établit |
 |---|---|
-| `tools/android/parcours-de-bout-en-bout.sh` | Dix étapes sur appareil, **résolution de noms coupée** : connexion, coffre personnel, **coffre d'équipe**, création, modification, registres, partage traversé jusqu'à WebCrypto, corbeille, verrouillage à l'arrière-plan, lien `otpauth` reçu coffre fermé, remplissage |
+| `tools/android/parcours-de-bout-en-bout.sh` | Onze étapes sur appareil, **résolution de noms coupée** : connexion, coffre personnel, coffre d'équipe **en lecture et en écriture**, registres, partage traversé jusqu'à WebCrypto, corbeille, verrouillage à l'arrière-plan, lien `otpauth` reçu coffre fermé, remplissage |
 | `tools/android/temoin-du-parcours.sh` | Le parcours sait rougir : mot de passe faux, remplissage désactivé |
+| `tools/android/temoin-de-la-destination.sh` | **Le §4** : domaine étranger confirmé et jamais remis en silence, refus qui **révoque** chez ghostbit, approbations par serveur et non globales |
+| `tools/android/temoin-du-sso-a-l-ecran.sh` | Le SSO du bouton au coffre, navigateur compris ; rougit si le schéma de retour ne suit pas l'identifiant du paquet |
+| `tools/android/temoin-du-sso-mobile.sh` | Le client mène le PKCE et obtient une session du vrai serveur ; état étranger et rejeu refusés |
 | `tools/android/temoin-de-l-invalidation.sh` | La clé du coffre est vraiment invalidée par un nouvel enrôlement (ADR-0002) |
 | `tools/android/temoin-du-partage-croise.sh` | L'enveloppe de partage traverse dans les deux sens entre le cœur et WebCrypto |
-| `tools/android/temoin-du-sso-mobile.sh` | Le client mène le PKCE et obtient une session du vrai serveur ; état étranger et rejeu refusés |
 | `tools/android/temoin-des-vecteurs.sh` | Chaque vecteur de `contrat.json` est réellement lu par un test |
 | `tools/android/verifier-l-autonomie.sh` | L'APK livré ne vend rien et ne nomme aucun serveur de l'éditeur |
 | `tools/android/temoin-de-l-autonomie.sh` | Le contrôle ci-dessus sait rougir |

@@ -321,9 +321,23 @@ class Coffre {
         val organisation: Organisation,
         val collections: List<CollectionDOrganisation>,
         internal val org: uniffi.ghost_crypto_ffi.Org,
+        /**
+         * L'Org Key scellée **telle qu'elle était à l'ouverture**.
+         *
+         * Elle ne sert qu'à une chose, et cette chose est la plus silencieuse de tout le
+         * partage d'équipe : détecter qu'un administrateur a **fait tourner la clé** pendant
+         * que cette session était ouverte. Voir [Coffre.exigerLaCleCourante].
+         */
+        internal val cleALOuverture: String,
     ) : AutoCloseable {
         override fun close() = org.close()
     }
+
+    /** La clé d'organisation a tourné depuis l'ouverture : il faut la rouvrir avant d'écrire. */
+    class CleDOrganisationPerimee : ErreurApi(
+        "La clé de ce coffre d'équipe a changé depuis son ouverture. Rouvrez-le avant " +
+            "d'enregistrer : votre modification serait illisible pour les autres membres.",
+    )
 
     /**
      * Ouvre une organisation : récupère l'Org Key scellée et la fait ouvrir par le cœur.
@@ -378,7 +392,8 @@ class Coffre {
             return Result.failure(
                 EchecDOuverture(EchecDOrganisation.Reseau(e.message ?: "serveur injoignable")))
         }
-        return Result.success(CoffreDOrganisation(organisation, collections, org))
+        return Result.success(
+            CoffreDOrganisation(organisation, collections, org, cleALOuverture = scellee))
     }
 
     /**
@@ -392,6 +407,99 @@ class Coffre {
         val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
         val elements = api.elementsDeCollection(j, ouvert.organisation.id, collection)
         return lectureSous(elements) { chiffre -> ouvrirSousOrg(chiffre, ouvert.org) }
+    }
+
+    /**
+     * **Refuse d'écrire si l'Org Key a tourné depuis l'ouverture.**
+     *
+     * C'est le piège le plus coûteux de l'écriture d'équipe, et il ne produit aucune erreur
+     * chez celui qui le commet. Un administrateur retire un membre : la clé tourne, les
+     * éléments sont ré-enveloppés vers la nouvelle. Une session ouverte avant la rotation
+     * détient encore l'ancienne. Si elle enregistre, elle scelle **sous une génération
+     * retirée** : le serveur accepte, l'écran affiche « enregistré », et l'élément est
+     * illisible pour tous ceux qui n'ont que la nouvelle clé — y compris son auteur, à sa
+     * prochaine ouverture.
+     *
+     * On compare donc l'Org Key scellée que le serveur rend **maintenant** avec celle qui a
+     * servi à ouvrir. Une seule requête, avant chaque écriture : c'est peu cher pour la
+     * seule vérification qui distingue « scellé sous la bonne clé » de « scellé sous une
+     * clé qui l'était ».
+     *
+     * Ce contrôle n'est pas une course parfaite — la rotation peut survenir entre la
+     * vérification et l'envoi. Il ferme la fenêtre des minutes, pas celle des
+     * millisecondes, et c'est la fenêtre qui existe en pratique.
+     */
+    private fun exigerLaCleCourante(ouvert: CoffreDOrganisation) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val actuelle = api.appartenance(j, ouvert.organisation.id).encryptedOrgKey
+        if (actuelle != ouvert.cleALOuverture) throw CleDOrganisationPerimee()
+    }
+
+    /**
+     * Crée un élément dans une collection d'équipe, **scellé sous l'Org Key courante**.
+     *
+     * Comme pour le coffre personnel, on relit ce que le serveur a rangé : il ne sait pas ce
+     * que contiennent les deux blobs, donc il ne peut rien valider, et un blob tronqué en
+     * chemin ne se verrait qu'à la lecture suivante — chez quelqu'un d'autre.
+     */
+    fun creerDansCollection(
+        ouvert: CoffreDOrganisation,
+        collection: String,
+        element: ElementDuCoffre,
+    ): EntreeDuCoffre.Lisible {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        exigerLaCleCourante(ouvert)
+        val (cle, donnees) = scellerSousOrg(element, ouvert.org)
+        val range = api.creerUnElementDOrganisation(
+            j, ouvert.organisation.id, collection, cle, donnees)
+        return EntreeDuCoffre.Lisible(range.id, ouvrirSousOrg(range, ouvert.org), range.updatedAt)
+    }
+
+    /**
+     * Remplace un élément d'équipe.
+     *
+     * **Le paramètre est l'entrée lisible, pas un identifiant.** C'est une garantie de type,
+     * et elle porte la seconde règle : une entrée qu'on n'a **jamais su ouvrir** ne peut pas
+     * être passée ici, donc ne peut pas être écrasée. Enregistrer par-dessus détruirait un
+     * contenu que personne n'a lu — la seule façon de perdre pour de bon ce qui n'était que
+     * temporairement inaccessible, par exemple en attendant qu'un administrateur remette la
+     * bonne clé.
+     *
+     * Un identifiant nu aurait suffi au serveur. C'est précisément pour cela qu'on ne le
+     * prend pas.
+     */
+    fun mettreAJourDansCollection(
+        ouvert: CoffreDOrganisation,
+        collection: String,
+        entree: EntreeDuCoffre.Lisible,
+        element: ElementDuCoffre,
+    ): EntreeDuCoffre.Lisible {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        exigerLaCleCourante(ouvert)
+        val (cle, donnees) = scellerSousOrg(element, ouvert.org)
+        val range = api.remplacerUnElementDOrganisation(
+            j, ouvert.organisation.id, collection, entree.id, cle, donnees)
+        return EntreeDuCoffre.Lisible(range.id, ouvrirSousOrg(range, ouvert.org), range.updatedAt)
+    }
+
+    /**
+     * Détruit un élément d'équipe. **Il n'y a pas de corbeille ici.**
+     *
+     * Même garantie de type que ci-dessus, et pour une raison plus forte encore : détruire
+     * une ligne qu'on n'a jamais su lire, c'est jeter ce dont on ignore le contenu, sans
+     * filet pour le rattraper.
+     */
+    fun supprimerDansCollection(
+        ouvert: CoffreDOrganisation,
+        collection: String,
+        entree: EntreeDuCoffre.Lisible,
+    ) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.supprimerUnElementDOrganisation(j, ouvert.organisation.id, collection, entree.id)
     }
 
     /** Accepte une invitation. Le contenu ne devient lisible qu'ensuite. */
@@ -781,6 +889,27 @@ class Coffre {
             val clair = org.decryptItem(
                 json.encodeToString(kotlinx.serialization.json.JsonObject.serializer(), enveloppe))
             return CodecDElement.lire(clair)
+        }
+
+        /**
+         * Le scellement **sous l'Org Key**, pendant exact de [ouvrirSousOrg].
+         *
+         * Il vit à côté de son inverse pour la même raison que celui du coffre personnel :
+         * deux conversions camelCase / snake_case écrites à deux endroits finissent par
+         * diverger, et la seconde à diverger est celle qu'on regarde le moins.
+         */
+        fun scellerSousOrg(
+            element: ElementDuCoffre,
+            org: uniffi.ghost_crypto_ffi.Org,
+        ): Pair<String, String> {
+            val scelle = org.encryptItem(CodecDElement.ecrire(element))
+            val objet = json.parseToJsonElement(scelle) as kotlinx.serialization.json.JsonObject
+            val cle = (objet["encrypted_key"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                ?: throw ErreurApi.ReponseIllisible()
+            val donnees =
+                (objet["encrypted_data"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                    ?: throw ErreurApi.ReponseIllisible()
+            return cle to donnees
         }
 
         /** L'inverse : rend le couple `(encryptedKey, encryptedData)` à envoyer au serveur. */
