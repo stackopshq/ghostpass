@@ -50,6 +50,28 @@ tasks.test {
     }
 }
 
+// La porte en ligne de commande sur les primitives de partage du cœur, pour le témoin
+// croisé avec WebCrypto. Voir PartageCroise.kt et tools/android/temoin-du-partage-croise.sh.
+//
+//   ./gradlew :coeur-hote:partageCroise --args="sceller 'un secret'"
+tasks.register<JavaExec>("partageCroise") {
+    group = "verification"
+    description = "Scelle ou ouvre une enveloppe de partage par le cœur Rust."
+    mainClass.set("ch.stackops.ghostpass.PartageCroise")
+    classpath = sourceSets["main"].runtimeClasspath
+    systemProperty("jna.library.path", File(genere, "jvmLibs").absolutePath)
+}
+
+// Le client du SSO mobile, pour le témoin de bout en bout contre un vrai serveur.
+// Voir SsoDeBoutEnBout.kt et tools/android/temoin-du-sso-mobile.sh.
+tasks.register<JavaExec>("ssoClient") {
+    group = "verification"
+    description = "Exécute le client SSO d'Android contre un serveur donné."
+    mainClass.set("ch.stackops.ghostpass.SsoDeBoutEnBout")
+    classpath = sourceSets["main"].runtimeClasspath
+    systemProperty("jna.library.path", File(genere, "jvmLibs").absolutePath)
+}
+
 // Sème un serveur local pour éprouver l'application à la main. Voir SemerLeServeur.kt.
 //
 //   ./gradlew :coeur-hote:semerLeServeur -Pserveur=http://127.0.0.1:3111

@@ -151,6 +151,19 @@ rempli.
 Le service d'autofill Android est du Kotlin, comme l'extension iOS est du Swift. C'est la
 fonction principale du produit, et la plus dépendante de la plateforme.
 
+**Il lit le coffre depuis le 2026-08-31** (`docs/adr/0002`). Le partage des rôles ne se
+devine pas et vaut d'être su : le service ne peut proposer que des lignes **sans valeur** —
+une `RemoteViews` est rendue par un autre processus et ne reçoit aucun événement, donc il
+n'existe là aucun moyen d'obtenir un geste. Tout ce qui touche aux secrets vit dans
+`ActiviteDeRemplissage`, qui a un écran : biométrie, ouverture du coffre par l'enveloppe
+d'appareil, choix, et `Dataset`.
+
+**Piège mesuré, et il ne produit aucune erreur** : l'authentification se pose soit sur la
+*réponse* (`FillResponse.setAuthentication`), soit sur le *jeu* (`Dataset.setAuthentication`),
+et les deux attendent en retour un objet **différent** — une `FillResponse` pour la
+première, un `Dataset` pour la seconde. Se tromper n'affiche rien : le journal note
+« invalid index (65535) », et le champ reste vide. GhostPass authentifie au niveau du jeu.
+
 Deux choses apprises côté iOS qui devraient transposer :
 
 - **le rapprochement d'hôtes n'utilise pas de liste de suffixes publics.** Voir
@@ -211,10 +224,24 @@ Mesuré ce matin : Clara n'a pas pu se connecter à GhostCal depuis mobile, et l
 disait rien de la vraie cause. **Un client mobile sans SSO est inutilisable sur ces
 instances-là**, sans qu'aucun message ne l'explique.
 
-Le serveur GhostPass reçoit en ce moment (autre session) une route `POST
-/api/auth/sso/exchange` acceptant `{ code, codeVerifier, nonce, redirectUri }` et rendant la
-même charge que le callback web — `{ token, email, kdfParams, encryptedUserKey,
-encryptedPrivateKey }`. Alignez-vous sur ces noms ; ne les réinventez pas.
+**Le SSO est câblé depuis le 2026-08-31**, contre les routes réelles et non contre une
+description. Trois corrections à ce qui était écrit ici, toutes constatées au contact :
+
+- le corps de l'échange est `{ code, codeVerifier }` — **et rien d'autre**. Ni `nonce` ni
+  `redirectUri` : le serveur les reprend de l'enregistrement du `start`, et ne les lit
+  jamais depuis ce corps. C'est ce qui empêche un appelant de choisir à quel `start` son
+  code se rattache ;
+- il faut **deux** routes, pas une : `GET /api/auth/sso/mobile/start` ouvre le flux, `POST
+  /api/auth/sso/exchange` le termine. Et `GET /api/auth/sso/status` décide de l'affichage
+  du bouton — une instance sans SSO répond `false`, et ouvrir un navigateur sur un `404`
+  laisserait l'utilisateur devant une page qu'il ne peut pas interpréter ;
+- **la réponse porte `email`**, que la connexion classique ne rend pas. Le déclarer
+  obligatoire dans le type partagé ferait échouer le décodage de toute connexion ordinaire.
+
+Le contrat complet est `docs/sso-mobile.md` sur la branche `main` du serveur ; il n'est
+**pas** sur la branche de travail de l'application. Le témoin
+`tools/android/temoin-du-sso-mobile.sh` monte donc un arbre de travail de `main` pour le
+seul serveur, et fait dialoguer le client de la branche de travail avec lui.
 
 **Le point de sécurité, et il n'est pas négociable** : flux à code d'autorisation **avec
 PKCE mené par l'application** (RFC 8252). Pas de redirection finale du serveur portant le
@@ -238,8 +265,19 @@ alors que l'extension déclarait bien fournir des codes à usage unique. La caus
 ailleurs — **l'application ne déclarait pas savoir ouvrir les liens `otpauth:`**. Ce
 réglage désigne l'application qui *ouvre les liens*, pas celle qui *remplit les champs*.
 
-L'équivalent Android est un `intent-filter` sur le schéma `otpauth`. Trois règles, apprises
-en le câblant :
+**Fait depuis le 2026-08-31.** L'`intent-filter` est posé sur `ActivitePrincipale` — et
+seulement maintenant que l'écran d'édition existe, parce que déclarer sans traiter est pire
+que se taire. Les vecteurs d'`EtiquetteOtpauthTests` sont portés dans `LienOtpauthTest`, et
+la rétention coffre fermé est une étape du parcours de bout en bout : on verrouille, le lien
+arrive, on déverrouille, et le formulaire doit s'ouvrir pré-rempli.
+
+**Ce que le brief dit et que le code d'iOS ne fait pas** : le test s'appelle « seul un lien
+de TOTP est retenu », mais `depuisUnQrCode` ne vérifie pas le type — il écarte
+`otpauth-migration://`, exige `otpauth://` et un secret non vide, et rien d'autre. Un
+`otpauth://hotp/…?secret=…` passe donc des deux côtés. C'est porté à l'identique, parce que
+c'était la consigne, et signalé dans `LienOtpauth` plutôt que corrigé d'un seul côté.
+
+Trois règles, apprises en le câblant :
 
 - **le lien arrive souvent coffre fermé** — on scanne un QR code, le système réveille
   l'application, qui demande d'abord le mot de passe maître. Le jeter à ce moment-là fait
@@ -269,15 +307,87 @@ silhouette touche les bords sans conséquence à 16 px. `suite/tools/brand/icone
 mesure la silhouette et la ramène à **80 % de la hauteur, centrée** — la proportion de
 l'icône iOS de GhostPass. Sans cette correction, deux produits de la suite ont des
 silhouettes de tailles différentes : invisible sur une capture isolée, flagrant sur
-l'écran d'accueil. L'outil est écrit pour iOS ; **l'équivalent adaptatif Android reste à
-écrire**, et doit viser la même proportion dans la zone sûre de l'icône adaptative.
+l'écran d'accueil.
 
-## 11. Ce qui reste à décider
+**L'équivalent Android existe depuis le 2026-08-31** :
+`suite/tools/brand/icone-adaptative-android.py`, appelé par
+`tools/android/make-brand-assets.sh`. Et la proportion **n'est pas la même**, ce qui est
+tout l'objet de l'outil. Une icône adaptative fait 108 dp, mais seule la zone centrale de
+**72 dp** est garantie visible : le reste est rogné selon le masque du lanceur. Les 80 %
+portent donc sur la zone sûre :
 
-- Le partage du trousseau entre l'application et le service d'autofill. Sur iOS, la
-  décision est prise et documentée (`docs/adr/0001`) : on partage, parce qu'un mot de passe
-  maître retapé dix fois par jour est un mot de passe maître qu'on raccourcit. L'équivalent
-  Android — un `KeyStore` et un identifiant d'application partagé — demande sa propre
-  analyse.
-- La biométrie : `BiometricPrompt` avec une clé invalidée à l'enrôlement d'une nouvelle
-  empreinte, l'équivalent de `.biometryCurrentSet`.
+```
+72 dp × 80 %  =  57,6 dp de silhouette
+57,6 / 108    ≈  53 % de la toile
+```
+
+Appliquer 80 % à la toile ferait déborder la silhouette de 7,2 dp de chaque côté — rognée
+**chez certains utilisateurs seulement**. L'outil remesure le PNG qu'il vient d'écrire et
+refuse d'écrire si la silhouette sort de la zone sûre ; la recette naïve à 80 % est bien
+refusée, vérifié.
+
+## 11. Ce qui était à décider — et qui l'est
+
+Les deux points de cette section sont **tranchés et mis en œuvre** depuis le 2026-08-31.
+
+**Le partage du trousseau entre l'application et le service** : `docs/adr/0002`. Ce n'est
+pas la transposition d'`0001` — sur Android le service tourne dans le processus de
+l'application, même bac à sable, mêmes alias de KeyStore. Il n'y a rien à partager parce
+que rien n'est séparé. La vraie question était « que persiste-t-on pour qu'un
+déverrouillage sans interface soit possible » ; la réponse est la clé du coffre enveloppée
+par le cœur sous un secret aléatoire, ce secret scellé par une clé de l'`AndroidKeyStore`.
+L'enveloppe passe par `wrap_user_key_for_passkey` / `unlock_with_passkey`, déjà dans le
+cœur et déjà partagées avec le déverrouillage par passkey du web : rien n'a été écrit en
+Kotlin, et il n'existe pas de second format d'enveloppe pour Android.
+
+**La biométrie** : `BiometricPrompt` sur la même clé (`Biometrie.kt`, `CleDEnveloppe.kt`).
+
+Trois choses mesurées en l'écrivant, qu'aucune lecture de documentation ne donne :
+
+- **`KeyInfo.isInvalidatedByBiometricEnrollment` ne témoigne de rien.** Il rapporte `true`
+  quoi qu'on ait demandé au constructeur, parce qu'il dérive du *type d'authentificateur*
+  de la clé et non du drapeau. Un test qui le lit est vert des deux côtés de la mutation —
+  le premier témoin écrit ici l'était. Le témoin qui vaut est
+  `tools/android/temoin-de-l-invalidation.sh` : il enrôle une empreinte de plus, pour de
+  vrai, et regarde si la clé sert encore ;
+- **ce qui protège réellement ici est l'authentification *par usage*** (zéro seconde de
+  validité) sur biométrie forte, pas le drapeau — qui est redondant dans cette
+  configuration. Une durée de validité positive attache la clé à l'horloge du système : la
+  clé témoin ainsi construite **survit** à l'enrôlement, mesuré ;
+- **la biométrie seule, sans `AUTH_DEVICE_CREDENTIAL`.** L'ADR écrit « biométrie ou code de
+  l'appareil » ; autoriser le code désarmerait l'invalidation, puisque l'attaque décrite
+  suppose déjà de connaître ce code. C'est un écart assumé, écrit dans `CleDEnveloppe.kt`.
+
+Plancher d'API : la politique complète demande l'**API 28** (`setUnlockedDeviceRequired`),
+alors que `minSdk` est 24. En dessous, le raccourci n'est pas proposé du tout — plutôt que
+de poser deux réglages sur trois sans le dire.
+
+## 12. Ce qui reste à faire
+
+- **Le partage de liens dans l'interface.** Le format d'enveloppe est éprouvé — `contrat.json`
+  bloc `share_envelope`, vecteur croisé lu par `EnveloppeDePartageTest`, et
+  `tools/android/temoin-du-partage-croise.sh` qui fait ouvrir un scellement du cœur par
+  **WebCrypto** et réciproquement. `DestinationDePartage` porte la règle de domaine du §4 et
+  elle est éprouvée par les vecteurs. **Aucun écran ne s'en sert** : rien ne crée ni ne
+  révoque un partage.
+- **Le SSO à l'écran.** Le flux est câblé et éprouvé contre le vrai serveur en ligne de
+  commande ; le chemin passant par l'onglet de navigateur et le retour dans le schéma d'URL
+  **n'a pas été rejoué sur appareil** — il demande un fournisseur d'identité joignable
+  depuis l'émulateur.
+- **Les registres en écriture.** Ils se lisent (dossiers, favoris, partages, couleurs) ;
+  rien ne les réécrit, donc mettre un élément en favori n'est pas possible.
+- **La corbeille.** `supprimer` met à la corbeille côté serveur ; aucun écran ne la montre
+  ni ne restaure.
+
+## 13. Les outils, et ce que chacun prouve
+
+| Outil | Ce qu'il établit |
+|---|---|
+| `tools/android/parcours-de-bout-en-bout.sh` | Un premier lancement aboutit à un coffre utilisable contre une instance quelconque, **résolution de noms coupée** — le troisième point du §7 |
+| `tools/android/temoin-du-parcours.sh` | Le parcours ci-dessus sait rougir : mot de passe faux, remplissage désactivé |
+| `tools/android/temoin-de-l-invalidation.sh` | La clé du coffre est vraiment invalidée par un nouvel enrôlement d'empreinte (ADR-0002) |
+| `tools/android/temoin-du-partage-croise.sh` | L'enveloppe de partage traverse dans les deux sens entre le cœur et WebCrypto |
+| `tools/android/temoin-du-sso-mobile.sh` | Le client mène le PKCE et obtient une session du vrai serveur ; état étranger et rejeu refusés |
+| `tools/android/temoin-des-vecteurs.sh` | Chaque vecteur de `contrat.json` est réellement lu par un test |
+| `tools/android/verifier-l-autonomie.sh` | L'APK livré ne vend rien et ne nomme aucun serveur de l'éditeur |
+| `tools/android/temoin-de-l-autonomie.sh` | Le contrôle ci-dessus sait rougir |

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,12 +25,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import ch.stackops.ghostpass.ModeleDuCoffre
 import ch.stackops.ghostpass.theme.BoutonPrincipal
+import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.ChampGhost
 import ch.stackops.ghostpass.theme.FondGhost
 import ch.stackops.ghostpass.theme.GP
@@ -73,6 +77,31 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
     /** Une session enregistrée se rouvre avec le seul mot de passe maître, sans réseau. */
     var sessionEnregistree by rememberSaveable {
         mutableStateOf(modele.sessionEnregistree != null)
+    }
+
+    val contexte = LocalContext.current
+    val activite = contexte as FragmentActivity
+    /**
+     * La biométrie ne se propose qu'une fois par ouverture d'écran.
+     *
+     * Sans ce verrou, un refus recomposerait l'écran, qui la relancerait : l'utilisateur
+     * qui veut taper son mot de passe maître ne pourrait jamais atteindre le clavier.
+     */
+    var biometrieTentee by rememberSaveable { mutableStateOf(false) }
+
+    // Une identité vérifiée par SSO enregistre une session : l'écran doit alors basculer sur
+    // « compte enregistré, entrez votre mot de passe maître ». Sans cela, l'utilisateur
+    // reviendrait du navigateur devant le même formulaire vide, sans savoir si quelque chose
+    // s'est passé.
+    LaunchedEffect(modele.identitesVerifiees) {
+        if (modele.identitesVerifiees > 0) sessionEnregistree = true
+    }
+
+    LaunchedEffect(sessionEnregistree, modele.biometrieActivee) {
+        if (sessionEnregistree && modele.biometrieActivee && !biometrieTentee) {
+            biometrieTentee = true
+            modele.deverrouillerParBiometrie(activite)
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -177,6 +206,33 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                                     if (modele.secondFacteurRequis) codeTotp else null,
                                 )
                             }
+                        }
+
+                        // L'authentification unique (§8). Elle n'apparaît que dans le
+                        // formulaire complet : elle a besoin d'une adresse de serveur, et
+                        // une session déjà enregistrée n'a plus rien à authentifier.
+                        //
+                        // Elle **n'ouvre pas le coffre** : au retour, le mot de passe maître
+                        // reste à saisir. Le libellé le dit — « s'identifier », pas
+                        // « se connecter » — parce que confondre les deux est la première
+                        // erreur de conception d'un client à connaissance nulle.
+                        if (!sessionEnregistree) {
+                            LienDiscret(
+                                texte = "S'identifier par authentification unique",
+                                actif = !modele.occupe && serveur.isNotBlank(),
+                                identifiant = "button.sso",
+                            ) { modele.demarrerLeSso(contexte, serveur) }
+                        }
+
+                        // La biométrie **ne remplace pas** le mot de passe maître : elle
+                        // raccourcit les déverrouillages suivants (ADR-0002). Le champ reste
+                        // donc au-dessus, et ceci est une action secondaire — pas l'inverse.
+                        if (sessionEnregistree && modele.biometrieActivee) {
+                            BoutonSecondaire(
+                                texte = "Déverrouiller par empreinte",
+                                actif = !modele.occupe,
+                                identifiant = "button.biometric",
+                            ) { modele.deverrouillerParBiometrie(activite) }
                         }
 
                         if (modele.sessionEnregistree != null) {

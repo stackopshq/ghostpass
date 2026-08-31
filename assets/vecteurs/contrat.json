@@ -131,6 +131,62 @@
     ]
   },
 
+  "share_envelope": {
+    "_": [
+      "L'enveloppe d'un partage de lien. **Ce n'est pas le scellement du coffre**, et les",
+      "confondre a rendu la création de partage impossible depuis mobile pendant plusieurs",
+      "jours : le relais refusait le nonce de 24 octets du coffre — « expected 12 bytes",
+      "after decode, got 24 » — et le serveur traduisait ce refus en 502.",
+      "",
+      "Le format n'est pas arbitré par le produit : il l'est par le **navigateur** qui",
+      "ouvre le lien. WebCrypto offre AES-GCM et n'offre pas XChaCha20 ; ouvrir une",
+      "enveloppe XChaCha demanderait de livrer un déchiffreur WebAssembly au destinataire,",
+      "quelqu'un qui n'est pas notre utilisateur et qui vient de cliquer sur un lien.",
+      "",
+      "Ce bloc manquait, et c'est pour cela que ce fichier n'a rien vu. Il existe pour la",
+      "classe de défaut « une divergence entre clients ne produit aucune erreur », et",
+      "l'enveloppe de partage en était une.",
+      "",
+      "**L'invariant qui rend le nonce de 96 bits acceptable** : chaque partage tire une",
+      "clé neuve, utilisée une seule fois. Réutiliser une clé entre partages ferait",
+      "entrer les nonces en collision, et une réutilisation de nonce sous GCM ne dégrade",
+      "pas la sécurité — elle livre la clé d'authentification.",
+      "",
+      "Un témoin qui vérifie qu'un côté se relit lui-même passe au vert dans le monde",
+      "cassé. Le seul qui mesure est croisé : ce que le navigateur scelle doit s'ouvrir",
+      "chez le cœur, et réciproquement."
+    ],
+    "algorithm": "AES-256-GCM",
+    "key_bytes": 32,
+    "nonce_bytes": 12,
+    "tag_appended_to_ciphertext": true,
+    "transport": {
+      "_": [
+        "La clé voyage dans le fragment du lien, que les navigateurs n'envoient jamais au",
+        "serveur. Elle y est écrite en base64url sans remplissage ; n'accepter que le",
+        "base64 standard échoue sur « Invalid padding », un message qui accuse le format",
+        "et laisse croire à une clé corrompue."
+      ],
+      "key_in_url_fragment": true,
+      "key_encoding": "base64url sans remplissage, base64 standard accepté aussi"
+    },
+    "crossed_vector": {
+      "_": [
+        "Clé et nonce constants, pour que les deux implémentations produisent exactement",
+        "le même chiffre. C'est ce que doit rendre `AES-256-GCM(clé, nonce, clair)` —",
+        "vérifiable par WebCrypto comme par le cœur."
+      ],
+      "key_b64": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=",
+      "nonce_b64": "AwMDAwMDAwMDAwMD",
+      "plaintext": "un mot de passe partage",
+      "ciphertext_b64": "UJCDbjVcfiYfYDM9mCSaLJ1dkpvV8vFzXQ/RugKmkurGUzXj/HrD"
+    },
+    "rejected": {
+      "_": "Le nonce du scellement de coffre : 24 octets là où l'enveloppe en attend 12.",
+      "nonce_bytes": [11, 16, 24]
+    }
+  },
+
   "sealed_contents": {
     "_": [
       "Les noms de champs des blobs scellés. Le serveur ne les lit jamais : il stocke un",
@@ -147,7 +203,12 @@
 
   "timestamps": {
     "_": [
-      "Secondes depuis l'epoch, partout. createdAt et expiresAt du registre des partages",
+      "Secondes depuis l'epoch **pour le registre des partages**. Ce bloc disait « partout »,",
+      "et c'était faux : les éléments rendus par l'API portent des millisecondes, sur treize",
+      "chiffres. Relevé le 2026-08-31 en portant le client Android, qui a dû écrire un test",
+      "par cas pour s'en convaincre. Voir le frère `api_items` ci-dessous.",
+      "",
+      "createdAt et expiresAt du registre des partages",
       "étaient dans deux unités différentes au premier jet — millisecondes d'un côté,",
       "secondes de l'autre — dans une structure partagée par trois clients. L'écart ne se",
       "serait vu qu'à l'affichage, chez celui qui n'a pas écrit la ligne.",
@@ -156,6 +217,18 @@
     ],
     "unit": "seconds",
     "digits": 10,
+    "api_items": {
+      "_": [
+        "Les horodatages des éléments rendus par le serveur — `updatedAt`, `deletedAt`.",
+        "Millisecondes, treize chiffres. Les lire comme des secondes place tout en 1970 ;",
+        "les écrire en secondes place tout dans un futur lointain. Ni l'un ni l'autre ne",
+        "lève d'erreur : c'est un affichage cohérent et faux.",
+        "",
+        "Ajouté à côté et non à la place : aucun client existant ne change de lecture."
+      ],
+      "unit": "milliseconds",
+      "digits": 13
+    },
     "difference_check": {
       "created_at": 1788000000,
       "expires_at": 1788086400,

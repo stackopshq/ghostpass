@@ -121,22 +121,26 @@ cargo run --release --bin uniffi-bindgen -- generate \
   --language kotlin \
   --out-dir "$KOTLIN"
 
-# ─── La collision Kotlin, corrigée en amont le 2026-08-31 ─────────────────────
+# ─── Le rattrapage d'un défaut d'UniFFI — **retiré le 2026-08-31** ────────────
 #
-# Il y avait ici un rattrapage : `GhostCryptoError` portait un champ nommé `message`, et
-# le générateur Kotlin produisait une classe étendant `Exception` avec un `val message`
-# **et** un `override val message` — que le compilateur refuse. Côté Swift, le même code
-# compilait parfaitement.
+# Il existait ici une rustine sur les liaisons générées. `GhostCryptoError` portait un champ
+# nommé `message` ; côté Kotlin le générateur produisait alors un `val message` **et** un
+# `override val message`, et le compilateur refusait le fichier :
 #
-# C'est la classe d'erreur qui vaut d'être retenue : **un contrôle qui ne regarde qu'une
-# plateforme est vert pendant que l'autre est cassée.** Les noms pris par `Throwable` —
-# `message`, `cause`, `stackTrace`, `suppressed` — sont à éviter dans les types d'erreur
-# du cœur, et rien du côté Swift ne le signalera.
+#   Conflicting declarations: val message: String
 #
-# La correction est allée là où elle devait : le champ s'appelle `raison` dans le cœur
-# commun (ghostsuite, 327581d). Le rattrapage local a donc disparu — et il a disparu
-# parce qu'il **échouait bruyamment** quand son motif s'évanouissait, au lieu de
-# s'appliquer à vide. Sans ce garde, il serait encore là, inutile et invisible.
+# La rustine marquait la propriété `override` et retirait le getter redondant. Elle échouait
+# bruyamment si son motif disparaissait, en demandant qu'on vienne voir plutôt que de la
+# laisser s'appliquer à vide.
+#
+# **Elle a échoué, et c'était la bonne nouvelle** : le cœur commun a renommé ce champ en
+# `raison`, il n'y a plus de collision, et le générateur produit un fichier qui compile tel
+# quel. La rustine est donc supprimée plutôt que réparée — c'est ce que son propre
+# commentaire demandait de faire ce jour-là.
+#
+# Ce qu'il faut en retenir pour la prochaine : un rattrapage qui ne sait pas échouer aurait
+# continué de s'appliquer à un motif absent, sans effet et sans un mot, et personne
+# n'aurait su que le défaut d'amont était corrigé.
 
 # ─── La même bibliothèque, pour l'hôte ────────────────────────────────────────
 #

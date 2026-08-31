@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Un formulaire de connexion ordinaire, tel qu'une application tierce l'écrit. Variante
+     `debug` uniquement — voir ActiviteDEssaiDeConnexion. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="connexion.example.com"
+        android:textSize="20sp" />
+    <EditText
+        android:id="@+id/essai_identifiant"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Identifiant"
+        android:importantForAutofill="yes"
+        android:autofillHints="username"
+        android:inputType="textEmailAddress" />
+    <EditText
+        android:id="@+id/essai_mot_de_passe"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Mot de passe"
+        android:importantForAutofill="yes"
+        android:autofillHints="password"
+        android:inputType="textPassword" />
+</LinearLayout>
