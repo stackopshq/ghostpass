@@ -11,8 +11,21 @@ import SwiftUI
 /// l'affichage se coupe depuis les réglages. Un coffre chiffré de bout en bout ne dit rien
 /// de son contenu au serveur ; les requêtes d'icônes, elles, en disent quelque chose.
 enum Favicon {
-    /// L'adresse du proxy pour cet URI, ou `nil` s'il n'y a pas de domaine exploitable.
-    static func url(pour adresse: String, serveur: String) -> URL? {
+    /// L'adresse du proxy pour cet URI, ou `nil` s'il n'y a pas de domaine exploitable
+    /// **ou pas de jeton**.
+    ///
+    /// Le jeton n'est pas une politesse : depuis que le serveur a fermé l'oracle temporel
+    /// de cette route — publique et son cache indexé sur le seul domaine, si bien que le
+    /// **temps de réponse** disait si quelqu'un avait ce domaine dans son coffre — une
+    /// requête sans `t` reçoit 401. Le rendre facultatif ferait tirer une requête vouée à
+    /// l'échec par élément de la liste, et la seule trace visible serait une pastille
+    /// d'initiale : exactement le symptôme sans le diagnostic. C'est ce qui vient d'arriver.
+    ///
+    /// Une balise `<img>` ne portant pas d'en-tête d'autorisation, le jeton passe par
+    /// l'URL ; il ne nomme l'utilisateur que pour cloisonner le cache, et n'ouvre rien
+    /// d'autre.
+    static func url(pour adresse: String, serveur: String, jeton: String?) -> URL? {
+        guard let jeton, !jeton.isEmpty else { return nil }
         guard estUnDomainePublic(SiteMatching.host(of: adresse)) else { return nil }
         let hote = SiteMatching.host(of: adresse)
         // Une adresse de serveur vide donnerait une URL relative — `/api/icons?…` sans
@@ -21,7 +34,10 @@ enum Favicon {
             return nil
         }
         composants.path = "/api/icons"
-        composants.queryItems = [URLQueryItem(name: "domain", value: hote)]
+        composants.queryItems = [
+            URLQueryItem(name: "domain", value: hote),
+            URLQueryItem(name: "t", value: jeton),
+        ]
         return composants.url
     }
 
@@ -73,6 +89,7 @@ struct SiteIcon: View {
     var taille: CGFloat = 38
 
     @EnvironmentObject private var prefs: Preferences
+    @EnvironmentObject private var store: VaultStore
 
     var body: some View {
         Group {
@@ -104,7 +121,7 @@ struct SiteIcon: View {
         guard let adresse, !adresse.isEmpty else { return nil }
         let serveur = SharedStore.load()?.serverURL ?? ""
         guard !serveur.isEmpty else { return nil }
-        return Favicon.url(pour: adresse, serveur: serveur)
+        return Favicon.url(pour: adresse, serveur: serveur, jeton: store.jetonDIcone)
     }
 
     private var monogramme: some View {

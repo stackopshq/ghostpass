@@ -22,6 +22,13 @@ enum APIError: LocalizedError, Equatable {
     }
 }
 
+/// `{ "token": "…", "expiresAt": 1756... }` — l'instant est en millisecondes, comme partout
+/// dans l'API (voir `contrat.json`, `timestamps.api_items`).
+struct JetonDIconeResponse: Decodable {
+    let token: String
+    let expiresAt: Double
+}
+
 struct PreloginResponse: Decodable {
     /// Le serveur stocke les paramètres KDF en colonne TEXT et les renvoie **tels quels** :
     /// `kdfParams` est donc une chaîne contenant du JSON, pas un objet JSON. C'est
@@ -418,6 +425,20 @@ struct APIClient {
         } catch {
             throw APIError.malformedResponse
         }
+    }
+
+    // ─── Icônes ───
+
+    /// Le jeton que l'URL d'icône accrochera, valable douze heures côté serveur.
+    ///
+    /// Il se redemande à chaque rafraîchissement du coffre plutôt qu'à sa seule expiration :
+    /// si l'exploitant n'a pas posé `ICON_TOKEN_SECRET`, le serveur tire sa clé de signature
+    /// **au démarrage**, et tous les jetons émis avant un redémarrage deviennent invalides
+    /// sans avoir expiré. Se fier à `expiresAt` laisserait alors les icônes muettes jusqu'à
+    /// douze heures. Une requête par rafraîchissement est un prix bien plus faible.
+    func jetonDIcone(token: String) async throws -> JetonDIconeResponse {
+        let data = try await request("GET", "api/icons/token", token: token)
+        return try decode(JetonDIconeResponse.self, from: data)
     }
 
     // ─── Authentification ───

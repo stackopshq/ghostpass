@@ -41,6 +41,10 @@ final class VaultStore: ObservableObject {
     }
     /// Le coffre affiché vient du disque, faute d'avoir pu joindre le serveur.
     @Published private(set) var isOffline = false
+
+    /// Le jeton qui autorise les requêtes d'icônes. `nil` tant qu'on ne l'a pas :
+    /// `SiteIcon` retombe alors sur l'initiale sans tirer de requête vouée au 401.
+    @Published private(set) var jetonDIcone: String?
     /// Dossiers **vides**, ceux qu'aucun élément n'habite. Les autres se déduisent des
     /// éléments eux-mêmes ; seuls ceux-ci ont besoin d'être écrits quelque part, faute
     /// de quoi créer un dossier avant d'y ranger quoi que ce soit ne laisserait aucune
@@ -446,6 +450,7 @@ final class VaultStore: ObservableObject {
             isOffline = false
             errorMessage = nil
             await chargerLesCoffresDEquipe()
+            await rafraichirLeJetonDIcone()
             await CredentialIdentities.sync(entries)
         } catch {
             // Avec une copie locale sous la main, l'absence de réseau se signale sans
@@ -1113,6 +1118,16 @@ final class VaultStore: ObservableObject {
 
     /// Les items supprimés, déchiffrés à la demande. Ils ne sont pas conservés dans
     /// `entries` : la corbeille se consulte, elle n'encombre pas le coffre.
+    /// Redemande le jeton d'icône. Un échec ne dit rien à l'utilisateur : la liste reste
+    /// lisible avec ses initiales, et une bannière pour des logos serait du bruit.
+    ///
+    /// En revanche il ne faut pas garder l'ancien : un jeton invalide fait tirer une
+    /// requête par élément visible, toutes rejetées, pour le même résultat à l'écran.
+    private func rafraichirLeJetonDIcone() async {
+        guard let api, let token else { return }
+        jetonDIcone = try? await api.jetonDIcone(token: token).token
+    }
+
     func loadTrash() async -> [VaultEntry] {
         guard let api, let token, let account else { return [] }
         do {

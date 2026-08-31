@@ -1397,7 +1397,7 @@ final class FaviconTests: XCTestCase {
 
     func testLAdresseViseLeProxyDuServeur() throws {
         let url = try XCTUnwrap(
-            Favicon.url(pour: "https://www.decathlon.fr/rayon", serveur: serveur))
+            Favicon.url(pour: "https://www.decathlon.fr/rayon", serveur: serveur, jeton: "j-1"))
         XCTAssertEqual(
             url.host, "ghostpass.stackops.ch", "l'icône ne doit venir que de notre serveur")
         XCTAssertEqual(url.path, "/api/icons")
@@ -1405,16 +1405,31 @@ final class FaviconTests: XCTestCase {
         XCTAssertEqual(
             composants.queryItems?.first(where: { $0.name == "domain" })?.value, "decathlon.fr",
             "le sous-domaine « www. » et le chemin doivent être écartés")
+        XCTAssertEqual(
+            composants.queryItems?.first(where: { $0.name == "t" })?.value, "j-1",
+            "sans le jeton, le serveur répond 401 et la liste perd tous ses logos")
+    }
+
+    /// Sans jeton, **aucune requête**.
+    ///
+    /// Ce témoin manquait, et son absence a coûté la disparition silencieuse de tous les
+    /// logos : le serveur a fermé un oracle temporel en exigeant `t`, l'application a
+    /// continué d'appeler la route sans lui, et chaque 401 retombait sur l'initiale — le
+    /// repli prévu pour « pas d'icône » masquait « contrat rompu ». Le symptôme était
+    /// visible, le diagnostic nulle part.
+    func testSansJetonAucuneRequete() {
+        XCTAssertNil(Favicon.url(pour: "https://decathlon.fr", serveur: serveur, jeton: nil))
+        XCTAssertNil(Favicon.url(pour: "https://decathlon.fr", serveur: serveur, jeton: ""))
     }
 
     /// Sans domaine exploitable, pas de requête du tout : une pastille d'initiale suffit.
     func testUneAdresseInexploitableNeDonneAucuneUrl() {
-        XCTAssertNil(Favicon.url(pour: "", serveur: serveur))
-        XCTAssertNil(Favicon.url(pour: "localhost", serveur: serveur))
+        XCTAssertNil(Favicon.url(pour: "", serveur: serveur, jeton: "j-1"))
+        XCTAssertNil(Favicon.url(pour: "localhost", serveur: serveur, jeton: "j-1"))
         XCTAssertNil(
-            Favicon.url(pour: "http://192.168.1.10:8080", serveur: serveur),
+            Favicon.url(pour: "http://192.168.1.10:8080", serveur: serveur, jeton: "j-1"),
             "une IP n'est pas un domaine")
-        XCTAssertNil(Favicon.url(pour: "https://decathlon.fr", serveur: ""))
+        XCTAssertNil(Favicon.url(pour: "https://decathlon.fr", serveur: "", jeton: "j-1"))
     }
 
     /// La couleur de repli est déterministe et partagée avec la web app : le même élément
