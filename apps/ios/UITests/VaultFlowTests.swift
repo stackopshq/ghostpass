@@ -189,7 +189,10 @@ final class VaultFlowTests: XCTestCase {
     }
 
     private func ouvrirReglages(_ app: XCUIApplication) {
-        ouvrirLeMenu(app, "button.preferences")
+        // Les réglages ont leur propre roue dans la barre : ils ne sont plus dans le menu.
+        let roue = app.buttons["button.preferences"]
+        XCTAssertTrue(roue.waitForExistence(timeout: 20), "la roue des réglages est absente")
+        roue.tap()
         XCTAssertTrue(
             app.buttons["button.doneSettings"].waitForExistence(timeout: 20),
             "l'écran des réglages ne s'est pas ouvert")

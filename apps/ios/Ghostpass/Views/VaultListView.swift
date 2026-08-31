@@ -172,6 +172,23 @@ struct VaultListView: View {
                             .accessibilityIdentifier("button.lock")
                     }
                 }
+                // Les réglages sortent du menu « … » : ils s'ouvrent plusieurs fois par
+                // séance, et les chercher parmi douze entrées coûte deux gestes là où un
+                // suffit. Le reste du menu, lui, ne se visite qu'à l'occasion — il garde
+                // sa liste.
+                //
+                // Placée avant le menu, donc à sa gauche : le « + » reste l'action de
+                // droite, celle que le pouce atteint sans regarder.
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        sheet = .settings
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .foregroundStyle(Color.gpAccentText)
+                    }
+                    .accessibilityLabel("Réglages")
+                    .accessibilityIdentifier("button.preferences")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         if store.biometryAvailable {
@@ -223,8 +240,6 @@ struct VaultListView: View {
                         .accessibilityIdentifier("button.export")
                         Button("Corbeille", systemImage: "trash") { sheet = .trash }
                             .accessibilityIdentifier("button.trash")
-                        Button("Réglages", systemImage: "gearshape") { sheet = .settings }
-                            .accessibilityIdentifier("button.preferences")
                         Button("Se déconnecter", role: .destructive) {
                             Task { await store.signOut() }
                         }
