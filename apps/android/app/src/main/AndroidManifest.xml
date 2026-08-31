@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aucune activité : rien à afficher pour l'instant. L'APK n'existe que comme hôte du
+     test instrumenté, qui a besoin d'un paquet installé et des `.so` empaquetés dedans. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="GhostPass" />
+</manifest>

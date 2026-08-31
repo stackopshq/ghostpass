@@ -156,7 +156,12 @@ jobs:
       # parce que le réseau était coupé.
       - name: Le dépôt du cœur est-il accessible ?
         env:
-          JETON: ${{ secrets.GITEA_TOKEN }}
+          # `GITEA_TOKEN` est injecté automatiquement par Gitea Actions et **limité au
+          # dépôt courant par conception** : il s'authentifie parfaitement et n'a aucun
+          # droit ailleurs, d'où un 404 sur `ghostsuite` là où on attendrait un 403. Le
+          # jeton personnel prend donc le pas quand il est posé ; l'automatique reste en
+          # repli pour ne pas casser une configuration existante.
+          JETON: ${{ secrets.GHOSTSUITE_TOKEN || secrets.GITEA_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${JETON:-}" ]; then
@@ -182,7 +187,7 @@ jobs:
               echo "::error::Aucune identité n'a été présentée à la forge (HTTP 403). secrets.GITEA_TOKEN est vide ou n'est pas transmis à ce travail."
               exit 1 ;;
             404)
-              echo "::error::Le jeton est valide mais n'a pas accès à stackops/ghostsuite (HTTP 404 — la forge masque l'existence d'un dépôt privé plutôt que d'avouer le refus). Le renouveler ne changerait rien : il faut donner au compte propriétaire du jeton un accès en lecture au dépôt, ou utiliser un jeton d'un compte qui l'a déjà."
+              echo "::error::Le jeton est valide mais n'a pas accès à stackops/ghostsuite (HTTP 404 — la forge masque l'existence d'un dépôt privé plutôt que d'avouer le refus). Le renouveler ne changerait rien. Cause la plus probable : GITEA_TOKEN est le jeton injecté par Gitea Actions, limité au dépôt courant. Posez un jeton personnel avec la portée read:repository dans le secret GHOSTSUITE_TOKEN."
               exit 1 ;;
             *) echo "::warning::N'a pas pu vérifier l'accès au cœur commun (HTTP $code) — réseau, ou curl absent. L'étape suivante tranchera." ;;
           esac
@@ -193,7 +198,7 @@ jobs:
           path: ghostsuite
           # Le dépôt est privé sur cette forge : sans jeton, le clone échoue en 404, ce
           # qui se lit comme « dépôt inexistant » plutôt que « accès refusé ».
-          token: ${{ secrets.GITEA_TOKEN }}
+          token: ${{ secrets.GHOSTSUITE_TOKEN || secrets.GITEA_TOKEN }}
       - name: Prérequis du poste
         run: |
           set -e
