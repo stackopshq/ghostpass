@@ -256,6 +256,23 @@ export function AuthScreen() {
                 </Bouton>
               </form>
 
+              {/* L'information de l'article 13 est due AU MOMENT de la collecte,
+                  pas dans un pied de page qu'on peut ne jamais dérouler. Elle
+                  n'apparaît donc qu'en mode inscription, juste sous le bouton
+                  qui crée le compte — c'est là que la personne décide. Le lien
+                  reste par ailleurs accessible en permanence, en pied d'écran. */}
+              {mode === "register" && (
+                <p className="mt-3 text-xs leading-relaxed text-muted">
+                  {t("auth.privacyNotice")}{" "}
+                  <a
+                    href="/confidentialite"
+                    className="font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
+                  >
+                    {t("auth.privacy")}
+                  </a>
+                </p>
+              )}
+
               <div className="mt-4 flex flex-col gap-2">
                 <Bouton
                   variante="discret"
@@ -305,6 +322,18 @@ export function AuthScreen() {
           </span>
           <LanguageSwitcher />
         </div>
+
+        {/* Toujours atteignable, y compris pour qui est déjà inscrit : une
+            personne qui revient se connecter doit pouvoir relire ce à quoi
+            elle a consenti sans avoir à recréer un compte pour revoir le lien. */}
+        <p className="mt-3 text-center">
+          <a
+            href="/confidentialite"
+            className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
+          >
+            {t("auth.privacy")}
+          </a>
+        </p>
       </div>
     </main>
   );
