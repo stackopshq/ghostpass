@@ -13,10 +13,56 @@ import { createOrg } from "@/lib/crypto";
 import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import type { OrgSummary } from "@/lib/orgs";
+import { couleurOrg, PALETTE_ORG, type RegistreCouleurs } from "@/lib/couleursOrg";
 import { Bouton, Champ, Saisie } from "@/components/champs";
 import { Organisation } from "@/components/Icones";
 
-export function ListeOrgs({ onOuvrir }: { onOuvrir: (org: OrgSummary) => void }) {
+/// Une pastille de couleur : le repère visuel, et le bouton qui l'ouvre.
+///
+/// C'est un vrai bouton, pas un `div` cliquable : sans cela on ne l'atteint ni
+/// au clavier ni au lecteur d'écran, et une couleur est précisément ce que la
+/// seconde de ces deux personnes ne perçoit pas — l'étiquette est alors tout
+/// ce qui reste.
+function Pastille({
+  couleur,
+  label,
+  choisie,
+  ouvre,
+  onClick,
+}: {
+  couleur: string;
+  label: string;
+  /// Pastille de palette : est-ce celle en vigueur ?
+  choisie?: boolean;
+  /// Pastille d'en-tête : le sélecteur est-il déplié ? Ce n'est pas un état
+  /// « enfoncé » mais un panneau ouvert, et les deux ne s'annoncent pas pareil.
+  ouvre?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={choisie}
+      aria-expanded={ouvre}
+      title={label}
+      className="size-5 shrink-0 rounded-full border border-border-strong focus:outline-none focus:ring-2 focus:ring-accent/40"
+      style={{ backgroundColor: couleur }}
+    />
+  );
+}
+
+export function ListeOrgs({
+  onOuvrir,
+  couleurs,
+  onCouleur,
+}: {
+  onOuvrir: (org: OrgSummary) => void;
+  couleurs: RegistreCouleurs;
+  /// `null` retire le choix : l'organisation revient à sa couleur attribuée.
+  onCouleur: (orgId: string, couleur: string | null) => void | Promise<void>;
+}) {
   const { t } = useI18n();
   const { token, account } = useSession();
   const [orgs, setOrgs] = useState<OrgSummary[]>([]);
@@ -30,6 +76,9 @@ export function ListeOrgs({ onOuvrir }: { onOuvrir: (org: OrgSummary) => void })
   const [cible, setCible] = useState<OrgSummary | null>(null);
   const [confirmation, setConfirmation] = useState("");
   const [refus, setRefus] = useState<string | null>(null);
+
+  // L'organisation dont le sélecteur de couleur est ouvert, s'il y en a une.
+  const [couleurOuverte, setCouleurOuverte] = useState<string | null>(null);
 
   const charger = useCallback(async () => {
     if (!token) return;
@@ -107,6 +156,12 @@ export function ListeOrgs({ onOuvrir }: { onOuvrir: (org: OrgSummary) => void })
           {orgs.map((org) => (
             <div key={org.orgId} className="carte px-4 py-3.5">
               <div className="flex items-center gap-3">
+                <Pastille
+                  couleur={couleurOrg(couleurs, org.orgId)}
+                  label={t("org.colorOf", { name: org.name })}
+                  ouvre={couleurOuverte === org.orgId}
+                  onClick={() => setCouleurOuverte(couleurOuverte === org.orgId ? null : org.orgId)}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{org.name}</p>
                   <p className="text-2xs text-muted">
@@ -140,6 +195,48 @@ export function ListeOrgs({ onOuvrir }: { onOuvrir: (org: OrgSummary) => void })
                   </Bouton>
                 )}
               </div>
+
+              {couleurOuverte === org.orgId && (
+                <div
+                  role="group"
+                  aria-label={t("org.colorOf", { name: org.name })}
+                  className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3"
+                >
+                  <span className="text-2xs text-muted">{t("org.colorPalette")}</span>
+                  {PALETTE_ORG.map((teinte) => (
+                    <Pastille
+                      key={teinte}
+                      couleur={teinte}
+                      label={teinte}
+                      choisie={couleurOrg(couleurs, org.orgId) === teinte}
+                      onClick={() => void onCouleur(org.orgId, teinte)}
+                    />
+                  ))}
+                  {/* Le choix libre. iOS ramène sa propre sélection en
+                      `#RRGGBB` avant d'écrire, donc une teinte très saturée
+                      choisie sur iPhone paraîtra un peu plus terne ici : le
+                      registre ne transporte pas d'espace colorimétrique. */}
+                  <label className="ml-1 flex items-center gap-1.5 text-2xs text-muted">
+                    {t("org.colorCustom")}
+                    <input
+                      type="color"
+                      aria-label={t("org.colorCustom")}
+                      value={couleurOrg(couleurs, org.orgId).toLowerCase()}
+                      onChange={(e) => void onCouleur(org.orgId, e.target.value)}
+                      className="size-6 cursor-pointer rounded border border-border bg-transparent p-0"
+                    />
+                  </label>
+                  <Bouton
+                    variante="discret"
+                    type="button"
+                    disabled={couleurs[org.orgId] === undefined}
+                    onClick={() => void onCouleur(org.orgId, null)}
+                    title={t("org.colorReset")}
+                  >
+                    {t("org.colorDefault")}
+                  </Bouton>
+                </div>
+              )}
 
               {cible?.orgId === org.orgId && (
                 <form onSubmit={supprimer} aria-label={t("org.delete")} className="mt-3 border-t border-border pt-3">
