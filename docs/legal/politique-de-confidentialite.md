@@ -4,7 +4,7 @@
 > Rédigé à partir de ce que le produit fait *réellement*, mesuré dans le code.
 > Les faits techniques sont vérifiables ; les qualifications juridiques non.
 
-*Version 0.1 — 2026-08-31. Articles 12 à 14 du règlement (UE) 2016/679 (RGPD).*
+*Version 0.2 — 2026-08-31. Articles 12 à 14 du règlement (UE) 2016/679 (RGPD).*
 
 ---
 
@@ -35,7 +35,7 @@ C'est la partie qui compte, et elle est courte.
 
 | Donnée | Ce que StackOps en voit |
 |---|---|
-| **Le contenu de vos secrets** — identifiants, notes, cartes, fichiers | **Rien.** Chiffré sur votre appareil. Nous n'avons aucune clé, et le serveur ne contient aucun code capable de déchiffrer |
+| **Le contenu de vos secrets** — identifiants, notes, cartes, fichiers | **Rien.** Chiffré sur votre appareil. Nous n'avons aucune clé, et rien, côté serveur, ne peut ouvrir un coffre |
 | **Les noms de vos dossiers personnels** | Rien — chiffrés aussi |
 | Votre adresse de courriel | **En clair.** C'est votre identifiant de connexion |
 | Les noms d'organisations, de collections et de groupes | **En clair** |
@@ -90,6 +90,22 @@ Commission européenne comme offrant une protection adéquate.
 Personne d'autre. Aucune régie publicitaire, aucun outil de mesure d'audience,
 aucun courtier de données.
 
+### Le partage d'un secret passe par ghostbit
+
+Quand vous créez un lien de partage, le secret **chiffré** est déposé chez
+**ghostbit**, un autre service de la suite Ghost. Ce n'est pas un tiers : c'est
+StackOps, sur son infrastructure — d'où son absence du tableau ci-dessus, qui
+liste les entreprises extérieures.
+
+Nous l'écrivons quand même, parce qu'un bloc de données **traverse** réellement,
+et que « ne sort pas » et « sort illisible » ne sont pas la même phrase. La clé
+qui ouvre ce bloc vit dans la partie de l'adresse située **après le `#`** — celle
+que votre navigateur n'envoie à aucun serveur. Ghostbit reçoit donc quelque chose
+qu'il ne peut pas lire, et nous non plus.
+
+Si votre organisation dispose d'une instance dédiée, le partage passe par **son**
+ghostbit et non par le nôtre.
+
 ### Ce que Cloudflare peut, et que nous préférons écrire
 
 Cloudflare achemine le trafic, donc il vous **sert le code JavaScript qui
@@ -135,6 +151,13 @@ Si notre réponse ne vous satisfait pas, vous pouvez saisir la **CNIL**,
 Si vous résidez en Suisse, vous pouvez également saisir le **PFPDT**,
 <https://www.edoeb.admin.ch>.
 
+**Le PFPDT a un second rôle, distinct de celui-là.** Saisir une autorité est
+votre droit ; l'informer est notre obligation. En cas de violation de données
+présentant un risque élevé pour votre personnalité ou vos droits fondamentaux, le
+PFPDT en est aussi le destinataire d'une annonce, « dans les meilleurs délais »
+(art. 24 de la loi suisse révisée) — un standard propre à cette loi, et non les
+72 heures du RGPD.
+
 ## Sécurité
 
 Le détail complet vit dans l'[accord de sous-traitance](dpa.md) et le
@@ -157,3 +180,4 @@ substantiel, nous vous en informerons avant qu'il prenne effet.
 | Version | Date | Modification |
 |---|---|---|
 | 0.1 | 2026-08-31 | Création |
+| 0.2 | 2026-08-31 | Trois corrections d'exactitude, après confrontation au code. « Le serveur ne contient aucun code capable de déchiffrer » devient « rien, côté serveur, ne peut ouvrir un coffre » : le serveur détient bien une primitive de déchiffrement, pour le seul secret du second facteur. Le partage par **ghostbit** est décrit — il ne l'était nulle part. Le **PFPDT** gagne son second rôle, destinataire d'une annonce de violation, distinct de celui d'autorité de réclamation |

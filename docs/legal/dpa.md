@@ -6,7 +6,7 @@
 > par un professionnel du droit. Les faits techniques qu'il contient sont
 > vérifiables ; les qualifications juridiques ne le sont pas encore.
 
-*Version 0.3 — 2026-08-31. Article 28 du règlement (UE) 2016/679 (RGPD).
+*Version 0.4 — 2026-08-31. Article 28 du règlement (UE) 2016/679 (RGPD).
 L'art. 9 de la loi fédérale suisse sur la protection des données (nLPD)
 s'applique en outre lorsque le Client ou les personnes concernées sont en
 Suisse — StackOps est établie en France, le RGPD est donc son régime premier.*
@@ -125,7 +125,7 @@ sur la discipline des personnes ; celle des métadonnées du §2, si.
 | Mesure | État |
 |---|---|
 | Chiffrement de bout en bout, clés dérivées du mot de passe maître | En place |
-| Aucun code de déchiffrement côté serveur | En place, vérifiable — le dépôt ne contient aucune primitive de déchiffrement dans `apps/server` |
+| Aucune primitive capable d'ouvrir un coffre, côté serveur | En place, vérifiable — le serveur détient **une** primitive de déchiffrement et une seule : celle qui lit le secret du second facteur pour vérifier un code (`apps/server/src/services/secretAtRest.ts`, voir l'avant-dernière ligne). Aucune clé de coffre n'existe de son côté, et aucun code du serveur ne déchiffre un contenu |
 | TLS sur tous les accès publics | En place |
 | Second facteur (TOTP, WebAuthn, clés d'accès) | En place |
 | Conteneur non-root, racine en lecture seule, `NoNewPrivileges` | En place |
@@ -140,6 +140,20 @@ La dernière ligne est un écart connu dans un modèle et sans objet dans l'autr
 Elle figure ici plutôt que d'être tue : un DPA qui ne mentionne que ce qui va
 bien ne vaut rien le jour où il faut s'y référer. Mais l'écrire sans dire à quel
 modèle il s'applique serait aussi trompeur — dans un sens comme dans l'autre.
+
+**La deuxième ligne a changé de formulation, et il faut dire pourquoi.** Elle
+affirmait jusqu'ici que « le dépôt ne contient aucune primitive de déchiffrement
+dans `apps/server` ». Ce n'est plus vrai depuis le 2026-08-30 : chiffrer au repos
+le secret du second facteur — le progrès que l'avant-dernière ligne de ce même
+tableau annonce — suppose de savoir le déchiffrer pour vérifier un code à six
+chiffres. Les deux lignes se contredisaient.
+
+**La substance ne bouge pas** : rien, côté serveur, ne peut ouvrir un coffre. Ce
+qui bouge est la vérifiabilité de la phrase. Le §9 invite le Client à examiner le
+code source ; l'ancienne rédaction se réfutait en trente secondes par une
+recherche de `createDecipheriv`, et lui faisait alors découvrir une contradiction
+interne dans le document qui le lie. **Une affirmation qui résiste à la
+vérification vaut mieux qu'une affirmation plus forte qui n'y résiste pas.**
 
 ## 5 bis. Les deux modèles d'hébergement
 
@@ -169,6 +183,7 @@ par StackOps chez OVH.
 | Application | Une machine virtuelle dédiée au seul Client |
 | Base de données | **Sur la même machine virtuelle**, dans son propre conteneur |
 | Connexion à la base | **Ne quitte jamais la machine.** Réseau privé de conteneurs, la base est jointe par son nom, et **aucun port n'est publié sur l'hôte** |
+| Partage de liens | **Par l'instance ghostbit du Client** — `GHOSTBIT_URL` doit la désigner, faute de quoi l'isolation de la ligne suivante est rompue. Voir §6 |
 | Isolation entre clients | Par machine virtuelle — mémoire, disque et réseau séparés |
 
 **La ligne « connexion en clair » du §5 ne concerne donc que le modèle A.** Dans
@@ -231,6 +246,44 @@ sauvegardes.
 Un sous-traitant déclaré en trop n'est pas un excès de prudence : il autorise un
 transfert qui n'a pas lieu, et rend la liste entière suspecte le jour où le
 Client la vérifie.
+
+### ghostbit — un service de StackOps, et non un sous-traitant ultérieur
+
+Depuis le 2026-08-29, **créer un lien de partage passe par ghostbit**, un autre
+service de la suite Ghost. Aucun document de ce dossier ne le disait ; c'est une
+omission, et elle se répare ici plutôt que dans le code d'un Client qui la
+découvrirait seul.
+
+**Ce qui traverse est le bloc chiffré lui-même**, et non une référence vers lui :
+GhostPass poste le chiffré à `${GHOSTBIT_URL}/api/v1/pastes`
+(`apps/server/src/services/ghostbit.ts`). La clé qui l'ouvre vit dans le
+**fragment de l'URL** — la portion après le `#`, que les navigateurs n'envoient à
+aucun serveur. Elle n'atteint donc ni GhostPass, ni ghostbit, ni aucun
+intermédiaire du chemin.
+
+**Écrire « rien ne sort » serait faux ; écrire « rien de lisible ne sort » est
+exact**, et la différence compte pour un Client qui doit répondre de ses flux.
+
+**Ghostbit ne figure pas au tableau ci-dessus parce qu'il n'est pas un
+sous-traitant ultérieur** : c'est un service de StackOps, exploité par StackOps,
+sur l'infrastructure de StackOps. Aucun tiers n'entre en scène, aucun transfert
+n'est créé, et l'inscrire au tableau laisserait croire l'inverse — ce qui est
+exactement le défaut décrit au paragraphe précédent. En modèle A, c'est un
+**composant interne du produit**, au même titre que sa base de données.
+
+**En modèle B, c'est une obligation de configuration, et elle est
+contraignante.** Le §5 bis promet une isolation « par machine virtuelle —
+mémoire, disque et réseau séparés ». Si `GHOSTBIT_URL` désignait l'instance
+mutualisée de StackOps, les blocs chiffrés du Client quitteraient sa machine
+dédiée pour l'infrastructure partagée de l'éditeur, et cette ligne du présent
+accord deviendrait fausse. **`GHOSTBIT_URL` doit donc désigner une instance
+ghostbit du Client.** Ghostbit s'auto-héberge et son image est publiée :
+`ghcr.io/stackopshq/ghostbit`.
+
+*Le produit refuse le partage plutôt que d'inventer un repli : `GHOSTBIT_URL`
+absente, `POST /api/send` répond 503 (`apps/server/src/routes/send.ts`). Une
+instance mal configurée ne fabrique donc pas de lien silencieusement mauvais —
+elle n'en fabrique aucun.*
 
 ### Les sauvegardes ont quitté Google Drive
 
@@ -309,6 +362,18 @@ plus tard sous 24 heures** après avoir eu connaissance d'une violation
 concernant ses données, avec la nature de l'incident, les catégories et le
 volume approximatif concernés, les conséquences probables et les mesures prises.
 Le Client reste responsable de sa propre notification à l'autorité.
+
+**Quelle autorité, lorsque des personnes en Suisse sont concernées.** La
+notification comprend alors le **PFPDT** — Préposé fédéral à la protection des
+données et à la transparence — au titre de l'art. 24 nLPD, en plus de l'autorité
+compétente au sens du RGPD.
+
+**Son standard n'est pas celui du RGPD, et le confondre serait une erreur dans
+les deux sens.** L'annonce au PFPDT est due « **dans les meilleurs délais** » :
+la loi suisse ne fixe aucun délai chiffré, et son seuil est un risque élevé pour
+la personnalité ou les droits fondamentaux de la personne. Recopier ici les 72
+heures de l'art. 33 RGPD inventerait un délai que la loi ne pose pas, et
+laisserait croire qu'attendre soixante-et-onze heures est conforme.
 
 ## 8. Fin du contrat (art. 28.3.g)
 

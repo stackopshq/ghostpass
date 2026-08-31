@@ -31,13 +31,23 @@ Most zero-knowledge claims are a paragraph in a marketing page. Here is ours as
 a command you can run:
 
 ```bash
-grep -rniE "decrypt|chacha|aes|subtle" apps/server/src | wc -l
+grep -rni "chacha" apps/server/src | wc -l
 # 0
 ```
 
-The server has no decryption primitive, because it has nothing to decrypt with.
-Your master password is turned into a key **on your device**, by a Rust core
-compiled to WebAssembly, and that key never crosses the network.
+XChaCha20-Poly1305 is the cipher that seals a vault, and it exists **only** in
+the Rust core — which runs in your browser, compiled to WebAssembly. Your master
+password is turned into a key on your device, and that key never crosses the
+network.
+
+**The server does hold one decryption primitive, and we would rather name it
+than let you find it.** `services/secretAtRest.ts` reads the second-factor seed
+back with AES-256-GCM, because checking a six-digit code requires that seed. It
+opens nothing else: no vault, no note, no card.
+
+*Until 2026-08-31 this section printed a wider command and claimed it returned
+`0`. It returned `5` — the AES above, plus the word in three comments. A proof
+you invite people to run has to survive being run.*
 
 **The counterpart, and we would rather you read it here than discover it:** if
 you lose your master password and your recovery kit, **your data is gone**. We

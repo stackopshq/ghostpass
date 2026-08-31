@@ -6,7 +6,7 @@
 > déploiement. Les faits techniques sont vérifiables ; les qualifications
 > juridiques ne sont pas encore relues.
 
-*Version 0.2 — 2026-08-31. Article 30 du règlement (UE) 2016/679 (RGPD).
+*Version 0.3 — 2026-08-31. Article 30 du règlement (UE) 2016/679 (RGPD).
 StackOps est établie en France : le RGPD est son régime premier. L'art. 12 nLPD
 s'applique en outre lorsque le Client ou les personnes concernées sont en
 Suisse.*
@@ -134,6 +134,19 @@ de garanties supplémentaires, mais le transfert existe et doit être déclaré 
 version antérieure de ce registre, écrite quand l'établissement était cru suisse,
 présentait Swiss Backup comme l'absence d'un transfert. C'était l'inverse.
 
+### ghostbit — reçoit des données, et n'est pourtant ni un destinataire tiers ni un transfert
+
+Créer un lien de partage transmet le bloc **chiffré** à **ghostbit**, un autre
+service de StackOps exploité sur son infrastructure
+(`apps/server/src/services/ghostbit.ts`). Ce n'est donc ni une communication à un
+tiers ni un transfert : même responsable, même infrastructure, même pays. La clé
+de déchiffrement vit dans le fragment de l'URL et n'atteint aucun serveur.
+
+Cela figure ici bien que rien ne l'y oblige, parce qu'un registre qui ne
+mentionne que les mouvements *externes* laisse croire qu'il n'y en a pas
+d'autres. En modèle B, la configuration doit désigner l'instance ghostbit du
+Client — voir §6 du DPA.
+
 ---
 
 ## Description générale des mesures de sécurité (art. 30.1.g et 30.2.d)
@@ -141,7 +154,9 @@ présentait Swiss Backup comme l'absence d'un transfert. C'était l'inverse.
 Le détail, par modèle d'hébergement, est au §5 et §5 bis du DPA. En synthèse :
 
 - **Chiffrement de bout en bout** — clés dérivées du mot de passe maître, jamais
-  transmises. Le serveur ne contient aucune primitive de déchiffrement ;
+  transmises. Le serveur ne contient aucune primitive capable d'ouvrir un
+  coffre — sa seule opération de déchiffrement porte sur le secret du second
+  facteur, ligne suivante ;
 - **Second facteur** — TOTP, WebAuthn, clés d'accès. Le secret TOTP est chiffré
   au repos (AES-256-GCM, clé hors base) depuis le 2026-08-30 ;
 - **Cloisonnement** — par machine virtuelle dans le modèle B, applicatif dans le
@@ -190,3 +205,4 @@ réponse datée et signée, ce qu'un document bureautique ne donne pas.
 |---|---|---|
 | 0.1 | 2026-08-31 | Création. Aucun responsable du traitement en fiche B — aucun DPA n'est signé |
 | 0.2 | 2026-08-31 | **L'établissement est français**, siège à Saint-Julien-en-Genevois, et non suisse comme l'écrivaient les conditions générales. Trois conséquences : le représentant art. 27 devient sans objet, la Suisse devient un pays tiers de destination, et la sauvegarde OVH de Roubaix entre au tableau des transferts |
+| 0.3 | 2026-08-31 | **ghostbit** entre au registre : le partage lui transmet le bloc chiffré. Ce n'est ni une communication à un tiers ni un transfert — même responsable, même infrastructure, même pays — mais un registre muet sur les mouvements internes laisse croire qu'il n'y en a pas. La mesure « aucune primitive de déchiffrement » est corrigée en « aucune primitive capable d'ouvrir un coffre » |
