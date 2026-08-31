@@ -1,0 +1,182 @@
+{
+  "_": [
+    "Les vecteurs de contrat de la suite. Source canonique, lue par les tests de chaque",
+    "client : web, iOS, Android, Flutter, et le cœur Rust lui-même.",
+    "",
+    "Ce fichier existe parce qu'une divergence entre clients ne produit aucune erreur.",
+    "Un champ renommé compile, passe les tests de son auteur, et rend des données",
+    "illisibles chez quelqu'un d'autre — plus tard, ailleurs, sans trace. Recopier ces",
+    "valeurs dans chaque client garantissait qu'elles finiraient par différer.",
+    "",
+    "Les clés sont en anglais, suivant docs/pile.md. Voir docs/adr/0002 pour ce que ce",
+    "fichier engage, comment il se distribue, et ce qu'il ne peut pas vérifier.",
+    "",
+    "Ne modifiez une valeur que si le protocole change réellement. Un test qui tombe",
+    "après une modification d'ici est le garde-fou qui fonctionne, pas un test à ajuster."
+  ],
+  "version": 1,
+
+  "zk_derivation": {
+    "_": [
+      "Argon2id, 64 MiB, 3 itérations, parallélisme 1, sel de 16 octets.",
+      "L'empreinte attendue vient de `hash-wasm`, la bibliothèque du navigateur, et non",
+      "du cœur : elle vérifie qu'un client obtient ce que le web obtient, pas que le cœur",
+      "est cohérent avec lui-même. Le cœur doit prouver qu'il la satisfait (ADR-0002 §3)."
+    ],
+    "passphrase": "correct horse",
+    "salt_hex": "07070707070707070707070707070707",
+    "expected_hex": "7b985d8fa00c9eccccf918c8cb9feaa8036af381caf6f498e099b5b849b8c18a",
+    "salt_bytes": 16,
+    "rejected_salt_bytes": [0, 8, 15, 17, 32]
+  },
+
+  "seal_domains": {
+    "_": [
+      "Un seul cœur sert plusieurs produits ; c'est le domaine de séparation qui les",
+      "empêche de lire les données l'un de l'autre. Si cette séparation cédait, elle",
+      "céderait en silence."
+    ],
+    "ghostcal": "ghostcal-zk-v1",
+    "ghostmail": "ghostmail-zk-v1"
+  },
+
+  "registries": {
+    "_": [
+      "Ce que le client doit retenir en plus des éléments chiffrés vit dans des éléments",
+      "comme les autres, sous un nom commençant par un octet NUL — qu'aucun clavier ne",
+      "produit, donc qu'aucun nom saisi par un utilisateur ne peut usurper.",
+      "",
+      "Chacun est un SecureNote dont data.content porte le JSON sérialisé. L'interface",
+      "masque tout élément dont le nom commence par le préfixe, sinon ils apparaîtraient",
+      "comme des lignes fantômes.",
+      "",
+      "Piège : grep traite un fichier contenant un NUL comme binaire et rend zéro résultat",
+      "sans le dire. Utiliser `grep -a`, ou chercher sans le préfixe."
+    ],
+    "prefix": "\u0000gp:",
+    "names": {
+      "folders": "\u0000gp:folders",
+      "favorites": "\u0000gp:favorites",
+      "shares": "\u0000gp:shares",
+      "org_colors": "\u0000gp:orgcolors"
+    },
+    "shapes": {
+      "folders": "tableau JSON de chemins — les dossiers vides seulement",
+      "favorites": "tableau JSON d'identifiants d'éléments",
+      "shares": "tableau JSON d'objets, champs dans sealed_contents.share_registry",
+      "org_colors": "objet JSON { identifiant d'organisation: \"#RRGGBB\" }"
+    }
+  },
+
+  "org_colors": {
+    "_": [
+      "Un utilisateur qui n'a rien réglé doit voir la même couleur sur tous les clients.",
+      "La règle est volontairement bête pour être reproductible partout.",
+      "",
+      "N'utilisez aucun hachage de bibliothèque : hashValue en Swift et hashCode en Kotlin",
+      "ne sont pas stables entre exécutions, et la couleur changerait à chaque ouverture.",
+      "",
+      "La palette est fixée plutôt que calculée : une teinte tirée d'un hachage donne",
+      "aussi bien du kaki que du rose fluo, et demande ensuite de corriger la luminosité",
+      "pour rester lisible sur les deux thèmes. Ces huit-là se distinguent entre elles, y",
+      "compris pour les formes courantes de daltonisme — on n'oppose jamais un rouge à un",
+      "vert seuls."
+    ],
+    "rule": "somme des octets UTF-8 de l'identifiant, modulo la taille de la palette",
+    "palette": [
+      "#4C8DFF",
+      "#B57BFF",
+      "#00C2A8",
+      "#FF8A3D",
+      "#E75480",
+      "#3FBF5F",
+      "#FFC53D",
+      "#7A8CFF"
+    ],
+    "vectors": {
+      "org_stackops": "#7A8CFF",
+      "org_1": "#4C8DFF",
+      "org_2": "#B57BFF",
+      "ORG-9f3c-4d2e": "#FFC53D",
+      "": "#4C8DFF"
+    },
+    "unreadable_falls_back_to_assigned": ["", "#12345", "bleu", "#GGGGGG", "#1234567"]
+  },
+
+  "share_link_domains": {
+    "_": [
+      "La clé de déchiffrement d'un partage voyage dans le fragment du lien. Un navigateur",
+      "ne l'envoie jamais dans la requête HTTP — mais la page servie par ce domaine est du",
+      "code que ce domaine contrôle, et rien ne l'empêche de lire location.hash.",
+      "",
+      "Accepter sans contrôle l'adresse rendue par le serveur revient donc à le laisser",
+      "désigner qui recevra la clé : il détient déjà le chiffré, et obtiendrait le secret",
+      "en clair. L'ancre de confiance est le serveur que l'utilisateur a saisi lui-même.",
+      "",
+      "Chaque couple est [serveur configuré, lien rendu]."
+    ],
+    "accepted": [
+      ["https://ghostpass.example.com", "https://ghostpass.example.com/s/abc"],
+      ["http://127.0.0.1:3111", "http://127.0.0.1:3111/s/abc"]
+    ],
+    "rejected": [
+      ["https://ghostpass.example.com", "https://relais.attaquant.example/p/abc"],
+      ["https://ghostpass.example.com", "https://ghostpass.example.com.attaquant.example/p/abc"],
+      ["https://ghostpass.example.com", "https://evil-ghostpass.example.com.co/p/abc"],
+      ["https://ghostpass.example.com", "http://ghostpass.example.com/s/abc"],
+      ["https://ghostpass.example.com", "https:///s/abc"]
+    ],
+    "accepted_after_user_approval": [
+      ["https://ghostpass.example.com", "https://ghostbit.example.com/p/abc", "ghostbit.example.com"]
+    ]
+  },
+
+  "sealed_contents": {
+    "_": [
+      "Les noms de champs des blobs scellés. Le serveur ne les lit jamais : il stocke un",
+      "blob que plusieurs clients scellent et ouvrent. Un champ renommé d'un côté ne casse",
+      "aucune compilation ; il rend les données illisibles chez les autres.",
+      "",
+      "Ils restent en anglais dans le JSON quelle que soit la langue du code qui les lit."
+    ],
+    "event": ["title", "description", "location"],
+    "task": ["title", "notes"],
+    "invitee_private": ["name", "answers", "notes"],
+    "share_registry": ["id", "url", "deleteToken", "name", "createdAt", "expiresAt"]
+  },
+
+  "timestamps": {
+    "_": [
+      "Secondes depuis l'epoch, partout. createdAt et expiresAt du registre des partages",
+      "étaient dans deux unités différentes au premier jet — millisecondes d'un côté,",
+      "secondes de l'autre — dans une structure partagée par trois clients. L'écart ne se",
+      "serait vu qu'à l'affichage, chez celui qui n'a pas écrit la ligne.",
+      "",
+      "Un horodatage en secondes tient sur dix chiffres jusqu'en 2286."
+    ],
+    "unit": "seconds",
+    "digits": 10,
+    "difference_check": {
+      "created_at": 1788000000,
+      "expires_at": 1788086400,
+      "expected_difference_seconds": 86400
+    }
+  },
+
+  "weekdays": {
+    "_": [
+      "Le serveur compte 0 = lundi. Calendar d'Apple compte 1 = dimanche, et Java compte",
+      "1 = dimanche aussi. Les confondre décale tout un horaire de disponibilités d'un",
+      "jour — l'écran reste cohérent, il affiche simplement un horaire qui n'est pas celui",
+      "qui gouverne les réservations. Personne ne le remarque avant qu'un invité réserve",
+      "un dimanche.",
+      "",
+      "Une valeur hors bornes doit se signaler, jamais se ramener par modulo : un weekday",
+      "de 42 qui s'affiche « lundi » est une valeur fausse présentée avec l'assurance",
+      "d'une vraie."
+    ],
+    "server_monday_is": 0,
+    "valid_range": [0, 6],
+    "out_of_range_must_be_flagged": [-1, 7, 42]
+  }
+}

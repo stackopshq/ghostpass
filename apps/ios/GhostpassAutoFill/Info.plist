@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Identité du bundle. `GENERATE_INFOPLIST_FILE` est désactivé pour cette cible — le
+	     dictionnaire `NSExtension` ne se décrit pas en réglages de compilation — donc ces
+	     clés doivent figurer ici : sans `CFBundleIdentifier`, l'extension sort sans
+	     identité et iOS refuse d'installer l'application entière. -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundleDisplayName</key>
+	<string>GhostPass</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID déverrouille votre coffre pour remplir vos identifiants.</string>
+
+	<!-- Un fournisseur d'identifiants : c'est ce point d'extension qui fait apparaître
+	     GhostPass dans Réglages > Apps > Mots de passe > Remplissage automatique. -->
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.authentication-services-credential-provider-ui</string>
+		<key>NSExtensionPrincipalClass</key>
+		<string>$(PRODUCT_MODULE_NAME).CredentialProviderViewController</string>
+		<key>NSExtensionAttributes</key>
+		<dict>
+			<!-- L'extension fournit des mots de passe et des codes à usage unique, pas de
+			     passkeys : l'annoncer évite qu'iOS la propose là où elle n'aurait rien à
+			     offrir.
+
+			     `ProvidesOneTimeCodes` est ce qui fait apparaître GhostPass sous
+			     « Réglages > Apps > Mots de passe > Configurer les codes dans ». Sans cette
+			     clé, l'extension reste invisible à cet endroit même si elle sait calculer
+			     les codes — le coffre les détenait, iOS ne le savait pas.
+
+			     La clé est ignorée sous iOS 17, où l'API des codes n'existe pas ; le code
+			     qui la sert est conditionné en conséquence. -->
+			<key>ASCredentialProviderExtensionCapabilities</key>
+			<dict>
+				<key>ProvidesPasswords</key>
+				<true/>
+				<key>ProvidesOneTimeCodes</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

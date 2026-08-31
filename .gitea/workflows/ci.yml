@@ -97,6 +97,185 @@ jobs:
   # Balisé par SHA de commit, jamais `latest` : une balise immuable est ce qui
   # permet de dire quelle construction est déployée, et d'y revenir. `main`
   # bouge — c'est une commodité, pas quelque chose depuis quoi déployer.
+  # Un job filtré par `if:` disparaît sans un mot du rapport : personne ne remarque que
+  # les tests iOS n'ont pas tourné. Ce job-ci tourne toujours, sur un runner Linux, et dit
+  # à voix haute ce que le garde a décidé — et, au passage, si le contexte `vars` est
+  # seulement disponible sur cette forge (il demande Gitea 1.20).
+  ios-gate:
+    name: Tests iOS — activés ?
+    runs-on: ubuntu-latest
+    steps:
+      - name: État du garde
+        run: |
+          valeur='${{ vars.MACOS_RUNNER }}'
+          echo "MACOS_RUNNER = « $valeur »"
+          if [ "$valeur" = "false" ]; then
+            echo "::warning::MACOS_RUNNER vaut « false » : les tests iOS sont volontairement écartés."
+          elif [ -z "$valeur" ]; then
+            echo "MACOS_RUNNER n'est pas définie pour ce dépôt — le job iOS tourne quand même."
+            echo "Une variable définie au niveau *utilisateur* ne s'applique pas à un dépôt"
+            echo "d'organisation : pour la voir ici, il faut la poser sur le dépôt ou sur"
+            echo "l'organisation (Paramètres du dépôt > Actions > Variables)."
+          else
+            echo "Le job iOS est activé et sera dispatché vers un runner étiqueté « macos »."
+          fi
+
+  ios:
+    name: App iOS (SwiftUI + UniFFI)
+    # Xcode et le simulateur n'existent que sur macOS : ce job réclame un runner de cette
+    # famille, étiqueté `macos` (voir tools/ci/README.md pour en brancher un).
+    #
+    # L'interrupteur est *à l'arrêt explicite*, et c'est le fruit d'une leçon. Un runner
+    # self-hosted est une machine réelle : éteinte, elle laisse le job en file d'attente et
+    # la pull request sans verdict — Gitea n'échoue pas, il attend. On avait donc écrit
+    # `== 'true'`, pour ne rien lancer par défaut.
+    #
+    # Sauf qu'une variable qui ne se résout pas — posée au niveau utilisateur alors que le
+    # dépôt appartient à une organisation, par exemple — rend une chaîne vide, et le job
+    # disparaît sans un mot : on croit avoir une CI iOS, on n'en a pas. Une file d'attente
+    # se voit ; une absence, non. Entre les deux, on préfère celle qui se voit.
+    #
+    # `MACOS_RUNNER` (Paramètres du **dépôt** ou de l'**organisation** > Actions >
+    # Variables) reste donc l'interrupteur, mais il ne sert qu'à *couper* : à `false` le
+    # job est écarté, dans tous les autres cas il tourne.
+    if: vars.MACOS_RUNNER != 'false'
+    runs-on: macos
+    # Le cœur crypto et son binding doivent déjà être verts : sans eux, l'app n'a rien
+    # à lier, et un échec ici ne dirait pas où le problème se trouve.
+    needs: crypto
+    steps:
+      - uses: actions/checkout@v4
+      # Pas d'action d'installation ici : sur une machine self-hosted, Xcode, rustup,
+      # xcodegen et Node sont ceux du poste. On vérifie qu'ils répondent plutôt que de
+      # les réinstaller à chaque exécution — et l'absence de l'un doit se lire d'un coup
+      # d'œil, pas se deviner trente lignes plus bas.
+      # Le cœur cryptographique vit dans le dépôt de la suite, pas ici — un seul cœur pour
+      # tous les produits (ghostsuite, ADR 0001). L'exécuteur récupère donc deux dépôts.
+      #
+      # C'est le prix de la boucle courte, assumé et documenté : compiler depuis les
+      # sources permet de corriger le cœur et de le vérifier chez un produit dans la
+      # foulée. Le jour où l'artefact sera publié — à l'arrivée d'Android, ou quand le
+      # cœur cessera de bouger — cette étape disparaîtra (ghostsuite, ADR 0002).
+      # L'étape suivante clone un dépôt privé. Sans droit de lecture, la forge répond
+      # « not found » — elle masque l'existence à qui n'y a pas accès — et le journal se
+      # lit alors comme « ce dépôt n'existe pas », ce qui envoie chercher au mauvais
+      # endroit. Le commentaire ci-dessous le prédisait déjà ; un commentaire ne protège
+      # que celui qui le lit au bon moment, et on ne lit pas les commentaires du fichier
+      # quand on cherche pourquoi un clone échoue.
+      #
+      # Trois issues, jamais deux : accessible, refusé, ou **pas pu regarder**. Confondre
+      # les deux derniers enverrait quelqu'un renouveler un jeton parfaitement valide
+      # parce que le réseau était coupé.
+      - name: Le dépôt du cœur est-il accessible ?
+        env:
+          # `GITEA_TOKEN` est injecté automatiquement par Gitea Actions et **limité au
+          # dépôt courant par conception** : il s'authentifie parfaitement et n'a aucun
+          # droit ailleurs, d'où un 404 sur `ghostsuite` là où on attendrait un 403. Le
+          # jeton personnel prend donc le pas quand il est posé ; l'automatique reste en
+          # repli pour ne pas casser une configuration existante.
+          JETON: ${{ secrets.GHOSTSUITE_TOKEN || secrets.GITEA_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${JETON:-}" ]; then
+            echo "::error::secrets.GITEA_TOKEN est absent de ce dépôt. L'étape suivante clonerait stackops/ghostsuite sans identifiant et échouerait sur « not found », ce qui se lit comme « dépôt inexistant »."
+            exit 1
+          fi
+          # Le jeton passe par stdin, jamais en argument : sur un exécutant partagé,
+          # `ps` montre l'argv de tous les processus, y compris ceux des autres.
+          code=$(printf 'header = "Authorization: token %s"\n' "$JETON" \
+            | curl -sS -K - -o /dev/null -w '%{http_code}' \
+              "https://git.stackops.ch/api/v1/repos/stackops/ghostsuite" || echo "000")
+          case "$code" in
+            200) echo "Le cœur commun est accessible." ;;
+            # Trois refus, trois gestes différents. Les confondre a un coût mesuré : le
+            # premier diagnostic de cette panne disait « vérifiez la portée du jeton »
+            # là où le jeton était valide, ce qui aurait envoyé chercher ailleurs après
+            # l'avoir renouvelé pour rien. Les codes ont été relevés un par un sur cette
+            # même URL, pas déduits.
+            401)
+              echo "::error::Le jeton présenté est refusé par la forge (HTTP 401) : invalide, révoqué ou expiré. Renouvelez secrets.GITEA_TOKEN."
+              exit 1 ;;
+            403)
+              echo "::error::Aucune identité n'a été présentée à la forge (HTTP 403). secrets.GITEA_TOKEN est vide ou n'est pas transmis à ce travail."
+              exit 1 ;;
+            404)
+              echo "::error::Le jeton est valide mais n'a pas accès à stackops/ghostsuite (HTTP 404 — la forge masque l'existence d'un dépôt privé plutôt que d'avouer le refus). Le renouveler ne changerait rien. Cause la plus probable : GITEA_TOKEN est le jeton injecté par Gitea Actions, limité au dépôt courant. Posez un jeton personnel avec la portée read:repository dans le secret GHOSTSUITE_TOKEN."
+              exit 1 ;;
+            *) echo "::warning::N'a pas pu vérifier l'accès au cœur commun (HTTP $code) — réseau, ou curl absent. L'étape suivante tranchera." ;;
+          esac
+      - name: Cœur commun de la suite
+        uses: actions/checkout@v4
+        with:
+          repository: stackops/ghostsuite
+          path: ghostsuite
+          # Le dépôt est privé sur cette forge : sans jeton, le clone échoue en 404, ce
+          # qui se lit comme « dépôt inexistant » plutôt que « accès refusé ».
+          token: ${{ secrets.GHOSTSUITE_TOKEN || secrets.GITEA_TOKEN }}
+      - name: Prérequis du poste
+        run: |
+          set -e
+          for outil in xcodebuild xcrun xcodegen cargo node npm; do
+            command -v "$outil" >/dev/null || { echo "::error::$outil introuvable sur ce runner"; exit 1; }
+          done
+          # `| head -1` ferait sortir xcodebuild en 141 (SIGPIPE) dès qu'il écrit la
+          # deuxième ligne : le shell des steps tourne en `-e -o pipefail`, et l'étape
+          # échouerait *après* avoir réussi. `sed -n 1p` lit tout le flux, lui.
+          xcodebuild -version | sed -n 1p
+      # Le pendant de `cargo fmt --check` pour Swift, qui manquait : le formatage du Rust
+      # était vérifié, celui de l'app ne l'était pas, et 166 écarts s'étaient accumulés
+      # sur 36 fichiers. Placé avant toute construction, il échoue en quelques secondes
+      # plutôt qu'après un quart d'heure de build et de simulateur.
+      #
+      # `--strict` fait de chaque avertissement une erreur. La base est à zéro : toute
+      # sortie non vide est donc une régression, pas un bruit de fond à trier.
+      - name: Formatage Swift
+        run: |
+          set -e
+          outil="$(xcrun --find swift-format)"
+          "$outil" lint --strict -r --configuration apps/ios/.swift-format \
+            apps/ios/Ghostpass apps/ios/GhostpassAutoFill apps/ios/UITests apps/ios/Tests
+      - name: Cibles Rust pour iOS
+        run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+      - name: Dépendances du serveur de test
+        working-directory: apps/server
+        run: npm ci
+      # Construit l'XCFramework et les bindings, monte un serveur GhostPass local, amorce
+      # un coffre de test (registre gp:folders compris), déroule les suites, coupe le
+      # serveur pour éprouver le hors-ligne, puis remplit un formulaire dans Safari.
+      - name: Tests iOS
+        # `GHOSTSUITE` dit au script où trouver le cœur : à côté du produit sur un poste,
+        # dans l'espace de travail en intégration continue.
+        env:
+          GHOSTSUITE: ${{ github.workspace }}/ghostsuite
+        run: ./tools/ios/run-ios-tests.sh
+      # L'application est gratuite, et ce qui se paie chez StackOps est la mise à
+      # disposition d'une VM, pas le logiciel. Cette qualification ne protège de rien si le
+      # paquet soumis contient une vitrine : le relecteur juge sur ce que contient
+      # l'application. On le mesure sur le paquet construit juste au-dessus, plutôt que de
+      # supposer qu'il restera propre — quelqu'un ajoutera un écran d'accueil dans six
+      # mois, et personne ne reliera ça au rejet qui suivra.
+      - name: L'application ne vend rien
+        run: ./tools/ios/verifier-l-autonomie.sh
+      # Un échec ne laisse qu'un nom de test : les rapports portent les captures d'écran
+      # et le journal du serveur, seuls moyens de comprendre sans reproduire localement.
+      - name: Rapports de test
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-results
+          path: apps/ios/TestResults/
+          retention-days: 7
+
+  # Publier ce qui a passé les contrôles, et seulement depuis `main`. Jusqu'au
+  # 2026-08-28 ghostpass ne publiait RIEN : déployer voulait dire construire les
+  # deux images à la main sur le poste, ce qui rend « quelle version tourne ? »
+  # une question à laquelle aucun registre ne répond. Ses voisins ghostcal et
+  # ghostlink publiaient déjà ; ce produit était l'exception.
+  #
+  # Balisé par SHA de commit, jamais `latest` : une balise immuable est ce qui
+  # permet de dire quelle construction est déployée, et d'y revenir. `main`
+  # bouge — c'est une commodité, pas quelque chose depuis quoi déployer.
+
   image:
     name: Images (Podman → ghcr)
     needs: [crypto, server, web]

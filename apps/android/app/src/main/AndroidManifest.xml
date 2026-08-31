@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Le coffre parle à un serveur que l'utilisateur choisit. Aucune autre permission :
+         ni contacts, ni stockage, ni localisation — un gestionnaire de mots de passe qui
+         en demanderait devrait s'en expliquer. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
+    <application
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.GhostPass"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/regles_de_sauvegarde"
+        android:dataExtractionRules="@xml/regles_de_sauvegarde"
+        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/securite_reseau">
+
+        <activity
+            android:name=".ActivitePrincipale"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Le service de remplissage automatique (§6).
+
+             `BIND_AUTOFILL_SERVICE` est une permission que **le système** exige de nous :
+             elle garantit que seul le système peut se lier à ce service. Sans elle, une
+             autre application pourrait s'y lier et lui demander des identifiants. -->
+        <service
+            android:name=".autofill.ServiceDeRemplissage"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.autofill"
+                android:resource="@xml/service_de_remplissage" />
+        </service>
+    </application>
+</manifest>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Ce fichier ne porte QUE ce que `GENERATE_INFOPLIST_FILE` ne sait pas exprimer : un
+  tableau. Xcode le prend pour base et pose par-dessus les clés `INFOPLIST_KEY_*` de
+  project.yml — les deux mécanismes coexistent, ils ne se remplacent pas. Toute clé
+  simple doit donc rester dans project.yml, à côté de son commentaire.
+-->
+<plist version="1.0">
+<dict>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>ch.stackops.ghostpass.otpauth</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>otpauth</string>
+      </array>
+    </dict>
+  </array>
+</dict>
+</plist>

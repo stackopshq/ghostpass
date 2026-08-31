@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Le thème de la fenêtre avant que Compose ne prenne la main. Sa couleur de fond est
+         celle de la nuit du produit : sans cela, un aplat blanc apparaît le temps d'une
+         image au lancement, et c'est exactement ce qui fait qu'une application paraît
+         bricolée. `NoActionBar` parce que l'écran porte son propre en-tête. -->
+    <style name="Theme.GhostPass" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/nuit</item>
+        <item name="android:statusBarColor">@color/nuit</item>
+        <item name="android:navigationBarColor">@color/nuit</item>
+    </style>
+</resources>

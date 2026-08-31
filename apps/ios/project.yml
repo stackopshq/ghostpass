@@ -1,0 +1,181 @@
+# Projet Xcode décrit en texte : `xcodegen generate` reconstruit le .xcodeproj.
+# Un .xcodeproj est un format que deux personnes ne peuvent pas éditer sans conflit ;
+# ce fichier-ci se relit, se diffe et se fusionne. Le .xcodeproj n'est pas versionné.
+name: Ghostpass
+options:
+  bundleIdPrefix: ch.stackops
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  # L'interface s'écrit en français ; c'est donc le français qui sert de clef dans le
+  # catalogue, et l'anglais qui en est une traduction. Déclarer les deux régions ici
+  # évite qu'un `en` oublié fasse retomber l'app sur la langue de développement.
+  developmentLanguage: fr
+  knownRegions: [fr, en, Base]
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    # `DEVELOPMENT_TEAM` n'est délibérément pas fixé ici.
+    #
+    # Il l'était, sous la forme `${DEVELOPMENT_TEAM}` — une substitution que xcodegen
+    # opère au moment de *générer* le projet, et non de le compiler. Variable absente de
+    # l'environnement, xcodegen laissait le littéral `${DEVELOPMENT_TEAM}` à six endroits
+    # du .xcodeproj : Xcode y lisait une équipe portant ce nom et refusait de signer sur
+    # un message qui ne désignait pas sa cause.
+    #
+    # Sans la clef, Xcode signe avec l'équipe du compte connecté — ce qu'on veut en local.
+    # Pour une compilation scriptée ou une montée TestFlight, l'équipe se passe à
+    # xcodebuild, qui la surcharge proprement :
+    #
+    #   xcodebuild ... DEVELOPMENT_TEAM=XXXXXXXXXX
+    #
+    CODE_SIGN_STYLE: Automatic
+    # Sans cela, la compilation ne relève pas les chaînes du code et le catalogue reste
+    # vide : on croirait l'application traduite alors que rien n'aurait été extrait.
+    SWIFT_EMIT_LOC_STRINGS: YES
+    # Version affichée et numéro de build. Sans elles, l'envoi à App Store Connect échoue,
+    # et deux envois du même numéro sont refusés — le build s'incrémente à chaque montée.
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # iPhone seulement. Sans cette clef, Xcode retient iPhone *et* iPad — le binaire
+    # sortait avec `UIDeviceFamily = [1, 2]` — et l'on vendait une plateforme que rien
+    # n'avait éprouvée. Ouverte sur un iPad, l'application fonctionnait mais montrait
+    # sa nature : listes étirées sur toute la largeur, feuilles de hauteur fixe dont le
+    # contenu se coupe. App Store Connect aurait de surcroît réclamé son jeu de captures.
+    #
+    # Elle est répétée sur chaque cible, et ce n'est pas une redondance : xcodegen pose
+    # sa propre valeur `1,2` au niveau des cibles, qui l'emporte sur celle-ci. Fixée ici
+    # seulement, le réglage n'atteignait pas le binaire — vérifié dans son Info.plist,
+    # pas déduit du fichier de projet.
+    #
+    # Le jour où l'iPad sera soigné, ces valeurs passeront à "1,2".
+    TARGETED_DEVICE_FAMILY: "1,2"
+
+targets:
+  Ghostpass:
+    type: application
+    platform: iOS
+    sources:
+      - path: Ghostpass
+      # Bindings produits par tools/ios/build-xcframework.sh : compilés avec l'app,
+      # jamais édités à la main, jamais versionnés.
+      - path: Generated
+    dependencies:
+      # Bibliothèque statique : liée, jamais embarquée (embed: false).
+      - framework: GhostpassCrypto.xcframework
+        embed: false
+      # L'extension voyage dans l'application : c'est ainsi qu'iOS la découvre.
+      - target: GhostpassAutoFill
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_ENTITLEMENTS: Ghostpass/Ghostpass.entitlements
+        GENERATE_INFOPLIST_FILE: YES
+        # Un tableau ne s'exprime pas en `INFOPLIST_KEY_*`. Ce fichier ne porte donc que
+        # `CFBundleURLTypes` ; Xcode le prend pour base et pose les clés générées dessus.
+        INFOPLIST_FILE: Ghostpass/Info.plist
+        # Icône : la déclinaison GhostPass de la charte ghost-suite, variante « remplie »
+        # (assets/logo/ghostpass-icon.svg) — celle que les autres produits emploient
+        # comme icône, le trait du logo disparaissant aux petites tailles.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_CFBundleDisplayName: GhostPass
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # Le portrait seul se défendait tant que l'application était un téléphone. Sur
+        # iPad, refuser le paysage est un choix qu'on remarque : la tablette se pose sur
+        # un clavier, se tient dans une housse, et son orientation naturelle n'est pas
+        # celle d'un téléphone.
+        #
+        # Les deux familles sont réglées séparément — `UISupportedInterfaceOrientations`
+        # vaut pour l'iPhone, sa variante `_iPad` pour la tablette. Sans la seconde, iOS
+        # applique la première aux deux.
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        # Sans cette clé, iOS tue l'app à la première demande biométrique.
+        INFOPLIST_KEY_NSFaceIDUsageDescription: >-
+          Face ID déverrouille votre coffre sans ressaisir le mot de passe maître.
+        # Sans cette clé, iOS tue l'app à l'ouverture du scanner de QR code.
+        INFOPLIST_KEY_NSCameraUsageDescription: >-
+          L'appareil photo lit le QR code d'un second facteur. Aucune image n'est
+          enregistrée ni transmise.
+        # Le chiffrement de GhostPass — Argon2id, XChaCha20-Poly1305 — n'entre dans aucune
+        # des exemptions d'Apple : ce n'est ni du HTTPS d'appoint, ni de l'authentification
+        # seule, c'est la fonction même du produit. Déclarer `false` serait donc faux.
+        #
+        # Conséquence à traiter avant publication : un rapport d'auto-classification annuel
+        # auprès du BIS américain (la distribution passe par l'App Store), et côté français
+        # la déclaration ANSSI de fourniture d'un moyen de cryptologie. Voir
+        # docs/appstore.md — ce sont des démarches, pas des réglages de compilation.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: YES
+        OTHER_LDFLAGS: -lc++
+
+  # Remplissage automatique : une cible à part, lancée par iOS dans son propre processus.
+  # Elle partage les sources du modèle et des services — le même code déchiffre le coffre
+  # des deux côtés, plutôt qu'une seconde implémentation qui divergerait.
+  GhostpassAutoFill:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: GhostpassAutoFill
+      - path: Ghostpass/Model
+      - path: Ghostpass/Services
+      - path: Ghostpass/Theme
+      # L'extension a son propre paquet : sans le catalogue, ses écrans resteraient
+      # en français quelle que soit la langue choisie dans l'application.
+      - path: Ghostpass/Resources
+      - path: Generated
+    dependencies:
+      - framework: GhostpassCrypto.xcframework
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass.autofill
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_FILE: GhostpassAutoFill/Info.plist
+        CODE_SIGN_ENTITLEMENTS: GhostpassAutoFill/GhostpassAutoFill.entitlements
+        INFOPLIST_KEY_CFBundleDisplayName: GhostPass
+        INFOPLIST_KEY_NSFaceIDUsageDescription: >-
+          Face ID déverrouille votre coffre pour remplir vos identifiants.
+        OTHER_LDFLAGS: -lc++
+
+  # Tests de contrat : la couture JSON serveur ↔ cœur Rust ↔ types Swift.
+  # Ni réseau ni interface — ils tournent en quelques secondes.
+  GhostpassTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: Ghostpass
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass.tests
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Ghostpass.app/Ghostpass
+        BUNDLE_LOADER: $(TEST_HOST)
+
+  # Parcours de bout en bout. Exige un serveur GhostPass amorcé : passer par
+  # tools/ios/run-ios-tests.sh, qui le démarre et crée le compte de test.
+  GhostpassUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Ghostpass
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.stackops.ghostpass.uitests
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Ghostpass
+
+schemes:
+  Ghostpass:
+    build:
+      targets:
+        Ghostpass: all
+    test:
+      targets:
+        - GhostpassTests
+        - GhostpassUITests

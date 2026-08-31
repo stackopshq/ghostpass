@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rien ne part en sauvegarde. Le coffre est à connaissance nulle : laisser Android
+     emporter le fichier de session chez Google contredirait ce que le produit promet. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="file" path="." />
+</full-backup-content>

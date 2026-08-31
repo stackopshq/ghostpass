@@ -1,0 +1,876 @@
+import LocalAuthentication
+import UIKit
+import XCTest
+
+/// Parcours de bout en bout contre un serveur GhostPass local, amorcé par
+/// `tools/ios/run-ios-tests.sh` avec un compte de test et un item de registre.
+///
+/// Les champs sont adressés par `accessibilityIdentifier` — jamais par position ni par
+/// libellé, qui dépendent tous deux de la mise en page et de la langue. La frappe passe
+/// par `app.typeText` plutôt que par l'élément : re-résoudre une requête pendant que le
+/// curseur clignote fait expirer la recherche d'instantané.
+///
+/// L'adresse du serveur et le compte sont ceux qu'amorce le script ; les variables
+/// d'environnement ne servent qu'à lancer ces tests à la main depuis Xcode. `xcodebuild`
+/// ne transmet pas d'environnement au processus de test, d'où ces valeurs par défaut —
+/// elles doivent rester alignées sur celles de `tools/ios/run-ios-tests.sh`.
+final class VaultFlowTests: XCTestCase {
+    private lazy var env = ProcessInfo.processInfo.environment
+    private var server: String { env["GHOSTPASS_SERVER"] ?? "http://127.0.0.1:3111" }
+    private var email: String { env["GHOSTPASS_EMAIL"] ?? "clara@ghostpass.test" }
+    private var master: String { env["GHOSTPASS_PASSWORD"] ?? "correct horse battery staple" }
+    private var demoItem: String { env["GHOSTPASS_DEMO_ITEM"] ?? "GitHub" }
+    /// Le contact de confiance amorcé par le script : un compte sans coffre, qui n'existe
+    /// que pour avoir une clé publique vers laquelle sceller.
+    private var contact: String { env["GHOSTPASS_CONTACT"] ?? "kevin@ghostpass.test" }
+
+    override func setUp() {
+        continueAfterFailure = false
+        NSLog("GP-CONF serveur=%@ email=%@", server, email)
+    }
+
+    private func shot(_ app: XCUIApplication, _ name: String) {
+        let a = XCTAttachment(screenshot: app.screenshot())
+        a.name = name
+        a.lifetime = .keepAlways
+        add(a)
+    }
+
+    /// Un tap sur un champ SwiftUI en sélectionne tout le contenu : la frappe le remplace.
+    private func remplir(_ app: XCUIApplication, _ id: String, _ text: String) {
+        let field = app.descendants(matching: .any).matching(identifier: id).firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 30), "champ « \(id) » absent")
+        // Exister ne suffit pas : un champ apparaît dans la hiérarchie avant d'être
+        // frappable — une feuille finit de se refermer, un écran de s'installer. Le
+        // frapper trop tôt échoue sur « not hittable », ce qui ne ressemble en rien à
+        // sa cause.
+        let frappable = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isHittable == true"), object: field)
+        XCTAssertEqual(
+            XCTWaiter().wait(for: [frappable], timeout: 15), .completed,
+            "champ « \(id) » hors d'atteinte — voici l'écran :\n\(app.debugDescription)")
+        field.tap()
+        app.typeText(text)
+    }
+
+    private func seConnecter(_ app: XCUIApplication) {
+        let champServeur = app.descendants(matching: .any)
+            .matching(identifier: "field.server").firstMatch
+        if !champServeur.waitForExistence(timeout: 8) {
+            // Une session est déjà enregistrée : l'écran ne demande que le mot de passe.
+            let autre = app.buttons["button.switchAccount"]
+            XCTAssertTrue(
+                autre.waitForExistence(timeout: 20),
+                "ni formulaire de connexion, ni bascule vers un autre compte")
+            autre.tap()
+        }
+        remplir(app, "field.server", server)
+        remplir(app, "field.email", email)
+        remplir(app, "field.master", master)
+        app.buttons["button.submit"].tap()
+        XCTAssertTrue(
+            coffreNavBar(app).waitForExistence(timeout: 180),
+            "le coffre ne s'est pas ouvert — serveur injoignable ou identifiants refusés")
+        // La liste apparaît avant que le coffre ne soit déchiffré : tant que `refresh()`
+        // occupe le fil principal, aucune alerte ne peut se poser. On attend donc que
+        // l'écran soit vraiment en place avant de chercher la proposition biométrique.
+        _ = app.buttons["button.add"].waitForExistence(timeout: 60)
+        ecarterLaPropositionBiometrique(app)
+    }
+
+    /// Verrouille le coffre comme le ferait quelqu'un.
+    ///
+    /// Le bouton « Verrouiller » ne paraît que si un délai de verrouillage est réglé : avec
+    /// le défaut — immédiat — quitter l'application suffit, et le bouton occuperait la
+    /// meilleure place de la barre pour rien. Le test emprunte donc le chemin réel plutôt
+    /// que de dépendre d'un bouton qui peut légitimement être absent.
+    private func verrouiller(_ app: XCUIApplication) {
+        let bouton = app.buttons["button.lock"]
+        if bouton.waitForExistence(timeout: 3) {
+            taper(bouton)
+            return
+        }
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        app.activate()
+    }
+
+    /// Frappe un élément même si l'interface vient de changer.
+    ///
+    /// Un `tap()` ordinaire commence par calculer un point de frappe ; sur une vue encore
+    /// en cours d'animation, ce calcul rend {-1, -1} et le geste se perd en silence. Le
+    /// tap en coordonnées, lui, vise le centre du cadre sans rien demander à personne.
+    private func taper(_ element: XCUIElement) {
+        // Disparu entre-temps : il n'y a plus rien à frapper, et c'est souvent que le geste
+        // précédent a porté. Sans ce garde, `coordinate` échoue durement sur « no matches
+        // found » — une erreur qui décrit la disparition de l'élément, jamais la raison
+        // pour laquelle on le cherchait.
+        guard element.exists else { return }
+        if element.isHittable {
+            element.tap()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+    }
+
+    /// Une connexion complète avec le mot de passe donné. Après une déconnexion il n'y a
+    /// plus de session enregistrée : le formulaire redemande tout, serveur compris.
+    private func seConnecterAvec(_ app: XCUIApplication, _ motDePasse: String) {
+        remplir(app, "field.server", server)
+        remplir(app, "field.email", email)
+        remplir(app, "field.master", motDePasse)
+        let valider = app.buttons["button.submit"]
+        degager(app, valider)
+        taper(valider)
+    }
+
+    /// Referme et rouvre l'application, puis attend le formulaire de connexion.
+    private func relancer(_ app: XCUIApplication) {
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(
+            app.descendants(matching: .any).matching(identifier: "field.master").firstMatch
+                .waitForExistence(timeout: 60),
+            "le formulaire de connexion ne revient pas après relance")
+    }
+
+    /// Amène un élément à portée : referme le clavier, qui couvre le bas de l'écran, et
+    /// fait défiler si l'élément reste hors champ.
+    ///
+    /// Ce qui se trouve sous le clavier n'est pas « atteignable » : le tap ordinaire
+    /// échoue, et le tap en coordonnées de secours frappe une touche du clavier. Un tap
+    /// dans le vide ne referme rien en SwiftUI — c'est le défilement qui le fait, l'écran
+    /// le déclarant avec `.scrollDismissesKeyboard(.immediately)`.
+    private func degager(_ app: XCUIApplication, _ element: XCUIElement) {
+        for _ in 0..<3 {
+            if element.exists && element.isHittable { return }
+            app.swipeUp()
+        }
+    }
+
+    private func aDisparu(_ element: XCUIElement, delai: TimeInterval) -> Bool {
+        let attente = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: element)
+        return XCTWaiter().wait(for: [attente], timeout: delai) == .completed
+    }
+
+    /// Écarte la proposition d'activer la biométrie, si elle se présente.
+    ///
+    /// Cette alerte ne surgit qu'après le premier déverrouillage d'un appareil où une
+    /// biométrie est inscrite — et elle surgit à son rythme, une fois le déchiffrement du
+    /// coffre terminé. Tant qu'elle est là, elle intercepte toutes les frappes, et les
+    /// échecs qui suivent ne ressemblent en rien à leur cause. On l'attend donc pour de
+    /// bon, et on vérifie qu'elle est bien partie : le premier tap sur une alerte qui
+    /// s'anime encore ne porte pas.
+    private func ecarterLaPropositionBiometrique(
+        _ app: XCUIApplication, delai: TimeInterval = 20
+    ) {
+        let plusTard = app.buttons["button.laterBiometric"].firstMatch
+        guard plusTard.waitForExistence(timeout: delai) else { return }
+        for _ in 0..<5 {
+            // La feuille peut s'être refermée depuis le tour précédent : on s'arrête là
+            // plutôt que de frapper dans le vide.
+            guard plusTard.exists else { return }
+            taper(plusTard)
+            if aDisparu(plusTard, delai: 3) { return }
+        }
+        XCTFail("la proposition d'activer la biométrie ne se referme pas")
+    }
+
+    /// Les registres internes — dossiers, favoris — voyagent dans la liste comme les
+    /// autres éléments. Aucun ne doit s'y montrer, et pas seulement celui des dossiers :
+    /// c'est le préfixe qui les masque, il faut donc l'éprouver sur plusieurs.
+    private func aucuneLigneFantome(_ app: XCUIApplication, _ contexte: String) {
+        for nom in ["gp:folders", "gp:favorites", "gp:"] {
+            let fantome = app.staticTexts.containing(
+                NSPredicate(format: "label CONTAINS[c] %@", nom))
+            XCTAssertEqual(fantome.count, 0, "ligne fantôme « \(nom) » visible (\(contexte))")
+        }
+    }
+
+    private func ouvrirReglages(_ app: XCUIApplication) {
+        ouvrirLeMenu(app, "button.preferences")
+        XCTAssertTrue(
+            app.buttons["button.doneSettings"].waitForExistence(timeout: 20),
+            "l'écran des réglages ne s'est pas ouvert")
+    }
+
+    /// Ouvre le menu du coffre et frappe une de ses entrées.
+    private func ouvrirLeMenu(_ app: XCUIApplication, _ identifiant: String) {
+        XCTAssertTrue(
+            deplierLeMenu(app, jusqua: identifiant), "« \(identifiant) » absent du menu")
+        app.buttons[identifiant].tap()
+    }
+
+    /// Déplie le menu du coffre et attend qu'une entrée connue y paraisse. Rend `false` si
+    /// le menu ne s'est pas ouvert — à l'appelant de décider si c'est une erreur.
+    ///
+    /// Un tap sur une barre de navigation encore en cours de mise en page ne porte pas :
+    /// XCUITest calcule un point de frappe {-1, -1} et le menu ne s'ouvre jamais. On
+    /// réessaie plutôt que d'en conclure que l'entrée n'existe pas — cette confusion-là a
+    /// fait passer `test02Biometrie` pour « pas de biométrie sur ce simulateur » pendant
+    /// des mois, alors que l'application la voyait très bien.
+    @discardableResult
+    private func deplierLeMenu(_ app: XCUIApplication, jusqua identifiant: String) -> Bool {
+        let menu = app.buttons["button.settings"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 30), "le menu du coffre est absent")
+        let entree = app.buttons[identifiant]
+        for _ in 0..<4 {
+            taper(menu)
+            if entree.waitForExistence(timeout: 5) { return true }
+        }
+        return false
+    }
+
+    /// La luminance moyenne d'une capture, entre 0 et 1.
+    ///
+    /// C'est la seule façon honnête de vérifier qu'un thème s'applique : les couleurs ne
+    /// sont pas des éléments d'accessibilité, et se contenter de constater que la case
+    /// « Sombre » est cochée reviendrait à tester la case, pas le thème.
+    private func luminance(_ capture: XCUIScreenshot) -> Double {
+        guard let cg = capture.image.cgImage else { return -1 }
+        let largeur = 32, hauteur = 64
+        var pixels = [UInt8](repeating: 0, count: largeur * hauteur * 4)
+        guard
+            let ctx = CGContext(
+                data: &pixels, width: largeur, height: hauteur, bitsPerComponent: 8,
+                bytesPerRow: largeur * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return -1 }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: largeur, height: hauteur))
+        var total = 0.0
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            total +=
+                0.2126 * Double(pixels[i]) + 0.7152 * Double(pixels[i + 1])
+                + 0.0722 * Double(pixels[i + 2])
+        }
+        return total / Double(largeur * hauteur) / 255
+    }
+
+    func test01ParcoursComplet() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        // 1. Connexion
+        seConnecter(app)
+        shot(app, "1-coffre")
+
+        // 2. La liste montre le coffre, et rien de ce qui doit rester caché
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 30),
+            "l'item de démonstration « \(demoItem) » est absent : la liste n'a pas pu se charger")
+        aucuneLigneFantome(app, "après connexion")
+
+        // 3. Création
+        let plus = app.buttons["button.add"]
+        XCTAssertTrue(plus.waitForExistence(timeout: 30))
+        // `taper` et non `tap` : « Ajouter » vit dans la barre de navigation, où un tap
+        // ordinaire sur une vue encore en cours de mise en page rend {-1, -1} et se perd en
+        // silence. La reprise d'avant réessayait le même geste raté — elle a laissé passer
+        // un échec intermittent qui ne disait rien de son sujet, seulement que « field.name »
+        // était introuvable sur un écran qui ne l'a jamais porté.
+        var ouverte = false
+        for _ in 0..<4 {
+            taper(plus)
+            if app.buttons["button.cancel"].waitForExistence(timeout: 8) {
+                ouverte = true
+                break
+            }
+        }
+        XCTAssertTrue(ouverte, "la feuille de création ne s'ouvre pas")
+        remplir(app, "field.name", "Forgejo")
+        remplir(app, "field.username", "clara")
+
+        // Le générateur : on vérifie qu'il propose bien quelque chose, puis on renonce —
+        // la suite du parcours a besoin d'un mot de passe connu.
+        app.buttons["button.generate"].tap()
+        let propose = app.staticTexts["text.generated"]
+        XCTAssertTrue(propose.waitForExistence(timeout: 20), "le générateur ne s'ouvre pas")
+        let premier = propose.label
+        XCTAssertGreaterThanOrEqual(premier.count, 8, "mot de passe généré trop court")
+        app.buttons["button.regenerate"].tap()
+        XCTAssertNotEqual(propose.label, premier, "régénérer redonne le même mot de passe")
+        shot(app, "5-generateur")
+        app.buttons["Annuler"].firstMatch.tap()
+
+        remplir(app, "field.password", "s3cret-initial")
+        remplir(app, "field.uri", "https://git.stackops.ch")
+        remplir(app, "field.totp", "GEZDGNBVGY3TQOJQ")
+        app.buttons["button.save"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Forgejo"].waitForExistence(timeout: 60),
+            "l'item créé n'apparaît pas dans la liste")
+
+        // 4. Favori : l'étoile du détail, puis la section en tête de liste
+        app.buttons["Forgejo, clara"].firstMatch.tap()
+        let etoile = app.buttons["button.favorite"]
+        XCTAssertTrue(etoile.waitForExistence(timeout: 30), "l'étoile des favoris est absente")
+        taper(etoile)
+        revenirAuCoffre(app)
+        let sectionFavoris = app.descendants(matching: .any)
+            .matching(identifier: "header.favorites").firstMatch
+        XCTAssertTrue(
+            sectionFavoris.waitForExistence(timeout: 60),
+            "la section des favoris n'apparaît pas après la mise en favori")
+        // Le favori vit dans son propre registre chiffré : il ne doit pas non plus se
+        // montrer comme un élément.
+        aucuneLigneFantome(app, "après mise en favori")
+        shot(app, "4-favoris")
+
+        // 5. Import : l'écran s'ouvre et explique. Le choix du fichier appartient au
+        // sélecteur du système ; ce qui nous revient — la lecture du CSV — est éprouvé
+        // par les tests de contrat, sur des vecteurs qu'un parcours ne saurait produire.
+        ouvrirLeMenu(app, "button.import")
+        XCTAssertTrue(
+            app.buttons["button.pickCsv"].waitForExistence(timeout: 30),
+            "l'écran d'import ne s'ouvre pas")
+        app.buttons["button.closeImport"].tap()
+
+        // 6. Export : l'écran demande le mot de passe maître avant de fabriquer un
+        // fichier qui contiendra tout en clair. Le choix de la destination appartient au
+        // système ; ce qui nous revient — le format — est éprouvé par les contrats.
+        ouvrirLeMenu(app, "button.export")
+        let preparer = app.buttons["button.prepareExport"]
+        XCTAssertTrue(preparer.waitForExistence(timeout: 30), "l'écran d'export ne s'ouvre pas")
+        XCTAssertFalse(
+            preparer.isEnabled, "l'export part sans mot de passe maître")
+        app.buttons["button.closeExport"].tap()
+
+        // 7. Santé du coffre
+        ouvrirLeMenu(app, "button.health")
+        let resume = app.descendants(matching: .any)
+            .matching(identifier: "card.healthSummary").firstMatch
+        XCTAssertTrue(
+            resume.waitForExistence(timeout: 30),
+            "l'écran de santé ne montre pas son résumé")
+        shot(app, "4-sante")
+        app.buttons["button.closeHealth"].tap()
+
+        // 6. Modification
+        app.buttons["Forgejo, clara"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["button.edit"].waitForExistence(timeout: 30))
+        app.buttons["button.edit"].tap()
+        XCTAssertTrue(app.buttons["button.cancel"].waitForExistence(timeout: 30))
+        remplir(app, "field.name", "Forgejo prod")
+        app.buttons["button.save"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Forgejo prod"].waitForExistence(timeout: 60),
+            "l'écran de détail garde l'ancien contenu après modification")
+
+        // 4b. Une modification ne doit emporter ni le mot de passe ni la clé TOTP :
+        // ni l'un ni l'autre n'a été touché, et leur disparition serait silencieuse.
+        app.buttons["button.reveal"].tap()
+        XCTAssertTrue(
+            app.staticTexts["s3cret-initial"].waitForExistence(timeout: 30),
+            "le mot de passe a été écrasé par l'édition")
+        let code = app.staticTexts["text.totp"]
+        XCTAssertTrue(
+            code.waitForExistence(timeout: 30),
+            "la clé TOTP a été effacée par l'édition")
+        XCTAssertEqual(
+            code.label.count, 6, "un code TOTP à six chiffres était attendu, pas « \(code.label) »")
+        XCTAssertTrue(
+            code.label.allSatisfy(\.isNumber), "code TOTP non numérique : « \(code.label) »")
+        shot(app, "2-detail")
+
+        // 6b. Changer le mot de passe archive l'ancien. C'est ce qui sauve un compte dont
+        // le changement a échoué à mi-chemin ; encore faut-il que l'écran le montre.
+        app.buttons["button.edit"].tap()
+        XCTAssertTrue(app.buttons["button.cancel"].waitForExistence(timeout: 30))
+        remplir(app, "field.password", "s3cret-remplace")
+        app.buttons["button.save"].tap()
+        let historique = app.buttons["button.history"]
+        XCTAssertTrue(
+            historique.waitForExistence(timeout: 60),
+            "l'ancien mot de passe n'a pas été archivé")
+        taper(historique)
+        XCTAssertTrue(
+            app.staticTexts["Remplacé"].waitForExistence(timeout: 20),
+            "l'historique ne montre rien une fois déplié")
+        shot(app, "2-historique")
+
+        // 4c. Dossiers : en créer un, y ranger l'élément, filtrer dessus
+        revenirAuCoffre(app)
+        app.buttons["button.folderFilter"].tap()
+        XCTAssertTrue(
+            app.buttons["button.newFolder"].waitForExistence(timeout: 20),
+            "écran des dossiers absent")
+        app.buttons["button.newFolder"].tap()
+        remplir(app, "field.folderName", "Travail")
+        app.buttons["button.createFolder"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["Travail"].waitForExistence(timeout: 30),
+            "le dossier créé n'apparaît pas")
+        app.buttons["button.closeFolders"].firstMatch.tap()
+
+        // On y range l'élément, puis on filtre : le dossier doit le contenir.
+        app.buttons["Forgejo prod, clara"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["button.edit"].waitForExistence(timeout: 20))
+        app.buttons["button.edit"].tap()
+        XCTAssertTrue(app.buttons["button.cancel"].waitForExistence(timeout: 20))
+        remplir(app, "field.folder", "Travail")
+        app.buttons["button.save"].tap()
+        sleep(2)
+        revenirAuCoffre(app)
+
+        app.buttons["button.folderFilter"].tap()
+        XCTAssertTrue(app.staticTexts["Travail"].waitForExistence(timeout: 20))
+        app.staticTexts["Travail"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Forgejo prod"].waitForExistence(timeout: 30),
+            "l'élément rangé n'apparaît pas dans son dossier")
+        XCTAssertFalse(
+            app.staticTexts[demoItem].exists,
+            "le filtre laisse passer un élément d'un autre dossier")
+        shot(app, "4c-dossier")
+
+        // Retour à la vue complète, sans quoi la suite filtrerait sans le savoir.
+        app.buttons["button.folderFilter"].tap()
+        XCTAssertTrue(app.staticTexts["Tous les éléments"].waitForExistence(timeout: 20))
+        app.staticTexts["Tous les éléments"].tap()
+        XCTAssertTrue(app.staticTexts[demoItem].waitForExistence(timeout: 30))
+
+        // 5. Suppression
+        revenirAuCoffre(app)
+        let ligne = app.buttons["Forgejo prod, clara"].firstMatch
+        XCTAssertTrue(ligne.waitForExistence(timeout: 30))
+        ligne.swipeLeft()
+        XCTAssertTrue(app.buttons["Supprimer"].waitForExistence(timeout: 30))
+        app.buttons["Supprimer"].tap()
+        expectation(
+            for: NSPredicate(format: "exists == false"),
+            evaluatedWith: app.staticTexts["Forgejo prod"])
+        waitForExpectations(timeout: 60)
+
+        // 5b. L'item supprimé est à la corbeille, d'où il revient
+        app.buttons["button.settings"].tap()
+        app.buttons["button.trash"].firstMatch.tap()
+        let dansLaCorbeille = app.staticTexts["Forgejo prod"]
+        XCTAssertTrue(
+            dansLaCorbeille.waitForExistence(timeout: 30),
+            "l'item supprimé n'est pas dans la corbeille")
+        shot(app, "5-corbeille")
+        // Balayage vers la droite : restaurer.
+        dansLaCorbeille.swipeRight()
+        XCTAssertTrue(app.buttons["Restaurer"].waitForExistence(timeout: 20))
+        app.buttons["Restaurer"].tap()
+        // On vérifie que la corbeille se vide, et non que le nom disparaît : l'item
+        // restauré réapparaît dans le coffre, sous la feuille, où il reste visible de
+        // l'arbre d'accessibilité.
+        XCTAssertTrue(
+            app.staticTexts["Corbeille vide"].waitForExistence(timeout: 30),
+            "l'item restauré n'a pas quitté la corbeille")
+        app.buttons["button.closeTrash"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["Forgejo prod"].waitForExistence(timeout: 30),
+            "l'item restauré n'est pas revenu dans le coffre")
+
+        // 5c. Cette fois pour de bon : suppression, puis purge confirmée
+        app.buttons["Forgejo prod, clara"].firstMatch.swipeLeft()
+        XCTAssertTrue(app.buttons["Supprimer"].waitForExistence(timeout: 20))
+        app.buttons["Supprimer"].tap()
+        expectation(
+            for: NSPredicate(format: "exists == false"),
+            evaluatedWith: app.staticTexts["Forgejo prod"])
+        waitForExpectations(timeout: 30)
+
+        app.buttons["button.settings"].tap()
+        app.buttons["button.trash"].firstMatch.tap()
+        let aPurger = app.staticTexts["Forgejo prod"]
+        XCTAssertTrue(aPurger.waitForExistence(timeout: 30))
+        aPurger.swipeLeft()
+        XCTAssertTrue(app.buttons["Supprimer"].waitForExistence(timeout: 20))
+        app.buttons["Supprimer"].tap()
+        // Une suppression définitive se confirme : sans cette étape, rien ne part.
+        XCTAssertTrue(
+            app.buttons["button.confirmPurge"].firstMatch.waitForExistence(timeout: 20),
+            "la suppression définitive ne demande pas confirmation")
+        app.buttons["button.confirmPurge"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["Corbeille vide"].waitForExistence(timeout: 30),
+            "l'item purgé est encore là")
+        app.buttons["button.closeTrash"].firstMatch.tap()
+
+        // 6. Verrouiller relâche vraiment les clés
+        verrouiller(app)
+        XCTAssertTrue(app.buttons["button.submit"].waitForExistence(timeout: 30))
+        XCTAssertFalse(
+            app.staticTexts[demoItem].exists, "le coffre reste visible après verrouillage")
+
+        // 7. Réouverture avec le seul mot de passe maître, sans réseau ni ressaisie du compte
+        remplir(app, "field.master", master)
+        app.buttons["button.submit"].tap()
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 180),
+            "la réouverture au mot de passe maître a échoué")
+        aucuneLigneFantome(app, "après réouverture")
+        XCTAssertFalse(app.staticTexts["Forgejo prod"].exists, "l'item supprimé est revenu")
+        shot(app, "3-reouvert")
+    }
+
+    /// Enrôlement puis réouverture biométrique. Ne s'exécute que si le script a inscrit
+    /// une biométrie dans le simulateur et se charge d'envoyer les correspondances :
+    /// sinon le test est ignoré, jamais vert par accident.
+    func test02Biometrie() throws {
+        // On interroge le simulateur plutôt que de se fier à une variable transmise :
+        // `xcodebuild` n'en propage aucune jusqu'ici. Le script inscrit une biométrie et
+        // envoie les correspondances ; sans lui, ce test est ignoré, jamais vert par défaut.
+        try XCTSkipUnless(
+            LAContext().canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil),
+            "aucune biométrie inscrite : lancez tools/ios/run-ios-tests.sh")
+
+        let app = XCUIApplication()
+        app.launch()
+
+        // Si la biométrie est déjà active, l'app se déverrouille seule au lancement.
+        if !coffreNavBar(app).waitForExistence(timeout: 45) {
+            seConnecter(app)
+            let plusTard = app.buttons["button.laterBiometric"].firstMatch
+            if plusTard.waitForExistence(timeout: 5) { plusTard.tap() }
+        }
+
+        // Activation par les réglages, et non par la proposition qui suit la connexion :
+        // celle-ci ne paraît qu'une fois, alors que le réglage est toujours là — c'est
+        // d'ailleurs le seul recours après un « Plus tard ».
+        // « Santé du coffre » est toujours là, quelle que soit la biométrie : c'est donc
+        // elle qui atteste que le menu s'est bien déplié, et pas l'entrée qu'on cherche.
+        XCTAssertTrue(
+            deplierLeMenu(app, jusqua: "button.health"),
+            "le menu du coffre ne s'ouvre pas — impossible de conclure sur la biométrie")
+
+        let activer = app.buttons["button.biometricOn"].firstMatch
+        let desactiver = app.buttons["button.biometricOff"].firstMatch
+        if activer.waitForExistence(timeout: 10) {
+            activer.tap()
+            remplir(app, "field.masterConfirm", master)
+            app.buttons["button.confirmBiometric"].firstMatch.tap()
+            // La feuille ne se referme que si le mot de passe a ouvert le coffre : la
+            // voir rester, c'est un refus du trousseau, qu'on remonte plutôt que
+            // d'échouer trois écrans plus loin sur un symptôme.
+            if app.buttons["button.confirmBiometric"].firstMatch.waitForExistence(timeout: 5),
+                app.navigationBars.staticTexts.containing(
+                    NSPredicate(format: "label BEGINSWITH %@", "Activer")
+                ).element.exists
+            {
+                shot(app, "4-echec-activation")
+                XCTFail("activation biométrique refusée par le trousseau")
+            }
+        } else if desactiver.exists {
+            // Déjà active : refermer le menu sans y toucher.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+        } else {
+            // Le menu est bien ouvert — « Santé du coffre » l'atteste — mais il ne propose
+            // ni activation ni désactivation : l'application ne voit réellement aucune
+            // biométrie, alors que le runner en voyait une. On s'arrête là plutôt que de
+            // rendre vert un chemin qu'on n'a pas exercé.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+            throw XCTSkip(
+                "l'application ne voit pas de biométrie sur ce simulateur — "
+                    + "déverrouillage biométrique non vérifié")
+        }
+
+        // Le cycle qui compte : verrouiller, puis rouvrir sans aucune saisie.
+        verrouiller(app)
+        sleep(5)
+        shot(app, "4-apres-verrouillage")
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 120),
+            "la biométrie n'a pas rouvert le coffre")
+        shot(app, "4-biometrie")
+
+        // Reposer la machine comme on l'a trouvée. Un coffre qui se rouvre tout seul n'a
+        // plus d'écran de connexion : les tests suivants y cherchent un formulaire qui
+        // n'apparaît jamais, et échouent sur « ni formulaire, ni bascule de compte » —
+        // c'est-à-dire sur un symptôme qui ne dit rien de leur propre sujet. Tant que ce
+        // test sautait, la question ne se posait pas ; elle se pose maintenant qu'il
+        // s'exécute vraiment.
+        desactiverLaBiometrie(app)
+    }
+
+    /// Coupe le déverrouillage biométrique s'il est actif, pour rendre à l'application son
+    /// écran de connexion. Sans effet s'il ne l'est pas.
+    private func desactiverLaBiometrie(_ app: XCUIApplication) {
+        guard deplierLeMenu(app, jusqua: "button.health") else {
+            XCTFail("le menu ne s'ouvre pas : impossible de reposer la biométrie")
+            return
+        }
+        let couper = app.buttons["button.biometricOff"].firstMatch
+        if couper.waitForExistence(timeout: 5) {
+            couper.tap()
+        } else {
+            // Déjà coupée : refermer le menu sans rien changer.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+        }
+        XCTAssertTrue(
+            coffreNavBar(app).waitForExistence(timeout: 30),
+            "le coffre n'est pas revenu après la coupure de la biométrie")
+    }
+
+    /// Le coffre doit s'ouvrir **sans serveur**. Lancé par le script après extinction du
+    /// backend, ce test suppose qu'un run précédent a laissé une session et une copie
+    /// locale — c'est-à-dire l'état d'un téléphone qui perd le réseau.
+    func test03HorsLigne() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        // Une session est enregistrée : l'écran ne demande que le mot de passe maître.
+        let champ = app.descendants(matching: .any)
+            .matching(identifier: "field.master").firstMatch
+        XCTAssertTrue(
+            champ.waitForExistence(timeout: 30),
+            "aucune session enregistrée : lancez ce test après le parcours complet")
+        champ.tap()
+        app.typeText(master)
+        app.buttons["button.submit"].tap()
+
+        // Déverrouiller ne demande pas le réseau : les blobs sont sur l'appareil.
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 180),
+            "le coffre ne s'ouvre pas hors ligne")
+        XCTAssertTrue(
+            app.otherElements["banner.offline"].waitForExistence(timeout: 30)
+                || app.staticTexts.containing(
+                    NSPredicate(format: "label CONTAINS[c] %@", "Hors ligne")
+                ).element.exists,
+            "rien n'indique que le coffre affiché vient de l'appareil")
+        aucuneLigneFantome(app, "hors ligne")
+        shot(app, "6-hors-ligne")
+    }
+
+    /// Le thème et la langue appartiennent à l'utilisateur, pas au système.
+    ///
+    /// Ce test ne se contente pas de cliquer : il vérifie que le titre du coffre change
+    /// bien de langue, que le choix survit à une relance, et que le fond de l'écran
+    /// s'éclaircit vraiment. Il repose ensuite tout comme il l'a trouvé — la suite qui
+    /// vient après lui attend une application en français.
+    func test05Preferences() throws {
+        let app = XCUIApplication()
+        app.launch()
+        seConnecter(app)
+
+        // 1. Passage à l'anglais
+        ouvrirReglages(app)
+        app.buttons["row.langue.anglais"].tap()
+        app.buttons["button.doneSettings"].tap()
+        XCTAssertTrue(
+            coffreNavBar(app, titre: "Vault").waitForExistence(timeout: 30),
+            "le coffre est resté en français après le passage à l'anglais")
+        shot(app, "7-anglais")
+
+        // 2. Le choix survit à une relance : sinon ce ne serait qu'un état d'écran.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(
+            app.staticTexts["Vault saved on this device"].waitForExistence(timeout: 60),
+            "la langue choisie a été oubliée au redémarrage")
+        remplir(app, "field.master", master)
+        app.buttons["button.submit"].tap()
+        XCTAssertTrue(coffreNavBar(app, titre: "Vault").waitForExistence(timeout: 180))
+
+        // 3. Thème clair, puis sombre, mesurés à l'écran
+        ouvrirReglages(app)
+        app.buttons["tile.apparence.clair"].tap()
+        app.buttons["button.doneSettings"].tap()
+        XCTAssertTrue(coffreNavBar(app, titre: "Vault").waitForExistence(timeout: 20))
+        let clair = luminance(app.screenshot())
+        shot(app, "8-clair")
+
+        ouvrirReglages(app)
+        app.buttons["tile.apparence.sombre"].tap()
+        app.buttons["button.doneSettings"].tap()
+        XCTAssertTrue(coffreNavBar(app, titre: "Vault").waitForExistence(timeout: 20))
+        let sombre = luminance(app.screenshot())
+        shot(app, "9-sombre")
+
+        XCTAssertGreaterThan(
+            clair, sombre + 0.25,
+            "le thème clair (\(clair)) ne se distingue pas du sombre (\(sombre))")
+
+        // 4. Retour aux réglages du système, pour la suite des tests
+        ouvrirReglages(app)
+        app.buttons["tile.apparence.systeme"].tap()
+        app.buttons["row.langue.systeme"].tap()
+        app.buttons["button.doneSettings"].tap()
+        XCTAssertTrue(
+            coffreNavBar(app).waitForExistence(timeout: 30),
+            "le retour au réglage du système n'a pas ramené le français")
+    }
+
+    /// Le parcours de récupération, en entier : créer une clé, oublier le mot de passe,
+    /// réinitialiser, rouvrir.
+    ///
+    /// C'est le seul chemin de l'application où une erreur coûte le coffre entier : sans
+    /// clé de récupération, un mot de passe maître oublié rend un coffre chiffré de bout
+    /// en bout définitivement illisible. Le test repose ensuite le compte comme il l'a
+    /// trouvé — il réinitialise une seconde fois vers le mot de passe d'origine — pour que
+    /// la suite hors ligne retrouve la session qu'elle attend.
+    func test06Recuperation() throws {
+        let app = XCUIApplication()
+        app.launch()
+        seConnecter(app)
+
+        // 1. Créer la clé, et la lire pendant qu'elle est affichée : elle ne le sera plus.
+        ouvrirLeMenu(app, "button.recoveryKey")
+        let creer = app.buttons["button.createRecovery"]
+        XCTAssertTrue(creer.waitForExistence(timeout: 30), "l'écran de la clé ne s'ouvre pas")
+        taper(creer)
+        let affichee = app.staticTexts["text.recoveryKey"]
+        XCTAssertTrue(
+            affichee.waitForExistence(timeout: 60), "aucune clé de récupération n'est produite")
+        let cle = affichee.label
+        XCTAssertGreaterThan(cle.count, 8, "clé de récupération suspecte : « \(cle) »")
+        shot(app, "10-cle-recuperation")
+        app.buttons["button.closeRecovery"].tap()
+
+        // 2. Se déconnecter : le mot de passe maître est « oublié ».
+        ouvrirLeMenu(app, "button.signOut")
+        XCTAssertTrue(
+            app.descendants(matching: .any).matching(identifier: "field.server").firstMatch
+                .waitForExistence(timeout: 60),
+            "la déconnexion ne ramène pas au formulaire de connexion")
+
+        // 3. Réinitialiser vers un nouveau mot de passe, puis s'en servir.
+        reinitialiser(app, cle: cle, versLeMotDePasse: "nouveau mot de passe maître")
+        // On repart d'un écran neuf : une feuille qui vient de se refermer laisse parfois
+        // le clavier ou un voile de présentation devant les champs, et c'est de toute
+        // façon ce que ferait quelqu'un qui vient de réinitialiser son mot de passe.
+        relancer(app)
+        seConnecterAvec(app, "nouveau mot de passe maître")
+        XCTAssertTrue(
+            coffreNavBar(app).waitForExistence(timeout: 180),
+            "le nouveau mot de passe n'ouvre pas le coffre")
+        XCTAssertTrue(
+            app.staticTexts[demoItem].waitForExistence(timeout: 60),
+            "le coffre s'ouvre mais son contenu ne se déchiffre plus")
+        shot(app, "11-recupere")
+
+        // 4. Reposer le compte comme on l'a trouvé.
+        ouvrirLeMenu(app, "button.signOut")
+        XCTAssertTrue(
+            app.descendants(matching: .any).matching(identifier: "field.server").firstMatch
+                .waitForExistence(timeout: 60))
+        reinitialiser(app, cle: cle, versLeMotDePasse: master)
+        relancer(app)
+        seConnecterAvec(app, master)
+        XCTAssertTrue(
+            coffreNavBar(app).waitForExistence(timeout: 180),
+            "le mot de passe d'origine ne revient pas")
+        ecarterLaPropositionBiometrique(app, delai: 5)
+    }
+
+    /// Confier l'accès de son coffre à un contact, puis le retirer.
+    ///
+    /// Ce que le test prouve vraiment, c'est la chaîne complète du scellement : l'app va
+    /// chercher la clé publique du contact, demande au cœur Rust de sceller l'USK vers
+    /// elle, et le serveur accepte un blob qu'il ne peut pas ouvrir. Aucune de ces trois
+    /// étapes n'est observable depuis l'écran — seul leur enchaînement l'est, sous la
+    /// forme d'un contact qui apparaît dans la liste.
+    func test07Urgence() throws {
+        let app = XCUIApplication()
+        app.launch()
+        seConnecter(app)
+
+        ouvrirLeMenu(app, "button.emergency")
+        let inviter = app.buttons["button.inviteEmergency"]
+        XCTAssertTrue(
+            inviter.waitForExistence(timeout: 30), "l'écran d'accès d'urgence ne s'ouvre pas")
+        shot(app, "12-urgence-vide")
+
+        // 1. Confier l'accès. Le rôle par défaut suffit : c'est le scellement qu'on éprouve.
+        taper(inviter)
+        remplir(app, "field.emergencyEmail", contact)
+        let confirmer = app.buttons["button.confirmInvite"]
+        XCTAssertTrue(confirmer.waitForExistence(timeout: 30), "le formulaire d'invitation manque")
+        degager(app, confirmer)
+        confirmer.tap()
+
+        // 2. Le contact apparaît. S'il n'apparaît pas, c'est que l'une des trois étapes
+        // invisibles a échoué — la recherche de clé, le scellement, ou le dépôt.
+        let ligne = app.staticTexts[contact]
+        XCTAssertTrue(
+            ligne.waitForExistence(timeout: 60),
+            "le contact n'apparaît pas : recherche de clé publique, scellement ou dépôt en échec")
+        shot(app, "13-urgence-confie")
+
+        // 3. Le retirer, et vérifier qu'il s'en va pour de bon.
+        app.buttons["Retirer cet accès"].firstMatch.tap()
+        let retirer = app.buttons["Retirer"]
+        XCTAssertTrue(retirer.waitForExistence(timeout: 30), "la confirmation de retrait manque")
+        retirer.tap()
+        XCTAssertTrue(
+            aDisparu(ligne, delai: 60), "le contact reste affiché après le retrait")
+
+        app.buttons["button.closeEmergency"].tap()
+        XCTAssertTrue(
+            coffreNavBar(app).waitForExistence(timeout: 30),
+            "la fermeture ne ramène pas au coffre")
+        aucuneLigneFantome(app, "après un aller-retour par l'accès d'urgence")
+    }
+
+    /// Remplit le formulaire « mot de passe oublié » et attend la confirmation. Laisse
+    /// l'écran de connexion prêt, serveur et compte déjà saisis.
+    private func reinitialiser(
+        _ app: XCUIApplication, cle: String, versLeMotDePasse motDePasse: String
+    ) {
+        remplir(app, "field.server", server)
+        remplir(app, "field.email", email)
+        let oublie = app.buttons["button.forgotPassword"]
+        XCTAssertTrue(oublie.waitForExistence(timeout: 30), "« Mot de passe oublié » est absent")
+        degager(app, oublie)
+        XCTAssertTrue(
+            oublie.isHittable,
+            "« Mot de passe oublié » reste hors d'atteinte — clavier ou défilement")
+        oublie.tap()
+        XCTAssertTrue(
+            app.buttons["button.submitRecovery"].waitForExistence(timeout: 30),
+            "l'écran de réinitialisation ne s'ouvre pas")
+        remplir(app, "field.recoveryKey", cle)
+        remplir(app, "field.newMaster", motDePasse)
+        let valider = app.buttons["button.submitRecovery"]
+        degager(app, valider)
+        taper(valider)
+        XCTAssertTrue(
+            app.staticTexts.matching(identifier: "text.recovered").firstMatch
+                .waitForExistence(timeout: 120),
+            "la réinitialisation n'aboutit pas")
+        // Ce qui est derrière une feuille existe encore : le message de confirmation se
+        // trouve sur l'écran de connexion, et se voit donc avant même que la feuille soit
+        // partie. Sans cette attente, la frappe suivante viserait un champ recouvert.
+        XCTAssertTrue(
+            aDisparu(valider, delai: 30),
+            "la feuille de réinitialisation ne se referme pas")
+    }
+}
+
+/// La barre du coffre, désignée par ce qu'elle contient et non par son texte exact.
+///
+/// Le titre porte un emoji que les systèmes antérieurs à iOS 26 ne savent pas dessiner :
+/// l'application l'omet alors. Exiger le texte exact ferait échouer ces tests sur un
+/// simulateur plus ancien, sans que rien ne soit cassé.
+///
+/// `titre` sert à `test05Preferences`, seul test qui ait une raison d'exiger l'anglais :
+/// c'est là sa mesure. Partout ailleurs le défaut français convient. L'égalité stricte
+/// qu'il pratiquait auparavant a fait tomber quatre tests le jour où l'emoji est arrivé
+/// — un seul directement, les trois autres par ricochet, ce test échouant avant de
+/// reposer la langue qu'il promet de reposer.
+/// Remonte de la fiche au coffre, si l'on s'y trouve.
+///
+/// Le libellé du bouton retour est le titre de l'écran précédent — emoji compris depuis
+/// qu'on en a mis un. Chercher « Coffre » à l'identique le rendait introuvable, et le test
+/// poursuivait sans avoir quitté la fiche : il échouait trois écrans plus loin, sur un
+/// bouton absent, en désignant un coupable qui n'y était pour rien.
+///
+/// Écrit une fois : la même ligne était recopiée à quatre endroits, et je n'en ai corrigé
+/// qu'un au premier passage.
+func revenirAuCoffre(_ app: XCUIApplication) {
+    let retour = app.navigationBars.buttons.matching(
+        NSPredicate(format: "label CONTAINS %@", "Coffre")
+    ).firstMatch
+    if retour.exists { retour.tap() }
+}
+
+func coffreNavBar(_ app: XCUIApplication, titre: String = "Coffre") -> XCUIElement {
+    app.navigationBars.containing(
+        NSPredicate(format: "identifier CONTAINS %@", titre)
+    ).firstMatch
+}

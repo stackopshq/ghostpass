@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- La ligne que le système affiche au-dessus du clavier. C'est une `RemoteViews` : elle
+     est rendue par un autre processus, ce qui interdit Compose et limite aux vues
+     classiques. Elle ne porte **aucun secret** — seulement une invitation à déverrouiller. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp">
+    <TextView
+        android:id="@+id/titre"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+    <TextView
+        android:id="@+id/sous_titre"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="13sp" />
+</LinearLayout>
