@@ -82,19 +82,27 @@ function rendreInline(texte: string): ReactNode[] {
         </code>,
       );
     } else if (m[2]) {
+      // Récursif, et ce n'est pas de la complétude gratuite : `**après le `#`**`
+      // est du gras qui contient du littéral, et la première version rendait son
+      // contenu tel quel — donc « après le `#` », accents graves compris, dans le
+      // texte que lit un juriste. Un auteur de document n'a pas à connaître les
+      // limites de ce rendu ; c'est au rendu de connaître le Markdown.
+      //
+      // La récursion termine : le motif du gras exclut `*`, celui de l'italique
+      // aussi, et un libellé de lien est strictement plus court que le lien.
       sortie.push(
         <strong key={cle++} className="font-semibold text-foreground">
-          {brut.slice(2, -2)}
+          {rendreInline(brut.slice(2, -2))}
         </strong>,
       );
     } else if (m[3]) {
       const coupe = brut.indexOf("](");
-      sortie.push(lien(brut.slice(coupe + 2, -1), brut.slice(1, coupe), cle++));
+      sortie.push(lien(brut.slice(coupe + 2, -1), rendreInline(brut.slice(1, coupe)), cle++));
     } else if (m[4]) {
       const url = brut.slice(1, -1);
       sortie.push(lien(url, url, cle++));
     } else {
-      sortie.push(<em key={cle++}>{brut.slice(1, -1)}</em>);
+      sortie.push(<em key={cle++}>{rendreInline(brut.slice(1, -1))}</em>);
     }
 
     curseur = debut + brut.length;

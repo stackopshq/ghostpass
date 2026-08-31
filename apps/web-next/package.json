@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/*.test.ts"
+    "test": "tsx --tsconfig test/tsconfig.json --test test/*.test.ts test/*.test.tsx"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^13.3.0",
