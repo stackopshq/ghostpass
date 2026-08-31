@@ -344,16 +344,17 @@ Kotlin, et il n'existe pas de second format d'enveloppe pour Android.
 
 Trois choses mesurées en l'écrivant, qu'aucune lecture de documentation ne donne :
 
-- **`KeyInfo.isInvalidatedByBiometricEnrollment` ne témoigne de rien.** Il rapporte `true`
-  quoi qu'on ait demandé au constructeur, parce qu'il dérive du *type d'authentificateur*
-  de la clé et non du drapeau. Un test qui le lit est vert des deux côtés de la mutation —
-  le premier témoin écrit ici l'était. Le témoin qui vaut est
-  `tools/android/temoin-de-l-invalidation.sh` : il enrôle une empreinte de plus, pour de
-  vrai, et regarde si la clé sert encore ;
-- **ce qui protège réellement ici est l'authentification *par usage*** (zéro seconde de
-  validité) sur biométrie forte, pas le drapeau — qui est redondant dans cette
-  configuration. Une durée de validité positive attache la clé à l'horloge du système : la
-  clé témoin ainsi construite **survit** à l'enrôlement, mesuré ;
+- **une mesure prise une fois n'est pas un fait.** `KeyInfo.isInvalidatedByBiometricEnrollment`
+  a d'abord paru ne rien distinguer : la même clé construite avec `false` rapportait `true`.
+  J'en ai conclu que le drapeau était redondant, et j'ai figé l'observation dans un test.
+  **Ce test est tombé** au démarrage à froid de l'émulateur suivant — le magasin distingue
+  bien les deux consignes. La première mesure venait d'une machine reprise d'un instantané.
+  Ce qui a sauvé la documentation d'un mensonge durable, c'est d'avoir figé l'observation
+  plutôt que de l'avoir seulement écrite ;
+- **le témoin qui fait autorité mesure le comportement**, pas ce que le magasin rapporte :
+  `tools/android/temoin-de-l-invalidation.sh` enrôle une empreinte de plus, pour de vrai, et
+  regarde si la clé sert encore. Il montre au passage qu'une **durée de validité positive**
+  fait survivre la clé à l'enrôlement — c'est la régression la plus plausible ;
 - **la biométrie seule, sans `AUTH_DEVICE_CREDENTIAL`.** L'ADR écrit « biométrie ou code de
   l'appareil » ; autoriser le code désarmerait l'invalidation, puisque l'attaque décrite
   suppose déjà de connaître ce code. C'est un écart assumé, écrit dans `CleDEnveloppe.kt`.
@@ -364,30 +365,32 @@ de poser deux réglages sur trois sans le dire.
 
 ## 12. Ce qui reste à faire
 
-- **Le partage de liens dans l'interface.** Le format d'enveloppe est éprouvé — `contrat.json`
-  bloc `share_envelope`, vecteur croisé lu par `EnveloppeDePartageTest`, et
-  `tools/android/temoin-du-partage-croise.sh` qui fait ouvrir un scellement du cœur par
-  **WebCrypto** et réciproquement. `DestinationDePartage` porte la règle de domaine du §4 et
-  elle est éprouvée par les vecteurs. **Aucun écran ne s'en sert** : rien ne crée ni ne
-  révoque un partage.
+- **L'écriture dans les coffres d'équipe.** Les collections se lisent ; l'éditeur écrit par
+  `/api/vault/items`, le coffre **personnel**, et l'y laisser enregistrer un élément d'équipe
+  le sortirait de l'équipe sans que personne ne sache où il est passé. Les éléments d'équipe
+  s'ouvrent donc en lecture, et le disent. Les routes d'écriture existent côté serveur.
 - **Le SSO à l'écran.** Le flux est câblé et éprouvé contre le vrai serveur en ligne de
-  commande ; le chemin passant par l'onglet de navigateur et le retour dans le schéma d'URL
-  **n'a pas été rejoué sur appareil** — il demande un fournisseur d'identité joignable
-  depuis l'émulateur.
-- **Les registres en écriture.** Ils se lisent (dossiers, favoris, partages, couleurs) ;
-  rien ne les réécrit, donc mettre un élément en favori n'est pas possible.
-- **La corbeille.** `supprimer` met à la corbeille côté serveur ; aucun écran ne la montre
-  ni ne restaure.
+  commande ; le chemin passant par l'onglet de navigateur n'a pas été rejoué sur appareil —
+  il demande un fournisseur d'identité joignable depuis l'émulateur.
+- **La confirmation de destination de partage sur un serveur à relais.** La règle et son
+  écran existent ; le serveur de cette branche ne rend qu'un identifiant, donc le lien
+  retombe toujours sur l'hôte saisi et la question ne se pose pas. Le chemin n'est éprouvé
+  que par les vecteurs.
+- **Le reste des réglages d'iOS** : import et export, santé du coffre, clé de récupération,
+  accès d'urgence, MFA, activité. Rien n'en est grisé dans le menu — un réglage qui promet
+  une fonction inexistante déplace l'échec du moment où l'on configure à celui où quelqu'un
+  essaie.
 
 ## 13. Les outils, et ce que chacun prouve
 
 | Outil | Ce qu'il établit |
 |---|---|
-| `tools/android/parcours-de-bout-en-bout.sh` | Un premier lancement aboutit à un coffre utilisable contre une instance quelconque, **résolution de noms coupée** — le troisième point du §7 |
-| `tools/android/temoin-du-parcours.sh` | Le parcours ci-dessus sait rougir : mot de passe faux, remplissage désactivé |
-| `tools/android/temoin-de-l-invalidation.sh` | La clé du coffre est vraiment invalidée par un nouvel enrôlement d'empreinte (ADR-0002) |
+| `tools/android/parcours-de-bout-en-bout.sh` | Dix étapes sur appareil, **résolution de noms coupée** : connexion, coffre personnel, **coffre d'équipe**, création, modification, registres, partage traversé jusqu'à WebCrypto, corbeille, verrouillage à l'arrière-plan, lien `otpauth` reçu coffre fermé, remplissage |
+| `tools/android/temoin-du-parcours.sh` | Le parcours sait rougir : mot de passe faux, remplissage désactivé |
+| `tools/android/temoin-de-l-invalidation.sh` | La clé du coffre est vraiment invalidée par un nouvel enrôlement (ADR-0002) |
 | `tools/android/temoin-du-partage-croise.sh` | L'enveloppe de partage traverse dans les deux sens entre le cœur et WebCrypto |
 | `tools/android/temoin-du-sso-mobile.sh` | Le client mène le PKCE et obtient une session du vrai serveur ; état étranger et rejeu refusés |
 | `tools/android/temoin-des-vecteurs.sh` | Chaque vecteur de `contrat.json` est réellement lu par un test |
 | `tools/android/verifier-l-autonomie.sh` | L'APK livré ne vend rien et ne nomme aucun serveur de l'éditeur |
 | `tools/android/temoin-de-l-autonomie.sh` | Le contrôle ci-dessus sait rougir |
+| `tools/verifier-avant-de-pousser.sh` | Les contrôles rapides de la CI, avant de pousser |

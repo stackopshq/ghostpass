@@ -6,6 +6,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -183,6 +184,84 @@ class EnveloppeDePartageTest {
             "un mot de passe partage",
             openSend(enUrl, scelle.nonce, scelle.ciphertext),
         )
+    }
+
+    // ─── Le lien, et les deux générations de serveur (§4) ───
+
+    /**
+     * Le serveur **à relais** rend une adresse : c'est elle qui fait foi.
+     *
+     * La reconstruire depuis l'identifiant produirait un lien vers une machine qui ne
+     * connaît pas ce partage — mort, et sans la moindre erreur pour le dire.
+     */
+    @Test
+    fun lAdresseRendueParLeServeurFaitFoi() {
+        val lien = Coffre.lienDePartage(
+            PartageCree(id = "abc", url = "https://ghostbit.example.com/p/abc"),
+            adresseServeur = "https://ghostpass.example.com",
+            cle = "AAAA",
+        )
+        assertTrue(lien, lien.startsWith("https://ghostbit.example.com/p/abc#"))
+    }
+
+    /**
+     * Un serveur antérieur ne rend qu'un identifiant : on déduit alors l'adresse de la
+     * sienne, ce qui est la seule chose juste à faire.
+     *
+     * Se fier à `url` seule casserait le partage sur tous les serveurs pas encore basculés
+     * — dont celui de cette branche.
+     */
+    @Test
+    fun sansAdresseRendueOnRetombeSurLaNotre() {
+        val lien = Coffre.lienDePartage(
+            PartageCree(id = "abc"),
+            adresseServeur = "https://ghostpass.example.com",
+            cle = "AAAA",
+        )
+        assertTrue(lien, lien.startsWith("https://ghostpass.example.com/s/abc#"))
+    }
+
+    /**
+     * **La clé s'écrit en base64url sans remplissage dans le fragment.**
+     *
+     * `contrat.json`, bloc `share_envelope.transport`, le dit et prévient de l'erreur :
+     * n'accepter que le base64 standard échoue sur « Invalid padding », un message qui
+     * accuse le format et laisse croire à une clé corrompue.
+     *
+     * On part donc d'une clé qui contient **les trois caractères qui diffèrent** — `+`, `/`
+     * et le remplissage. Une clé sans eux passerait quelle que soit la conversion, et le
+     * témoin serait vert des deux côtés de la mutation.
+     */
+    @Test
+    fun laCleSEcritEnBase64urlDansLeFragment() {
+        val cleStandard = "a+b/c=="
+        val lien = Coffre.lienDePartage(
+            PartageCree(id = "abc"), "https://ghostpass.example.com", cleStandard)
+        val fragment = lien.substringAfter('#')
+        assertEquals("a-b_c", fragment)
+        assertFalse("un fragment ne doit porter ni + ni /", fragment.any { it == '+' || it == '/' })
+        assertFalse("ni remplissage", fragment.contains('='))
+    }
+
+    /**
+     * Un horodatage qui n'est pas plausible en secondes n'est **pas inscrit**.
+     *
+     * `expiresAt` vient d'un service de partage tiers, par un relais qui ne fait que le
+     * transmettre : rien dans ce dépôt n'en garantit l'unité, alors que le registre est en
+     * secondes. On préfère ne rien inscrire à inscrire une valeur mille fois trop grande —
+     * convertir à la volée reviendrait à deviner l'unité d'un champ dont c'est justement
+     * l'unité qui est en jeu.
+     */
+    @Test
+    fun unHorodatageQuiNEstPasEnSecondesNEstPasInscrit() {
+        assertEquals(1_788_000_000L, Coffre.secondesPlausibles(1_788_000_000L))
+        assertEquals(
+            "1 788 000 000 000 est ce même instant en millisecondes : il ne doit pas entrer",
+            null,
+            Coffre.secondesPlausibles(1_788_000_000_000L),
+        )
+        assertEquals(null, Coffre.secondesPlausibles(null))
+        assertEquals(null, Coffre.secondesPlausibles(0L))
     }
 
     // ─── Outillage ───

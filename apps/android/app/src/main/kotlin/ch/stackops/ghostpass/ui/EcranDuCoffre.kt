@@ -3,6 +3,7 @@ package ch.stackops.ghostpass.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,89 +15,92 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
+import ch.stackops.ghostpass.CollectionDOrganisation
 import ch.stackops.ghostpass.ContenuDElement
 import ch.stackops.ghostpass.CouleurDEquipe
+import ch.stackops.ghostpass.EchecDOrganisation
 import ch.stackops.ghostpass.EntreeDuCoffre
+import ch.stackops.ghostpass.EtatDAppartenance
 import ch.stackops.ghostpass.ModeleDuCoffre
+import ch.stackops.ghostpass.Organisation
 import ch.stackops.ghostpass.RaisonDIllisibilite
 import ch.stackops.ghostpass.theme.BoutonSecondaire
+import ch.stackops.ghostpass.theme.ChampGhost
 import ch.stackops.ghostpass.theme.FondGhost
 import ch.stackops.ghostpass.theme.GP
 import ch.stackops.ghostpass.theme.LienDiscret
 import ch.stackops.ghostpass.theme.LocalCouleurs
 
 /**
- * La liste du coffre.
+ * La liste du coffre — personnel ou d'équipe.
  *
- * C'est ici que la règle §5 devient visible : la liste parcourt `lecture.entrees`, qui
- * contient **aussi** les lignes qui ne se sont pas ouvertes. Filtrer sur `lisibles` serait
- * une ligne plus courte et une régression silencieuse.
+ * C'est ici que la règle §5 devient visible : la liste parcourt `lectureAffichee.entrees`,
+ * qui contient **aussi** les lignes qui ne se sont pas ouvertes. Filtrer sur `lisibles`
+ * serait une ligne plus courte et une régression silencieuse.
+ *
+ * ## Ce que cet écran a longtemps manqué
+ *
+ * Trois choses, toutes vues en dix secondes sur un vrai téléphone et par aucune relecture :
+ *
+ *  - **les coffres d'équipe.** L'application n'appelait que `/api/vault/items`, le coffre
+ *    personnel. Quelqu'un dont les mots de passe vivent en collection d'équipe voyait une
+ *    liste vide et concluait à une perte de données ;
+ *  - **la recherche.** Un coffre de trente lignes sans recherche n'est plus un gestionnaire
+ *    de mots de passe, c'est une liste ;
+ *  - **un moyen de sortir.** Ni verrouillage à portée de main, ni déconnexion.
  */
 @Composable
 fun EcranDuCoffre(
     modele: ModeleDuCoffre,
     surNouveau: () -> Unit = {},
     surModifier: (EntreeDuCoffre.Lisible) -> Unit = {},
+    surCorbeille: () -> Unit = {},
 ) {
     val couleurs = LocalCouleurs.current
-    val lecture = modele.lecture
-    val activite = LocalContext.current as FragmentActivity
+    val lecture = modele.lectureAffichee
+    var recherche by rememberSaveable { mutableStateOf("") }
+    var reglagesOuverts by rememberSaveable { mutableStateOf(false) }
+
+    // Les organisations se chargent avec le coffre. Sans elles, l'écran ment par omission.
+    LaunchedEffect(Unit) { modele.chargerLesOrganisations() }
 
     Box(Modifier.fillMaxSize()) {
         FondGhost()
         Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    "Coffre",
-                    color = couleurs.encre,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.widthIn(max = 110.dp)) {
-                        BoutonSecondaire("Nouveau", identifiant = "button.new") { surNouveau() }
-                    }
-                    Box(Modifier.widthIn(max = 130.dp)) {
-                        BoutonSecondaire("Verrouiller") { modele.verrouiller() }
-                    }
-                }
+            BarreDOutils(
+                modele = modele,
+                reglagesOuverts = reglagesOuverts,
+                surReglages = { reglagesOuverts = !reglagesOuverts },
+                surNouveau = surNouveau,
+            )
+
+            if (reglagesOuverts) {
+                MenuDeReglages(modele, surCorbeille) { reglagesOuverts = false }
             }
 
-            // Le raccourci d'ADR-0002 se propose ici et pas à l'entrée : on ne peut
-            // envelopper que la clé d'un coffre déjà ouvert. Le proposer avant serait une
-            // case à cocher qui ne ferait rien.
-            if (modele.biometriePossible) {
-                LienDiscret(
-                    texte = if (modele.biometrieActivee) {
-                        "Désactiver le déverrouillage par empreinte"
-                    } else {
-                        "Activer le déverrouillage par empreinte"
-                    },
-                    identifiant = "button.biometricToggle",
-                    modifierExterne = Modifier.padding(horizontal = 20.dp),
-                ) {
-                    if (modele.biometrieActivee) {
-                        modele.desactiverLaBiometrie()
-                    } else {
-                        modele.activerLaBiometrie(activite)
-                    }
-                }
-            }
+            ChoixDuCoffre(modele)
+
+            if (modele.collectionOuverte == null) BandeDeDossiers(modele)
 
             modele.message?.let { texte ->
                 Text(
@@ -118,20 +122,33 @@ fun EcranDuCoffre(
                 )
             }
 
-            if (lecture.entrees.isEmpty()) {
+            // ─── La recherche ───
+            //
+            // Un champ à nous, et non celui de Material. La charte §7 note que sur iOS les
+            // boutons restent rectangulaires **parce que** la barre de recherche du système
+            // ne peut pas devenir une pilule. Ici le champ est redessinable : il prend donc
+            // la forme des autres champs du produit, et rien n'a besoin de céder.
+            if (lecture.entrees.isNotEmpty() || recherche.isNotEmpty()) {
+                Box(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+                    ChampGhost(
+                        intitule = "Rechercher",
+                        valeur = recherche,
+                        invite = "Nom, identifiant, dossier",
+                        identifiant = "field.search",
+                        onChange = { recherche = it },
+                    )
+                }
+            }
+
+            val filtrees = filtrer(lecture.entrees, recherche)
+
+            if (filtrees.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    // « Vide » et « on n'a pas pu regarder » sont deux choses différentes,
-                    // et les confondre est la même faute que faire disparaître une ligne
-                    // illisible : l'utilisateur conclut qu'il n'a rien enregistré, et
-                    // recrée un identifiant qui existe déjà.
                     Text(
-                        if (modele.horsLigne) {
-                            "Coffre indisponible hors ligne — rien n'a encore été mis en cache."
-                        } else {
-                            "Ce coffre est vide."
-                        },
+                        messageDeListeVide(modele, recherche),
                         color = couleurs.attenue,
                         fontSize = 14.sp,
+                        modifier = Modifier.padding(horizontal = 24.dp),
                     )
                 }
             } else {
@@ -139,13 +156,47 @@ fun EcranDuCoffre(
                     Modifier.fillMaxSize().padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    // `lecture.entrees`, jamais `lecture.lisibles` : c'est la règle §5, et
-                    // c'est cette ligne qui la porte.
-                    items(lecture.entrees, key = { it.id }) { entree ->
+                    // Les favoris en tête, puis le nom sans égard à la casse. L'ordre est
+                    // **stable** : une liste qui se réordonne d'un affichage à l'autre est
+                    // une liste où l'on ne retrouve rien.
+                    val ordonnees = filtrees.sortedWith(
+                        compareBy<EntreeDuCoffre> { it.id !in lecture.favoris }
+                            .thenBy(String.CASE_INSENSITIVE_ORDER) {
+                                (it as? EntreeDuCoffre.Lisible)?.element?.name ?: ""
+                            },
+                    )
+                    items(ordonnees, key = { it.id }) { entree ->
                         when (entree) {
-                            is EntreeDuCoffre.Lisible ->
-                                LigneLisible(entree) { surModifier(entree) }
+                            is EntreeDuCoffre.Lisible -> LigneLisible(
+                                entree = entree,
+                                favori = entree.id in lecture.favoris,
+                                // L'étoile écrit dans un registre du coffre **personnel** :
+                                // elle n'a pas de sens sur un élément d'équipe, et la
+                                // proposer y écrirait un favori que personne ne relirait.
+                                surFavori = if (modele.collectionOuverte == null) {
+                                    { modele.basculerLeFavori(entree.id) }
+                                } else {
+                                    null
+                                },
+                            ) { surModifier(entree) }
                             is EntreeDuCoffre.Illisible -> LigneIllisible(entree)
+                        }
+                    }
+
+                    // Ce qu'une recherche a mis de côté sans pouvoir le lire. Une ligne
+                    // illisible n'a pas de nom : aucune recherche ne peut la retenir, et son
+                    // absence se lirait « il n'y a rien d'autre ». On la compte donc.
+                    val illisiblesEcartees =
+                        lecture.nombreDIllisibles - filtrees.count { it is EntreeDuCoffre.Illisible }
+                    if (recherche.isNotEmpty() && illisiblesEcartees > 0) {
+                        item {
+                            Text(
+                                "$illisiblesEcartees élément(s) illisible(s) ne peuvent pas " +
+                                    "être filtrés : ils n'ont pas de nom à comparer.",
+                                color = couleurs.attenue,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(vertical = 6.dp),
+                            )
                         }
                     }
                 }
@@ -154,8 +205,290 @@ fun EcranDuCoffre(
     }
 }
 
+/**
+ * La barre d'outils : l'ornement, le titre, et les actions.
+ *
+ * L'emoji de coffre est **purement décoratif**, et ses deux modificateurs comptent autant
+ * que lui — c'est l'idée de Kevin, reprise telle quelle d'iOS :
+ *
+ *  - `hideFromAccessibility()` : sans elle, un lecteur d'écran annonce l'emoji avant le
+ *    titre, et « visage de fantôme » n'apprend rien à personne ;
+ *  - **aucun `clickable`** : un ornement ne doit pas absorber un toucher. Appuyer sur
+ *    quelque chose qui ne fait rien se lit comme une panne.
+ */
 @Composable
-private fun LigneLisible(entree: EntreeDuCoffre.Lisible, surClic: () -> Unit) {
+private fun BarreDOutils(
+    modele: ModeleDuCoffre,
+    reglagesOuverts: Boolean,
+    surReglages: () -> Unit,
+    surNouveau: () -> Unit,
+) {
+    val couleurs = LocalCouleurs.current
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            "🗄️",
+            fontSize = 22.sp,
+            modifier = Modifier.semantics { hideFromAccessibility() },
+        )
+        Text(
+            modele.collectionOuverte?.nom ?: "Coffre",
+            color = couleurs.encre,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
+        if (modele.peutModifierIci) {
+            Box(Modifier.widthIn(max = 110.dp)) {
+                BoutonSecondaire("Nouveau", identifiant = "button.new") { surNouveau() }
+            }
+        }
+        Box(Modifier.widthIn(max = 60.dp)) {
+            BoutonSecondaire(
+                texte = if (reglagesOuverts) "✕" else "⋯",
+                identifiant = "button.settings",
+            ) { surReglages() }
+        }
+    }
+}
+
+/**
+ * Le menu de réglages — **et rien de grisé**.
+ *
+ * iOS en a un bien plus long : santé du coffre, clé de récupération, import et export,
+ * urgence, MFA, activité. Rien de tout cela n'existe ici, et rien de tout cela n'y figure.
+ * Un réglage grisé qui promet une fonction inexistante est pire que son absence : il déplace
+ * l'échec du moment où l'on configure au moment où quelqu'un essaie de s'en servir.
+ */
+@Composable
+private fun MenuDeReglages(
+    modele: ModeleDuCoffre,
+    surCorbeille: () -> Unit,
+    surFermer: () -> Unit,
+) {
+    val couleurs = LocalCouleurs.current
+    val activite = LocalContext.current as FragmentActivity
+    val forme = RoundedCornerShape(GP.rayonCarte)
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .background(couleurs.surface.copy(alpha = 0.9f), forme)
+            .border(1.dp, couleurs.bordure, forme)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        LienDiscret("Corbeille", identifiant = "button.trash") {
+            surFermer()
+            surCorbeille()
+        }
+
+        if (modele.biometriePossible) {
+            LienDiscret(
+                texte = if (modele.biometrieActivee) {
+                    "Désactiver le déverrouillage par empreinte"
+                } else {
+                    "Activer le déverrouillage par empreinte"
+                },
+                identifiant = "button.biometricToggle",
+            ) {
+                if (modele.biometrieActivee) {
+                    modele.desactiverLaBiometrie()
+                } else {
+                    modele.activerLaBiometrie(activite)
+                }
+            }
+        }
+
+        LienDiscret("Verrouiller", identifiant = "button.lock") {
+            surFermer()
+            modele.verrouiller()
+        }
+
+        // La déconnexion oublie la session, le cache **et** l'enveloppe biométrique. Elle
+        // est distincte du verrouillage, et le dire évite de la choisir par erreur.
+        LienDiscret("Se déconnecter", identifiant = "button.logout") {
+            surFermer()
+            modele.fermerLaSession()
+        }
+        Text(
+            "Le verrouillage garde la session ; la déconnexion l'efface et demandera de " +
+                "tout ressaisir.",
+            color = couleurs.attenue,
+            fontSize = 11.sp,
+        )
+    }
+}
+
+/**
+ * Le choix entre le coffre personnel et les coffres d'équipe.
+ *
+ * Trois états par organisation, et les confondre coûte :
+ *
+ *  - **ouverte** : ses collections s'affichent ;
+ *  - **en attente d'acceptation** : elle n'a *pas* de contenu, et le dire n'est pas la même
+ *    chose que la montrer vide ;
+ *  - **en échec** : elle garde sa place et dit pourquoi. Les autres restent utilisables —
+ *    une clé d'équipe qui ne s'ouvre pas ne doit pas vider l'écran.
+ */
+@Composable
+private fun ChoixDuCoffre(modele: ModeleDuCoffre) {
+    val couleurs = LocalCouleurs.current
+    if (modele.organisations.isEmpty()) return
+
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Pastilledechoix(
+                texte = "Mon coffre",
+                choisie = modele.collectionOuverte == null,
+                identifiant = "chip.personal",
+            ) { modele.revenirAuCoffrePersonnel() }
+
+            for (organisation in modele.organisations) {
+                Pastilledechoix(
+                    texte = organisation.nom,
+                    choisie = modele.organisationOuverte?.organisation?.id == organisation.id,
+                    identifiant = "chip.org." + organisation.id,
+                ) {
+                    if (organisation.etat == EtatDAppartenance.Invite) {
+                        modele.accepterLInvitation(organisation)
+                    } else {
+                        modele.ouvrirUneOrganisation(organisation)
+                    }
+                }
+            }
+        }
+
+        for (organisation in modele.organisations) {
+            val echec = modele.echecsDOrganisation[organisation.id]
+            if (organisation.etat == EtatDAppartenance.Invite) {
+                Text(
+                    "« ${organisation.nom} » vous a invité·e. Touchez son nom pour accepter ; " +
+                        "son contenu ne sera lisible qu'ensuite.",
+                    color = couleurs.attenue,
+                    fontSize = 12.sp,
+                )
+            } else if (echec != null) {
+                Text(
+                    "« ${organisation.nom} » : " + when (echec) {
+                        EchecDOrganisation.InvitationEnAttente ->
+                            "invitation pas encore acceptée."
+                        EchecDOrganisation.AucuneCleRemise ->
+                            "aucune clé ne vous a encore été remise. Un administrateur doit " +
+                                "vous l'attribuer."
+                        is EchecDOrganisation.CleRefusee ->
+                            "la clé de ce coffre n'a pas pu être ouverte. Elle a peut-être " +
+                                "été remplacée depuis qu'elle vous a été remise."
+                        is EchecDOrganisation.Reseau ->
+                            "coffre injoignable pour l'instant."
+                    },
+                    color = couleurs.danger,
+                    fontSize = 12.sp,
+                )
+            }
+        }
+
+        // Les collections de l'organisation ouverte.
+        val ouverte = modele.organisationOuverte
+        if (ouverte != null && ouverte.collections.isNotEmpty()) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                for (collection in ouverte.collections) {
+                    Pastilledechoix(
+                        // La permission se lit **avant** d'ouvrir : découvrir qu'on ne peut
+                        // pas écrire après avoir tout saisi est le pire moment.
+                        texte = collection.nom +
+                            if (collection.permission.peutEcrire) "" else " (lecture)",
+                        choisie = modele.collectionOuverte?.id == collection.id,
+                        identifiant = "chip.collection." + collection.id,
+                    ) { modele.ouvrirUneCollection(collection) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Pastilledechoix(
+    texte: String,
+    choisie: Boolean,
+    identifiant: String,
+    surClic: () -> Unit,
+) {
+    val couleurs = LocalCouleurs.current
+    val forme = RoundedCornerShape(GP.rayon)
+    Box(
+        Modifier
+            .background(
+                if (choisie) couleurs.accent.copy(alpha = 0.9f) else couleurs.surface2,
+                forme,
+            )
+            .border(1.dp, couleurs.bordure, forme)
+            .clickable(onClick = surClic)
+            .semantics { contentDescription = identifiant }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            texte,
+            color = if (choisie) couleurs.surAccent else couleurs.encre,
+            fontSize = 13.sp,
+        )
+    }
+}
+
+/** Ce qu'on dit quand la liste est vide — et « vide » a quatre causes différentes. */
+private fun messageDeListeVide(modele: ModeleDuCoffre, recherche: String): String = when {
+    recherche.isNotEmpty() -> "Aucun élément ne correspond à « $recherche »."
+    // « On n'a pas pu regarder » n'est pas « il n'y a rien », et les confondre fait
+    // recréer un identifiant qui existe déjà.
+    modele.horsLigne -> "Coffre indisponible hors ligne — rien n'a encore été mis en cache."
+    modele.collectionOuverte != null -> "Cette collection d'équipe est vide."
+    modele.organisations.isNotEmpty() ->
+        "Votre coffre personnel est vide. Vos mots de passe sont peut-être dans un coffre " +
+            "d'équipe : choisissez-le ci-dessus."
+    else -> "Ce coffre est vide."
+}
+
+/**
+ * Le filtre de la recherche.
+ *
+ * Il porte sur le nom, l'identifiant et le dossier — ce qu'on tape quand on cherche. Les
+ * lignes illisibles ne peuvent pas être filtrées : elles n'ont pas de nom, puisqu'il vit
+ * dans le chiffré. Elles sortent donc dès qu'une recherche est active, et l'écran le
+ * **compte** pour que leur absence ne se lise pas « il n'y a rien d'autre ».
+ */
+private fun filtrer(entrees: List<EntreeDuCoffre>, recherche: String): List<EntreeDuCoffre> {
+    val requete = recherche.trim().lowercase()
+    if (requete.isEmpty()) return entrees
+    return entrees.filterIsInstance<EntreeDuCoffre.Lisible>().filter { entree ->
+        val element = entree.element
+        val identifiants = element.identifiants
+        element.name.lowercase().contains(requete) ||
+            element.folder?.lowercase()?.contains(requete) == true ||
+            identifiants?.username?.lowercase()?.contains(requete) == true ||
+            identifiants?.uris?.any { it.lowercase().contains(requete) } == true
+    }
+}
+
+@Composable
+private fun LigneLisible(
+    entree: EntreeDuCoffre.Lisible,
+    favori: Boolean,
+    surFavori: (() -> Unit)?,
+    surClic: () -> Unit,
+) {
     val couleurs = LocalCouleurs.current
     val element = entree.element
     val forme = RoundedCornerShape(GP.rayonCarte)
@@ -171,7 +504,7 @@ private fun LigneLisible(entree: EntreeDuCoffre.Lisible, surClic: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Pastille(element.name)
-        Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f)) {
             Text(element.name, color = couleurs.encre, fontSize = 15.sp)
             val detail = when (val d = element.data) {
                 is ContenuDElement.Connexion -> d.valeur.username.ifEmpty { "Identifiant" }
@@ -179,6 +512,26 @@ private fun LigneLisible(entree: EntreeDuCoffre.Lisible, surClic: () -> Unit) {
                 is ContenuDElement.Carte -> "Carte"
             }
             Text(detail, color = couleurs.attenue, fontSize = 13.sp)
+        }
+        if (surFavori != null) {
+            // L'étoile a sa propre zone de toucher : elle ne doit pas ouvrir l'élément.
+            Text(
+                if (favori) "★" else "☆",
+                color = if (favori) couleurs.accentTexte else couleurs.attenue,
+                fontSize = 18.sp,
+                modifier = Modifier
+                    .clickable(onClick = surFavori)
+                    // L'état entre dans la description, et pour deux raisons qui vont
+                    // ensemble. Un lecteur d'écran annonce « ★ » comme « étoile blanche »,
+                    // ce qui n'apprend rien ; et une description qui porte l'état est la
+                    // seule chose qu'une machine puisse lire, puisqu'une description
+                    // remplace le texte du nœud plutôt que de s'y ajouter.
+                    .semantics {
+                        contentDescription = "button.favorite." + entree.id +
+                            if (favori) ".on" else ".off"
+                    }
+                    .padding(6.dp),
+            )
         }
     }
 }
@@ -189,10 +542,10 @@ private fun LigneLisible(entree: EntreeDuCoffre.Lisible, surClic: () -> Unit) {
  * Elle **garde sa place** et **dit pourquoi**. Elle ne porte aucun nom : le nom vit dans le
  * chiffré, et en inventer un serait pire que de n'en montrer aucun.
  *
- * Sa forme est celle des autres lignes, pas celle d'une erreur : ce n'est pas un incident
- * de l'application, c'est un élément du coffre qui existe et qu'on ne peut pas lire. Une
- * bannière rouge dirait « quelque chose s'est mal passé » là où il faut lire « ceci est à
- * vous, sous une clé que vous n'avez pas ici ».
+ * Sa forme est celle des autres lignes, pas celle d'une erreur : ce n'est pas un incident de
+ * l'application, c'est un élément du coffre qui existe et qu'on ne peut pas lire. Dans une
+ * collection d'équipe, c'est encore plus vrai — l'élément a été scellé par quelqu'un
+ * d'autre, et son absence se lirait « cette personne ne l'a pas encore créé ».
  */
 @Composable
 private fun LigneIllisible(entree: EntreeDuCoffre.Illisible) {
@@ -209,9 +562,7 @@ private fun LigneIllisible(entree: EntreeDuCoffre.Illisible) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(
-            Modifier
-                .size(32.dp)
-                .background(couleurs.surface2, RoundedCornerShape(10.dp)),
+            Modifier.size(32.dp).background(couleurs.surface2, RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Text("🔒", fontSize = 15.sp)
@@ -219,11 +570,7 @@ private fun LigneIllisible(entree: EntreeDuCoffre.Illisible) {
         Column(Modifier.fillMaxWidth()) {
             Text("Élément illisible", color = couleurs.attenue, fontSize = 15.sp)
             Text(
-                when (val raison = entree.raison) {
-                    // Trois causes, trois conduites à tenir. Un message unique
-                    // « erreur de déchiffrement » les rendrait toutes également
-                    // décourageantes, et enverrait chercher un problème de clé là où il n'y
-                    // en a pas.
+                when (entree.raison) {
                     RaisonDIllisibilite.CleManquante ->
                         "Chiffré sous une clé dont cet appareil ne dispose pas."
                     is RaisonDIllisibilite.SceauRefuse ->
@@ -239,19 +586,77 @@ private fun LigneIllisible(entree: EntreeDuCoffre.Illisible) {
 }
 
 /**
+ * La bande des dossiers, et le moyen d'en créer un vide.
+ *
+ * Un dossier « existe » de deux façons : parce qu'un élément l'habite, ou parce qu'il est
+ * inscrit au registre des dossiers **vides**. La seconde est la seule qui permette de
+ * préparer un rangement avant d'avoir quoi que ce soit à y mettre, et la seule qui empêche
+ * un dossier de s'évaporer quand on en sort le dernier élément.
+ */
+@Composable
+private fun BandeDeDossiers(modele: ModeleDuCoffre) {
+    val couleurs = LocalCouleurs.current
+    var ouvert by rememberSaveable { mutableStateOf(false) }
+    var nouveau by rememberSaveable { mutableStateOf("") }
+    val dossiers = modele.dossiers
+
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        LienDiscret(
+            texte = if (ouvert) "Masquer les dossiers" else "Dossiers (${dossiers.size})",
+            identifiant = "button.folders",
+        ) { ouvert = !ouvert }
+
+        if (ouvert) {
+            for (dossier in dossiers) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(dossier, color = couleurs.encre, fontSize = 13.sp)
+                    // Seuls les dossiers vides se retirent : les autres tiennent à leurs
+                    // éléments, et « retirer » n'y voudrait rien dire.
+                    if (dossier in modele.lecture.dossiersVides) {
+                        LienDiscret("Retirer", identifiant = "button.removeFolder") {
+                            modele.retirerUnDossierVide(dossier)
+                        }
+                    }
+                }
+            }
+            ChampGhost(
+                intitule = "Nouveau dossier",
+                valeur = nouveau,
+                invite = "Travail/Serveurs",
+                identifiant = "field.newFolder",
+                onChange = { nouveau = it },
+            )
+            LienDiscret(
+                texte = "Ajouter",
+                actif = nouveau.isNotBlank() && !modele.occupe,
+                identifiant = "button.addFolder",
+            ) {
+                modele.ajouterUnDossierVide(nouveau)
+                nouveau = ""
+            }
+        }
+    }
+}
+
+/**
  * La pastille d'initiale, teintée par la règle de couleur partagée.
  *
- * La même couleur pour le même nom sur les trois clients : c'est [CouleurDEquipe], la
- * somme des octets UTF-8 modulo huit. Aucun hachage de bibliothèque, parce qu'aucun n'est
- * garanti stable d'une exécution à l'autre.
+ * La même couleur pour le même nom sur les trois clients : [CouleurDEquipe], la somme des
+ * octets UTF-8 modulo huit. Aucun hachage de bibliothèque, parce qu'aucun n'est garanti
+ * stable d'une exécution à l'autre.
  */
 @Composable
 private fun Pastille(nom: String) {
     val argb = CouleurDEquipe.couleurArgb(CouleurDEquipe.attribuee(nom))!!
     Box(
-        Modifier
-            .size(32.dp)
-            .background(Color(argb).copy(alpha = 0.9f), RoundedCornerShape(10.dp)),
+        Modifier.size(32.dp).background(Color(argb).copy(alpha = 0.9f), RoundedCornerShape(10.dp)),
         contentAlignment = Alignment.Center,
     ) {
         Text(

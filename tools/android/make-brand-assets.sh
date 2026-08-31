@@ -15,7 +15,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-OUTIL="$ROOT/../suite/tools/brand/icone-adaptative-android.py"
+# `GHOSTSUITE` dit où trouver le dépôt de la charte ; par défaut, un clone voisin. C'est la
+# convention de `build-jni.sh`, et coder le chemin en dur ici obligeait à ranger les deux
+# dépôts d'une seule façon — sans le dire, et en échouant sur « outil introuvable ».
+SUITE="${GHOSTSUITE:-$(cd "$ROOT/.." && pwd)/suite}"
+OUTIL="$SUITE/tools/brand/icone-adaptative-android.py"
+CADRE="$SUITE/tools/brand/icone-ios.py"
 SOURCE="$ROOT/assets/logo/favicon.svg"
 RES="$ROOT/apps/android/app/src/main/res"
 
@@ -25,4 +30,26 @@ RES="$ROOT/apps/android/app/src/main/res"
 # La nuit de la charte, celle de `values/colors.xml`. Le fond d'une icône adaptative doit
 # être opaque : Android compose le premier plan par-dessus, et une couche transparente
 # laisserait voir ce que le lanceur a derrière.
-exec python3 "$OUTIL" "$SOURCE" "$RES" --fond "#0B0F17"
+python3 "$OUTIL" "$SOURCE" "$RES"
+
+# ─── L'enseigne de l'écran d'entrée ───
+#
+# La marque posée sur la plaque, en `drawable-*`. Fond **transparent** : c'est la plaque qui
+# fournit le contraste, et l'aplatir ici donnerait un carré blanc au milieu d'une carte de
+# verre.
+#
+# Recadrée par `icone-ios.py --cadre`, et c'est ce qui manquait : la plaque donne sa marge
+# autour de l'**image**, pas autour de la silhouette. Sans recadrage, la silhouette remplit
+# sa boîte bord à bord et paraît à l'étroit — là où celle de son produit frère respire.
+echo
+echo "Enseigne (drawable-*/marque.png)"
+TEMPO="$(mktemp -d)"
+trap 'rm -rf "$TEMPO"' EXIT
+python3 "$CADRE" --cadre "$TEMPO/marque.svg" "$SOURCE"
+# 64 dp — la taille de la plaque dans `EcranDeDeverrouillage`.
+for densite in mdpi:64 hdpi:96 xhdpi:128 xxhdpi:192 xxxhdpi:256; do
+  nom="${densite%%:*}"; cote="${densite##*:}"
+  mkdir -p "$RES/drawable-$nom"
+  rsvg-convert -w "$cote" -h "$cote" "$TEMPO/marque.svg" -o "$RES/drawable-$nom/marque.png"
+  printf "  drawable-%-8s %4s px\n" "$nom" "$cote"
+done

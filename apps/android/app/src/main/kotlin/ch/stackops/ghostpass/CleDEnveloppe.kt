@@ -26,11 +26,9 @@ import javax.crypto.spec.GCMParameterSpec
  *    il ne dit pas *quelle* authentification, ni combien de temps elle vaut ;
  *  - `setInvalidatedByBiometricEnrollment(true)` — l'équivalent de `.biometryCurrentSet`.
  *    Son défaut est `false` et son oubli ne produit aucune erreur : c'est le réglage que
- *    l'ADR nomme comme le plus important. **Mesuré ici, il est pourtant redondant dans
- *    cette politique-ci** : une clé liée à `AUTH_BIOMETRIC_STRONG` à chaque usage est déjà
- *    attachée aux empreintes enrôlées, et le magasin rapporte l'invalidation même quand on
- *    demande `false`. Ce qui la fait réellement perdre est une **durée de validité
- *    positive** — voir [politique] et le témoin, qui fait diverger cette branche-là ;
+ *    l'ADR nomme comme le plus important, et le magasin le porte bien — une clé construite
+ *    sans lui rapporte `false`. Ce fichier a un temps affirmé le contraire, sur une mesure
+ *    prise une seule fois ; `CleDEnveloppeTest` raconte comment elle s'est démentie ;
  *  - `setUnlockedDeviceRequired(true)` — rien ne se déchiffre écran verrouillé.
  *
  * ## Biométrie **seule**, et pas « biométrie ou code de l'appareil »
@@ -85,20 +83,16 @@ object CleDEnveloppe {
     /**
      * La politique de la clé, **isolée dans une fonction pour être lisible par un test**.
      *
-     * Les deux paramètres n'existent que pour le témoin, et le second est là parce que le
-     * premier s'est révélé insuffisant — mesuré sur émulateur (API 35), pas supposé :
+     * Les deux paramètres n'existent que pour les témoins, qui ont besoin de fabriquer des
+     * clés **volontairement fausses** pour montrer que les bonnes ne le sont pas :
      *
-     * **`setInvalidatedByBiometricEnrollment(false)` ne change rien à cette politique-ci.**
-     * Le magasin rapporte `isInvalidatedByBiometricEnrollment = true` dans les deux cas.
-     * C'est cohérent : une clé liée à `AUTH_BIOMETRIC_STRONG` **à chaque usage** est
-     * nécessairement attachée aux empreintes actuellement enrôlées, et l'invalidation
-     * découle de la forme de la clé plutôt que du drapeau. Le drapeau est alors redondant —
-     * on le garde parce qu'il redevient nécessaire dès que la politique change.
-     *
-     * Ce qui **fait** vraiment perdre l'invalidation est [secondesDeValidite] : une durée
-     * positive attache la clé à l'horloge du système plutôt qu'aux empreintes, et le
-     * drapeau cesse alors de porter. C'est cette branche-là que le témoin fait diverger,
-     * parce que c'est celle où une régression est possible.
+     *  - `invalideeParEnrolement = false` produit une clé que le magasin rapporte comme
+     *    non invalidée. C'est ce qui rend l'assertion de production non vide ;
+     *  - `secondesDeValidite > 0` attache la clé à l'horloge du système plutôt qu'aux
+     *    empreintes. Une telle clé **survit** à un nouvel enrôlement — mesuré par
+     *    `tools/android/temoin-de-l-invalidation.sh` — et c'est la régression la plus
+     *    plausible : quelqu'un trouve la biométrie insistante et pose « valable cinq
+     *    minutes ».
      *
      * Le code de production n'appelle jamais cette fonction avec autre chose que ses défauts.
      */

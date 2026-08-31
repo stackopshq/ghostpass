@@ -13,14 +13,22 @@ package ch.stackops.ghostpass
  * d'édition et l'activité qui reçoit l'intention y lisent tous la même règle — trois copies
  * en divergeraient.
  *
- * ## Ce que le brief dit et que le code d'iOS ne fait pas
+ * ## Le type compte, et pas seulement le schéma
  *
- * Le test d'iOS s'appelle « seul un lien de TOTP est retenu ». Le code ne vérifie pas le
- * type : `depuisUnQrCode` écarte `otpauth-migration://`, exige le préfixe `otpauth://` et un
- * secret non vide — et rien d'autre. Un `otpauth://hotp/…?secret=…` passe donc, des deux
- * côtés. C'est porté à l'identique **parce que le porter à l'identique est la consigne**, et
- * signalé ici plutôt que corrigé d'un seul côté : deux clients qui accepteraient des liens
- * différents se comporteraient différemment sur le même QR code.
+ * Le premier portage suivait `depuisUnQrCode` à la lettre : préfixe `otpauth://`, secret non
+ * vide, et rien d'autre. Le test d'iOS s'appelait pourtant « seul un lien de TOTP est
+ * retenu », et **rien ne le vérifiait** — des deux côtés. Signalé en portant, corrigé depuis
+ * sur les deux clients ; les vecteurs sont dans `TypeDeLienOtpauthTests` côté iOS et
+ * [LienOtpauthTest] ici.
+ *
+ * Ce que coûtait le trou : `otpauth://hotp/…?secret=…` est une URI parfaitement valide dont
+ * le secret compte des **événements** et non le temps. Acceptée, elle produirait des codes
+ * calculés sur l'horloge — donc faux, **et sans aucune erreur**. Le site afficherait « code
+ * incorrect » et rien ne désignerait GhostPass. C'est exactement la classe de défaut que ce
+ * fichier existe pour empêcher.
+ *
+ * Un type **inconnu** est refusé lui aussi : le retenir par défaut serait le même défaut,
+ * déplacé d'un cran.
  */
 object LienOtpauth {
 
@@ -31,21 +39,62 @@ object LienOtpauth {
     private const val PREFIXE_EXPORT = "otpauth-migration://"
 
     /**
-     * Le lien est-il un lien de second facteur que nous savons traiter ?
+     * Ce qu'un lien reçu du dehors se révèle être.
      *
-     * Deux refus qui comptent, et le second est le plus facile à laisser passer :
+     * Trois états et non deux : l'export d'une application d'authentification **n'est pas**
+     * « autre chose ». Son message dit quoi faire — exporter compte par compte — là où
+     * l'autre dit seulement que ça ne va pas. Les confondre, c'est répondre « ce lien n'est
+     * pas reconnu » à quelqu'un qui vient de faire exactement le geste qu'on lui a appris.
+     */
+    sealed interface Lecture {
+        /** Un lien de TOTP utilisable, avec son secret. */
+        data class SecondFacteur(val uri: String) : Lecture
+
+        /**
+         * L'export d'une application d'authentification (`otpauth-migration://`) : plusieurs
+         * comptes dans un protobuf compressé, que nous ne savons pas lire.
+         */
+        data object ExportDApplication : Lecture
+
+        /** Tout le reste : mauvais schéma, mauvais type, ou pas de secret. */
+        data object AutreChose : Lecture
+    }
+
+    /**
+     * Lit un lien venu du dehors.
      *
-     *  - **l'export d'une application d'authentification** (`otpauth-migration://`) porte
-     *    plusieurs comptes dans un protobuf compressé, que nous ne savons pas lire ;
+     * Quatre refus, et le deuxième est celui qui manquait :
+     *
+     *  - **l'export d'une application** garde son état à lui, pour garder son message ;
+     *  - **le type doit valoir `totp`**, casse indifférente. `hotp` compte des événements ;
+     *    un type inconnu n'est pas un TOTP non plus ;
      *  - **un lien sans secret** ne configure rien. L'accepter ouvrirait un formulaire vide
      *    en laissant croire qu'un code a été importé — l'utilisateur enregistrerait un
-     *    élément sans second facteur et ne s'en apercevrait qu'au moment de s'en servir.
+     *    élément sans second facteur et ne s'en apercevrait qu'au moment de s'en servir ;
+     *  - et tout ce qui n'est pas du schéma `otpauth`.
      */
-    fun estUnLienDeTotp(uri: String): Boolean {
+    fun lire(uri: String): Lecture {
         val propre = uri.trim()
-        if (propre.lowercase().startsWith(PREFIXE_EXPORT)) return false
-        if (!propre.lowercase().startsWith(PREFIXE)) return false
-        return !secret(propre).isNullOrEmpty()
+        if (propre.lowercase().startsWith(PREFIXE_EXPORT)) return Lecture.ExportDApplication
+        if (!propre.lowercase().startsWith(PREFIXE)) return Lecture.AutreChose
+        if (type(propre) != "totp") return Lecture.AutreChose
+        if (secret(propre).isNullOrEmpty()) return Lecture.AutreChose
+        return Lecture.SecondFacteur(propre)
+    }
+
+    /** Le lien est-il un lien de second facteur que nous savons traiter ? */
+    fun estUnLienDeTotp(uri: String): Boolean = lire(uri) is Lecture.SecondFacteur
+
+    /**
+     * Le type du lien — `totp`, `hotp`, ou ce qu'un générateur aura écrit là.
+     *
+     * C'est l'**autorité** de l'URI, entre `://` et la première barre ou le premier point
+     * d'interrogation. Rendu en minuscules : les générateurs de QR code ne s'accordent pas
+     * sur la casse, et refuser `OTPAUTH://TOTP/…` rejetterait un lien parfaitement valide.
+     */
+    private fun type(uri: String): String {
+        val apresSchema = uri.substring(uri.indexOf("://") + 3)
+        return apresSchema.substringBefore('?').substringBefore('/').lowercase()
     }
 
     /**

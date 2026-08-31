@@ -14,7 +14,9 @@ import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import ch.stackops.ghostpass.theme.ThemeGhostPass
 import ch.stackops.ghostpass.ui.EcranDeDeverrouillage
+import ch.stackops.ghostpass.ui.BoitesDePartage
 import ch.stackops.ghostpass.ui.EcranDeLElement
+import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
 import ch.stackops.ghostpass.ui.EcranDuCoffre
 
 /**
@@ -78,10 +80,15 @@ class ActivitePrincipale : FragmentActivity() {
                     }
                 }
 
-                BackHandler(enabled = edition != null) { edition = null }
+                BackHandler(enabled = edition != null || modele.corbeilleOuverte) {
+                    if (edition != null) edition = null else modele.fermerLaCorbeille()
+                }
 
                 when {
                     !modele.deverrouille -> EcranDeDeverrouillage(modele)
+                    modele.corbeilleOuverte -> EcranDeLaCorbeille(modele) {
+                        modele.fermerLaCorbeille()
+                    }
                     edition != null -> EcranDeLElement(
                         modele,
                         edition!!.entree,
@@ -92,6 +99,9 @@ class ActivitePrincipale : FragmentActivity() {
                         // l'écran — la leçon d'`EditTarget` côté iOS, où deux feuilles de
                         // même identité n'en font qu'une.
                         cle = edition!!.identite,
+                        // Un élément d'équipe s'ouvre en lecture : l'éditeur écrit dans le
+                        // coffre personnel, et l'y enregistrer le sortirait de l'équipe.
+                        lectureSeule = !modele.peutModifierIci,
                     ) { edition = null }
                     else -> EcranDuCoffre(
                         modele,
@@ -100,8 +110,15 @@ class ActivitePrincipale : FragmentActivity() {
                             modele.message = null
                             edition = Edition(entree)
                         },
+                        surCorbeille = { modele.ouvrirLaCorbeille() },
                     )
                 }
+
+                // Les boîtes du partage sont posées **au-dessus de tout**, et pas dans un
+                // écran : la destination doit se confirmer avant que la clé ne s'affiche, et
+                // une boîte qui recouvre l'application ne se contourne ni par un retour
+                // arrière ni par un changement d'écran.
+                BoitesDePartage(modele)
             }
         }
     }
@@ -155,6 +172,20 @@ class ActivitePrincipale : FragmentActivity() {
      */
     override fun onStop() {
         super.onStop()
+        // **Ce corps était vide.** Le commentaire ci-dessus annonçait le verrouillage depuis
+        // le premier jour, `FLAG_SECURE` était posé juste au-dessus pour cacher la vignette
+        // d'un coffre ouvert — et le coffre restait ouvert. Un téléphone posé, repris une
+        // heure plus tard, rouvrait la liste sans rien demander.
+        //
+        // Rien ne le signalait : l'application marchait mieux ainsi, et c'est ce qui rend
+        // ce genre d'absence coûteux. Trouvé le 2026-08-31 en lisant la documentation à
+        // côté du code qu'elle décrit.
+        //
+        // `isChangingConfigurations` est la garde qui manque le plus souvent : une simple
+        // rotation passe par `onStop`, et verrouiller là ferait perdre sa saisie à
+        // quelqu'un qui a seulement tourné son téléphone. Le déverrouillage biométrique
+        // rendrait la faute presque invisible, et parfaitement agaçante.
+        if (!isChangingConfigurations) modele.verrouiller()
     }
 }
 

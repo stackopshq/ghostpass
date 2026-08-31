@@ -4,6 +4,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -65,6 +67,30 @@ data class ElementChiffre(
 
 @Serializable
 private data class EnveloppeDElements(val items: List<ElementChiffre>)
+
+/**
+ * Ce que le serveur rend à la création d'un partage.
+ *
+ * **Trois champs sur quatre sont optionnels, et ce n'est pas de la prudence** : deux
+ * générations de serveur coexistent, et le client doit parler aux deux (§4).
+ *
+ *  - le serveur **à relais** rend `{ id, url, deleteToken, expiresAt }` : le partage vit
+ *    chez ghostbit, et reconstruire l'adresse depuis l'identifiant produirait un lien vers
+ *    une machine qui ne connaît pas ce partage — mort, et sans la moindre erreur ;
+ *  - le serveur **antérieur** héberge les partages lui-même et ne rend que `{ id }` : là,
+ *    déduire l'adresse de celle qu'on a saisie est la seule chose juste à faire.
+ *
+ * Se fier à `url` seule casserait le partage sur tous les serveurs pas encore basculés —
+ * y compris celui de cette branche, qui ne rend que l'identifiant.
+ */
+@Serializable
+data class PartageCree(
+    val id: String,
+    val url: String? = null,
+    val deleteToken: String? = null,
+    /** Secondes depuis l'epoch, comme le registre des partages. */
+    val expiresAt: Long? = null,
+)
 
 /** Ce que rend `GET /api/auth/sso/status`. Un seul champ, et c'est voulu. */
 @Serializable
@@ -251,6 +277,122 @@ class ClientApi(baseUrl: String) {
             ),
         )
 
+    // ─── Les coffres d'équipe ───
+
+    /** Les organisations dont l'utilisateur est membre, invitations comprises. */
+    fun organisations(jeton: String): List<OrganisationDto> =
+        json.decodeFromString(
+            EnveloppeDOrganisations.serializer(),
+            requete("GET", "/api/orgs", jeton = jeton),
+        ).organizations
+
+    /** Le rôle, l'état, et l'Org Key scellée vers la clé publique de ce membre. */
+    fun appartenance(jeton: String, org: String): AppartenanceDto =
+        json.decodeFromString(
+            AppartenanceDto.serializer(),
+            requete("GET", "/api/orgs/$org/membership", jeton = jeton),
+        )
+
+    /**
+     * Les collections auxquelles ce membre a droit.
+     *
+     * **Le serveur ne rend que celles-là** : la permission est tranchée là-bas, et
+     * l'application ne fait qu'afficher ce qu'on lui donne. Filtrer une seconde fois ici
+     * donnerait deux règles à tenir d'accord, dont une seule fait autorité.
+     */
+    fun collectionsDOrganisation(jeton: String, org: String): List<CollectionDto> =
+        json.decodeFromString(
+            EnveloppeDeCollections.serializer(),
+            requete("GET", "/api/orgs/$org/collections", jeton = jeton),
+        ).collections
+
+    /** Les éléments d'une collection, chiffrés sous l'Org Key et non sous la clé du coffre. */
+    fun elementsDeCollection(jeton: String, org: String, collection: String): List<ElementChiffre> =
+        json.decodeFromString(
+            EnveloppeDElements.serializer(),
+            requete("GET", "/api/orgs/$org/collections/$collection/items", jeton = jeton),
+        ).items
+
+    /** Accepte une invitation. Le serveur rend `{ status: "active" }`, qu'on ne lit pas. */
+    fun accepterLOrganisation(jeton: String, org: String) {
+        requete("POST", "/api/orgs/$org/accept", jeton = jeton)
+    }
+
+    /**
+     * Les éléments de la corbeille — ceux qu'un `DELETE` a marqués sans les détruire.
+     *
+     * Même forme que `/api/vault/items`, `deletedAt` en plus. C'est ce qui permet de les
+     * relire avec le même code : la corbeille n'est pas un autre coffre, c'est le même,
+     * filtré autrement.
+     */
+    fun elementsDeLaCorbeille(jeton: String): List<ElementChiffre> =
+        json.decodeFromString(
+            EnveloppeDElements.serializer(),
+            requete("GET", "/api/vault/trash", jeton = jeton),
+        ).items
+
+    /** Sort un élément de la corbeille. Le serveur rend `{ ok: true }`, qu'on ne lit pas. */
+    fun restaurerUnElement(jeton: String, id: String) {
+        requete("POST", "/api/vault/trash/$id/restore", jeton = jeton)
+    }
+
+    /**
+     * Détruit un élément pour de bon.
+     *
+     * Distinct de [mettreALaCorbeille], et le seul des deux qui soit irréversible. Les
+     * confondre dans l'interface serait la faute la plus coûteuse du produit : personne ne
+     * peut rendre un mot de passe que personne n'a plus.
+     */
+    fun purgerUnElement(jeton: String, id: String) {
+        requete("DELETE", "/api/vault/trash/$id", jeton = jeton)
+    }
+
+    /**
+     * Crée un partage de lien. Le serveur ne voit que du chiffré.
+     *
+     * `iv` est le nom que le serveur donne au **nonce** — celui de l'enveloppe de partage,
+     * douze octets, et non les vingt-quatre du coffre (`contrat.json`, `share_envelope`).
+     * Le nom vient d'une époque où le champ portait un vecteur d'initialisation ; le
+     * renommer casserait les serveurs déjà déployés, alors on le traduit ici, une fois.
+     */
+    fun creerUnPartage(
+        jeton: String,
+        chiffre: String,
+        nonce: String,
+        heures: Int,
+        consultations: Int,
+    ): PartageCree =
+        json.decodeFromString(
+            PartageCree.serializer(),
+            requete(
+                "POST", "/api/send", jeton = jeton,
+                corps = buildJsonObject {
+                    put("ciphertext", chiffre)
+                    put("iv", nonce)
+                    put("expiresInHours", heures)
+                    put("maxViews", consultations)
+                }.toString(),
+            ),
+        )
+
+    /**
+     * Révoque un partage.
+     *
+     * **Le jeton voyage en en-tête, pas dans le chemin** : les chemins s'écrivent dans les
+     * journaux des serveurs intermédiaires, les en-têtes beaucoup moins. C'est le choix
+     * d'iOS et il n'y a aucune raison d'en changer.
+     *
+     * N'existe que sur les serveurs à relais. Un serveur antérieur n'a pas cette route et
+     * répondra `404` — c'est pourquoi rien n'est écrit au registre des partages quand il ne
+     * rend pas de jeton : une ligne qu'on ne peut pas révoquer y serait un vœu.
+     */
+    fun revoquerUnPartage(jeton: String, id: String, jetonDeSuppression: String) {
+        requete(
+            "DELETE", "/api/send/$id", jeton = jeton,
+            entetes = mapOf("x-delete-token" to jetonDeSuppression),
+        )
+    }
+
     /** Déconnexion : révoque la session côté serveur. Sans corps. */
     fun deconnexion(jeton: String) {
         try {
@@ -266,6 +408,7 @@ class ClientApi(baseUrl: String) {
         chemin: String,
         jeton: String? = null,
         corps: String? = null,
+        entetes: Map<String, String> = emptyMap(),
     ): String {
         val url = try {
             URL(base + chemin)
@@ -281,17 +424,40 @@ class ClientApi(baseUrl: String) {
             connexion.requestMethod = methode
             connexion.connectTimeout = 15_000
             connexion.readTimeout = 30_000
-            // `Content-Type` seulement s'il y a un corps : plusieurs routes du serveur
-            // n'en prennent aucun, et l'annoncer quand même est au mieux du bruit.
-            if (corps != null) {
+            // ─── Un corps JSON explicite, même quand la route n'en veut pas ───
+            //
+            // **Mesuré, et invisible depuis iOS.** La pile HTTP d'Android ajoute d'elle-même
+            // `Content-Type: application/x-www-form-urlencoded` aux méthodes qui *peuvent*
+            // porter un corps — POST, PUT, DELETE — même lorsqu'on ne lui en donne aucun.
+            // Fastify voit alors un type qu'il ne sait pas analyser et répond
+            // **415 « Unsupported Media Type »**, sans jamais atteindre la route.
+            //
+            // Le symptôme était parfait : la suppression d'un élément ne faisait rien,
+            // l'écran restait ouvert, et le serveur n'avait aucune trace d'une suppression.
+            // On cherche alors du côté du coffre, des permissions, du jeton. Le message
+            // « Unsupported Media Type » n'apparaissait qu'en bas d'un écran, sous les
+            // champs. `URLSession` côté iOS n'ajoute rien, donc rien de tout cela n'existait
+            // là-bas — la classe de défaut « une divergence entre clients ne produit aucune
+            // erreur », vue depuis le client qui la subit.
+            //
+            // On ne peut pas *retirer* un en-tête posé par la pile ; on peut l'écraser. Un
+            // `{}` explicite est donc envoyé quand la route n'attend rien : Fastify l'analyse
+            // sans broncher, et les routes concernées ignorent leur corps.
+            //
+            // Un corps **vide** avec `application/json` ne marcherait pas non plus : Fastify
+            // rend « Body cannot be empty when content-type is set to 'application/json' ».
+            // Les trois cas ont été mesurés contre le serveur, pas déduits.
+            val charge = corps ?: if (methode == "GET" || methode == "HEAD") null else "{}"
+            if (charge != null) {
                 connexion.setRequestProperty("Content-Type", "application/json")
                 connexion.doOutput = true
             }
             if (jeton != null) {
                 connexion.setRequestProperty("Authorization", "Bearer $jeton")
             }
-            if (corps != null) {
-                connexion.outputStream.use { it.write(corps.toByteArray(Charsets.UTF_8)) }
+            for ((nom, valeur) in entetes) connexion.setRequestProperty(nom, valeur)
+            if (charge != null) {
+                connexion.outputStream.use { it.write(charge.toByteArray(Charsets.UTF_8)) }
             }
 
             val statut = connexion.responseCode

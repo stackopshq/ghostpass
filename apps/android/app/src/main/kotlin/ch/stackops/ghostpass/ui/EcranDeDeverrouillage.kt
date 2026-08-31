@@ -1,5 +1,6 @@
 package ch.stackops.ghostpass.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -26,12 +27,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import ch.stackops.ghostpass.ModeleDuCoffre
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BoutonPrincipal
 import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.ChampGhost
@@ -283,14 +286,23 @@ private fun Enseigne(sessionEnregistree: Boolean) {
                 .padding(14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            // La silhouette de la marque. Elle attend l'icône adaptative que §10 décrit :
-            // les SVG de charte sont cadrés pour un favicon, où la silhouette touche les
-            // bords sans conséquence à 16 px, et `suite/tools/brand/icone-ios.py` la ramène
-            // à 80 % de la hauteur, centrée. **L'équivalent Android reste à écrire** ;
-            // en attendant, un glyphe tient la place et la proportion.
-            Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-                Text("👻", fontSize = 40.sp)
-            }
+            // La silhouette de la marque, rendue par `tools/android/make-brand-assets.sh`
+            // depuis le SVG de charte et recadrée par `icone-ios.py --cadre` : la plaque
+            // donne sa marge autour de l'**image**, pas autour de la silhouette, et sans ce
+            // recadrage elle remplit sa boîte bord à bord et paraît à l'étroit.
+            //
+            // Un emoji tenait la place « en attendant l'outil Android ». L'outil est arrivé
+            // et le bouchon est resté — vu par Clara en lançant l'application sur son
+            // téléphone, pas par nous en relisant le code. Un provisoire ne se signale pas
+            // tout seul.
+            //
+            // `contentDescription = null` : c'est un ornement. Le titre « GhostPass » le
+            // suit immédiatement, et l'annoncer une seconde fois n'apprendrait rien.
+            Image(
+                painter = painterResource(R.drawable.marque),
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+            )
         }
         Text(
             "GhostPass",

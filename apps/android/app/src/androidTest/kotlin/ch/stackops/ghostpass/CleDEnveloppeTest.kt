@@ -35,16 +35,16 @@ import javax.crypto.SecretKeyFactory
  * ## Le contrôle, et pourquoi il est là
  *
  * Un témoin dont les deux branches de la mutation produisent la même sortie est vert des
- * deux côtés. Le contrôle a servi, et **il a démoli le premier témoin de ce fichier** :
- * mesuré sur émulateur API 35, `KeyInfo.isInvalidatedByBiometricEnrollment` rapporte `true`
- * quoi qu'on demande, parce qu'il dérive du type d'authentificateur et non du drapeau.
- * L'assertion d'origine était donc verte quelle que soit la ligne écrite dans le code.
+ * deux côtés. Le contrôle a servi deux fois, et dans les deux sens : il a d'abord démoli le
+ * témoin naïf de ce fichier — les deux clés rapportaient alors la même chose — puis, sur un
+ * émulateur démarré à froid, il a montré qu'elles ne la rapportaient plus. La conclusion que
+ * j'en avais tirée était donc fausse, et c'est le test figeant cette conclusion qui l'a dit.
  *
- * Ce qu'il reste ici est ce qui se mesure honnêtement en processus, chaque témoin disant sa
- * force. **Le comportement lui-même** — la clé cesse-t-elle de servir après un enrôlement ?
- * — demande d'enrôler une empreinte au milieu, ce qu'aucun test ne peut faire seul : il est
+ * **Le comportement lui-même** — la clé cesse-t-elle de servir après un enrôlement ? —
+ * demande d'enrôler une empreinte au milieu, ce qu'aucun test ne peut faire seul : il est
  * mesuré par [InvalidationDeLaCleTest], que pilote
- * `tools/android/temoin-de-l-invalidation.sh`.
+ * `tools/android/temoin-de-l-invalidation.sh`. C'est lui qui fait autorité ; celui-ci
+ * complète.
  *
  * ## Ce que ce témoin ne prouve pas
  *
@@ -87,39 +87,50 @@ class CleDEnveloppeTest {
     }
 
     /**
-     * **`KeyInfo` ne sait pas témoigner de ce réglage. Mesuré, et consigné ici pour qu'on
-     * ne réécrive pas le faux témoin.**
+     * **`setInvalidatedByBiometricEnrollment(true)` est bien porté par la clé.**
      *
-     * Le premier jet de ce fichier affirmait `isInvalidatedByBiometricEnrollment == true`
-     * sur la clé de production, et se croyait concluant. Son contrôle l'a démenti :
-     * la **même** clé construite avec `setInvalidatedByBiometricEnrollment(false)` rapporte
-     * `true` elle aussi. Le second essai — une clé à durée de validité, où le réglage devrait
-     * cesser de porter — rapporte encore `true`.
+     * Ce test a une histoire, et elle vaut mieux que son assertion.
      *
-     * L'explication, cohérente avec ce qu'on lit dans le magasin : `KeyInfo` dérive cette
-     * propriété du **type d'authentificateur** de la clé, pas du drapeau qu'on a posé. Toute
-     * clé liée à la biométrie la rapporte vraie. C'est un lecteur de la forme de la clé, pas
-     * de notre consigne.
+     * Le premier jet affirmait `isInvalidatedByBiometricEnrollment == true` sur la clé de
+     * production et se croyait concluant. Son contrôle l'a démenti : la **même** clé
+     * construite avec `false` rapportait `true` elle aussi. J'en ai conclu que `KeyInfo`
+     * dérivait la propriété du type d'authentificateur, écrit que le drapeau était
+     * redondant, et figé cette observation dans un test.
      *
-     * Ce test fige donc le fait plutôt que la fiction. S'il tombe un jour, c'est qu'Android
-     * a changé et qu'un vrai témoin par `KeyInfo` est redevenu possible : ce serait une
-     * bonne nouvelle, et il faudrait revenir ici.
+     * **Ce test-là vient de tomber**, sur un émulateur redémarré à froid : la clé de
+     * production rapporte `true`, celle sans le drapeau `false`. Le magasin distingue donc
+     * les deux consignes. La première mesure avait été prise sur un émulateur repris d'un
+     * instantané, et quelque chose y faussait la lecture.
      *
-     * Le comportement lui-même — la clé cesse-t-elle de fonctionner après un enrôlement ? —
-     * est mesuré ailleurs, parce qu'il demande d'enrôler une empreinte au milieu :
-     * `tools/android/temoin-de-l-invalidation.sh` et [InvalidationDeLaCleTest].
+     * Deux leçons, et la seconde est la plus utile :
+     *
+     *  - un test qui **fige une observation** attrape le jour où elle cesse d'être vraie.
+     *    Sans lui, la documentation aurait continué d'affirmer une redondance fausse ;
+     *  - une mesure prise une fois, sur une machine dont on ne contrôle pas l'état, n'est
+     *    pas un fait. Celle-ci a tenu une demi-journée.
+     *
+     * Ce qui n'a pas changé : `tools/android/temoin-de-l-invalidation.sh` reste le témoin
+     * **fort**, parce qu'il mesure le comportement — la clé cesse-t-elle de servir après un
+     * enrôlement — et non ce que le magasin rapporte de lui-même.
      */
     @Test
-    fun keyInfoNeTemoigneDeRienSurCeReglage() {
+    fun laCleDuCoffreEstInvalideeParUnNouvelEnrolement() {
         supposerLaPolitiqueTenable()
         val production = infoDe(CleDEnveloppe.creer(alias))
-        val sansLeDrapeau = infoDe(cleAvecPolitique(aliasTemoin, invalideeParEnrolement = false))
-
-        assertEquals(
-            "Android a changé : `KeyInfo` distingue désormais les deux consignes. Un vrai " +
-                "témoin par `KeyInfo` est redevenu possible — écrivez-le, et corrigez la " +
-                "documentation de CleDEnveloppe.politique.",
+        assertTrue(
+            "setInvalidatedByBiometricEnrollment(true) manque : le coffre resterait " +
+                "ouvrable par une empreinte enrôlée après coup, et rien ne le signalerait",
             production.isInvalidatedByBiometricEnrollment,
+        )
+
+        // Le contrôle : la même politique **sans** le drapeau doit rapporter l'inverse.
+        // Sans lui, on ne saurait pas si l'on mesure Android ou son propre écho — et c'est
+        // exactement ce qui s'est produit la première fois.
+        val sansLeDrapeau = infoDe(cleAvecPolitique(aliasTemoin, invalideeParEnrolement = false))
+        assertFalse(
+            "le magasin ne distingue plus les deux consignes : ce témoin est redevenu vert " +
+                "quoi qu'on écrive dans le code. Reportez-vous à " +
+                "tools/android/temoin-de-l-invalidation.sh, qui mesure le comportement.",
             sansLeDrapeau.isInvalidatedByBiometricEnrollment,
         )
     }

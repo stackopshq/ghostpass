@@ -90,10 +90,18 @@ Un test doit vérifier que la clé est bien **invalidée par l'enrôlement d'une
 empreinte**. C'est le seul des trois réglages dont l'oubli ne se voit jamais à l'usage :
 tout continue de fonctionner, simplement pour quelqu'un de plus.
 
-*Mesuré le 2026-08-31.* Le témoin évident — lire `KeyInfo` sur la clé — **ne mesure rien**.
-Fabriquée **sans** le réglage, la même clé rapporte `true` quand même : `KeyInfo` dérive du
-type d'authentificateur, pas du drapeau. Le test était vert quoi qu'on écrive dans le code,
-et un contrôle négatif l'a révélé.
+*Mesuré le 2026-08-31, puis **corrigé le même jour**.* On avait d'abord conclu que lire
+`KeyInfo` ne mesurait rien — la clé fabriquée sans le réglage rapportant `true` elle aussi.
+
+**C'était faux, et la façon dont on l'a su vaut d'être gardée.** Cette observation avait
+été figée dans un test plutôt que seulement écrite ; le test **est tombé** au premier
+démarrage à froid de l'émulateur. La première mesure venait d'une machine reprise d'un
+instantané, où le magasin de clés ne distinguait pas les deux consignes. Le magasin d'un
+appareil neuf, lui, les distingue.
+
+Figer une observation dans un test est donc ce qui a évité une documentation durablement
+fausse : une note en prose serait restée vraie pour toujours. Le test est devenu un vrai
+témoin.
 
 Le témoin qui vaut est `tools/android/temoin-de-l-invalidation.sh` : il **enrôle réellement
 une empreinte de plus** sur l'appareil et regarde si la clé sert encore. Trois pièges y ont
@@ -102,10 +110,12 @@ les clés entre les deux temps ; l'intention d'enrôlement ouvre la *liste* au l
 l'assistant quand une empreinte existe déjà, si bien que rien n'était enrôlé ; et une boîte
 de renommage faisait compter la même empreinte deux fois.
 
-**Ce que la mesure a aussi appris** : dans cette politique-ci, le drapeau est *redondant*.
-Ce qui protège est l'authentification par usage sur biométrie forte. Le garder n'est pas
-inutile — il documente l'intention et protégerait si la politique s'assouplissait — mais
-prétendre qu'il est le rempart serait faux.
+Reste le témoin qui va plus loin que `KeyInfo` : `tools/android/temoin-de-l-invalidation.sh`
+**enrôle réellement une empreinte de plus** sur l'appareil et regarde si la clé sert encore.
+Trois pièges y ont été trouvés, tous silencieux — `connectedAndroidTest` désinstalle
+l'application et efface les clés entre les deux temps ; l'intention d'enrôlement ouvre la
+*liste* au lieu de l'assistant quand une empreinte existe déjà ; et une boîte de renommage
+faisait compter la même empreinte deux fois.
 
 `setUnlockedDeviceRequired`, lui, n'est rendu par `KeyInfo` à aucun niveau d'API jusqu'à
 36 : son témoin est donc plus faible que les deux autres, et le fichier le dit.

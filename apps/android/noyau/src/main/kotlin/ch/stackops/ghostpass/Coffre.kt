@@ -281,6 +281,282 @@ class Coffre {
     }
 
     /**
+     * Écrit un registre à nom réservé (§2).
+     *
+     * Un registre est un élément comme un autre : une note sécurisée dont le contenu est du
+     * JSON, sous un nom commençant par un **octet NUL**. Rien ici n'est spécial sauf le nom —
+     * et c'est le nom qui fait tout, puisque aucun clavier ne produit de NUL et qu'aucun nom
+     * d'utilisateur ne peut donc usurper un registre.
+     *
+     * `idExistant` décide entre créer et remplacer. Le deviner serait coûteux dans les deux
+     * sens : créer alors qu'il existe donnerait **deux** registres du même nom, dont un
+     * seul serait lu — et l'autre resterait à contredire le premier chez le prochain client.
+     * L'appelant le tient de `LectureDuCoffre.identifiantsDeRegistres`, qui existe pour ça.
+     */
+    fun ecrireUnRegistre(nom: String, contenu: String, idExistant: String?): EntreeDuCoffre.Lisible {
+        require(nom.startsWith(Registres.PREFIXE)) {
+            "« $nom » ne commence pas par le préfixe réservé : ce serait un élément " +
+                "ordinaire, visible dans la liste de l'utilisateur"
+        }
+        val element = elementDeRegistre(nom, contenu)
+        return if (idExistant == null) creer(element) else mettreAJour(idExistant, element)
+    }
+
+    // ─── Les coffres d'équipe ───
+
+    /**
+     * Les organisations dont l'utilisateur est membre, **y compris les invitations**.
+     *
+     * Une invitation en attente n'a pas de contenu lisible : la montrer comme vide serait
+     * faux, et l'omettre pire encore. C'est l'écran qui dira qu'elle attend.
+     */
+    fun organisations(): List<Organisation> {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return api.organisations(j).map(Organisation::depuis).sortedBy { it.nom.lowercase() }
+    }
+
+    /** Une organisation ouverte : son Org Key en mémoire, et ses collections. */
+    class CoffreDOrganisation(
+        val organisation: Organisation,
+        val collections: List<CollectionDOrganisation>,
+        internal val org: uniffi.ghost_crypto_ffi.Org,
+    ) : AutoCloseable {
+        override fun close() = org.close()
+    }
+
+    /**
+     * Ouvre une organisation : récupère l'Org Key scellée et la fait ouvrir par le cœur.
+     *
+     * **`openOrg` vérifie que la clé provient bien de la clé publique annoncée.** Sans cette
+     * vérification, un serveur actif pourrait substituer une Org Key de son choix et lire
+     * ensuite tout ce que le membre écrirait dans l'organisation. C'est le cœur qui la fait ;
+     * on ne fait que lui passer les deux valeurs.
+     *
+     * Rend un [EchecDOrganisation] plutôt que de lever : **une organisation qui ne s'ouvre
+     * pas ne doit pas vider l'écran**, et les autres doivent s'afficher quand même.
+     */
+    fun ouvrirLOrganisation(organisation: Organisation): Result<CoffreDOrganisation> {
+        val compteOuvert = compte ?: return Result.failure(ErreurApi.CoffreVerrouille())
+        val api = client ?: return Result.failure(ErreurApi.Reseau("Aucun serveur configuré."))
+        val j = jeton ?: return Result.failure(ErreurApi.Reseau("Aucune session ouverte."))
+
+        if (organisation.etat == EtatDAppartenance.Invite) {
+            return Result.failure(EchecDOuverture(EchecDOrganisation.InvitationEnAttente))
+        }
+        val appartenance = try {
+            api.appartenance(j, organisation.id)
+        } catch (e: Exception) {
+            return Result.failure(
+                EchecDOuverture(EchecDOrganisation.Reseau(e.message ?: "serveur injoignable")))
+        }
+        val scellee = appartenance.encryptedOrgKey
+        val clePubliqueDeLAdmin = appartenance.sealedByPublicKey
+        if (scellee.isNullOrEmpty() || clePubliqueDeLAdmin.isNullOrEmpty()) {
+            return Result.failure(EchecDOuverture(EchecDOrganisation.AucuneCleRemise))
+        }
+
+        val org = try {
+            compteOuvert.openOrg(clePubliqueDeLAdmin, scellee)
+        } catch (e: Exception) {
+            return Result.failure(
+                EchecDOuverture(EchecDOrganisation.CleRefusee(e.message ?: "sceau refusé")))
+        }
+        val role = RoleDOrganisation.depuis(appartenance.role).takeIf {
+            it != RoleDOrganisation.Inconnu
+        } ?: organisation.role
+        val collections = try {
+            api.collectionsDOrganisation(j, organisation.id).map {
+                CollectionDOrganisation(
+                    id = it.id,
+                    nom = it.name.ifBlank { it.id },
+                    permission = PermissionDeCollection.depuis(it.permission, role),
+                )
+            }
+        } catch (e: Exception) {
+            org.close()
+            return Result.failure(
+                EchecDOuverture(EchecDOrganisation.Reseau(e.message ?: "serveur injoignable")))
+        }
+        return Result.success(CoffreDOrganisation(organisation, collections, org))
+    }
+
+    /**
+     * Les éléments d'une collection, lus **sous l'Org Key**.
+     *
+     * La même [lectureSous] que le coffre personnel : une ligne qu'on ne sait pas ouvrir
+     * garde sa place et dit pourquoi.
+     */
+    fun elementsDeCollection(ouvert: CoffreDOrganisation, collection: String): LectureDuCoffre {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val elements = api.elementsDeCollection(j, ouvert.organisation.id, collection)
+        return lectureSous(elements) { chiffre -> ouvrirSousOrg(chiffre, ouvert.org) }
+    }
+
+    /** Accepte une invitation. Le contenu ne devient lisible qu'ensuite. */
+    fun accepterLOrganisation(id: String) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.accepterLOrganisation(j, id)
+    }
+
+    /** Porte un [EchecDOrganisation] dans un `Result`. */
+    class EchecDOuverture(val motif: EchecDOrganisation) : Exception(message(motif)) {
+        companion object {
+            fun message(motif: EchecDOrganisation): String = when (motif) {
+                EchecDOrganisation.InvitationEnAttente ->
+                    "Vous n'avez pas encore accepté cette invitation."
+                EchecDOrganisation.AucuneCleRemise ->
+                    "Aucune clé ne vous a encore été remise pour ce coffre d'équipe."
+                is EchecDOrganisation.CleRefusee ->
+                    "La clé de ce coffre d'équipe n'a pas pu être ouverte."
+                is EchecDOrganisation.Reseau -> motif.message
+            }
+        }
+    }
+
+    // ─── La corbeille ───
+
+    /**
+     * Ce que la corbeille contient, lu **comme le coffre**.
+     *
+     * La même fonction [lecture] : un élément qu'on ne sait pas ouvrir garde sa place ici
+     * aussi. C'est même plus important qu'ailleurs — la corbeille est le dernier endroit où
+     * l'on peut encore rattraper quelque chose, et une ligne qui y disparaîtrait serait
+     * perdue sans que personne ne l'ait décidé.
+     */
+    fun lireLaCorbeille(): LectureDuCoffre {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return lecture(api.elementsDeLaCorbeille(j), compte)
+    }
+
+    /** Sort un élément de la corbeille. */
+    fun restaurer(id: String) {
+        compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.restaurerUnElement(j, id)
+    }
+
+    /**
+     * Détruit un élément pour de bon.
+     *
+     * **Le coffre doit être ouvert**, alors que le serveur ne l'exigerait pas — le jeton
+     * suffirait. C'est la même règle que pour la mise à la corbeille, et elle compte
+     * davantage ici : détruire une ligne qu'on ne sait pas lire, c'est jeter ce dont on
+     * ignore le contenu.
+     */
+    fun purger(id: String) {
+        compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.purgerUnElement(j, id)
+    }
+
+    // ─── Le partage de lien (§4) ───
+
+    /** Ce qu'une demande de partage produit. */
+    sealed interface Partage {
+        /** Le lien est prêt à être remis. [inscription] est nulle si rien n'est révocable. */
+        data class Pret(val lien: String, val inscription: PartageEnCours?) : Partage
+
+        /**
+         * La destination n'est pas celle du serveur configuré : **à montrer et à confirmer**.
+         *
+         * Le partage existe déjà côté serveur à cet instant — c'est lui qui vient de le
+         * créer. Un refus doit donc le **révoquer**, sans quoi on laisse derrière soi un
+         * secret publié que personne ne surveille.
+         */
+        data class ADemander(
+            val hote: String,
+            val lien: String,
+            val cree: PartageCree,
+            val inscription: PartageEnCours?,
+        ) : Partage
+
+        /** Refusé sans appel : rétrogradation de schéma, ou lien sans hôte. */
+        data class Refuse(val raison: String) : Partage
+    }
+
+    /**
+     * Scelle un secret et crée un lien de partage.
+     *
+     * **L'enveloppe n'est pas celle du coffre** : `sealSend` du cœur produit de l'AES-256-GCM
+     * à nonce de douze octets, parce que le format est arbitré par le **navigateur** qui
+     * ouvrira le lien — WebCrypto offre AES-GCM et n'offre pas XChaCha20. Confondre les deux
+     * a rendu le partage mobile impossible pendant plusieurs jours, le relais refusant
+     * « expected 12 bytes after decode, got 24 ».
+     *
+     * Le contrôle de destination se fait **avant que la clé ne soit remise à l'utilisateur** :
+     * une fois le lien affiché, il est trop tard pour demander.
+     */
+    fun partager(
+        secret: String,
+        heures: Int,
+        consultations: Int,
+        nom: String,
+        approuves: Set<String>,
+    ): Partage {
+        compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val s = session ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+
+        val scelle = uniffi.ghost_crypto_ffi.sealSend(secret)
+        val cree = api.creerUnPartage(j, scelle.ciphertext, scelle.nonce, heures, consultations)
+
+        val lien = lienDePartage(cree, s.adresseServeur, scelle.key)
+
+        val inscription = cree.deleteToken?.let { jetonDeSuppression ->
+            PartageEnCours(
+                id = cree.id,
+                url = lien,
+                deleteToken = jetonDeSuppression,
+                name = nom,
+                createdAt = System.currentTimeMillis() / 1000,
+                expiresAt = secondesPlausibles(cree.expiresAt),
+            )
+        }
+
+        if (DestinationDePartage.estDeConfiance(lien, s.adresseServeur, approuves)) {
+            return Partage.Pret(lien, inscription)
+        }
+        if (!DestinationDePartage.demandeUneConfirmation(lien, s.adresseServeur, approuves)) {
+            // Une rétrogradation de schéma ne se confirme pas, elle se refuse — et le
+            // partage créé doit partir avec.
+            revoquerSiPossible(cree)
+            return Partage.Refuse(
+                "Le serveur a rendu un lien en clair alors qu'il est joint en HTTPS. " +
+                    "Le partage a été annulé.",
+            )
+        }
+        if (cree.deleteToken == null) {
+            // Une destination étrangère sans jeton de révocation : on ne pourrait pas
+            // reprendre le partage si l'utilisateur refusait. On refuse donc d'emblée
+            // plutôt que de poser une question dont une des réponses est impossible à tenir.
+            return Partage.Refuse(
+                "Le serveur a rendu un lien vers un autre domaine sans jeton de révocation : " +
+                    "impossible de reprendre ce partage. Rien ne sera affiché.",
+            )
+        }
+        return Partage.ADemander(AdresseServeur.hote(lien).orEmpty(), lien, cree, inscription)
+    }
+
+    /** Révoque un partage. Sans jeton, il n'y a pas de route : on ne prétend pas le faire. */
+    fun revoquerUnPartage(id: String, jetonDeSuppression: String) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.revoquerUnPartage(j, id, jetonDeSuppression)
+    }
+
+    private fun revoquerSiPossible(cree: PartageCree) {
+        val jetonDeSuppression = cree.deleteToken ?: return
+        runCatching { revoquerUnPartage(cree.id, jetonDeSuppression) }
+    }
+
+    /**
      * Met un élément à la corbeille.
      *
      * Le coffre doit être **ouvert** pour supprimer, alors que le serveur ne l'exigerait
@@ -311,8 +587,30 @@ class Coffre {
      * @param compte la clé d'enveloppe, ou `null` si le coffre est verrouillé — auquel cas
      *   **toutes** les lignes deviennent illisibles, et aucune ne disparaît.
      */
-    fun lecture(elements: List<ElementChiffre>, compte: Account?): LectureDuCoffre {
-        val compteOuvert = compte
+    fun lecture(elements: List<ElementChiffre>, compte: Account?): LectureDuCoffre =
+        lectureSous(elements, compte?.let { c -> { chiffre -> ouvrir(chiffre, c) } })
+
+    /**
+     * La même lecture, sous **n'importe quelle clé**.
+     *
+     * Le coffre personnel s'ouvre sous la clé de l'utilisateur, une collection d'équipe sous
+     * l'Org Key. Les deux suivent exactement les mêmes règles — une ligne qu'on ne sait pas
+     * ouvrir garde sa place, les registres se récoltent et se masquent — et les écrire deux
+     * fois les ferait diverger.
+     *
+     * C'est même **plus** vrai côté équipe : l'élément a été scellé par quelqu'un d'autre, et
+     * son absence se lirait « cette personne ne l'a pas encore créé ». iOS écartait en
+     * silence des deux côtés ; ne réintroduisons pas le défaut par la porte des
+     * organisations.
+     *
+     * @param ouvreur `null` quand aucune clé n'est disponible — **toutes** les lignes
+     *   deviennent alors illisibles, et aucune ne disparaît.
+     */
+    fun lectureSous(
+        elements: List<ElementChiffre>,
+        ouvreur: ((ElementChiffre) -> ElementDuCoffre)?,
+    ): LectureDuCoffre {
+        val compteOuvert = ouvreur
         val entrees = mutableListOf<EntreeDuCoffre>()
         var dossiers = emptyList<String>()
         var favoris = emptySet<String>()
@@ -327,7 +625,7 @@ class Coffre {
                 continue
             }
             val element = try {
-                ouvrir(chiffre, compteOuvert)
+                compteOuvert(chiffre)
             } catch (e: GhostCryptoException) {
                 // Le cœur a refusé l'enveloppe.
                 entrees += EntreeDuCoffre.Illisible(
@@ -390,6 +688,63 @@ class Coffre {
         private val json = Json { ignoreUnknownKeys = true }
 
         /**
+         * Garde un horodatage **seulement s'il ressemble à des secondes**.
+         *
+         * `contrat.json` fixe le registre des partages en secondes, sur dix chiffres jusqu'en
+         * 2286. La valeur vient d'un service de partage tiers, par un relais qui ne fait que
+         * la transmettre : rien dans ce dépôt n'en garantit l'unité.
+         *
+         * On préfère **ne rien inscrire** à inscrire une valeur mille fois trop grande. Une
+         * date affichée en l'an 56 000 se remarque, mais une date affichée par un *autre*
+         * client, à partir d'un registre partagé, se lit comme une donnée — et personne ne
+         * saurait dire de quel côté est l'erreur. Convertir à la volée serait pire encore :
+         * ce serait deviner l'unité d'un champ dont c'est justement l'unité qui est en jeu.
+         */
+        /**
+         * L'élément que porte un registre.
+         *
+         * Isolé pour être **éprouvable sans serveur** : un test peut le sceller, le relire
+         * par [lecture], et vérifier que ce qu'on écrit est bien ce qu'on lit. La forme —
+         * une note sécurisée dont le contenu est du JSON — n'est pas arbitraire : c'est
+         * celle que lisent les autres clients, et s'en écarter donnerait un registre que
+         * seul Android saurait relire.
+         */
+        fun elementDeRegistre(nom: String, contenu: String): ElementDuCoffre = ElementDuCoffre(
+            name = nom,
+            notes = null,
+            folder = null,
+            data = ContenuDElement.NoteSecrete(Note(contenu)),
+        )
+
+        /**
+         * Le lien d'un partage, fragment compris.
+         *
+         * Deux choses s'y décident, et les deux ont déjà coûté :
+         *
+         *  - **l'adresse**. Le serveur à relais en rend une, et la reconstruire depuis
+         *    l'identifiant produirait un lien vers une machine qui ne connaît pas ce partage.
+         *    Le serveur antérieur n'en rend pas, et là c'est l'inverse : la déduire est la
+         *    seule chose juste à faire ;
+         *  - **le fragment**. Le cœur rend du base64 standard ; une URL réclame la variante
+         *    `base64url` sans remplissage. `contrat.json` le dit dans `share_envelope.transport`
+         *    et prévient de l'erreur : n'accepter que le base64 standard échoue sur
+         *    « Invalid padding », un message qui accuse le format et laisse croire à une clé
+         *    corrompue.
+         */
+        fun lienDePartage(cree: PartageCree, adresseServeur: String, cle: String): String {
+            val base = cree.url ?: DestinationDePartage.lienDeRepli(adresseServeur, cree.id)
+            val fragment = cle.replace('+', '-').replace('/', '_').trimEnd('=')
+            return "$base#$fragment"
+        }
+
+        fun secondesPlausibles(valeur: Long?): Long? {
+            if (valeur == null) return null
+            // 1e11 secondes ≈ l'an 5138 ; 1e11 millisecondes ≈ 1973. Au-delà, ce ne sont
+            // pas des secondes.
+            return if (valeur in 1..99_999_999_999L) valeur else null
+        }
+
+        /**
          * Le seul point où camelCase devient snake_case.
          *
          * L'API expose `encryptedKey` / `encryptedData`, à plat, avec un `id` ; le cœur
@@ -405,6 +760,26 @@ class Coffre {
             }
             val clair = compte.decryptItem(json.encodeToString(
                 kotlinx.serialization.json.JsonObject.serializer(), enveloppe))
+            return CodecDElement.lire(clair)
+        }
+
+        /**
+         * La même ouverture, **sous l'Org Key** d'une organisation.
+         *
+         * L'enveloppe se construit à l'identique — c'est la clé qui change, pas le format.
+         * Deux constructions séparées finiraient par diverger sur le passage camelCase
+         * vers snake_case, et le second à diverger serait celui qu'on regarde le moins.
+         */
+        fun ouvrirSousOrg(
+            chiffre: ElementChiffre,
+            org: uniffi.ghost_crypto_ffi.Org,
+        ): ElementDuCoffre {
+            val enveloppe = buildJsonObject {
+                put("encrypted_key", chiffre.encryptedKey)
+                put("encrypted_data", chiffre.encryptedData)
+            }
+            val clair = org.decryptItem(
+                json.encodeToString(kotlinx.serialization.json.JsonObject.serializer(), enveloppe))
             return CodecDElement.lire(clair)
         }
 

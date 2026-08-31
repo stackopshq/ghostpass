@@ -218,8 +218,9 @@ set -e
 # signe de succès ; un runner qui ne démarre pas ne dit ni OK ni FAILURES, et ce
 # troisième cas est traité comme un échec — jamais comme un silence favorable.
 if grep -q "^OK (" "$SORTIE"; then
-  echo "  ✓ parcours complet : connexion, lecture, création, modification,"
-  echo "    verrouillage, redéverrouillage, remplissage — sans qu'aucun nom ne se résolve."
+  echo "  ✓ parcours complet : connexion, lecture du coffre personnel **et d'équipe**,"
+  echo "    création, modification, registres, partage, corbeille, verrouillage,"
+  echo "    lien otpauth reçu coffre fermé, remplissage — sans qu'aucun nom ne se résolve."
 else
   echo "  ✗ le parcours a échoué. Ce qu'il rapporte :" >&2
   # Le bloc entier, et pas seulement la première ligne : le message porte l'étape, la
@@ -230,7 +231,54 @@ else
 fi
 
 echo
-echo "== 6. Ce que le serveur a vu =="
+echo "== 6. Le partage traverse jusqu'au navigateur =="
+# **Le seul contrôle qui vaille pour cette classe de défaut.** `contrat.json` le dit :
+# « un témoin qui vérifie qu'un côté se relit lui-même passe au vert dans le monde cassé ».
+# Le parcours vient de créer un partage depuis l'application ; on l'ouvre ici avec
+# **WebCrypto**, l'implémentation du navigateur qui l'ouvrira chez le destinataire.
+#
+# C'est ce défaut-là qui a coûté plusieurs jours : le cœur produisait un nonce de 24 octets,
+# le relais refusait « expected 12 bytes after decode, got 24 », et aucun aller-retour interne
+# ne pouvait le voir.
+LIEN="$("$ADB" shell cat \
+  /storage/emulated/0/Android/data/$PAQUET/cache/lien-de-partage.txt 2>/dev/null | tr -d '\r')"
+if [[ -z "$LIEN" ]]; then
+  echo "  ✗ le parcours n'a déposé aucun lien de partage." >&2
+  exit 1
+fi
+IDENTIFIANT="${LIEN%%\#*}"; IDENTIFIANT="${IDENTIFIANT##*/}"
+CLE="${LIEN##*\#}"
+echo "  · partage $IDENTIFIANT, clé de ${#CLE} caractères en base64url"
+
+CHIFFRE="$(curl -s "http://127.0.0.1:$PORT/api/send/$IDENTIFIANT")"
+CLAIR="$(node --input-type=module -e '
+  const [cleUrl, charge] = process.argv.slice(1);
+  const { webcrypto } = await import("node:crypto");
+  const { ciphertext, iv } = JSON.parse(charge);
+  // La clé voyage en base64url sans remplissage : la ramener au base64 standard est
+  // exactement ce que fait la page du navigateur. Ne pas le faire échoue sur
+  // « Invalid padding », un message qui accuse le format et laisse croire à une clé corrompue.
+  const std = cleUrl.replace(/-/g, "+").replace(/_/g, "/").padEnd(
+    cleUrl.length + ((4 - (cleUrl.length % 4)) % 4), "=");
+  const cle = await webcrypto.subtle.importKey(
+    "raw", Buffer.from(std, "base64"), "AES-GCM", false, ["decrypt"]);
+  const clair = await webcrypto.subtle.decrypt(
+    { name: "AES-GCM", iv: Buffer.from(iv, "base64") }, cle,
+    Buffer.from(ciphertext, "base64"));
+  process.stdout.write(Buffer.from(clair).toString("utf8"));
+' "$CLE" "$CHIFFRE" 2>/dev/null || true)"
+
+if [[ "$CLAIR" == "tr0ubad0ur" ]]; then
+  echo "  ✓ un partage créé dans l'application s'ouvre avec WebCrypto"
+else
+  echo "  ✗ WebCrypto n'a pas ouvert le partage créé par l'application." >&2
+  echo "    Reçu : « $CLAIR » — attendu le mot de passe de l'élément créé." >&2
+  echo "    C'est exactement le défaut qui a rendu le partage mobile impossible." >&2
+  exit 1
+fi
+
+echo
+echo "== 7. Ce que le serveur a vu =="
 # Le parcours pourrait passer sur un cache : on exige que le serveur ait vu chaque étape.
 manquant=0
 for route in "auth/prelogin" "auth/login" "vault/items"; do
@@ -252,6 +300,34 @@ if grep -q '"method":"PUT","url":"/api/vault/items/' "$JOURNAL"; then
   echo "  ✓ modification (PUT /api/vault/items/…)"
 else
   echo "  ✗ aucune modification n'a atteint le serveur" >&2; manquant=1
+fi
+if grep -q '"method":"POST","url":"/api/send"' "$JOURNAL"; then
+  echo "  ✓ partage (POST /api/send)"
+else
+  echo "  ✗ aucun partage n'a atteint le serveur" >&2; manquant=1
+fi
+if grep -q '"url":"/api/vault/trash"' "$JOURNAL"; then
+  echo "  ✓ corbeille (GET /api/vault/trash)"
+else
+  echo "  ✗ la corbeille n'a jamais été demandée au serveur" >&2; manquant=1
+fi
+
+# ─── Les registres : un seul par nom, jamais deux ───
+#
+# Le défaut que cette ligne attrape ne lève aucune erreur : écrire un registre sans
+# réutiliser son identité en crée un **second** du même nom. Un seul est lu ; l'autre reste
+# à contredire le premier chez le prochain client. On compte donc les créations : le
+# parcours écrit trois fois des registres (favori, dossier ajouté, dossier retiré), et cela
+# doit faire **deux** créations — un registre de favoris, un de dossiers — puis des
+# remplacements.
+creations="$(grep -c '"method":"POST","url":"/api/vault/items"' "$JOURNAL" || true)"
+# Le semis en dépose quatre, l'application en crée un : cinq, plus les deux registres.
+if [[ "$creations" -le 7 ]]; then
+  echo "  ✓ registres écrits sans doublon ($creations créations d'éléments au total)"
+else
+  echo "  ✗ $creations créations : un registre a été créé plusieurs fois au lieu d'être" >&2
+  echo "    remplacé. Un seul serait lu, l'autre resterait à le contredire." >&2
+  manquant=1
 fi
 [[ $manquant -eq 0 ]] || exit 1
 

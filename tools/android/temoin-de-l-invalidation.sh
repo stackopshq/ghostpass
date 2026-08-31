@@ -173,7 +173,13 @@ compter_les_empreintes() {
     sleep 3
   fi
   # `sort -u` : on compte des empreintes distinctes, pas des occurrences d'un libellé.
-  lire_ecran | grep -oiE "^Finger [0-9]+" | sort -u | wc -l | tr -d ' '
+  #
+  # `|| true` sur le `grep`, et c'est **le même piège que la coupure de résolution de noms**
+  # : sous `set -o pipefail`, un `grep` qui ne trouve rien rend 1, le pipeline entier rend 1,
+  # et la substitution de commande fait tomber le script sous `set -e`. Zéro empreinte est
+  # pourtant un résultat parfaitement normal — c'est même celui du premier passage.
+  # Le script s'arrêtait après « code de verrouillage posé », sans un mot.
+  { lire_ecran | grep -oiE "^Finger [0-9]+" || true; } | sort -u | wc -l | tr -d " "
 }
 
 # ─── Pourquoi `am instrument` et non `connectedAndroidTest` ───

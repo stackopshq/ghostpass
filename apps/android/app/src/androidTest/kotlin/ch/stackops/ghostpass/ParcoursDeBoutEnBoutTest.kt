@@ -12,6 +12,7 @@ import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -117,6 +118,10 @@ class ParcoursDeBoutEnBoutTest {
             )
         }
 
+        etape("2 bis. Le coffre d'équipe") {
+            coffreDEquipe()
+        }
+
         val nom = "Journal " + System.currentTimeMillis() % 100000
         etape("3. Création d'un élément") {
             toucher("button.new")
@@ -136,28 +141,365 @@ class ParcoursDeBoutEnBoutTest {
         etape("4. Modification de cet élément") {
             toucher(By.text(nom), "l'élément créé")
             poser("field.username", "clara.vanacker")
-            toucher("button.save")
+            toucherJusqua("button.save", By.desc("button.settings"), "le retour au coffre")
             attendre(
                 By.text("clara.vanacker"),
                 "la modification n'est pas revenue du serveur",
             )
         }
 
-        etape("5. Verrouillage") {
-            toucher(By.text("Verrouiller"), "le bouton de verrouillage")
+        etape("5. Les registres à nom réservé s'écrivent") {
+            registres(nom)
+        }
+
+        etape("6. Le partage de lien") {
+            partager(nom)
+        }
+
+        etape("7. La corbeille") {
+            corbeille(nom)
+        }
+
+        etape("8. Verrouillage, à la main puis en passant à l'arrière-plan") {
+            ouvrirLesReglages()
+            toucher("button.lock")
             attendre(
                 By.desc("field.master"),
                 "le verrouillage n'a pas ramené à l'écran d'entrée",
             )
+            poser("field.master", motDePasse)
+            toucher("button.submit")
+            attendre(By.text(nom), "le redéverrouillage hors ligne n'a pas rouvert le coffre")
+
+            // **Le passage à l'arrière-plan doit verrouiller.** `onStop` l'annonçait dans son
+            // commentaire et ne le faisait pas : le coffre restait ouvert, et un téléphone
+            // posé puis repris rouvrait la liste sans rien demander. Rien ne le signalait —
+            // l'application marchait *mieux* ainsi.
+            ouvrirLeFormulaireDEssai()
+            ouvrirLApplication()
+            attendre(
+                By.desc("field.master"),
+                "LE COFFRE EST RESTÉ OUVERT après un passage à l'arrière-plan. C'est ce que " +
+                    "le commentaire d'`onStop` annonce depuis le premier jour, et ce que " +
+                    "`FLAG_SECURE` suppose en cachant la vignette d'un coffre ouvert",
+                20_000,
+            )
         }
 
-        etape("6. Un lien otpauth arrive coffre fermé") {
+        etape("9. Un lien otpauth arrive coffre fermé") {
             lienDeSecondFacteurCoffreFerme(nom)
         }
 
-        etape("7. Le remplissage automatique d'un formulaire tiers") {
+        etape("10. Le remplissage automatique d'un formulaire tiers") {
             remplirLeFormulaireDEssai(nom)
         }
+    }
+
+    // ─── Les coffres d'équipe ───
+
+    /**
+     * **Le défaut le plus grave qu'ait connu ce portage, et le plus silencieux.**
+     *
+     * L'application n'appelait que `/api/vault/items`, le coffre personnel. Quelqu'un dont
+     * les mots de passe vivent en collection d'équipe se connectait, voyait une liste vide,
+     * et concluait que ses données avaient disparu. Aucune erreur, aucun journal, rien à
+     * chercher — mesuré sur un vrai téléphone, invisible à toute relecture.
+     *
+     * Cette étape vérifie les quatre règles d'un coup :
+     *
+     *  1. l'organisation apparaît et s'ouvre ;
+     *  2. son élément se déchiffre **sous l'Org Key**, pas sous la clé du coffre ;
+     *  3. l'élément scellé sous une **autre** Org Key garde sa place et dit pourquoi (§5) ;
+     *  4. l'éditeur s'y ouvre en **lecture seule** — l'y laisser enregistrer déplacerait
+     *     l'élément dans le coffre personnel, où l'équipe ne le retrouverait jamais.
+     */
+    private fun coffreDEquipe() {
+        val organisation = attendre(
+            By.descStartsWith("chip.org."),
+            "aucune organisation n'apparaît : l'application n'interroge pas `/api/orgs`, et " +
+                "un coffre d'équipe reste invisible — c'est le défaut du coffre vide",
+            30_000,
+        )
+        organisation.click()
+        appareil.waitForIdle()
+
+        attendre(
+            By.text("Routeur de l'agence"),
+            "l'élément d'équipe ne s'affiche pas : l'Org Key n'a pas été ouverte, ou les " +
+                "éléments ont été déchiffrés sous la mauvaise clé",
+            30_000,
+        )
+        assertNotNull(
+            "l'élément scellé sous une autre Org Key a disparu de la collection. C'est la " +
+                "règle §5, et elle compte plus encore en équipe : son absence se lirait " +
+                "« cette personne ne l'a pas encore créé »",
+            appareil.findObject(By.text("Élément illisible")),
+        )
+
+        // Lecture seule : ni « Nouveau » dans la barre, ni « Enregistrer » dans l'éditeur.
+        assertNull(
+            "« Nouveau » est proposé dans une collection d'équipe : l'éditeur écrit dans le " +
+                "coffre personnel, et l'élément sortirait de l'équipe sans que personne ne " +
+                "sache où il est passé",
+            appareil.findObject(By.desc("button.new")),
+        )
+        toucher(By.text("Routeur de l'agence"), "l'élément d'équipe")
+        attendre(
+            By.textContains("pas encore le modifier"),
+            "l'éditeur d'un élément d'équipe ne dit pas qu'il est en lecture seule",
+        )
+        assertNull(
+            "« Enregistrer » est proposé sur un élément d'équipe",
+            appareil.findObject(By.desc("button.save")),
+        )
+        toucherJusqua("button.cancel", By.desc("button.settings"), "le retour au coffre")
+
+        // Et l'on revient au coffre personnel, qui doit être intact.
+        toucher("chip.personal")
+        attendre(By.text("Forgejo"), "le retour au coffre personnel")
+    }
+
+    /**
+     * La ligne du coffre portant ce nom — **la plus basse** des correspondances.
+     *
+     * Dès qu'une recherche est saisie, le nom figure à l'écran deux fois : dans le champ et
+     * dans la ligne. `findObject` rend le premier venu, c'est-à-dire le champ, et le toucher
+     * n'ouvre rien. La ligne est toujours sous le champ ; c'est le seul repère fiable.
+     */
+    private fun ligneDuCoffre(nom: String): UiObject2 {
+        attendre(By.text(nom), "l'élément « $nom »")
+        return appareil.findObjects(By.text(nom)).maxByOrNull { it.visibleBounds.top }
+            ?: throw AssertionError("l'élément « $nom » a disparu entre deux regards")
+    }
+
+    /** Ouvre le menu de réglages, où vivent le verrouillage, la corbeille et la biométrie. */
+    private fun ouvrirLesReglages() {
+        toucherJusqua("button.settings", By.desc("button.lock"), "le menu de réglages")
+    }
+
+    /**
+     * Touche, **et vérifie que le toucher a produit son effet**.
+     *
+     * Un écran qui vient de s'ouvrir bouge encore : `UiObject2.click()` vise le centre des
+     * limites relevées à l'instant précédent, et une animation d'un dixième de seconde suffit
+     * pour que le doigt tombe à côté. Rien ne le signale — le clic « réussit », et c'est
+     * l'assertion suivante qui échoue, trente secondes plus tard, en accusant le produit.
+     *
+     * On rejoue donc jusqu'à trois fois, en attendant à chaque tour ce que le toucher devait
+     * provoquer. Ce n'est pas une temporisation déguisée : c'est la différence entre
+     * « j'ai cliqué » et « il s'est passé quelque chose ».
+     */
+    /** La même chose, sur une cible désignée par un sélecteur plutôt qu'un identifiant. */
+    private fun toucherJusqua2(cible: BySelector, attendu: BySelector, quoi: String) {
+        repeat(3) {
+            toucher(cible, quoi)
+            if (appareil.wait(Until.hasObject(attendu), 4_000) == true) return
+        }
+        throw AssertionError(
+            "après trois touchers, $quoi n'est toujours pas là.\nÉcran : ${ecranActuel()}",
+        )
+    }
+
+    private fun toucherJusqua(identifiant: String, attendu: BySelector, quoi: String) {
+        repeat(3) {
+            toucher(identifiant)
+            if (appareil.wait(Until.hasObject(attendu), 4_000) == true) return
+        }
+        throw AssertionError(
+            "après trois touchers de « $identifiant », $quoi n'est toujours pas là.\n" +
+                "Écran : ${ecranActuel()}",
+        )
+    }
+
+    // ─── Les registres en écriture (§2) ───
+
+    /**
+     * Favori et dossier vide : deux registres, deux façons de disparaître en silence.
+     *
+     * Ce qui se joue : un registre écrit de travers ne fait échouer personne. Il se relit
+     * vide, l'utilisateur perd ses favoris, et il n'y a aucune erreur à chercher. On vérifie
+     * donc la **persistance après relecture du coffre**, pas seulement l'état de l'écran —
+     * une étoile allumée dans une composition ne prouve rien tant que le serveur ne l'a pas
+     * rendue.
+     */
+    private fun registres(nomDeLElement: String) {
+        val identifiant = identifiantDe(nomDeLElement)
+        toucher("button.favorite.$identifiant.off")
+        // `rafraichir` suit l'écriture : quand l'étoile revient allumée, elle vient du
+        // coffre **relu**, pas d'un état local. C'est la différence entre « on a écrit » et
+        // « le serveur a gardé ».
+        //
+        // L'état se lit dans la description et non dans le texte : une `contentDescription`
+        // **remplace** le texte du nœud d'accessibilité au lieu de s'y ajouter, si bien que
+        // le « ★ » n'est visible d'aucune machine. Le premier jet attendait ce caractère et
+        // ne l'a jamais vu, sur un écran qui l'affichait.
+        attendre(
+            By.desc("button.favorite.$identifiant.on"),
+            "le favori n'est pas revenu du coffre après écriture : le registre a peut-être " +
+                "été écrit sous un nom sans octet NUL, ou pas écrit du tout",
+            30_000,
+        )
+
+        toucher("button.folders")
+        poser("field.newFolder", "Essai/Dossier")
+        toucher("button.addFolder")
+        attendre(
+            By.text("Essai/Dossier"),
+            "le dossier vide n'a pas été inscrit au registre : un dossier sans élément " +
+                "n'existe que là, et sans lui il s'évapore",
+            30_000,
+        )
+
+        // Et il se retire — le registre se **réécrit**, il ne fait pas que croître.
+        toucher(By.text("Retirer"), "le retrait du dossier vide")
+        appareil.wait(Until.gone(By.text("Essai/Dossier")), 30_000)
+        assertNull(
+            "le dossier vide retiré est resté : le registre ne se réécrit pas",
+            appareil.findObject(By.text("Essai/Dossier")),
+        )
+        toucher("button.folders")
+    }
+
+    /**
+     * L'identifiant serveur d'un élément, tel que l'étoile le porte dans sa description.
+     *
+     * On apparie par **recouvrement vertical**, et non par intersection des boîtes : le nom
+     * est à gauche de la ligne, l'étoile à droite, et leurs rectangles ne se touchent pas.
+     * Le premier jet les intersectait et ne trouvait jamais rien — « aucune étoile en face
+     * de … », sur un écran qui en portait une.
+     */
+    private fun identifiantDe(nom: String): String {
+        val ligne = attendre(By.text(nom), "l'élément « $nom »").visibleBounds
+        val etoile = appareil.findObjects(By.descStartsWith("button.favorite."))
+            .firstOrNull { it.visibleBounds.centerY() in ligne.top..ligne.bottom }
+            ?: throw AssertionError(
+                "aucune étoile sur la ligne de « $nom » — l'étoile n'est proposée que dans " +
+                    "le coffre personnel, jamais sur un élément d'équipe",
+            )
+        return etoile.contentDescription
+            .removePrefix("button.favorite.")
+            .removeSuffix(".on")
+            .removeSuffix(".off")
+    }
+
+    // ─── Le partage de lien (§4) ───
+
+    /**
+     * Crée un lien de partage et **le dépose pour le script**.
+     *
+     * Le script l'ouvre ensuite avec **WebCrypto** — l'implémentation du navigateur qui
+     * ouvrira réellement le lien chez le destinataire. C'est le seul contrôle qui vaille :
+     * `contrat.json` le dit en toutes lettres, « un témoin qui vérifie qu'un côté se relit
+     * lui-même passe au vert dans le monde cassé ». Un aller-retour par le seul cœur
+     * réussirait aussi bien en XChaCha20 qu'en AES-GCM, et aucun partage ne traverserait.
+     */
+    private fun partager(nomDeLElement: String) {
+        toucher(By.text(nomDeLElement), "l'élément à partager")
+        toucher("button.share")
+        toucher("button.createShare")
+
+        // Le serveur de cette branche ne rend qu'un identifiant : le lien retombe sur
+        // l'adresse saisie, qui est de confiance par construction. Aucune confirmation de
+        // destination n'est donc attendue ici — celle-ci demande un serveur à relais.
+        val lien = attendre(
+            By.textContains("#"),
+            "aucun lien de partage n'est apparu",
+            30_000,
+        ).text
+        assertTrue(
+            "le lien doit porter la clé dans son fragment, après le « # »",
+            lien.substringAfter('#').length >= 40,
+        )
+        deposer("lien-de-partage.txt", lien)
+
+        toucher("button.closeLink")
+        // On attend un repère **propre au coffre**, et non le nom de l'élément : l'éditeur
+        // porte ce nom dans son propre champ, si bien qu'attendre le nom était satisfait
+        // sans que l'écran ait changé. Les étapes suivantes se déroulaient alors dans
+        // l'éditeur, en accusant tout autre chose.
+        toucherJusqua("button.cancel", By.desc("button.settings"), "le retour au coffre")
+    }
+
+    // ─── La corbeille ───
+
+    /**
+     * Supprimer met à la corbeille, et la corbeille rend.
+     *
+     * Le `DELETE` du serveur est un effacement **doux** : sans cet écran, la nuance était
+     * invisible — l'utilisateur croyait détruire, et le serveur gardait tout.
+     */
+    private fun corbeille(nomDeLElement: String) {
+        // On filtre d'abord : une liste réduite à une ligne retire toute ambiguïté de
+        // défilement, et fait au passage travailler la recherche. Chercher l'élément dans
+        // une liste de six lignes sur un écran qui défile, c'était laisser le hasard décider
+        // sur quelle ligne le doigt tombe.
+        poser("field.search", nomDeLElement)
+        // **La ligne, pas le champ.** Une fois la recherche saisie, le nom apparaît deux
+        // fois à l'écran : dans le champ et dans la ligne. `findObject` rendait le premier —
+        // le champ — et le toucher n'ouvrait rien. On prend donc le plus bas des deux.
+        repeat(3) {
+            ligneDuCoffre(nomDeLElement).click()
+            appareil.waitForIdle()
+            if (appareil.wait(Until.hasObject(By.desc("button.delete")), 4_000) == true) return@repeat
+        }
+        attendre(By.desc("button.delete"), "l'éditeur de l'élément")
+
+        // Deux gestes, et on **attend le changement de libellé entre les deux**. Les
+        // enchaîner à l'aveugle laissait la seconde pression atterrir ailleurs si l'écran
+        // avait défilé entre-temps : l'éditeur restait ouvert, et le nom qu'on cherchait
+        // était celui de son propre champ. Le test accusait alors le serveur.
+        toucherJusqua(
+            "button.delete",
+            By.text("Confirmer la suppression"),
+            "la demande de confirmation",
+        )
+        toucher("button.delete")
+
+        // L'éditeur doit s'être refermé avant qu'on regarde la liste.
+        attendre(By.desc("button.settings"), "le retour au coffre après la suppression", 30_000)
+        appareil.wait(Until.gone(By.text(nomDeLElement)), 30_000)
+        assertNull(
+            "l'élément supprimé est resté dans le coffre.\n" +
+                "Écran : ${ecranActuel()}",
+            appareil.findObject(By.text(nomDeLElement)),
+        )
+
+        ouvrirLesReglages()
+        toucher("button.trash")
+        attendre(
+            By.text(nomDeLElement),
+            "l'élément supprimé n'est pas dans la corbeille : le serveur l'aurait détruit " +
+                "alors qu'il ne fait que le marquer",
+            30_000,
+        )
+        toucher("button.restore")
+        toucher("button.backFromTrash")
+        attendre(
+            By.text(nomDeLElement),
+            "l'élément restauré n'est pas revenu au coffre",
+            30_000,
+        )
+        poser("field.search", "")
+    }
+
+    /** Dépose un texte que le script pourra lire. */
+    private fun deposer(nom: String, contenu: String) {
+        val contexte = InstrumentationRegistry.getInstrumentation().targetContext
+        java.io.File(contexte.externalCacheDir, nom).writeText(contenu)
+    }
+
+    /** Ouvre le formulaire d'essai, sans rien en attendre. */
+    private fun ouvrirLeFormulaireDEssai() {
+        val contexte = InstrumentationRegistry.getInstrumentation().targetContext
+        contexte.startActivity(
+            Intent().setClassName(
+                contexte.packageName, "ch.stackops.ghostpass.essai.ActiviteDEssaiDeConnexion",
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+        )
+        attendre(
+            By.res("ch.stackops.ghostpass:id/essai_identifiant"),
+            "le formulaire d'essai ne s'est pas ouvert",
+        )
     }
 
     // ─── Les liens de second facteur (§9) ───
@@ -537,7 +879,7 @@ class ParcoursDeBoutEnBoutTest {
                 listOfNotNull(texte, description).firstOrNull { it.isNotBlank() }
             }
             .distinct()
-            .take(15)
+            .take(40)
         return "[paquet=${appareil.currentPackageName}] " +
             if (vus.isEmpty()) "(rien de nommé)" else vus.joinToString(" · ")
     }

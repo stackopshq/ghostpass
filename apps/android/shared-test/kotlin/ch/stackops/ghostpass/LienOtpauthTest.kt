@@ -92,6 +92,70 @@ class LienOtpauthTest {
         }
     }
 
+    // ─── Le type du lien : les vecteurs de `TypeDeLienOtpauthTests`, portés ───
+    //
+    // Ces cinq-là sont nés d'un défaut que ce portage a révélé : le premier jet suivait
+    // `depuisUnQrCode` à la lettre et n'examinait que le schéma, alors que le test d'iOS
+    // s'appelait déjà « seul un lien de TOTP est retenu ». Les deux clients acceptaient
+    // `otpauth://hotp/…`.
+
+    @Test
+    fun unLienDeTotpEstRetenu() {
+        assertTrue(
+            LienOtpauth.lire("otpauth://totp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+                is LienOtpauth.Lecture.SecondFacteur,
+        )
+    }
+
+    /** Les générateurs de QR code ne s'accordent pas sur la casse. */
+    @Test
+    fun leTypeSeLitSansEgardALaCasse() {
+        assertTrue(
+            "la casse ne doit pas décider",
+            LienOtpauth.lire("OTPAUTH://TOTP/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+                is LienOtpauth.Lecture.SecondFacteur,
+        )
+    }
+
+    /**
+     * **Le cas qui distingue les deux implémentations.**
+     *
+     * Avec le seul contrôle du schéma, celui-ci passait — et produisait des codes calculés
+     * sur l'horloge à partir d'un secret qui compte des événements. Faux, et en silence.
+     */
+    @Test
+    fun unLienDeHotpEstRefuse() {
+        assertEquals(
+            "un lien de HOTP doit être refusé : son secret compte des événements, pas le " +
+                "temps, et les codes seraient faux sans qu'aucune erreur ne le dise",
+            LienOtpauth.Lecture.AutreChose,
+            LienOtpauth.lire("otpauth://hotp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ&counter=1"),
+        )
+    }
+
+    /** Un type qu'on ne connaît pas n'est pas un TOTP : le retenir serait le même défaut. */
+    @Test
+    fun unTypeInconnuEstRefuse() {
+        assertEquals(
+            LienOtpauth.Lecture.AutreChose,
+            LienOtpauth.lire("otpauth://steam/GitHub:clara?secret=GEZDGNBVGY3TQOJQ"),
+        )
+    }
+
+    /**
+     * L'export d'une application garde son état à lui.
+     *
+     * Il ne doit pas se confondre avec « autre chose » : son message dit **quoi faire**,
+     * là où l'autre dit seulement que ça ne va pas.
+     */
+    @Test
+    fun lExportDApplicationGardeSonMessage() {
+        assertEquals(
+            LienOtpauth.Lecture.ExportDApplication,
+            LienOtpauth.lire("otpauth-migration://offline?data=AAAA"),
+        )
+    }
+
     // ─── Ce que les vecteurs d'iOS ne couvrent pas, et qui arrive ───
 
     /**

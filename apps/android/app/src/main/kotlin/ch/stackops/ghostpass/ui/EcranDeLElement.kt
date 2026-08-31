@@ -63,13 +63,14 @@ fun EcranDeLElement(
     entree: EntreeDuCoffre.Lisible?,
     lien: String? = null,
     cle: String = entree?.id ?: lien ?: "nouveau",
+    lectureSeule: Boolean = false,
     surFin: () -> Unit,
 ) {
     // `key` enferme tout l'état de ce formulaire dans l'identité de ce qu'on édite. Deux
     // liens reçus coup sur coup ouvrent alors deux formulaires ; sans lui, le second
     // rouvrirait le premier, pré-rempli avec les valeurs du premier — et rien ne
     // signalerait l'erreur.
-    key(cle) { CorpsDeLElement(modele, entree, lien, surFin) }
+    key(cle) { CorpsDeLElement(modele, entree, lien, lectureSeule, surFin) }
 }
 
 @Composable
@@ -77,6 +78,7 @@ private fun CorpsDeLElement(
     modele: ModeleDuCoffre,
     entree: EntreeDuCoffre.Lisible?,
     lien: String?,
+    lectureSeule: Boolean,
     surFin: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
@@ -136,7 +138,15 @@ private fun CorpsDeLElement(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(
-                Modifier.widthIn(max = GP.largeurMax).padding(horizontal = 20.dp, vertical = 28.dp),
+                Modifier
+                    .widthIn(max = GP.largeurMax)
+                    // **96 dp de marge en bas**, et ce n'est pas de l'esthétique. Le dernier
+                    // contrôle du formulaire — « Annuler » — tombait sinon dans la bande que
+                    // la navigation par gestes se réserve : le système avale le toucher, et
+                    // le bouton paraît simplement ne rien faire. Un doigt humain a le même
+                    // problème, et personne ne pense à faire défiler un écran qui semble
+                    // déjà entier.
+                    .padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 Text(
@@ -296,7 +306,19 @@ private fun CorpsDeLElement(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        BoutonPrincipal(
+                        // En lecture seule, **aucun bouton d'enregistrement**. Le proposer
+                        // puis échouer serait déjà mauvais ; le proposer et réussir au
+                        // mauvais endroit — dans le coffre personnel — serait pire : l'élément
+                        // disparaîtrait pour toute l'équipe.
+                        if (lectureSeule) {
+                            Text(
+                                "Élément d'un coffre d'équipe : GhostPass sait le lire, pas " +
+                                    "encore le modifier depuis Android.",
+                                color = couleurs.attenue,
+                                fontSize = 12.sp,
+                            )
+                        }
+                        if (!lectureSeule) BoutonPrincipal(
                             texte = "Enregistrer",
                             actif = !modele.occupe && nom.isNotBlank(),
                             occupe = modele.occupe,
@@ -331,7 +353,7 @@ private fun CorpsDeLElement(
                             }
                         }
 
-                        if (entree != null) {
+                        if (entree != null && !lectureSeule) {
                             BoutonSecondaire(
                                 texte = if (confirmeLaSuppression) {
                                     "Confirmer la suppression"
@@ -355,6 +377,11 @@ private fun CorpsDeLElement(
                                 }
                             }
                         }
+
+                        // Le partage ne s'offre que sur un élément **existant** : il n'y a
+                        // rien à partager d'un formulaire qu'on n'a pas encore enregistré,
+                        // et le proposer laisserait croire que le secret saisi part déjà.
+                        if (entree != null) PanneauDePartage(modele, entree)
 
                         LienDiscret("Annuler", identifiant = "button.cancel") {
                             modele.message = null
@@ -388,4 +415,84 @@ private fun historique(origine: Identifiants?, nouveau: String): List<String> {
     if (origine == null) return emptyList()
     if (origine.password == nouveau || origine.password.isEmpty()) return origine.passwordHistory
     return listOf(origine.password) + origine.passwordHistory
+}
+
+/**
+ * Le partage d'un secret par lien éphémère (§4).
+ *
+ * Deux réglages, et ce sont ceux d'iOS : une durée et un nombre de consultations. Le second
+ * est le plus utile et le moins connu — un lien qui s'efface après une lecture rend inutile
+ * de faire confiance au canal par lequel il a voyagé.
+ *
+ * Ce panneau ne montre **jamais** le lien : il déclenche la création, et c'est
+ * `BoitesDePartage` qui affiche soit la confirmation de destination, soit le lien. L'ordre
+ * est le point : la destination se confirme avant que la clé ne soit remise.
+ */
+@Composable
+private fun PanneauDePartage(modele: ModeleDuCoffre, entree: EntreeDuCoffre.Lisible) {
+    val couleurs = LocalCouleurs.current
+    var ouvert by rememberSaveable { mutableStateOf(false) }
+    var heures by rememberSaveable { mutableStateOf("24") }
+    var consultations by rememberSaveable { mutableStateOf("1") }
+
+    // Une carte n'a pas **un** secret : numéro, date et code sont trois champs, et n'en
+    // envoyer qu'un donnerait au destinataire quelque chose d'inutilisable en lui laissant
+    // croire qu'il a tout. On le dit au lieu de choisir à sa place.
+    val partageable = entree.element.data !is ContenuDElement.Carte
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LienDiscret(
+            texte = if (ouvert) "Masquer le partage" else "Partager ce secret par lien",
+            actif = partageable && !modele.occupe,
+            identifiant = "button.share",
+        ) { ouvert = !ouvert }
+
+        if (!partageable) {
+            Text(
+                "Une carte porte plusieurs champs : GhostPass ne partage pas un secret " +
+                    "unique pour elle.",
+                color = couleurs.attenue,
+                fontSize = 12.sp,
+            )
+        }
+
+        if (ouvert && partageable) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f)) {
+                    ChampGhost(
+                        intitule = "Heures",
+                        valeur = heures,
+                        invite = "24",
+                        identifiant = "field.shareHours",
+                        typeDeClavier = KeyboardType.Number,
+                        onChange = { heures = it },
+                    )
+                }
+                Box(Modifier.weight(1f)) {
+                    ChampGhost(
+                        intitule = "Consultations",
+                        valeur = consultations,
+                        invite = "1",
+                        identifiant = "field.shareViews",
+                        typeDeClavier = KeyboardType.Number,
+                        onChange = { consultations = it },
+                    )
+                }
+            }
+            BoutonSecondaire(
+                texte = "Créer le lien",
+                actif = !modele.occupe,
+                identifiant = "button.createShare",
+            ) {
+                // Les bornes du serveur : 1 à 720 heures, 0 à 100 consultations. Les
+                // appliquer ici évite un aller-retour qui rendrait « requête invalide »,
+                // message qui n'apprend rien à qui a tapé « 0 ».
+                modele.partager(
+                    entree,
+                    heures = heures.toIntOrNull()?.coerceIn(1, 720) ?: 24,
+                    consultations = consultations.toIntOrNull()?.coerceIn(0, 100) ?: 1,
+                )
+            }
+        }
+    }
 }

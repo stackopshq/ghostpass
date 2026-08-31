@@ -8,6 +8,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -131,6 +134,10 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 lecture = coffre.relire(elements)
                 horsLigne = false
                 message = null
+                // Les coffres d'équipe se chargent avec le coffre personnel. Sans cela,
+                // quelqu'un dont les mots de passe vivent en équipe voit une liste vide et
+                // conclut que l'application ne marche pas.
+                chargerLesOrganisations()
             } catch (e: Exception) {
                 horsLigne = true
                 // Le coffre reste affiché tel qu'il est : une erreur de réseau ne doit pas
@@ -261,14 +268,35 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         private set
 
     /**
-     * Retient un lien venu du dehors, **s'il est de ceux qu'on sait traiter**.
+     * Retient un lien venu du dehors, **s'il est de ceux qu'on sait traiter** — et **dit
+     * pourquoi** quand il ne l'est pas.
      *
-     * Le filtre est [LienOtpauth.estUnLienDeTotp] — le même que celui d'iOS, éprouvé sur les
-     * mêmes vecteurs. Retenir un lien qu'on ne saura pas ouvrir ferait apparaître un
-     * formulaire vide après le déverrouillage, ce qui est pire que ne rien faire.
+     * Retenir un lien qu'on ne saura pas ouvrir ferait apparaître un formulaire vide après
+     * le déverrouillage, ce qui est pire que ne rien faire. Mais le refuser *en silence*
+     * n'est pas mieux : l'utilisateur vient de scanner un QR code et de choisir GhostPass
+     * pour l'ouvrir. Une application qui s'ouvre et ne réagit pas se lit comme une panne, et
+     * il rescannera.
+     *
+     * D'où les trois états de [LienOtpauth.Lecture] plutôt qu'un booléen. Celui de l'export
+     * d'application a son message à lui : il dit **quoi faire**, là où l'autre dirait
+     * seulement que ça ne va pas — et c'est le cas de quelqu'un qui a fait exactement le
+     * geste qu'on lui a appris.
      */
     fun retenirLeLien(uri: String?) {
-        if (uri != null && LienOtpauth.estUnLienDeTotp(uri)) lienEnAttente = uri
+        if (uri == null) return
+        when (LienOtpauth.lire(uri)) {
+            is LienOtpauth.Lecture.SecondFacteur -> {
+                lienEnAttente = uri
+                message = null
+            }
+            LienOtpauth.Lecture.ExportDApplication ->
+                message = "Ce QR code est un export d'application d'authentification, qui " +
+                    "porte plusieurs comptes à la fois. GhostPass ne sait pas le lire : " +
+                    "exportez les comptes un par un."
+            LienOtpauth.Lecture.AutreChose ->
+                message = "Ce lien n'est pas un second facteur utilisable — il lui manque " +
+                    "un secret, ou il n'est pas de type « totp »."
+        }
     }
 
     /**
@@ -395,6 +423,434 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    // ─── Les coffres d'équipe ───
+
+    /** Les organisations, invitations comprises. Vide tant qu'on n'a pas regardé. */
+    var organisations by mutableStateOf<List<Organisation>>(emptyList())
+        private set
+
+    /**
+     * Pourquoi telle organisation ne s'est pas ouverte, par identifiant.
+     *
+     * **Une organisation qui échoue ne vide pas l'écran** : elle garde sa place, dit
+     * pourquoi, et les autres s'affichent. C'est la même règle que pour un élément
+     * illisible, à l'échelle au-dessus.
+     */
+    var echecsDOrganisation by mutableStateOf<Map<String, EchecDOrganisation>>(emptyMap())
+        private set
+
+    /** L'organisation ouverte, ou `null` quand on regarde le coffre personnel. */
+    var organisationOuverte by mutableStateOf<Coffre.CoffreDOrganisation?>(null)
+        private set
+
+    var collectionOuverte by mutableStateOf<CollectionDOrganisation?>(null)
+        private set
+
+    private var lectureDeCollection by mutableStateOf(LectureDuCoffre())
+
+    /**
+     * Ce que l'écran affiche : le coffre personnel, ou la collection ouverte.
+     *
+     * Une seule propriété plutôt que deux chemins dans l'écran : les règles d'affichage —
+     * une ligne illisible garde sa place, les registres se masquent — sont les mêmes, et
+     * deux chemins finiraient par ne plus les appliquer pareil.
+     */
+    val lectureAffichee: LectureDuCoffre
+        get() = if (collectionOuverte == null) lecture else lectureDeCollection
+
+    /**
+     * Le membre a-t-il le **droit** d'écrire dans ce qu'il regarde ?
+     *
+     * C'est la permission effective que le serveur établit, par collection. Elle sert à
+     * l'affichage — une collection en lecture seule le dit sur sa pastille — parce que
+     * découvrir qu'on n'avait pas le droit après avoir tout saisi est le pire moment.
+     */
+    val peutEcrire: Boolean
+        get() = collectionOuverte?.permission?.peutEcrire ?: true
+
+    /**
+     * L'écriture est-elle **possible** ici, dans cette version ?
+     *
+     * Distinct de [peutEcrire], et il faut les deux. Un membre peut parfaitement avoir le
+     * droit d'écrire dans une collection que cette application ne sait pas encore modifier :
+     * l'éditeur écrit par `/api/vault/items`, le coffre **personnel**. L'y laisser
+     * enregistrer un élément d'équipe le déplacerait silencieusement dans le coffre privé du
+     * membre — il disparaîtrait pour toute l'équipe, et personne ne saurait où il est passé.
+     *
+     * Les routes d'écriture d'équipe existent côté serveur ; elles ne sont pas câblées. Tant
+     * qu'elles ne le sont pas, on n'offre pas le bouton — plutôt que de l'offrir et
+     * d'échouer, ou pire, de réussir au mauvais endroit.
+     */
+    val peutModifierIci: Boolean
+        get() = collectionOuverte == null
+
+    /**
+     * Va chercher les organisations.
+     *
+     * Un échec ici **ne doit pas empêcher le coffre personnel de s'afficher** : une
+     * instance sans organisations répond `404` ou une liste vide, et faire échouer tout
+     * l'écran pour cela rendrait l'application inutilisable sur les instances les plus
+     * simples.
+     */
+    fun chargerLesOrganisations() {
+        viewModelScope.launch {
+            try {
+                organisations = withContext(Dispatchers.IO) { coffre.organisations() }
+            } catch (_: Exception) {
+                organisations = emptyList()
+            }
+        }
+    }
+
+    /** Ouvre une organisation, et sa première collection. */
+    fun ouvrirUneOrganisation(organisation: Organisation) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                val resultat = withContext(Dispatchers.IO) {
+                    coffre.ouvrirLOrganisation(organisation)
+                }
+                resultat.onSuccess { ouvert ->
+                    organisationOuverte?.close()
+                    organisationOuverte = ouvert
+                    echecsDOrganisation = echecsDOrganisation - organisation.id
+                    val premiere = ouvert.collections.firstOrNull()
+                    if (premiere == null) {
+                        collectionOuverte = null
+                        lectureDeCollection = LectureDuCoffre()
+                    } else {
+                        ouvrirUneCollection(premiere)
+                    }
+                }.onFailure { erreur ->
+                    val motif = (erreur as? Coffre.EchecDOuverture)?.motif
+                        ?: EchecDOrganisation.Reseau(erreur.message ?: "erreur inconnue")
+                    // On note l'échec **sans** fermer ce qui est affiché : les autres
+                    // organisations et le coffre personnel restent utilisables.
+                    echecsDOrganisation = echecsDOrganisation + (organisation.id to motif)
+                }
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    fun ouvrirUneCollection(collection: CollectionDOrganisation) {
+        val ouvert = organisationOuverte ?: return
+        viewModelScope.launch {
+            occupe = true
+            try {
+                collectionOuverte = collection
+                lectureDeCollection = withContext(Dispatchers.IO) {
+                    coffre.elementsDeCollection(ouvert, collection.id)
+                }
+                message = null
+            } catch (e: Exception) {
+                lectureDeCollection = LectureDuCoffre()
+                message = messageLisible(e)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    /** Revient au coffre personnel. La clé d'organisation est rendue au cœur. */
+    fun revenirAuCoffrePersonnel() {
+        organisationOuverte?.close()
+        organisationOuverte = null
+        collectionOuverte = null
+        lectureDeCollection = LectureDuCoffre()
+    }
+
+    /** Accepte une invitation, puis relit la liste : l'organisation devient lisible. */
+    fun accepterLInvitation(organisation: Organisation) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                withContext(Dispatchers.IO) { coffre.accepterLOrganisation(organisation.id) }
+                echecsDOrganisation = echecsDOrganisation - organisation.id
+                organisations = withContext(Dispatchers.IO) { coffre.organisations() }
+                organisations.firstOrNull { it.id == organisation.id }?.let {
+                    ouvrirUneOrganisation(it)
+                }
+            } catch (e: Exception) {
+                message = messageLisible(e)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    // ─── Le partage de lien (§4) ───
+
+    /** Le lien prêt à être remis, ou `null`. Effacé dès que l'écran le referme. */
+    var lienDePartage by mutableStateOf<String?>(null)
+
+    /**
+     * Une destination étrangère qu'il faut montrer à l'utilisateur avant de lui remettre la
+     * clé.
+     *
+     * Tant que ceci n'est pas nul, **aucun lien n'est affiché**. C'est ce qui fait tenir la
+     * règle : une fois le lien montré, il est trop tard pour demander.
+     */
+    var destinationAConfirmer by mutableStateOf<Coffre.Partage.ADemander?>(null)
+        private set
+
+    /**
+     * Partage le secret d'un élément.
+     *
+     * Le secret dépend du genre, et une carte n'en a pas **un** : numéro, date et code sont
+     * trois champs, et n'en envoyer qu'un donnerait au destinataire quelque chose
+     * d'inutilisable en lui laissant croire qu'il a tout. On refuse plutôt que de choisir à
+     * sa place.
+     */
+    fun partager(entree: EntreeDuCoffre.Lisible, heures: Int, consultations: Int) {
+        val secret = when (val d = entree.element.data) {
+            is ContenuDElement.Connexion -> d.valeur.password
+            is ContenuDElement.NoteSecrete -> d.valeur.content
+            is ContenuDElement.Carte -> null
+        }
+        if (secret.isNullOrEmpty()) {
+            message = "Cet élément n'a pas de secret unique à partager."
+            return
+        }
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                val approuves = stockage.domainesApprouves(serveurEnregistre)
+                val resultat = withContext(Dispatchers.IO) {
+                    coffre.partager(secret, heures, consultations, entree.element.name, approuves)
+                }
+                when (resultat) {
+                    is Coffre.Partage.Pret -> terminerLePartage(resultat.lien, resultat.inscription)
+                    is Coffre.Partage.ADemander -> destinationAConfirmer = resultat
+                    is Coffre.Partage.Refuse -> message = resultat.raison
+                }
+            } catch (e: Exception) {
+                message = messageLisible(e)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    /**
+     * L'utilisateur accepte la destination.
+     *
+     * `memoriser` retient l'hôte **pour ce serveur-là**, jamais globalement : approuver
+     * `ghostbit.example.com` pour l'instance de son entreprise ne doit rien autoriser sur
+     * l'instance d'un tiers.
+     */
+    fun confirmerLaDestination(memoriser: Boolean) {
+        val attente = destinationAConfirmer ?: return
+        destinationAConfirmer = null
+        if (memoriser) stockage.approuver(serveurEnregistre, attente.hote)
+        terminerLePartage(attente.lien, attente.inscription)
+    }
+
+    /**
+     * L'utilisateur refuse : **le partage est révoqué**.
+     *
+     * Il existe déjà côté serveur à cet instant — c'est le serveur qui vient de le créer.
+     * L'oublier laisserait derrière soi un secret publié que personne ne surveille.
+     */
+    fun refuserLaDestination() {
+        val attente = destinationAConfirmer ?: return
+        destinationAConfirmer = null
+        val jetonDeSuppression = attente.cree.deleteToken
+        viewModelScope.launch {
+            occupe = true
+            try {
+                if (jetonDeSuppression != null) {
+                    withContext(Dispatchers.IO) {
+                        coffre.revoquerUnPartage(attente.cree.id, jetonDeSuppression)
+                    }
+                    message = "Partage annulé et révoqué."
+                } else {
+                    // Ne peut pas arriver : `Coffre.partager` refuse d'emblée une
+                    // destination étrangère sans jeton, précisément pour ne pas poser une
+                    // question dont une des réponses serait impossible à tenir.
+                    message = "Partage annulé, mais ce serveur ne permet pas de le révoquer."
+                }
+            } catch (e: Exception) {
+                message = "Le partage n'a pas pu être révoqué : ${messageLisible(e)}"
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    /**
+     * Inscrit le partage au registre, puis montre le lien.
+     *
+     * L'inscription est nulle quand le serveur n'a pas rendu de jeton de révocation : sans
+     * jeton et sans route pour l'employer, une ligne au registre serait un vœu. Le lien,
+     * lui, est remis dans les deux cas — il fonctionne.
+     */
+    private fun terminerLePartage(lien: String, inscription: PartageEnCours?) {
+        lienDePartage = lien
+        if (inscription == null) return
+        ecrireUnRegistre(
+            Registres.PARTAGES,
+            Json.encodeToString(
+                ListSerializer(PartageEnCours.serializer()), lecture.partages + inscription),
+        )
+    }
+
+    /** Révoque un partage déjà inscrit au registre, et l'en retire. */
+    fun revoquerUnPartage(partage: PartageEnCours) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                withContext(Dispatchers.IO) {
+                    coffre.revoquerUnPartage(partage.id, partage.deleteToken)
+                }
+                ecrireUnRegistre(
+                    Registres.PARTAGES,
+                    Json.encodeToString(
+                        ListSerializer(PartageEnCours.serializer()),
+                        lecture.partages.filterNot { it.id == partage.id },
+                    ),
+                )
+            } catch (e: Exception) {
+                message = messageLisible(e)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    // ─── La corbeille ───
+
+    /** Ce que la corbeille contient. Vide tant qu'on ne l'a pas ouverte. */
+    var corbeille by mutableStateOf(LectureDuCoffre())
+        private set
+
+    var corbeilleOuverte by mutableStateOf(false)
+        private set
+
+    fun ouvrirLaCorbeille() {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                corbeille = withContext(Dispatchers.IO) { coffre.lireLaCorbeille() }
+                corbeilleOuverte = true
+            } catch (e: Exception) {
+                message = messageLisible(e)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    fun fermerLaCorbeille() {
+        corbeilleOuverte = false
+        corbeille = LectureDuCoffre()
+    }
+
+    fun restaurer(id: String) = agirSurLaCorbeille { coffre.restaurer(id) }
+
+    /** Détruit pour de bon. Irréversible, et l'écran demande deux fois. */
+    fun purger(id: String) = agirSurLaCorbeille { coffre.purger(id) }
+
+    private fun agirSurLaCorbeille(action: () -> Unit) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                withContext(Dispatchers.IO) { action() }
+                corbeille = withContext(Dispatchers.IO) { coffre.lireLaCorbeille() }
+                rafraichir()
+            } catch (e: Exception) {
+                message = messageLisible(e)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    // ─── Les registres en écriture (§2) ───
+
+    /**
+     * Écrit un registre, en le **remplaçant** s'il existe déjà.
+     *
+     * L'identité vient de la dernière lecture. Sans elle, chaque écriture créerait un
+     * nouveau registre du même nom : un seul serait lu, et l'autre resterait à contredire le
+     * premier chez le prochain client — sans qu'aucune erreur ne soit levée nulle part.
+     */
+    private fun ecrireUnRegistre(nom: String, contenu: String) {
+        viewModelScope.launch {
+            occupe = true
+            try {
+                withContext(Dispatchers.IO) {
+                    coffre.ecrireUnRegistre(nom, contenu, lecture.identifiantsDeRegistres[nom])
+                }
+                rafraichir()
+            } catch (e: Exception) {
+                message = messageLisible(e)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    /**
+     * Met un élément en favori, ou l'en retire.
+     *
+     * Le registre porte des **identifiants d'éléments**, pas des noms : un élément renommé
+     * reste favori, et deux éléments homonymes ne se confondent pas.
+     */
+    fun basculerLeFavori(id: String) {
+        val favoris = lecture.favoris.toMutableSet()
+        if (!favoris.add(id)) favoris.remove(id)
+        ecrireUnRegistre(
+            Registres.FAVORIS,
+            Json.encodeToString(ListSerializer(String.serializer()), favoris.sorted()),
+        )
+    }
+
+    /**
+     * Retient un dossier **vide**.
+     *
+     * Le registre ne porte que ceux-là : un dossier qu'un élément habite se déduit de
+     * l'élément, et l'inscrire deux fois donnerait deux sources pour la même vérité. On
+     * retire donc du registre tout dossier qui vient d'être peuplé — c'est fait à chaque
+     * écriture, plus bas.
+     */
+    fun ajouterUnDossierVide(nom: String) {
+        val propre = nom.trim().trim('/')
+        if (propre.isEmpty()) return
+        if (propre in dossiersHabites() || propre in lecture.dossiersVides) return
+        ecrireLesDossiersVides(lecture.dossiersVides + propre)
+    }
+
+    fun retirerUnDossierVide(nom: String) {
+        ecrireLesDossiersVides(lecture.dossiersVides - nom)
+    }
+
+    private fun ecrireLesDossiersVides(dossiers: List<String>) {
+        // Les dossiers devenus habités sortent du registre : c'est la règle « les dossiers
+        // **vides** seulement » (§2), et sans ce filtre le registre grossirait indéfiniment
+        // de dossiers qui n'ont plus rien à y faire.
+        val vides = dossiers.toSortedSet() - dossiersHabites()
+        ecrireUnRegistre(
+            Registres.DOSSIERS,
+            Json.encodeToString(ListSerializer(String.serializer()), vides.toList()),
+        )
+    }
+
+    /** Les dossiers qu'au moins un élément habite. Ils se déduisent, ils ne s'inscrivent pas. */
+    private fun dossiersHabites(): Set<String> =
+        lecture.lisibles.mapNotNull { it.element.folder?.trim()?.ifEmpty { null } }.toSet()
+
+    /** Tous les dossiers à montrer : ceux qu'on habite, plus ceux qu'on garde vides. */
+    val dossiers: List<String>
+        get() = (dossiersHabites() + lecture.dossiersVides).sorted()
+
     // ─── Écrire dans le coffre ───
 
     /**
@@ -447,6 +903,12 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         coffre.verrouiller()
         deverrouille = false
         lecture = LectureDuCoffre()
+        // Les clés d'organisation vivent en mémoire du cœur : les rendre fait partie du
+        // verrouillage, au même titre que la clé du coffre. Les laisser derrière ferait
+        // qu'un écran verrouillé garde de quoi déchiffrer une équipe entière.
+        revenirAuCoffrePersonnel()
+        organisations = emptyList()
+        echecsDOrganisation = emptyMap()
     }
 
     fun fermerLaSession() {
