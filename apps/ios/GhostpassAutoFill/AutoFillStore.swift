@@ -51,6 +51,7 @@ final class AutoFillStore: ObservableObject {
         Biometrics.isAvailable && Keychain.get(Keychain.Key.biometricsEnabled) == "1"
     }
     var biometryLabel: String { Biometrics.label }
+    var biometryIcon: String { Biometrics.icon }
 
     /// Les entrées dont une adresse correspond au domaine demandé, d'abord ; le reste
     /// ensuite, car un identifiant peut servir sur un domaine que le coffre ignore.

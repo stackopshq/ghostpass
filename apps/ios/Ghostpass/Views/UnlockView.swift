@@ -251,9 +251,23 @@ struct UnlockView: View {
                 .accessibilityIdentifier("button.submit")
 
                 if useSavedSession && store.canUnlockWithBiometrics {
-                    Button("Déverrouiller avec \(store.biometryLabel)") {
+                    Button {
                         Task { await store.unlockWithBiometrics() }
+                    } label: {
+                        // Le geste attendu se reconnaît à son symbole plus vite qu'il ne se
+                        // lit. On garde le nom en étiquette d'accessibilité : c'est une
+                        // **action**, pas une décoration, et VoiceOver ne doit pas annoncer
+                        // « image » là où il y a un bouton.
+                        //
+                        // `Biometrics.icon` suit le matériel — visage, empreinte, ou un
+                        // bouclier neutre si l'appareil annonce une biométrie que cette
+                        // version ne connaît pas. Une icône Face ID codée en dur mentirait
+                        // sur un iPhone à Touch ID.
+                        Image(systemName: store.biometryIcon)
+                            .font(.system(size: 22, weight: .medium))
+                            .frame(maxWidth: .infinity)
                     }
+                    .accessibilityLabel("Déverrouiller avec \(store.biometryLabel)")
                     .buttonStyle(SecondaryButtonStyle())
                     .disabled(store.isBusy)
                     .accessibilityIdentifier("button.biometric")
