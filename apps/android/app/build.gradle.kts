@@ -28,6 +28,10 @@ android {
         versionCode = 1
         versionName = "0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Les témoins qu'un script pilote sont exclus de l'exécution ordinaire : lancés
+        // d'affilée, ils seraient rouges pour une raison qui n'est pas le produit. Voir
+        // `TemoinPilote` et `tools/android/temoin-de-l-invalidation.sh`.
+        testInstrumentationRunnerArguments["notAnnotation"] = "ch.stackops.ghostpass.TemoinPilote"
 
         // Les trois ABI que build-jni.sh produit, et pas une de plus. JNA, elle, embarque
         // aussi `x86`, `armeabi` et `mips` : sans ce filtre, un appareil dont l'ABI

@@ -9,6 +9,8 @@
 
     <application
         android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.GhostPass"
         android:allowBackup="false"
@@ -27,6 +29,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- L'écran du remplissage : biométrie, choix, et rien d'autre.
+
+             `exported="false"` : le système la lance par une `PendingIntent` que ce paquet
+             a fabriquée, donc sous notre identité. L'exporter la rendrait lançable par
+             n'importe quelle application, qui obtiendrait un écran demandant l'empreinte de
+             l'utilisateur au nom de GhostPass.
+
+             `excludeFromRecents` et `noHistory` : elle est lancée dans la tâche de
+             l'application qu'on remplit. La laisser dans le sélecteur de tâches y poserait
+             une vignette de GhostPass qui n'appartient pas à son propriétaire, et un retour
+             dessus rouvrirait un écran de coffre hors de son contexte. -->
+        <activity
+            android:name=".autofill.ActiviteDeRemplissage"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.GhostPass"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- Le service de remplissage automatique (§6).
 

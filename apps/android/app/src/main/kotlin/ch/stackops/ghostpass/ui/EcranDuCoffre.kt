@@ -2,6 +2,7 @@ package ch.stackops.ghostpass.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,9 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import ch.stackops.ghostpass.ContenuDElement
 import ch.stackops.ghostpass.CouleurDEquipe
 import ch.stackops.ghostpass.EntreeDuCoffre
@@ -30,7 +33,7 @@ import ch.stackops.ghostpass.RaisonDIllisibilite
 import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.FondGhost
 import ch.stackops.ghostpass.theme.GP
-import ch.stackops.ghostpass.theme.IntituleDeSection
+import ch.stackops.ghostpass.theme.LienDiscret
 import ch.stackops.ghostpass.theme.LocalCouleurs
 
 /**
@@ -41,9 +44,14 @@ import ch.stackops.ghostpass.theme.LocalCouleurs
  * une ligne plus courte et une régression silencieuse.
  */
 @Composable
-fun EcranDuCoffre(modele: ModeleDuCoffre) {
+fun EcranDuCoffre(
+    modele: ModeleDuCoffre,
+    surNouveau: () -> Unit = {},
+    surModifier: (EntreeDuCoffre.Lisible) -> Unit = {},
+) {
     val couleurs = LocalCouleurs.current
     val lecture = modele.lecture
+    val activite = LocalContext.current as FragmentActivity
 
     Box(Modifier.fillMaxSize()) {
         FondGhost()
@@ -59,8 +67,34 @@ fun EcranDuCoffre(modele: ModeleDuCoffre) {
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                 )
-                Box(Modifier.widthIn(max = 140.dp)) {
-                    BoutonSecondaire("Verrouiller") { modele.verrouiller() }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.widthIn(max = 110.dp)) {
+                        BoutonSecondaire("Nouveau", identifiant = "button.new") { surNouveau() }
+                    }
+                    Box(Modifier.widthIn(max = 130.dp)) {
+                        BoutonSecondaire("Verrouiller") { modele.verrouiller() }
+                    }
+                }
+            }
+
+            // Le raccourci d'ADR-0002 se propose ici et pas à l'entrée : on ne peut
+            // envelopper que la clé d'un coffre déjà ouvert. Le proposer avant serait une
+            // case à cocher qui ne ferait rien.
+            if (modele.biometriePossible) {
+                LienDiscret(
+                    texte = if (modele.biometrieActivee) {
+                        "Désactiver le déverrouillage par empreinte"
+                    } else {
+                        "Activer le déverrouillage par empreinte"
+                    },
+                    identifiant = "button.biometricToggle",
+                    modifierExterne = Modifier.padding(horizontal = 20.dp),
+                ) {
+                    if (modele.biometrieActivee) {
+                        modele.desactiverLaBiometrie()
+                    } else {
+                        modele.activerLaBiometrie(activite)
+                    }
                 }
             }
 
@@ -109,7 +143,8 @@ fun EcranDuCoffre(modele: ModeleDuCoffre) {
                     // c'est cette ligne qui la porte.
                     items(lecture.entrees, key = { it.id }) { entree ->
                         when (entree) {
-                            is EntreeDuCoffre.Lisible -> LigneLisible(entree)
+                            is EntreeDuCoffre.Lisible ->
+                                LigneLisible(entree) { surModifier(entree) }
                             is EntreeDuCoffre.Illisible -> LigneIllisible(entree)
                         }
                     }
@@ -120,7 +155,7 @@ fun EcranDuCoffre(modele: ModeleDuCoffre) {
 }
 
 @Composable
-private fun LigneLisible(entree: EntreeDuCoffre.Lisible) {
+private fun LigneLisible(entree: EntreeDuCoffre.Lisible, surClic: () -> Unit) {
     val couleurs = LocalCouleurs.current
     val element = entree.element
     val forme = RoundedCornerShape(GP.rayonCarte)
@@ -130,6 +165,7 @@ private fun LigneLisible(entree: EntreeDuCoffre.Lisible) {
             .fillMaxWidth()
             .background(couleurs.surface.copy(alpha = 0.7f), forme)
             .border(1.dp, couleurs.bordure, forme)
+            .clickable(onClick = surClic)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),

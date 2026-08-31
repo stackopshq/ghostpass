@@ -151,6 +151,19 @@ rempli.
 Le service d'autofill Android est du Kotlin, comme l'extension iOS est du Swift. C'est la
 fonction principale du produit, et la plus dépendante de la plateforme.
 
+**Il lit le coffre depuis le 2026-08-31** (`docs/adr/0002`). Le partage des rôles ne se
+devine pas et vaut d'être su : le service ne peut proposer que des lignes **sans valeur** —
+une `RemoteViews` est rendue par un autre processus et ne reçoit aucun événement, donc il
+n'existe là aucun moyen d'obtenir un geste. Tout ce qui touche aux secrets vit dans
+`ActiviteDeRemplissage`, qui a un écran : biométrie, ouverture du coffre par l'enveloppe
+d'appareil, choix, et `Dataset`.
+
+**Piège mesuré, et il ne produit aucune erreur** : l'authentification se pose soit sur la
+*réponse* (`FillResponse.setAuthentication`), soit sur le *jeu* (`Dataset.setAuthentication`),
+et les deux attendent en retour un objet **différent** — une `FillResponse` pour la
+première, un `Dataset` pour la seconde. Se tromper n'affiche rien : le journal note
+« invalid index (65535) », et le champ reste vide. GhostPass authentifie au niveau du jeu.
+
 Deux choses apprises côté iOS qui devraient transposer :
 
 - **le rapprochement d'hôtes n'utilise pas de liste de suffixes publics.** Voir
@@ -269,15 +282,70 @@ silhouette touche les bords sans conséquence à 16 px. `suite/tools/brand/icone
 mesure la silhouette et la ramène à **80 % de la hauteur, centrée** — la proportion de
 l'icône iOS de GhostPass. Sans cette correction, deux produits de la suite ont des
 silhouettes de tailles différentes : invisible sur une capture isolée, flagrant sur
-l'écran d'accueil. L'outil est écrit pour iOS ; **l'équivalent adaptatif Android reste à
-écrire**, et doit viser la même proportion dans la zone sûre de l'icône adaptative.
+l'écran d'accueil.
 
-## 11. Ce qui reste à décider
+**L'équivalent Android existe depuis le 2026-08-31** :
+`suite/tools/brand/icone-adaptative-android.py`, appelé par
+`tools/android/make-brand-assets.sh`. Et la proportion **n'est pas la même**, ce qui est
+tout l'objet de l'outil. Une icône adaptative fait 108 dp, mais seule la zone centrale de
+**72 dp** est garantie visible : le reste est rogné selon le masque du lanceur. Les 80 %
+portent donc sur la zone sûre :
 
-- Le partage du trousseau entre l'application et le service d'autofill. Sur iOS, la
-  décision est prise et documentée (`docs/adr/0001`) : on partage, parce qu'un mot de passe
-  maître retapé dix fois par jour est un mot de passe maître qu'on raccourcit. L'équivalent
-  Android — un `KeyStore` et un identifiant d'application partagé — demande sa propre
-  analyse.
-- La biométrie : `BiometricPrompt` avec une clé invalidée à l'enrôlement d'une nouvelle
-  empreinte, l'équivalent de `.biometryCurrentSet`.
+```
+72 dp × 80 %  =  57,6 dp de silhouette
+57,6 / 108    ≈  53 % de la toile
+```
+
+Appliquer 80 % à la toile ferait déborder la silhouette de 7,2 dp de chaque côté — rognée
+**chez certains utilisateurs seulement**. L'outil remesure le PNG qu'il vient d'écrire et
+refuse d'écrire si la silhouette sort de la zone sûre ; la recette naïve à 80 % est bien
+refusée, vérifié.
+
+## 11. Ce qui était à décider — et qui l'est
+
+Les deux points de cette section sont **tranchés et mis en œuvre** depuis le 2026-08-31.
+
+**Le partage du trousseau entre l'application et le service** : `docs/adr/0002`. Ce n'est
+pas la transposition d'`0001` — sur Android le service tourne dans le processus de
+l'application, même bac à sable, mêmes alias de KeyStore. Il n'y a rien à partager parce
+que rien n'est séparé. La vraie question était « que persiste-t-on pour qu'un
+déverrouillage sans interface soit possible » ; la réponse est la clé du coffre enveloppée
+par le cœur sous un secret aléatoire, ce secret scellé par une clé de l'`AndroidKeyStore`.
+L'enveloppe passe par `wrap_user_key_for_passkey` / `unlock_with_passkey`, déjà dans le
+cœur et déjà partagées avec le déverrouillage par passkey du web : rien n'a été écrit en
+Kotlin, et il n'existe pas de second format d'enveloppe pour Android.
+
+**La biométrie** : `BiometricPrompt` sur la même clé (`Biometrie.kt`, `CleDEnveloppe.kt`).
+
+Trois choses mesurées en l'écrivant, qu'aucune lecture de documentation ne donne :
+
+- **`KeyInfo.isInvalidatedByBiometricEnrollment` ne témoigne de rien.** Il rapporte `true`
+  quoi qu'on ait demandé au constructeur, parce qu'il dérive du *type d'authentificateur*
+  de la clé et non du drapeau. Un test qui le lit est vert des deux côtés de la mutation —
+  le premier témoin écrit ici l'était. Le témoin qui vaut est
+  `tools/android/temoin-de-l-invalidation.sh` : il enrôle une empreinte de plus, pour de
+  vrai, et regarde si la clé sert encore ;
+- **ce qui protège réellement ici est l'authentification *par usage*** (zéro seconde de
+  validité) sur biométrie forte, pas le drapeau — qui est redondant dans cette
+  configuration. Une durée de validité positive attache la clé à l'horloge du système : la
+  clé témoin ainsi construite **survit** à l'enrôlement, mesuré ;
+- **la biométrie seule, sans `AUTH_DEVICE_CREDENTIAL`.** L'ADR écrit « biométrie ou code de
+  l'appareil » ; autoriser le code désarmerait l'invalidation, puisque l'attaque décrite
+  suppose déjà de connaître ce code. C'est un écart assumé, écrit dans `CleDEnveloppe.kt`.
+
+Plancher d'API : la politique complète demande l'**API 28** (`setUnlockedDeviceRequired`),
+alors que `minSdk` est 24. En dessous, le raccourci n'est pas proposé du tout — plutôt que
+de poser deux réglages sur trois sans le dire.
+
+## 12. Ce qui reste à faire
+
+- **Les liens `otpauth:`** (§9). L'écran d'édition existe désormais et porte un champ de
+  second facteur ; l'`intent-filter` et la rétention du lien coffre fermé restent à écrire.
+- **Le SSO** (§8). Rien n'en est fait.
+- **Le partage de liens** (§4). `DestinationDePartage` porte la règle de domaine et elle est
+  éprouvée par les vecteurs ; aucun écran ne s'en sert.
+- **Les registres en écriture.** Ils se lisent (dossiers, favoris, partages, couleurs) ;
+  rien ne les réécrit, donc mettre un élément en favori n'est pas possible.
+- **Un parcours de premier lancement automatisé**, celui que `verifier-l-autonomie.sh` dit
+  ne pas prouver. Il a été fait **à la main** contre un serveur local sur émulateur le
+  2026-08-31 — connexion, coffre, biométrie, création, remplissage — mais rien ne le rejoue.

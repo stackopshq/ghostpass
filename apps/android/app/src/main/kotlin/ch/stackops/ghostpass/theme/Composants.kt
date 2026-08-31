@@ -137,13 +137,22 @@ fun BoutonSecondaire(
 
 /** Un lien discret, en pied de carte. */
 @Composable
-fun LienDiscret(texte: String, actif: Boolean = true, identifiant: String? = null, onClick: () -> Unit) {
+fun LienDiscret(
+    texte: String,
+    actif: Boolean = true,
+    identifiant: String? = null,
+    // Le placement appartient à l'appelant, pas au composant : un lien posé dans une carte
+    // et un lien posé en pleine page n'ont pas la même marge, et coder l'une des deux ici
+    // obligerait l'autre à la défaire.
+    modifierExterne: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     val couleurs = LocalCouleurs.current
     Text(
         texte,
         color = if (actif) couleurs.accentTexte else couleurs.attenue,
         fontSize = 13.sp,
-        modifier = Modifier
+        modifier = modifierExterne
             .clickable(enabled = actif, onClick = onClick)
             .padding(top = 2.dp)
             .then(if (identifiant != null) Modifier.semantics { contentDescription = identifiant } else Modifier),

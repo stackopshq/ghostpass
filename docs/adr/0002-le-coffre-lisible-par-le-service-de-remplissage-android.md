@@ -41,8 +41,18 @@ qui protège devient alors ce qui affaiblit.
 
 Trois exigences, et aucune n'est décorative :
 
-- **`setUserAuthenticationRequired(true)`** — la clé ne sort qu'après biométrie ou code de
-  l'appareil. C'est ce qui remplace le mot de passe maître, et non ce qui s'y ajoute ;
+- **`setUserAuthenticationRequired(true)`**, avec **`AUTH_BIOMETRIC_STRONG` seul** — la clé
+  ne sort qu'après biométrie forte.
+
+  *Corrigé le 2026-08-31, après mesure.* Cette ligne disait « biométrie **ou code de
+  l'appareil** », et c'était une erreur de ma part : ajouter `AUTH_DEVICE_CREDENTIAL`
+  **désarme le réglage suivant**, celui que cet ADR juge le plus important. Un code
+  d'appareil n'est pas invalidé par l'enrôlement d'une empreinte ; qui le connaît ouvrirait
+  le coffre quoi qu'il arrive côté biométrie.
+
+  Conséquence assumée : sur un appareil sans biométrie enrôlée, le raccourci n'existe pas
+  et le mot de passe maître reste le seul chemin. C'est le bon repli — vers plus fort, pas
+  vers plus faible ;
 - **`setInvalidatedByBiometricEnrollment(true)`** — l'équivalent exact de
   `.biometryCurrentSet` sur iOS. Sans lui, quelqu'un qui ajoute son empreinte au téléphone
   déverrouillé de sa victime obtient le coffre. Le défaut d'Android est `false` : l'oubli
@@ -74,8 +84,28 @@ l'utilisateur retourne aux mots de passe qu'il retient.
 processus entre deux usages, et le service se retrouve lié sans rien avoir. La fonction
 marcherait par intermittence, ce qui est plus déroutant qu'une fonction absente.
 
-## Le témoin
+## Le témoin, et pourquoi le témoin évident ne vaut rien
 
 Un test doit vérifier que la clé est bien **invalidée par l'enrôlement d'une nouvelle
 empreinte**. C'est le seul des trois réglages dont l'oubli ne se voit jamais à l'usage :
 tout continue de fonctionner, simplement pour quelqu'un de plus.
+
+*Mesuré le 2026-08-31.* Le témoin évident — lire `KeyInfo` sur la clé — **ne mesure rien**.
+Fabriquée **sans** le réglage, la même clé rapporte `true` quand même : `KeyInfo` dérive du
+type d'authentificateur, pas du drapeau. Le test était vert quoi qu'on écrive dans le code,
+et un contrôle négatif l'a révélé.
+
+Le témoin qui vaut est `tools/android/temoin-de-l-invalidation.sh` : il **enrôle réellement
+une empreinte de plus** sur l'appareil et regarde si la clé sert encore. Trois pièges y ont
+été trouvés, tous silencieux — `connectedAndroidTest` désinstalle l'application et efface
+les clés entre les deux temps ; l'intention d'enrôlement ouvre la *liste* au lieu de
+l'assistant quand une empreinte existe déjà, si bien que rien n'était enrôlé ; et une boîte
+de renommage faisait compter la même empreinte deux fois.
+
+**Ce que la mesure a aussi appris** : dans cette politique-ci, le drapeau est *redondant*.
+Ce qui protège est l'authentification par usage sur biométrie forte. Le garder n'est pas
+inutile — il documente l'intention et protégerait si la politique s'assouplissait — mais
+prétendre qu'il est le rempart serait faux.
+
+`setUnlockedDeviceRequired`, lui, n'est rendu par `KeyInfo` à aucun niveau d'API jusqu'à
+36 : son témoin est donc plus faible que les deux autres, et le fichier le dit.

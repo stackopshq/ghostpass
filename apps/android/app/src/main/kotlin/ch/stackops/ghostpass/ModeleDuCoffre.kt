@@ -1,6 +1,8 @@
 package ch.stackops.ghostpass
 
 import android.app.Application
+import android.os.Build
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +24,9 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
 
     private val coffre = Coffre()
     private val stockage = StockageDeSession(application)
+
+    /** L'enveloppe d'appareil d'ADR-0002 : ce qui rend le raccourci biométrique possible. */
+    private val enveloppe = EnveloppeDeLAppareil(application)
 
     var occupe by mutableStateOf(false)
         private set
@@ -135,6 +140,165 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ─── La biométrie (ADR-0002) ───
+
+    /**
+     * L'appareil peut-il porter le raccourci ?
+     *
+     * Deux conditions, et les séparer importe pour le message : le KeyStore doit savoir
+     * tenir la politique (API 28), **et** une empreinte doit être enrôlée. La seconde est
+     * la plus fréquente, et c'est celle qui produirait autrement une erreur de
+     * cryptographie là où la phrase juste est « votre téléphone n'a pas d'empreinte ».
+     */
+    val biometriePossible: Boolean
+        get() = enveloppe.possible && Biometrie.disponible(getApplication())
+
+    /** Une enveloppe est-elle posée sur cet appareil ? */
+    var biometrieActivee by mutableStateOf(false)
+        private set
+
+    init {
+        biometrieActivee = enveloppe.activee
+    }
+
+    /**
+     * Pose l'enveloppe. **Exige que le coffre soit déjà ouvert** — on n'enveloppe pas une
+     * clé qu'on n'a pas.
+     *
+     * C'est le seul moment où l'utilisateur consent explicitement, et c'est pourquoi la clé
+     * du KeyStore est régénérée ici : la politique appliquée est celle du code
+     * d'aujourd'hui, pas celle du jour de la première activation.
+     */
+    fun activerLaBiometrie(activite: FragmentActivity) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
+        val chiffreur = try {
+            enveloppe.preparerLActivation()
+        } catch (e: Exception) {
+            message = "Cet appareil n'a pas pu préparer la clé : ${e.message}"
+            return
+        }
+        Biometrie.demander(
+            activite,
+            titre = "Activer le déverrouillage biométrique",
+            sousTitre = "GhostPass gardera la clé de votre coffre sous votre empreinte.",
+            chiffreur = chiffreur,
+            surSucces = { authentifie ->
+                try {
+                    enveloppe.activer(authentifie, coffre)
+                    biometrieActivee = true
+                    message = null
+                } catch (e: Exception) {
+                    enveloppe.oublier()
+                    biometrieActivee = false
+                    message = "L'activation a échoué : ${e.message}"
+                }
+            },
+            surEchec = { texte -> if (texte != null) message = texte },
+        )
+    }
+
+    /** Retire l'enveloppe. Le mot de passe maître redevient le seul chemin. */
+    fun desactiverLaBiometrie() {
+        enveloppe.oublier()
+        biometrieActivee = false
+    }
+
+    /**
+     * Rouvre le coffre par la biométrie, **sans réseau et sans mot de passe maître**.
+     *
+     * C'est le chemin qu'emprunte le service de remplissage quand le système le lie alors
+     * que l'interface n'a jamais été ouverte, et c'est la raison d'être de tout l'ADR.
+     *
+     * @param surFin appelé dans tous les cas, avec le succès — le remplissage a besoin de
+     *   savoir qu'il peut se replier sur le mot de passe maître.
+     */
+    fun deverrouillerParBiometrie(activite: FragmentActivity, surFin: (Boolean) -> Unit = {}) {
+        val session = stockage.session()
+        if (session == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            surFin(false)
+            return
+        }
+        val dechiffreur = enveloppe.preparerLOuverture()
+        if (dechiffreur == null) {
+            // Soit rien n'était posé, soit la clé a été invalidée par un nouvel enrôlement
+            // — et dans ce second cas [EnveloppeDeLAppareil] vient d'effacer le matériel.
+            // Les deux mènent au même endroit : le mot de passe maître.
+            biometrieActivee = false
+            surFin(false)
+            return
+        }
+        Biometrie.demander(
+            activite,
+            titre = "Déverrouiller GhostPass",
+            sousTitre = session.email,
+            chiffreur = dechiffreur,
+            surSucces = { authentifie ->
+                try {
+                    enveloppe.ouvrir(authentifie, coffre, session, stockage.jeton())
+                    deverrouille = true
+                    message = null
+                    rafraichir()
+                    surFin(true)
+                } catch (e: Exception) {
+                    message = messageLisible(e)
+                    surFin(false)
+                }
+            },
+            surEchec = { texte ->
+                if (texte != null) message = texte
+                surFin(false)
+            },
+        )
+    }
+
+    // ─── Écrire dans le coffre ───
+
+    /**
+     * Crée ou remplace un élément, puis relit le coffre.
+     *
+     * @param id `null` pour une création, l'identité serveur pour une modification. Les
+     *   séparer en deux méthodes ferait écrire deux fois la même traduction d'erreur ; les
+     *   confondre côté serveur ferait un `POST` là où l'utilisateur croyait modifier, donc
+     *   un doublon silencieux. D'où un paramètre explicite plutôt qu'une devinette sur un
+     *   identifiant vide.
+     */
+    fun enregistrerUnElement(id: String?, element: ElementDuCoffre, surFin: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                withContext(Dispatchers.IO) {
+                    if (id == null) coffre.creer(element) else coffre.mettreAJour(id, element)
+                }
+                rafraichir()
+                surFin(true)
+            } catch (e: Exception) {
+                message = messageLisible(e)
+                surFin(false)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    /** Met un élément à la corbeille du serveur. Il n'est pas détruit ; il sort de la liste. */
+    fun supprimerUnElement(id: String, surFin: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                withContext(Dispatchers.IO) { coffre.supprimer(id) }
+                rafraichir()
+                surFin(true)
+            } catch (e: Exception) {
+                message = messageLisible(e)
+                surFin(false)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
     fun verrouiller() {
         coffre.verrouiller()
         deverrouille = false
@@ -145,6 +309,10 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { coffre.fermerLaSession() }
             stockage.oublier()
+            // L'enveloppe part avec le reste. La laisser derrière ferait qu'une empreinte
+            // rouvrirait le coffre d'un compte dont on vient de se déconnecter.
+            enveloppe.oublier()
+            biometrieActivee = false
             deverrouille = false
             lecture = LectureDuCoffre()
         }
@@ -162,6 +330,8 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             "Adresse de serveur invalide. Exemple : ghostpass.example.com"
         is ErreurApi.Reseau ->
             "Serveur injoignable. Vérifiez l'adresse et votre connexion."
+        is ErreurApi.CoffreVerrouille ->
+            "Le coffre est verrouillé. Déverrouillez-le avant d'écrire."
         is ErreurApi.Http -> e.message ?: "Erreur serveur."
         is uniffi.ghost_crypto_ffi.GhostCryptoException ->
             "Mot de passe maître incorrect."

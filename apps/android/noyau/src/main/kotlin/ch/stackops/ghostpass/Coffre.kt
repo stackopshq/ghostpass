@@ -139,6 +139,42 @@ class Coffre {
         this.session = session
     }
 
+    /**
+     * Rouvre le coffre **sans mot de passe maître**, à partir de l'enveloppe d'appareil.
+     *
+     * C'est le mécanisme d'`docs/adr/0002` : la clé du coffre (l'USK) a été enveloppée par
+     * un secret aléatoire, et ce secret vit sous une clé de l'`AndroidKeyStore` liée à
+     * l'authentification. L'appelant a déjà obtenu le secret en clair — c'est lui qui a
+     * traversé la biométrie ; ici on ne fait plus qu'ouvrir.
+     *
+     * **Aucune cryptographie n'est écrite ici non plus.** L'enveloppe et son ouverture sont
+     * `wrap_user_key_for_passkey` / `unlock_with_passkey` du cœur Rust, déjà écrites,
+     * déjà éprouvées, et partagées avec le déverrouillage par passkey du web. Le seul
+     * écart est la provenance du secret : une passkey côté web, le KeyStore ici. Le cœur
+     * ne fait pas la différence, et c'est bien qu'il ne la fasse pas — c'est ce qui évite
+     * d'inventer un second format d'enveloppe pour Android.
+     *
+     * @param secret le secret d'enveloppe en base64, sorti du KeyStore.
+     * @param uskEnveloppee l'`EncString` rendue par [envelopperLaCle].
+     */
+    fun rouvrirParEnveloppe(session: Session, secret: String, uskEnveloppee: String, jetonConnu: String?) {
+        compte = Account.withPasskey(secret, uskEnveloppee, session.encryptedPrivateKey)
+        client = ClientApi(session.adresseServeur)
+        jeton = jetonConnu
+        this.session = session
+    }
+
+    /**
+     * Enveloppe la clé du coffre sous un secret, pour la persister (ADR-0002).
+     *
+     * Rend l'`EncString` à écrire sur l'appareil. Le secret, lui, ne s'écrit pas ici : il
+     * part sous la clé du KeyStore, chez l'appelant.
+     */
+    fun envelopperLaCle(secret: String): String {
+        val c = compte ?: throw ErreurApi.CoffreVerrouille()
+        return c.wrapUserKeyForPasskey(secret)
+    }
+
     /** Verrouille : les clés partent, la session reste. */
     fun verrouiller() {
         compte?.close()
@@ -174,6 +210,50 @@ class Coffre {
 
     /** Ouvre et ordonne une liste d'éléments chiffrés, d'où qu'elle vienne. */
     fun relire(elements: List<ElementChiffre>): LectureDuCoffre = lecture(elements, compte)
+
+    /**
+     * Écrit un nouvel élément, et **relit ce que le serveur a rangé**.
+     *
+     * Ce détour n'est pas de la prudence gratuite. Le serveur ne sait pas ce que contiennent
+     * les deux blobs : il ne peut donc rien valider, et un blob tronqué en chemin serait
+     * accepté sans un mot. La faute ne se verrait qu'à la lecture suivante, sur un autre
+     * appareil, sous la forme d'une ligne illisible — et personne ne saurait dire quand
+     * elle est devenue illisible. On rouvre ici ce qu'on vient d'écrire : si l'aller-retour
+     * ne rend pas l'élément, l'écriture échoue tout de suite, à l'endroit qui l'a causée.
+     */
+    fun creer(element: ElementDuCoffre): EntreeDuCoffre.Lisible {
+        val c = compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val (cle, donnees) = sceller(element, c)
+        val range = api.creerUnElement(j, cle, donnees)
+        return EntreeDuCoffre.Lisible(range.id, ouvrir(range, c), range.updatedAt)
+    }
+
+    /** Remplace un élément existant, et relit de même. */
+    fun mettreAJour(id: String, element: ElementDuCoffre): EntreeDuCoffre.Lisible {
+        val c = compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val (cle, donnees) = sceller(element, c)
+        val range = api.remplacerUnElement(j, id, cle, donnees)
+        return EntreeDuCoffre.Lisible(range.id, ouvrir(range, c), range.updatedAt)
+    }
+
+    /**
+     * Met un élément à la corbeille.
+     *
+     * Le coffre doit être **ouvert** pour supprimer, alors que le serveur ne l'exigerait
+     * pas : le jeton suffirait. C'est délibéré — supprimer une ligne qu'on ne sait pas lire
+     * revient à jeter ce dont on ignore le contenu, et c'est exactement ce qui arriverait à
+     * une ligne illisible de quelqu'un d'autre.
+     */
+    fun supprimer(id: String) {
+        compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.mettreALaCorbeille(j, id)
+    }
 
     companion object {
     /**

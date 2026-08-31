@@ -78,6 +78,15 @@ sealed class ErreurApi(message: String) : Exception(message) {
      * était bon.
      */
     class SecondFacteurRequis(val genre: String) : ErreurApi("Second facteur requis.")
+
+    /**
+     * Une écriture a été demandée alors que le coffre est fermé.
+     *
+     * Distincte de [Reseau] : rien n'a été tenté, rien n'a échoué côté serveur. Les
+     * confondre ferait afficher « serveur injoignable » à quelqu'un dont le serveur va
+     * très bien et dont c'est le coffre qui est verrouillé.
+     */
+    class CoffreVerrouille : ErreurApi("Le coffre est verrouillé.")
 }
 
 /**
@@ -147,6 +156,55 @@ class ClientApi(baseUrl: String) {
             EnveloppeDElements.serializer(),
             requete("GET", "/api/vault/items", jeton = jeton),
         ).items
+
+    /**
+     * Crée un élément. Le serveur rend le `201` et l'élément tel qu'il l'a rangé.
+     *
+     * Le corps ne porte que les deux blobs : le serveur attribue l'identifiant lui-même
+     * (`newId()`), et ne sait rien du contenu. Lui laisser choisir l'identité est ce qui
+     * évite deux clients qui inventeraient la même.
+     */
+    fun creerUnElement(jeton: String, cle: String, donnees: String): ElementChiffre =
+        json.decodeFromString(
+            ElementChiffre.serializer(),
+            requete(
+                "POST", "/api/vault/items", jeton = jeton,
+                corps = json.encodeToString(CHAMPS, mapOf(
+                    "encryptedKey" to cle, "encryptedData" to donnees)),
+            ),
+        )
+
+    /**
+     * Remplace un élément existant. `PUT`, et non `PATCH` : le serveur remplace les deux
+     * blobs d'un bloc. Il ne peut pas en modifier un seul — il ne sait pas ce qu'ils
+     * contiennent.
+     */
+    fun remplacerUnElement(
+        jeton: String,
+        id: String,
+        cle: String,
+        donnees: String,
+    ): ElementChiffre =
+        json.decodeFromString(
+            ElementChiffre.serializer(),
+            requete(
+                "PUT", "/api/vault/items/$id", jeton = jeton,
+                corps = json.encodeToString(CHAMPS, mapOf(
+                    "encryptedKey" to cle, "encryptedData" to donnees)),
+            ),
+        )
+
+    /**
+     * Met un élément à la corbeille. `DELETE` côté serveur est un effacement **doux** :
+     * la ligne reçoit un `deletedAt` et sort de `/api/vault/items`, sans disparaître.
+     *
+     * Rend `204` sans corps, ce que [requete] traduit par une chaîne vide — on ne la lit
+     * pas. Décoder une réponse vide en JSON lèverait, et ferait passer une suppression
+     * réussie pour un échec.
+     */
+    fun mettreALaCorbeille(jeton: String, id: String) {
+        requete("DELETE", "/api/vault/items/$id", jeton = jeton)
+    }
 
     /** Déconnexion : révoque la session côté serveur. Sans corps. */
     fun deconnexion(jeton: String) {
