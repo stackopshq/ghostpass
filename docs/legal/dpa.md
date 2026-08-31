@@ -187,7 +187,7 @@ Client peut s'y opposer ; à défaut d'accord, il peut résilier sans pénalité
 |---|---|---|---|---|
 | **Cloudflare, Inc.** | Tunnel du nom public — rien d'autre | États-Unis | Voit le trafic ; **sert le code qui chiffre** (voir plus bas) | A et B |
 | **Infomaniak Network SA (Swiss Backup)** | Destination hors site des sauvegardes, chiffrées par restic avant envoi | Suisse | Aucun accès en clair | A et B |
-| **OVH SAS** | Serveur physique portant la machine virtuelle dédiée du Client | France — centre de données **à compléter** | Accès physique à la machine ; aucun accès applicatif | **B uniquement** |
+| **OVH SAS** | Serveur physique portant la machine virtuelle dédiée du Client | France — centre de données de **Gravelines** (Nord) | Accès physique à la machine ; aucun accès applicatif | **B uniquement** |
 
 La dernière ligne n'existe que si le Client a choisi le modèle B. Dans le
 modèle A, l'infrastructure est celle de StackOps et aucun hébergeur tiers n'est

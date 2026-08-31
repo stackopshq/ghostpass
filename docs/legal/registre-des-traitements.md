@@ -122,7 +122,7 @@ DPA).
 |---|---|---|---|---|
 | **Cloudflare, Inc.** | États-Unis | Le trafic du nom public ; sert le code qui chiffre | Clauses contractuelles types | A et B |
 | **Infomaniak Network SA** (Swiss Backup) | Suisse | Sauvegardes, chiffrées par restic avant envoi | Pas de transfert hors Suisse ; décision d'adéquation pour l'UE | A et B |
-| **OVH SAS** | France | Rien en clair — l'hébergeur porte la machine, pas les données applicatives | Union européenne, pas de transfert hors UE | B uniquement |
+| **OVH SAS** | France — **Gravelines** (Nord) | Rien en clair — l'hébergeur porte la machine, pas les données applicatives | Union européenne, pas de transfert hors UE | B uniquement |
 
 **Le tunnel Cloudflare est le seul transfert hors de Suisse et de l'Union.** Il
 disparaît si le Client auto-héberge.
