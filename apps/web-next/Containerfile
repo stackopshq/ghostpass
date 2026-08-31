@@ -68,6 +68,12 @@ WORKDIR /src/apps/web-next
 COPY apps/web-next/package.json apps/web-next/package-lock.json ./
 RUN npm ci
 COPY apps/web-next/ ./
+# Les documents légaux, HORS de `apps/web-next/` : la page `/confidentialite`
+# rend `docs/legal/politique-de-confidentialite.md`, lu au moment de la
+# construction (voir `src/app/confidentialite/page.tsx`). Sans cette ligne, la
+# construction échoue — bruyamment, ce qui vaut mieux qu'une page absente d'une
+# image que rien ne distingue d'une bonne.
+COPY docs/legal /src/docs/legal
 # `prebuild` copie le module WASM dans `public/`, d'où `src/lib/crypto.ts` le
 # charge. Il vient de l'étage ci-dessus, pas du dépôt.
 RUN npm run build
