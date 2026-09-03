@@ -586,7 +586,15 @@ export function VaultScreen() {
           )}
           {section === "coffre" && (
             <ImportExport
-              personnels={items}
+              // `items` porte AUSSI les éléments d'équipe, ajoutés juste après
+              // le coffre personnel par `charger()`. Les passer tels quels
+              // faisait exactement ce que `lib/export.ts` dit empêcher : un
+              // membre déposait les secrets de toute son organisation en clair
+              // dans un fichier, sur sa machine, sans que l'équipe l'apprenne.
+              // Le nom du paramètre disait « personnels » et la valeur ne
+              // l'était pas ; le filtre est ici, au seul endroit qui connaît
+              // les deux listes.
+              personnels={items.filter((i) => !i.shared)}
               onImporte={() => void charger().then(() => setChoisi(null))}
             />
           )}
