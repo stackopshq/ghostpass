@@ -57,7 +57,7 @@ export function versCsv(personnels: VaultEntry[]): string {
 /// depuis le téléphone et migrer depuis le navigateur doivent donner le même
 /// coffre, sans quoi le fichier qu'on importe décide de ce qu'on garde.
 ///
-/// Les en-têtes sont mis en minuscules par `parseCsv` : `OTPAuth` et
+/// Les en-têtes sont mis en minuscules par `parseCsvDetaille` : `OTPAuth` et
 /// `otpSecret` se cherchent donc ici en `otpauth` et `otpsecret`.
 const ALIAS = {
   name: ["name", "title"],

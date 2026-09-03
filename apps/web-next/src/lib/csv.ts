@@ -1,5 +1,9 @@
 // Parseur CSV minimal (gère les guillemets et les retours à la ligne échappés).
-// Renvoie une ligne par enregistrement, sous forme d'objet indexé par en-tête (en minuscules).
+//
+// Une seule sortie, `parseCsvDetaille`. Il en a existé deux : l'ancienne
+// rognait toutes les cellules, y compris les mots de passe, et perdait la
+// position des enregistrements. La garder « au cas où » revenait à laisser en
+// évidence la version dont on venait de mesurer qu'elle abîme les secrets.
 
 /// Marque d'ordre des octets. Excel et plusieurs navigateurs la posent en tête
 /// du fichier ; sans ce retrait, le premier en-tête s'appelle `<BOM>name` et
@@ -49,19 +53,6 @@ function parseRows(text: string): string[][] {
   return rows;
 }
 
-export function parseCsv(text: string): Record<string, string>[] {
-  const rows = parseRows(text).filter((r) => r.some((c) => c.trim() !== ""));
-  if (rows.length < 2) return [];
-  const headers = rows[0]!.map((h) => h.trim().toLowerCase());
-  return rows.slice(1).map((cells) => {
-    const obj: Record<string, string> = {};
-    headers.forEach((h, i) => {
-      obj[h] = (cells[i] ?? "").trim();
-    });
-    return obj;
-  });
-}
-
 /// Un enregistrement du fichier, avec de quoi rendre compte de son sort.
 export type LigneCsv = {
   /// Rang de l'enregistrement parmi les lignes de données, à partir de 1.
@@ -75,11 +66,11 @@ export type LigneCsv = {
   cellules: string[];
   /// Les champs indexés par en-tête minuscule, valeurs BRUTES.
   ///
-  /// Volontairement non rognées, à la différence de `parseCsv` : un mot de
-  /// passe peut commencer ou finir par une espace, et la rogner produit un
-  /// secret faux que rien ne signale, le pire des échecs d'import, puisqu'il
-  /// se découvre à la première connexion refusée, des semaines plus tard.
-  /// C'est à l'appelant de rogner les champs pour lesquels c'est anodin.
+  /// Volontairement non rognées : un mot de passe peut commencer ou finir par
+  /// une espace, et la rogner produit un secret faux que rien ne signale, le
+  /// pire des échecs d'import, puisqu'il se découvre à la première connexion
+  /// refusée, des semaines plus tard. C'est à l'appelant de rogner les champs
+  /// pour lesquels c'est anodin.
   champs: Record<string, string>;
   /// Faux quand le nombre de cellules ne correspond pas à l'en-tête : guillemet
   /// non refermé, séparateur exotique, fichier tronqué.
@@ -88,12 +79,12 @@ export type LigneCsv = {
 
 export type FichierCsv = { entetes: string[]; lignes: LigneCsv[] };
 
-/// Le même découpage que `parseCsv`, mais qui rend compte de ce qu'il a vu.
+/// Le découpage, et le compte de ce qu'il a vu.
 ///
-/// `parseCsv` écrase deux informations dont un compte rendu d'import honnête a
-/// besoin : la position de l'enregistrement, et le fait qu'une ligne était
-/// malformée. Sans elles, une ligne illisible se présente comme une entrée vide
-/// et se compte parmi les réussites.
+/// Rendre une simple liste d'objets écrase deux informations dont un compte
+/// rendu d'import honnête a besoin : la position de l'enregistrement, et le
+/// fait qu'une ligne était malformée. Sans elles, une ligne illisible se
+/// présente comme une entrée vide et se compte parmi les réussites.
 export function parseCsvDetaille(text: string): FichierCsv {
   const rows = parseRows(text);
   const utiles = rows.filter((r) => r.some((c) => c.trim() !== ""));

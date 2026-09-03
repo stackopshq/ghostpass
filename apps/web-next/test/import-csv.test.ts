@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseCsv } from "../src/lib/csv.js";
+import { parseCsvDetaille } from "../src/lib/csv.js";
 import { depuisLigneCsv } from "../src/lib/export.js";
 
 // L'import d'un CSV exporté par un autre gestionnaire.
@@ -21,9 +21,9 @@ const SANS_NOM = "(sans nom)";
 
 /// La première ligne d'un CSV, telle que l'import la construit.
 function premiere(csv: string) {
-  const lignes = parseCsv(csv);
+  const { lignes } = parseCsvDetaille(csv);
   assert.equal(lignes.length, 1, "le CSV de test doit produire exactement une entrée");
-  return depuisLigneCsv(lignes[0]!, SANS_NOM);
+  return depuisLigneCsv(lignes[0]!.champs, SANS_NOM);
 }
 
 test("Bitwarden : la note arrive, et le dossier avec", () => {
