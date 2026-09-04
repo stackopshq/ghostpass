@@ -81,7 +81,7 @@ nothing.
 ## Security
 
 Do **not** open a public issue for a vulnerability. Write to
-**security@stackops.ch** — see [`.well-known/security.txt`](apps/web-next/public/.well-known/security.txt).
+**contact@stackops.ch** — see [`.well-known/security.txt`](apps/web-next/public/.well-known/security.txt).
 Acknowledgement within 72 hours, and credit if you want it.
 
 ## The one rule that is not negotiable

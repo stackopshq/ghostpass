@@ -14,7 +14,7 @@
 GhostPass est édité par **StackOps**, entreprise individuelle de Kevin Allioli,
 dont le siège est à **Saint-Julien-en-Genevois (Haute-Savoie), France**. Contact :
 support@stackops.ch. Pour toute question de protection des données :
-privacy@stackops.ch. Pour signaler une faille : security@stackops.ch (voir
+privacy@stackops.ch. Pour signaler une faille : contact@stackops.ch (voir
 `/.well-known/security.txt`).
 
 ## 2. Ce que le service fait

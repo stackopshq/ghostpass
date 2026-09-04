@@ -155,7 +155,7 @@ The **browser extension** (Manifest V3, autofill) lives in `ghostpass-extension`
 
 ## Security
 
-Report a vulnerability to **security@stackops.ch** — see
+Report a vulnerability to **contact@stackops.ch** — see
 [`/.well-known/security.txt`](apps/web-next/public/.well-known/security.txt).
 We acknowledge within 72 hours, keep you posted, and credit you if you want.
 
