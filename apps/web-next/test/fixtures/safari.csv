@@ -1,0 +1,3 @@
+Title,URL,Username,Password,Notes,OTPAuth
+Assurance,https://assurance.exemple.ch/,clara,pomme-2024,"Numéro de contrat 44821",otpauth://totp/Assurance:clara?secret=JBSWY3DPEHPK3PXP
+Boutique,https://boutique.exemple.ch/,clara@exemple.ch,achats-en-ligne,,

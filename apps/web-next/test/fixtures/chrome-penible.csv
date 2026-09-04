@@ -1,0 +1,9 @@
+name,url,username,password,note
+Hébergeur,https://hebergeur.exemple.ch/,clara,motdepasse,"Première ligne, avec virgule
+Deuxième ligne avec ""guillemets""
+Troisième ligne"
+Code du portail,,,4821,Le code du portail de l'immeuble
+Sans rien à protéger,https://vide.exemple.ch/,clara,,
+,,,,Note orpheline
+Ligne cassée,https://casse.exemple.ch/,clara,motdepasse,note,colonne en trop
+,,,,

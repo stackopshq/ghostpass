@@ -195,7 +195,6 @@ const en: Dict = {
   "app.expiresOn": "expires {date}",
   "app.noExpiry": "no expiry",
   "app.noName": "(no name)",
-  "app.imported": "{n} entry/entries imported.",
   "app.importCsv": "Import (CSV)",
   "app.selected": "{n} selected",
   "app.selectAll": "Select all",
@@ -306,7 +305,6 @@ const en: Dict = {
   "app.exportB": "in clear text",
   "app.exportC": " in a CSV file. Keep it safe and delete it after use.",
   "app.exportCsv": "Export (CSV)",
-  "app.importCols": "Recognised columns: name, username, password, url, folder, totp (compatible with 1Password / Bitwarden / Proton exports).",
   "app.recentLogins": "Recent sign-ins",
   "app.noLogins": "No sign-in recorded.",
   "app.newDevice": "New device",
@@ -348,6 +346,51 @@ const en: Dict = {
   "send.show": "Show",
   "send.hide": "Hide",
   "send.copy": "Copy",
+  // --- import depuis un navigateur ---
+  "import.title": "Import your passwords",
+  "import.intro":
+    "First export your passwords from your browser, then pick the file here. Everything happens in this tab: the file itself never reaches our servers.",
+  "import.howto": "Getting the file out of your browser",
+  "import.chrome.nom": "Chrome",
+  "import.chrome.etapes":
+    "open chrome://password-manager/settings, then \"Download file\" under \"Export passwords\".",
+  "import.edge.nom": "Edge",
+  "import.edge.etapes": "open edge://wallet/passwords/settings, then \"Export passwords\".",
+  "import.firefox.nom": "Firefox",
+  "import.firefox.etapes":
+    "open about:logins, click the \"...\" button at the top right, then \"Export logins\".",
+  "import.safari.nom": "Safari",
+  "import.safari.etapes":
+    "Safari menu, \"Settings\", \"Passwords\" tab, then the \"...\" button below the list and \"Export all passwords\".",
+  "import.warning":
+    "That file holds every one of your passwords in clear text. Delete it from your disk as soon as the import is done, and empty the bin.",
+  "import.deleteFile":
+    "Now delete the CSV file from your disk, and empty the bin: it holds your passwords in clear text.",
+  "import.choose": "Choose the CSV file",
+  "import.cancel": "Cancel",
+  "import.back": "Choose another file",
+  "import.close": "Close",
+  "import.readError": "That file could not be read.",
+  "import.detected.chromium": "Recognised format: Chrome, Edge, Brave or Opera.",
+  "import.detected.firefox": "Recognised format: Firefox.",
+  "import.detected.safari": "Recognised format: Safari.",
+  "import.detected.autre": "Format not identified: the usual column names will be used.",
+  "import.notRecognised":
+    "This file does not look like a password export: it has no password column.",
+  "import.summary": "{lues} entry/entries read, {aImporter} to import, {ignorees} skipped.",
+  "import.noPassword":
+    "{n} entry/entries have no password; they will be imported for their note or their code.",
+  "import.reason.doublonCoffre": "{n} already in your vault, identical",
+  "import.reason.doublonFichier": "{n} repeated within the file",
+  "import.reason.sansSecret": "{n} with no password, no code and no note: nothing to protect",
+  "import.reason.sansIdentifiant": "{n} with no name, no address and no username",
+  "import.reason.illisible": "{n} unreadable line(s): the columns do not line up",
+  "import.confirm": "Import {n} entry/entries",
+  "import.nothing": "Nothing to import in this file",
+  "import.progress": "Encrypting and sending... {n} of {total}",
+  "import.done": "{n} entry/entries imported, out of {lues} read.",
+  "import.failed":
+    "{n} entry/entries could not be sent. Try again: whatever went through will be recognised as a duplicate.",
 };
 
 const fr: Dict = {
@@ -524,7 +567,6 @@ const fr: Dict = {
   "app.expiresOn": "expire le {date}",
   "app.noExpiry": "sans échéance",
   "app.noName": "(sans nom)",
-  "app.imported": "{n} entrée(s) importée(s).",
   "app.importCsv": "Importer (CSV)",
   "app.selected": "{n} sélectionné(s)",
   "app.selectAll": "Tout sélectionner",
@@ -635,7 +677,6 @@ const fr: Dict = {
   "app.exportB": "en clair",
   "app.exportC": " dans un fichier CSV. Conservez-le en lieu sûr et supprimez-le après usage.",
   "app.exportCsv": "Exporter (CSV)",
-  "app.importCols": "Colonnes reconnues : name, username, password, url, folder, totp (compatible exports 1Password / Bitwarden / Proton).",
   "app.recentLogins": "Connexions récentes",
   "app.noLogins": "Aucune connexion enregistrée.",
   "app.newDevice": "Nouvel appareil",
@@ -677,6 +718,52 @@ const fr: Dict = {
   "send.show": "Afficher",
   "send.hide": "Masquer",
   "send.copy": "Copier",
+  // --- import depuis un navigateur ---
+  "import.title": "Importer vos mots de passe",
+  "import.intro":
+    "Exportez d'abord vos mots de passe depuis votre navigateur, puis choisissez le fichier ici. Tout se passe dans cet onglet : le fichier lui-même n'arrive jamais sur nos serveurs.",
+  "import.howto": "Obtenir le fichier depuis votre navigateur",
+  "import.chrome.nom": "Chrome",
+  "import.chrome.etapes":
+    "ouvrez chrome://password-manager/settings, puis « Télécharger le fichier » sous « Exporter les mots de passe ».",
+  "import.edge.nom": "Edge",
+  "import.edge.etapes":
+    "ouvrez edge://wallet/passwords/settings, puis « Exporter les mots de passe ».",
+  "import.firefox.nom": "Firefox",
+  "import.firefox.etapes":
+    "ouvrez about:logins, cliquez sur le bouton « ... » en haut à droite, puis « Exporter les identifiants ».",
+  "import.safari.nom": "Safari",
+  "import.safari.etapes":
+    "menu Safari, « Réglages », onglet « Mots de passe », puis le bouton « ... » en bas de la liste et « Exporter tous les mots de passe ».",
+  "import.warning":
+    "Ce fichier contient tous vos mots de passe en clair. Supprimez-le de votre disque dès que l'import est terminé, et videz la corbeille.",
+  "import.deleteFile":
+    "Supprimez maintenant le fichier CSV de votre disque, et videz la corbeille : il contient vos mots de passe en clair.",
+  "import.choose": "Choisir le fichier CSV",
+  "import.cancel": "Annuler",
+  "import.back": "Choisir un autre fichier",
+  "import.close": "Fermer",
+  "import.readError": "Ce fichier n'a pas pu être lu.",
+  "import.detected.chromium": "Format reconnu : Chrome, Edge, Brave ou Opera.",
+  "import.detected.firefox": "Format reconnu : Firefox.",
+  "import.detected.safari": "Format reconnu : Safari.",
+  "import.detected.autre": "Format non identifié : les noms de colonnes usuels seront utilisés.",
+  "import.notRecognised":
+    "Ce fichier ne ressemble pas à un export de mots de passe : il n'a aucune colonne de mot de passe.",
+  "import.summary": "{lues} entrée(s) lue(s), {aImporter} à importer, {ignorees} ignorée(s).",
+  "import.noPassword":
+    "{n} entrée(s) sans mot de passe seront importées pour leur note ou leur code.",
+  "import.reason.doublonCoffre": "{n} déjà présente(s) dans votre coffre, à l'identique",
+  "import.reason.doublonFichier": "{n} répétée(s) dans le fichier",
+  "import.reason.sansSecret": "{n} sans mot de passe, ni code, ni note : rien à protéger",
+  "import.reason.sansIdentifiant": "{n} sans nom, ni adresse, ni identifiant",
+  "import.reason.illisible": "{n} ligne(s) illisible(s) : les colonnes ne tombent pas juste",
+  "import.confirm": "Importer {n} entrée(s)",
+  "import.nothing": "Rien à importer dans ce fichier",
+  "import.progress": "Chiffrement et envoi... {n} sur {total}",
+  "import.done": "{n} entrée(s) importée(s), sur {lues} lue(s).",
+  "import.failed":
+    "{n} entrée(s) n'ont pas pu être envoyées. Réessayez : ce qui est déjà passé sera reconnu comme un doublon.",
 };
 
 const messages: Record<Locale, Dict> = { en, fr };

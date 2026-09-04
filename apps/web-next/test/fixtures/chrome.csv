@@ -1,0 +1,5 @@
+name,url,username,password,note
+example.com,https://example.com/,clara@example.com,3XnP-quatre,
+mairie-pressins.fr,https://www.mairie-pressins.fr/wp-login.php,clara,"Zx,9""qw",Compte de la mairie
+com.spotify.music,android://f4Kk9Q==@com.spotify.music/,clara@example.com,ecoute-2019,
+forum.exemple.org,https://forum.exemple.org/login,,,Compte créé en 2019 puis mot de passe oublié
