@@ -182,9 +182,26 @@ export async function verifyIdToken(
 // interceptable. Nous restons client confidentiel face à l'IdP, comme sur le chemin web — que ce
 // bloc ne touche pas.
 
-/// Adresse de retour par défaut de l'application iPhone. La liste blanche est côté serveur : le
+/// Adresses de retour par défaut de l'application iPhone. La liste blanche est côté serveur : le
 /// corps de l'échange ne choisit jamais où repart le code.
-const DEFAULT_APP_REDIRECT = "ch.stackops.ghostpass://sso";
+///
+/// Deux schémas, parce que l'App Store en impose deux : la build distribuée porte
+/// `ch.stackops.ghostpass`, celle de recette (TestFlight, simulateur) porte
+/// `ch.stackops.ghostpass.essai`, et un identifiant de paquet ne peut pas être partagé entre
+/// deux applications. Refuser le second obligerait à ne jamais éprouver le SSO ailleurs qu'en
+/// production, ce qui est exactement l'endroit où l'on ne veut pas le découvrir.
+///
+/// Le second n'affaiblit pas le premier. Une application voisine qui revendiquerait l'un ou
+/// l'autre schéma ne récupère qu'un code inerte : l'échange exige le vérificateur PKCE, que seule
+/// l'application qui a ouvert la session détient. Le risque résiduel est le même pour les deux,
+/// et il est celui, connu, des schémas d'URL sur iOS.
+///
+/// L'ORDRE COMPTE : `pickAppRedirect` rend le premier élément quand la requête ne demande rien.
+/// Le schéma de production doit donc rester en tête.
+const DEFAULT_APP_REDIRECTS = [
+  "ch.stackops.ghostpass://sso",
+  "ch.stackops.ghostpass.essai://sso",
+];
 
 export interface MobileConfig {
   /// Où l'IdP nous renvoie (chez NOUS, pas sur le SPA). Doit être enregistrée côté IdP ; jamais
@@ -199,7 +216,7 @@ export function getMobileConfig(): MobileConfig | null {
   const redirectUri = process.env.OIDC_MOBILE_REDIRECT_URI?.trim();
   if (!redirectUri) return null;
   const raw = process.env.SSO_MOBILE_REDIRECT_URIS?.trim();
-  const allowedAppRedirects = (raw ? raw.split(",") : [DEFAULT_APP_REDIRECT])
+  const allowedAppRedirects = (raw ? raw.split(",") : DEFAULT_APP_REDIRECTS)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
   if (allowedAppRedirects.length === 0) return null;
