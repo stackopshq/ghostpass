@@ -118,6 +118,10 @@ class ParcoursDeBoutEnBoutTest {
             )
         }
 
+        etape("2 ter. L'accueil fond les deux origines") {
+            lAccueilFondLesDeuxOrigines()
+        }
+
         etape("2 bis. Le coffre d'équipe") {
             coffreDEquipe()
         }
@@ -263,6 +267,126 @@ class ParcoursDeBoutEnBoutTest {
         }
     }
 
+    // ─── L'accueil, qui contient tout le coffre ───
+
+    /**
+     * **Une seule liste, et chaque ligne dit d'où elle vient.**
+     *
+     * Le défaut que cette étape garde fermé : l'organisation était un lieu où l'on entrait,
+     * et l'accueil ne pouvait pas montrer son contenu. Pour un compte dont **tous** les mots
+     * de passe vivent en équipe — celui de Clara — l'application ouvrait sur « Ce coffre est
+     * vide ». Aucune erreur, et l'apparence exacte d'une perte de données.
+     *
+     * ## Pourquoi cette étape sait rougir
+     *
+     * Un témoin qui compterait « au moins un élément » serait vert des deux côtés de la
+     * mutation : le coffre personnel suffirait à le satisfaire. Trois affirmations
+     * distinctes le rendent falsifiable, et chacune tombe pour une raison différente :
+     *
+     *  - `Forgejo` **et** `Routeur de l'agence` sur le même écran, sans être entré nulle
+     *    part. Retirer la fusion fait disparaître le second ;
+     *  - la marque « Équipe StackOps · Coffre partagé » est affichée. Retirer le marquage la
+     *    fait disparaître, alors même que la liste resterait complète ;
+     *  - la marque est sur la ligne du **routeur**, pas sur celle de Forgejo. Marquer tout
+     *    le monde — ou personne — fait tomber celle-ci, et c'est elle qui porte le mot
+     *    « distinguables » : une liste unique où rien ne séparerait les deux origines serait
+     *    pire que deux listes, puisqu'on croirait tout pouvoir modifier.
+     */
+    private fun lAccueilFondLesDeuxOrigines() {
+        // ─── 1. Les deux origines sont dans la même liste ───
+        //
+        // Sans recherche, sans être entré nulle part : c'est l'accueil tel qu'il s'ouvre.
+        // La liste porte six lignes sur un écran de 540×1200, donc on défile — l'absence
+        // d'un élément présent mais plus bas accuserait la fusion à tort.
+        faireApparaitre("Forgejo")
+        attendre(By.text("Forgejo"), "l'élément personnel « Forgejo » à l'accueil")
+        faireApparaitre("Routeur de l'agence")
+        attendre(
+            By.text("Routeur de l'agence"),
+            "l'accueil ne montre pas l'élément d'équipe « Routeur de l'agence ». C'est le " +
+                "défaut qui ressemble à une perte de données : pour un compte dont tous les " +
+                "mots de passe vivent en organisation, cet écran est vide et ne dit rien",
+            30_000,
+        )
+
+        // ─── 2. Et chacune se distingue de l'autre ───
+        //
+        // **La recherche isole une ligne à la fois**, et c'est ce qui rend le contrôle
+        // concluant plutôt qu'approximatif. Apparier une marque à sa ligne par les
+        // coordonnées s'est révélé faux au premier essai : les lignes illisibles n'ont pas
+        // de nom, se rangent donc en tête, et **portent une marque elles aussi** — la
+        // première marque de l'écran n'appartenait à aucun nom. Dès qu'une recherche est
+        // active, l'écran ne porte plus qu'un élément, et « la marque est là » ne peut plus
+        // vouloir dire « la marque est ailleurs ».
+        neGarderQue("Routeur de l'agence")
+        attendre(
+            By.text(MARQUE_DEQUIPE),
+            "la ligne d'équipe ne porte pas sa marque « $MARQUE_DEQUIPE ». La liste peut " +
+                "être complète et rester illisible : sans marque, on ne sait pas qui voit " +
+                "quoi, ni ce qu'on a le droit de modifier",
+            15_000,
+        )
+        // L'étoile n'est pas proposée ici : elle écrit dans un registre du coffre
+        // **personnel**, que l'équipe ne relirait jamais.
+        assertNull(
+            "l'étoile des favoris est proposée sur un élément d'équipe : elle y écrirait un " +
+                "favori dans un registre personnel, que personne ne relirait de ce côté",
+            appareil.findObject(By.descStartsWith("button.favorite.")),
+        )
+
+        neGarderQue("Forgejo")
+        // Le pendant, et c'est lui qui porte le mot « distinguables » : marquer tout le
+        // monde reviendrait à ne marquer personne.
+        assertNull(
+            "l'élément personnel porte lui aussi une marque d'équipe. Les deux origines " +
+                "redeviennent indistinguables dans une liste qui les mélange, ce qui est " +
+                "pire que deux listes séparées : on croit tout pouvoir modifier",
+            appareil.findObject(By.text(MARQUE_DEQUIPE)),
+        )
+        // Et le contrôle du contrôle : l'étoile **est** là sur un élément personnel. Sans
+        // cette ligne, l'assertion d'au-dessus passerait aussi si l'écran n'affichait rien.
+        assertNotNull(
+            "aucune étoile sur un élément personnel : l'assertion précédente ne mesurerait " +
+                "alors qu'un écran vide",
+            appareil.findObject(By.descStartsWith("button.favorite.")),
+        )
+        neGarderQue("")
+    }
+
+    /**
+     * Ne laisse à l'écran que les éléments dont le nom contient ce texte.
+     *
+     * Une recherche vide rend la liste entière. On passe par le champ du produit plutôt que
+     * par un défilement : un contrôle qui dépend de ce qui se trouve à l'écran au moment où
+     * on regarde n'est pas un contrôle, c'est une coïncidence reproductible.
+     */
+    private fun neGarderQue(texte: String) {
+        poser("field.search", texte)
+        appareil.waitForIdle()
+    }
+
+    /**
+     * Fait défiler la liste jusqu'à ce que ce nom soit visible.
+     *
+     * L'accueil porte désormais **les deux origines** : il est plus long qu'avant, et sur
+     * l'écran de 540×1200 du parcours il déborde. Sans ce défilement, l'étape tomberait sur
+     * « introuvable » pour un élément parfaitement présent — un message qui accuse la fusion
+     * là où c'est la hauteur de l'écran qui manque.
+     */
+    private fun faireApparaitre(nom: String) {
+        repeat(4) {
+            if (appareil.hasObject(By.text(nom))) return
+            appareil.swipe(
+                appareil.displayWidth / 2,
+                (appareil.displayHeight * 0.7).toInt(),
+                appareil.displayWidth / 2,
+                (appareil.displayHeight * 0.35).toInt(),
+                8,
+            )
+            appareil.waitForIdle()
+        }
+    }
+
     // ─── Les coffres d'équipe ───
 
     /**
@@ -278,8 +402,15 @@ class ParcoursDeBoutEnBoutTest {
      *  1. l'organisation apparaît et s'ouvre ;
      *  2. son élément se déchiffre **sous l'Org Key**, pas sous la clé du coffre ;
      *  3. l'élément scellé sous une **autre** Org Key garde sa place et dit pourquoi (§5) ;
-     *  4. l'éditeur s'y ouvre en **lecture seule** — l'y laisser enregistrer déplacerait
-     *     l'élément dans le coffre personnel, où l'équipe ne le retrouverait jamais.
+     *  4. une ligne illisible ne s'ouvre pas : enregistrer par-dessus écraserait un contenu
+     *     que personne n'a jamais lu ;
+     *  5. l'écriture part vers `/api/orgs/…/items`, et ce qu'elle crée **revient à l'accueil
+     *     avec sa marque** — c'est ce qui distingue « il est là parce qu'il est d'équipe »
+     *     de « il est là parce qu'il a fui dans le coffre personnel ».
+     *
+     * Entrer dans une organisation n'est plus le seul moyen d'en voir le contenu — l'accueil
+     * le montre, et [lAccueilFondLesDeuxOrigines] l'éprouve. Ce chemin-ci reste : il vérifie
+     * la vue filtrée par collection, et les écritures qui en partent.
      */
     private fun coffreDEquipe() {
         val organisation = attendre(
@@ -342,14 +473,34 @@ class ParcoursDeBoutEnBoutTest {
             30_000,
         )
 
-        // Et il ne doit **pas** être dans le coffre personnel.
+        // ─── Et il revient à l'accueil, **marqué** ───
+        //
+        // Cette assertion était l'inverse : on exigeait que l'élément d'équipe ne figure
+        // **pas** dans la liste d'accueil. C'était juste tant que l'accueil signifiait « le
+        // coffre personnel » — un élément d'équipe qui s'y trouvait y était arrivé par
+        // `/api/vault/items`, donc sorti de l'équipe en silence.
+        //
+        // Depuis la fusion, l'accueil est le coffre entier, et cette même présence est
+        // devenue ce qu'on veut. Ce qu'il faut encore distinguer — « il est là parce qu'il
+        // est d'équipe » de « il est là parce qu'il a fui dans le personnel » — c'est
+        // exactement ce que dit sa **marque**. Sans elle, les deux mondes rendraient le même
+        // écran, et ce contrôle ne mesurerait plus rien.
         toucher("chip.personal")
-        attendre(By.text("Forgejo"), "le retour au coffre personnel")
-        assertNull(
-            "l'élément d'équipe s'est retrouvé dans le coffre personnel : c'est exactement " +
-                "la fuite silencieuse que le verrouillage précédent empêchait",
-            appareil.findObject(By.text(nomDEquipe)),
+        attendre(By.text("Forgejo"), "le retour à l'accueil")
+        neGarderQue(nomDEquipe)
+        attendre(
+            By.text(nomDEquipe),
+            "l'élément créé dans l'équipe n'apparaît pas à l'accueil : la liste fondue ne " +
+                "s'est pas relue après l'écriture",
+            30_000,
         )
+        assertNotNull(
+            "l'élément d'équipe figure à l'accueil **sans** sa marque : il s'y lit comme un " +
+                "élément personnel, et c'est le symptôme d'une fuite par /api/vault/items — " +
+                "il aurait quitté l'équipe sans que rien ne le dise",
+            appareil.findObject(By.text(MARQUE_DEQUIPE)),
+        )
+        neGarderQue("")
         toucher(By.descStartsWith("chip.org."), "l'organisation")
         attendre(By.text(nomDEquipe), "le retour à la collection d'équipe", 30_000)
 
@@ -1027,5 +1178,20 @@ class ParcoursDeBoutEnBoutTest {
          */
         const val LIEN =
             "otpauth://totp/Cachet:clara@example.com?secret=GEZDGNBVGY3TQOJQ&issuer=Cachet"
+
+        /**
+         * La marque que porte une ligne d'équipe : « équipe · collection ».
+         *
+         * Les deux moitiés viennent du semeur et du serveur, et les deux comptent :
+         * « Équipe StackOps » est le nom donné dans [SemerLeServeur], « Coffre partagé » est
+         * la collection par défaut que le serveur crée avec l'organisation
+         * (`DEFAULT_COLLECTION_NAME`). Savoir **laquelle** compte dès qu'on appartient à
+         * plusieurs équipes, et une collection n'a de sens qu'associée à la sienne.
+         *
+         * Si l'un des deux noms change de côté serveur, cette constante doit suivre — et la
+         * faire tomber est le bon comportement : une marque qui n'affiche plus ce qu'on
+         * croit est pire qu'une marque absente.
+         */
+        const val MARQUE_DEQUIPE = "Équipe StackOps · Coffre partagé"
     }
 }
