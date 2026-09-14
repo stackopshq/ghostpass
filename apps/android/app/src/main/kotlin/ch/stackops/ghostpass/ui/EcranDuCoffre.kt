@@ -359,7 +359,16 @@ private fun ChoixDuCoffre(modele: ModeleDuCoffre) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Pastilledechoix(
-                texte = "Mon coffre",
+                // « Mon coffre » est devenu faux le jour où l'accueil a fondu les deux
+                // origines : cette pastille ne montre plus le seul coffre personnel, elle
+                // montre **tout**. Le nom est celui d'iOS, vu sur la capture
+                // `AppStore/captures/01-coffre.png` — « Tous les éléments ».
+                //
+                // L'identifiant, lui, ne bouge pas : `chip.personal` sert aux témoins des
+                // deux plateformes, et le renommer d'un seul côté les ferait diverger en
+                // silence. Le libellé se lit, l'identifiant se cherche ; ce sont deux
+                // publics différents.
+                texte = "Tous les éléments",
                 choisie = modele.collectionOuverte == null,
                 identifiant = "chip.personal",
             ) { modele.revenirAuCoffrePersonnel() }
