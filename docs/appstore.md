@@ -23,12 +23,20 @@ doit monter à chaque envoi : App Store Connect refuse deux fois le même.
 
 ### Compte et identifiants
 
-- Compte développeur Apple *(en cours de validation)*.
-- Enregistrer les deux identifiants : `ch.stackops.ghostpass` et
-  `ch.stackops.ghostpass.autofill`.
-- Enregistrer le groupe d'applications `group.ch.stackops.ghostpass` — l'extension de
-  remplissage lit le coffre par lui ; sans ce groupe, elle ne trouve rien.
-- Renseigner `DEVELOPMENT_TEAM` (variable d'environnement, injectée à la compilation).
+- Compte développeur Apple — **validé le 14 septembre 2026**, équipe `9WHCJ5W7S6`
+  (« Clara Vanacker », type Individual).
+- Les deux identifiants `ch.stackops.ghostpass` et `ch.stackops.ghostpass.autofill` sont
+  enregistrés — créés par la signature automatique au premier build vers un appareil.
+- Le groupe d'applications est **`group.ch.stackops.ghostpass.coffre`**, et le suffixe
+  n'est pas décoratif : `group.ch.stackops.ghostpass` est **immobilisé**. Les identifiants
+  de groupe sont uniques chez Apple toutes équipes confondues, et celui-là a été pris par
+  l'équipe personnelle lors d'un essai antérieur. Une équipe personnelle ne s'administre
+  pas sur le portail : il n'est pas récupérable, seulement contournable.
+- `DEVELOPMENT_TEAM` doit être **imposée** et non découverte : le certificat de l'équipe
+  personnelle vit encore dans le trousseau, et signer avec produit une application qui
+  s'installe, se lance, et dont le remplissage ne voit rien.
+- **Chaque appareil de test doit être enregistré sur le compte.** `-allowProvisioningUpdates`
+  ne suffit pas toujours : le second iPhone a dû être ajouté à la main par son identifiant.
 
 ### Chiffrement : deux démarches, pas une
 
@@ -133,25 +141,42 @@ Elle distingue maintenant les deux cas.
 
 ## À éprouver avant d'envoyer
 
-**Le remplissage automatique, sur un appareil réel.** C'est la fonctionnalité qui justifie
-une application native.
+**Le remplissage automatique, sur un appareil réel — fait le 14 septembre 2026.** Sur un
+iPhone 17 Pro : l'extension est appelée, Face ID se lance seul, et le champ se remplit
+sans geste depuis la suggestion du clavier.
 
-*Vérifiée à la main le 28 août 2026 sur simulateur* : l'extension apparaît et s'active dans
-les réglages système, le clavier propose l'identifiant du bon site parmi les trois du
-coffre, et les champs se remplissent. L'appariement par domaine et le déchiffrement hors
-ligne de l'extension sont donc éprouvés.
+Six défauts en séparaient, **tous invisibles depuis un simulateur**. Ils valent d'être
+listés, parce qu'ils disent ce qu'un simulateur ne peut pas prouver :
 
-Reste l'appareil réel, que rien ne remplace : `test04Remplissage` continue de se sauter
-sous `xcodebuild` faute de clavier logiciel — six réglages essayés sans succès, voir le
-commentaire du test. On sait maintenant que le produit n'est pas en cause.
+1. Le groupe d'applications immobilisé (voir plus haut).
+2. Le voile de confidentialité couvrait l'extension en permanence : sa condition était
+   `scenePhase != .active`, et une extension n'a pas de cycle de vie de scène —
+   `scenePhase` n'y vaut jamais `.active`.
+3. La cible de l'extension n'embarquait pas `Assets.xcassets` : `Image("LogoMark")` ne
+   rendait **rien**, sans erreur ni journal, et le voile réduit à son mot ressemblait à un
+   écran vide.
+4. Les coffres d'équipe n'étaient jamais déposés dans le conteneur partagé. Pour un compte
+   dont tous les mots de passe vivent en organisation, la copie locale était vide et
+   l'extension annonçait « Aucun identifiant » sur tous les sites.
+5. et 6. Deux fois la même notification manquante — `NSExtensionHostDidBecomeActive`
+   n'arrive pas toujours — employée comme une garantie : elle rendait la demande
+   biométrique intermittente et laissait la réponse en suspens pour toujours.
 
-En attendant l'appareil, `tools/ios/autofill-manuel.sh` monte un banc d'essai sur
-simulateur et le laisse en place, avec la marche à suivre. Il reste un geste que rien
-n'automatise : cocher GhostPass dans *Réglages > Général > Saisie automatique*. Ce réglage
-vit dans un magasin système que `defaults` n'atteint pas.
+`test04Remplissage` continue de se sauter sous `xcodebuild` faute de clavier logiciel, et
+`tools/ios/autofill-manuel.sh` reste le banc d'essai sur simulateur. Il reste un geste que
+rien n'automatise : cocher GhostPass dans *Réglages > Général > Saisie automatique*. Ce
+réglage vit dans un magasin système que `defaults` n'atteint pas.
 
-**Le reste aussi.** Rien n'a jamais tourné ailleurs que sur simulateur : ni la biométrie
-réelle, ni les passkeys, ni le comportement sous mémoire contrainte.
+**Une limite d'outillage, apprise en cherchant ces défauts** : `NSLog` depuis une extension
+iOS n'est visible ni par `xcrun devicectl device process launch --console`, ni par
+`idevicesyslog`. Pour observer une extension, il faut un affichage à l'écran — c'est ce que
+fait la section « Remplissage automatique » des réglages, qui montre l'état du conteneur
+partagé et le contenu de la copie locale. C'est elle qui a désigné le quatrième défaut.
+
+**La biométrie réelle est éprouvée** elle aussi, des deux côtés — application et extension.
+
+**Ce qui n'a toujours jamais tourné ailleurs que sur simulateur** : les passkeys, et le
+comportement sous mémoire contrainte.
 
 ## Ce qui n'est pas prêt et qu'il vaut mieux savoir
 
