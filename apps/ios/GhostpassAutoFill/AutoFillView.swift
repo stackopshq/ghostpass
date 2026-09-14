@@ -4,8 +4,22 @@ import SwiftUI
 /// déverrouillage, puis la liste — les entrées du site en cours en tête.
 struct AutoFillView: View {
     @EnvironmentObject private var store: AutoFillStore
-    @Environment(\.scenePhase) private var scenePhase
     @State private var password = ""
+
+    /// Faut-il masquer ? **Pas** `scenePhase`, et c'est tout le sujet.
+    ///
+    /// Une extension n'a pas de cycle de vie de scène : `scenePhase` n'y vaut jamais
+    /// `.active`. La condition `scenePhase != .active` était donc **toujours vraie**, et le
+    /// voile couvrait l'extension en permanence dès qu'elle était déverrouillée. À l'écran,
+    /// cela donnait le mot « GhostPass » seul au milieu d'un fond sombre — sans logo, le
+    /// catalogue d'images manquant aussi à cette cible — c'est-à-dire quelque chose qui
+    /// ressemble à une extension vide, jamais à un voile.
+    ///
+    /// Le simulateur n'aurait pas tranché : c'est un iPhone branché qui l'a montré.
+    ///
+    /// `NSExtensionHostWillResignActive` et ses voisines sont les notifications prévues
+    /// pour cela — une extension ne peut pas interroger `UIApplication.shared`.
+    @State private var masquer = false
 
     var body: some View {
         NavigationStack {
@@ -24,10 +38,19 @@ struct AutoFillView: View {
             // le système photographie l'écran à la sortie, et l'extension n'échappe pas à
             // cette vignette sous prétexte que sa vie est courte.
             .overlay {
-                if scenePhase != .active && store.isUnlocked {
+                if masquer && store.isUnlocked {
                     VoileDeConfidentialite()
                 }
             }
+            .onReceive(
+                NotificationCenter.default.publisher(for: .NSExtensionHostWillResignActive)
+            ) { _ in masquer = true }
+            .onReceive(
+                NotificationCenter.default.publisher(for: .NSExtensionHostDidEnterBackground)
+            ) { _ in masquer = true }
+            .onReceive(
+                NotificationCenter.default.publisher(for: .NSExtensionHostDidBecomeActive)
+            ) { _ in masquer = false }
             .navigationTitle("GhostPass")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -124,6 +124,10 @@ targets:
       # L'extension a son propre paquet : sans le catalogue, ses écrans resteraient
       # en français quelle que soit la langue choisie dans l'application.
       - path: Ghostpass/Resources
+      # Et sans le catalogue d'images, `Image("LogoMark")` ne rend **rien** — sans erreur
+      # ni journal. Le voile de confidentialité s'affichait donc réduit à son mot, ce qui
+      # ressemble à un écran vide. Constaté sur iPhone.
+      - path: Ghostpass/Assets.xcassets
       - path: Generated
     dependencies:
       - framework: GhostpassCrypto.xcframework
