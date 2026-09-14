@@ -18,6 +18,27 @@ final class AutoFillStore: ObservableObject {
     /// Identifiant précis attendu, quand iOS en désigne un.
     var requested: String?
 
+    /// Fournir l'identifiant désigné sans demander ? **Non**, tant que ce chemin n'aura
+    /// pas été compris — voir le commentaire de `load`. Un drapeau nommé plutôt qu'un code
+    /// retiré : l'effacer ferait disparaître avec lui ce qu'on a appris en essayant.
+    private static let fournitureAutomatique = false
+
+    /// L'hôte a-t-il rendu l'extension active ?
+    ///
+    /// `completeRequest` pendant la transition qui suit la demande Face ID part sans
+    /// remplir : la feuille se ferme, et les champs restent vides. Un choix **manuel**
+    /// n'a jamais ce problème — il arrive forcément après l'activation. C'est le choix
+    /// **automatique**, quand iOS désigne déjà l'identifiant attendu, qui tombe au mauvais
+    /// moment, et ce chemin n'a pu s'exécuter qu'à partir du jour où des identifiants ont
+    /// enfin été proposés.
+    ///
+    /// Vrai par défaut : sans demande biométrique, aucune notification ne viendra, et il
+    /// ne faut pas retenir une fourniture qui n'a aucune raison d'attendre.
+    var hoteActif = true
+
+    /// L'entrée à fournir dès que l'hôte sera actif.
+    private var enAttenteDeFourniture: VaultEntry?
+
     /// Ce qu'iOS est venu chercher. Le même écran sert les deux, mais pas avec le même
     /// contenu : en mode code, une entrée sans secret TOTP n'a rien à offrir et ne doit
     /// pas figurer dans la liste.
@@ -190,10 +211,50 @@ final class AutoFillStore: ObservableObject {
                 entries.isEmpty ? tr("Aucun identifiant dans la copie locale du coffre.") : nil
         }
 
-        // iOS peut désigner l'entrée attendue : la fournir sans rien demander de plus.
-        if let requested, let entry = entries.first(where: { $0.id == requested }) {
-            pick(entry)
+        // iOS peut désigner l'entrée attendue. On ne la fournit **plus** sans rien
+        // demander, et ce retrait est une reddition documentée, pas une préférence.
+        //
+        // Ce qui est établi : un choix **manuel** remplit les champs, un choix
+        // **automatique** ferme la feuille sans rien remplir. Le chemin automatique n'a pu
+        // s'exécuter qu'à partir du moment où des identifiants ont enfin été proposés — il
+        // n'avait donc jamais été éprouvé.
+        //
+        // Ce qui a été essayé, sans succès : différer la fourniture jusqu'à
+        // `NSExtensionHostDidBecomeActive`, sur l'hypothèse que `completeRequest` pendant
+        // la transition qui suit Face ID partait dans le vide. La feuille reste
+        // effectivement visible deux secondes de plus — donc l'appel a bien lieu après
+        // l'activation — et le remplissage n'a toujours pas lieu. L'hypothèse est écartée.
+        //
+        // Ce qui reste à vérifier, et qui demande un moyen de lire ce que l'extension
+        // fournit réellement : que `login.username` et `login.password` ne soient pas
+        // vides pour cette entrée-là, et que l'identité enregistrée porte le même
+        // `user` que ce qu'on renvoie — Safari peut écarter une réponse qui ne
+        // correspond pas à l'identité qu'il a désignée.
+        //
+        // En attendant, la liste s'affiche avec l'entrée attendue en tête : un geste au
+        // lieu de zéro, sur un chemin qui fonctionne.
+        if Self.fournitureAutomatique, let requested,
+            let entry = entries.first(where: { $0.id == requested })
+        {
+            fournir(entry)
         }
+    }
+
+    /// Fournit maintenant, ou retient jusqu'à l'activation de l'hôte.
+    private func fournir(_ entry: VaultEntry) {
+        if hoteActif {
+            pick(entry)
+        } else {
+            enAttenteDeFourniture = entry
+        }
+    }
+
+    /// Appelé quand l'hôte redevient actif. Vide la fourniture retenue, s'il y en a une.
+    func hoteEstActif() {
+        hoteActif = true
+        guard let entry = enAttenteDeFourniture else { return }
+        enAttenteDeFourniture = nil
+        pick(entry)
     }
 
     func pick(_ entry: VaultEntry) {

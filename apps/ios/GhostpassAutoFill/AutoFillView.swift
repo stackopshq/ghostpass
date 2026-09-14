@@ -49,16 +49,24 @@ struct AutoFillView: View {
             }
             .onReceive(
                 NotificationCenter.default.publisher(for: .NSExtensionHostWillResignActive)
-            ) { _ in masquer = true }
+            ) { _ in
+                masquer = true
+                store.hoteActif = false
+            }
             .onReceive(
                 NotificationCenter.default.publisher(for: .NSExtensionHostDidEnterBackground)
-            ) { _ in masquer = true }
+            ) { _ in
+                masquer = true
+                store.hoteActif = false
+            }
             .onReceive(
                 NotificationCenter.default.publisher(for: .NSExtensionHostDidBecomeActive)
             ) { _ in
                 masquer = false
                 // L'hôte vient de rendre l'extension active : c'est l'instant où le
-                // trousseau accepte enfin de présenter la demande.
+                // trousseau accepte enfin de présenter la demande, **et** celui où une
+                // réponse a une chance d'aboutir.
+                store.hoteEstActif()
                 demanderLaBiometrie()
             }
             .navigationTitle("GhostPass")
