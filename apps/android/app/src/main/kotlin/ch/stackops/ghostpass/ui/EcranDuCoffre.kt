@@ -43,6 +43,7 @@ import ch.stackops.ghostpass.EntreeDuCoffre
 import ch.stackops.ghostpass.EtatDAppartenance
 import ch.stackops.ghostpass.ModeleDuCoffre
 import ch.stackops.ghostpass.Organisation
+import ch.stackops.ghostpass.OrigineDuCoffre
 import ch.stackops.ghostpass.RaisonDIllisibilite
 import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.ChampGhost
@@ -81,8 +82,10 @@ fun EcranDuCoffre(
     var recherche by rememberSaveable { mutableStateOf("") }
     var reglagesOuverts by rememberSaveable { mutableStateOf(false) }
 
-    // Les organisations se chargent avec le coffre. Sans elles, l'écran ment par omission.
-    LaunchedEffect(Unit) { modele.chargerLesOrganisations() }
+    // Les équipes se chargent avec le coffre, **contenu compris** : cette liste est celle
+    // du coffre entier. Sans elles, l'écran ment par omission — et pour qui n'a que des
+    // mots de passe d'équipe, il ment entièrement.
+    LaunchedEffect(Unit) { modele.chargerLesCoffresDEquipe() }
 
     Box(Modifier.fillMaxSize()) {
         FondGhost()
@@ -173,7 +176,12 @@ fun EcranDuCoffre(
                                 // L'étoile écrit dans un registre du coffre **personnel** :
                                 // elle n'a pas de sens sur un élément d'équipe, et la
                                 // proposer y écrirait un favori que personne ne relirait.
-                                surFavori = if (modele.collectionOuverte == null) {
+                                //
+                                // La condition porte sur l'**origine** de la ligne et non
+                                // sur l'écran : depuis la fusion, l'accueil contient les
+                                // deux, et « aucune collection ouverte » ne veut plus dire
+                                // « tout est personnel ici ».
+                                surFavori = if (!entree.origine.estDEquipe) {
                                     { modele.basculerLeFavori(entree.id) }
                                 } else {
                                     null
@@ -241,7 +249,9 @@ private fun BarreDOutils(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
-        if (modele.peutModifierIci) {
+        // « Nouveau » parle de l'endroit où l'élément **ira**, pas d'un élément existant :
+        // c'est donc bien la permission de l'écran, et non celle d'une origine.
+        if (modele.peutEcrire) {
             Box(Modifier.widthIn(max = 110.dp)) {
                 BoutonSecondaire("Nouveau", identifiant = "button.new") { surNouveau() }
             }
@@ -455,9 +465,12 @@ private fun messageDeListeVide(modele: ModeleDuCoffre, recherche: String): Strin
     // recréer un identifiant qui existe déjà.
     modele.horsLigne -> "Coffre indisponible hors ligne — rien n'a encore été mis en cache."
     modele.collectionOuverte != null -> "Cette collection d'équipe est vide."
-    modele.organisations.isNotEmpty() ->
-        "Votre coffre personnel est vide. Vos mots de passe sont peut-être dans un coffre " +
-            "d'équipe : choisissez-le ci-dessus."
+    // Cette phrase-là était le symptôme du défaut, pas son remède : elle envoyait chercher
+    // ailleurs ce que l'accueil aurait dû montrer. Depuis la fusion, un accueil vide alors
+    // qu'on appartient à des équipes ne veut plus dire « c'est rangé ailleurs » — il veut
+    // dire que les équipes n'ont pas pu être lues, et c'est ce qu'il faut dire.
+    modele.echecsDOrganisation.isNotEmpty() ->
+        "Vos coffres d'équipe n'ont pas pu être ouverts — voyez le motif ci-dessus."
     else -> "Ce coffre est vide."
 }
 
@@ -512,6 +525,7 @@ private fun LigneLisible(
                 is ContenuDElement.Carte -> "Carte"
             }
             Text(detail, color = couleurs.attenue, fontSize = 13.sp)
+            MarqueDOrigine(entree.origine)
         }
         if (surFavori != null) {
             // L'étoile a sa propre zone de toucher : elle ne doit pas ouvrir l'élément.
@@ -581,8 +595,47 @@ private fun LigneIllisible(entree: EntreeDuCoffre.Illisible) {
                 color = couleurs.attenue,
                 fontSize = 12.sp,
             )
+            // Une ligne illisible porte sa marque **aussi**, et c'est là qu'elle sert le
+            // plus : sans elle, elle se lirait comme un élément personnel abîmé, et l'on
+            // chercherait le défaut dans le mauvais coffre — alors que la cause est presque
+            // toujours une clé d'organisation qu'on n'a pas encore reçue.
+            MarqueDOrigine(entree.origine)
         }
     }
+}
+
+/**
+ * **D'où vient cette ligne**, dit sur la ligne elle-même.
+ *
+ * C'est ce qui rend la fusion lisible. Une seule liste où rien ne distinguerait un élément
+ * d'équipe d'un élément personnel serait pire que deux listes : on croirait tout pouvoir
+ * modifier, et l'on ne saurait pas qui voit quoi.
+ *
+ * L'étiquette nomme **l'équipe et la collection**. Les deux, parce que savoir laquelle
+ * compte dès qu'on appartient à plusieurs équipes, et qu'une collection n'a de sens
+ * qu'associée à la sienne.
+ *
+ * Elle reste du **texte**, et ne prend pas de `contentDescription` : contrairement à
+ * l'étoile, dont le glyphe n'apprend rien à un lecteur d'écran, ce texte est déjà la phrase
+ * qu'il faut lire. Une description l'aurait remplacée par un identifiant de machine, et
+ * aurait rendu l'écran moins lisible pour gagner un témoin plus commode.
+ */
+@Composable
+private fun MarqueDOrigine(origine: OrigineDuCoffre) {
+    val couleurs = LocalCouleurs.current
+    val etiquette = origine.etiquette ?: return
+    Text(
+        etiquette,
+        color = couleurs.accentTexte,
+        fontSize = 11.sp,
+        modifier = Modifier
+            .padding(top = 3.dp)
+            .background(
+                couleurs.accent.copy(alpha = 0.14f),
+                RoundedCornerShape(6.dp),
+            )
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    )
 }
 
 /**

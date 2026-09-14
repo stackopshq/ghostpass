@@ -99,9 +99,12 @@ class ActivitePrincipale : FragmentActivity() {
                         // l'écran — la leçon d'`EditTarget` côté iOS, où deux feuilles de
                         // même identité n'en font qu'une.
                         cle = edition!!.identite,
-                        // Un élément d'équipe s'ouvre en lecture : l'éditeur écrit dans le
-                        // coffre personnel, et l'y enregistrer le sortirait de l'équipe.
-                        lectureSeule = !modele.peutModifierIci,
+                        // Le droit se lit sur **l'élément**, pas sur l'écran d'où on
+                        // l'ouvre. Depuis la fusion, un élément d'équipe s'ouvre le plus
+                        // souvent depuis l'accueil, où aucune collection n'est « ouverte » :
+                        // demander à l'écran répondrait « modifiable » pour tout, y compris
+                        // pour une collection en lecture seule.
+                        lectureSeule = !modele.peutModifier(edition!!.entree),
                     ) { edition = null }
                     else -> EcranDuCoffre(
                         modele,

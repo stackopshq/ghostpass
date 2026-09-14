@@ -134,10 +134,10 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 lecture = coffre.relire(elements)
                 horsLigne = false
                 message = null
-                // Les coffres d'équipe se chargent avec le coffre personnel. Sans cela,
-                // quelqu'un dont les mots de passe vivent en équipe voit une liste vide et
-                // conclut que l'application ne marche pas.
-                chargerLesOrganisations()
+                // Les coffres d'équipe se chargent avec le coffre personnel, **et leur
+                // contenu avec eux**. Sans cela, quelqu'un dont les mots de passe vivent en
+                // équipe voit une liste vide et conclut que l'application ne marche pas.
+                chargerLesCoffresDEquipe()
             } catch (e: Exception) {
                 horsLigne = true
                 // Le coffre reste affiché tel qu'il est : une erreur de réseau ne doit pas
@@ -455,17 +455,59 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
     private var lectureDeCollection by mutableStateOf(LectureDuCoffre())
 
     /**
-     * Ce que l'écran affiche : le coffre personnel, ou la collection ouverte.
+     * Les organisations ouvertes, par identifiant — **toutes**, et gardées ouvertes.
+     *
+     * Elles l'étaient une à la fois tant que l'organisation était un lieu où l'on entrait.
+     * Depuis que l'accueil montre leur contenu, il n'y a plus d'« organisation courante » :
+     * n'importe quelle ligne de la liste peut avoir besoin de sa clé pour se réécrire, et
+     * refermer après lecture obligerait à rouvrir — donc à redemander l'Org Key au serveur —
+     * à chaque enregistrement.
+     *
+     * Cette table est **le seul propriétaire** de ces coffres ouverts : c'est elle qui les
+     * referme, au verrouillage et à la déconnexion. Ouvrir deux fois la même organisation
+     * ferait vivre deux clés pour une seule équipe, et n'en rendrait qu'une.
+     */
+    private var coffresOuverts by mutableStateOf<Map<String, Coffre.CoffreDOrganisation>>(
+        emptyMap(),
+    )
+
+    /**
+     * Ce que les équipes apportent à l'accueil : une lecture par collection, chacune déjà
+     * **marquée** de son [Appartenance].
+     *
+     * Le marquage se fait ici, à la lecture, et non à l'affichage : l'origine sert ensuite à
+     * router l'écriture, et une marque posée par l'écran ne serait pas là quand le modèle en
+     * a besoin.
+     */
+    var partagesDEquipe by mutableStateOf<List<LectureDuCoffre>>(emptyList())
+        private set
+
+    /**
+     * **Le coffre, en une seule liste.**
+     *
+     * C'est le modèle d'iOS (`VaultStore.chargerLesCoffresDEquipe`), et le défaut qu'il
+     * corrige est le plus grave qu'ait connu ce portage : quelqu'un dont tous les mots de
+     * passe vivent en organisation — le compte de Clara — ouvrait l'application et voyait
+     * « aucun élément ». Ses données étaient là, derrière une navigation qu'il ne
+     * connaissait pas. Aucune erreur, et l'apparence exacte d'une perte de données.
+     *
+     * Une seule liste, et **chaque ligne dit d'où elle vient**.
+     */
+    val coffreComplet: LectureDuCoffre
+        get() = Coffre.fusionner(lecture, partagesDEquipe)
+
+    /**
+     * Ce que l'écran affiche : le coffre fondu, ou la collection dans laquelle on est entré.
      *
      * Une seule propriété plutôt que deux chemins dans l'écran : les règles d'affichage —
      * une ligne illisible garde sa place, les registres se masquent — sont les mêmes, et
      * deux chemins finiraient par ne plus les appliquer pareil.
      */
     val lectureAffichee: LectureDuCoffre
-        get() = if (collectionOuverte == null) lecture else lectureDeCollection
+        get() = if (collectionOuverte == null) coffreComplet else lectureDeCollection
 
     /**
-     * Le membre a-t-il le **droit** d'écrire dans ce qu'il regarde ?
+     * Le membre a-t-il le **droit** d'écrire là où un nouvel élément irait ?
      *
      * C'est la permission effective que le serveur établit, par collection. Elle sert à
      * l'affichage — une collection en lecture seule le dit sur sa pastille — parce que
@@ -475,48 +517,128 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         get() = collectionOuverte?.permission?.peutEcrire ?: true
 
     /**
-     * Peut-on modifier ce qu'on regarde ?
+     * Peut-on modifier **cet élément-là** ?
      *
-     * Aujourd'hui identique à [peutEcrire] : l'écriture d'équipe est câblée, et les deux
-     * notions se rejoignent. Elles restent **deux** propriétés parce qu'elles répondent à
-     * deux questions différentes — « en a-t-il le droit » et « l'application sait-elle le
-     * faire » — et qu'elles se sont déjà séparées une fois : pendant une journée, un membre
-     * avait le droit d'écrire dans une collection que l'application ne savait pas modifier.
-     * Les fondre alors aurait laissé l'éditeur enregistrer par `/api/vault/items`, et
-     * l'élément serait sorti de l'équipe **en silence**.
+     * La question se posait autrefois à l'écran — « dans quoi suis-je entré ? » — et cette
+     * réponse-là est morte avec la fusion : depuis que l'accueil mêle les deux origines, il
+     * n'y a plus d'écran d'équipe où l'on serait entré, et répondre « oui » parce qu'aucune
+     * collection n'est ouverte proposerait « Modifier » sur un élément d'équipe en lecture
+     * seule. L'échec arriverait après la saisie.
+     *
+     * La réponse juste voyage donc avec l'élément, dans son [OrigineDuCoffre].
+     *
+     * Le paramètre est **nullable** pour la création : un élément qui n'existe pas encore
+     * n'a pas d'origine, et il ira là où l'on regarde.
      */
-    val peutModifierIci: Boolean
-        get() = collectionOuverte?.permission?.peutEcrire ?: true
+    fun peutModifier(entree: EntreeDuCoffre.Lisible?): Boolean =
+        when (val origine = entree?.origine) {
+            is OrigineDuCoffre.Equipe -> origine.appartenance.peutEcrire
+            else -> peutEcrire
+        }
+
+    /** L'étiquette d'une collection, telle qu'elle voyagera avec chacune de ses lignes. */
+    private fun appartenanceDe(
+        ouvert: Coffre.CoffreDOrganisation,
+        collection: CollectionDOrganisation,
+    ) = Appartenance(
+        organisation = ouvert.organisation.id,
+        collection = collection.id,
+        nomEquipe = ouvert.organisation.nom,
+        nomCollection = collection.nom,
+        // La permission **effective sur cette collection**, et non le rôle dans
+        // l'organisation : un membre ordinaire peut n'avoir que la lecture ici et l'écriture
+        // ailleurs.
+        peutEcrire = collection.permission.peutEcrire,
+    )
 
     /**
-     * Va chercher les organisations.
+     * Va chercher les organisations **et leur contenu**, pour que l'accueil les montre.
      *
-     * Un échec ici **ne doit pas empêcher le coffre personnel de s'afficher** : une
-     * instance sans organisations répond `404` ou une liste vide, et faire échouer tout
-     * l'écran pour cela rendrait l'application inutilisable sur les instances les plus
-     * simples.
+     * Le pendant de `VaultStore.chargerLesCoffresDEquipe()` côté iOS. Charger la liste des
+     * organisations sans leur contenu était le défaut de fond : les éléments d'équipe
+     * étaient traités comme un supplément d'affichage — une pastille sur laquelle il fallait
+     * savoir appuyer — plutôt que comme le contenu du coffre.
+     *
+     * **Trois échecs distincts, et aucun ne vide l'écran :**
+     *
+     *  - la liste des organisations échoue : une instance sans organisations répond `404`,
+     *    et faire échouer tout l'écran pour cela rendrait l'application inutilisable sur les
+     *    instances les plus simples. Le coffre personnel s'affiche seul ;
+     *  - une organisation ne s'ouvre pas : elle est notée dans [echecsDOrganisation], garde
+     *    sa place et dit pourquoi. Les autres équipes et le coffre personnel restent là ;
+     *  - une collection ne se lit pas : même règle, à l'échelle en dessous.
+     *
+     * Ce qu'on ne fait **pas** : effacer [partagesDEquipe] avant de recharger. Une liste
+     * vidée puis remplie clignote, et si le rechargement échoue elle reste vide — ce qui
+     * ramènerait exactement le défaut qu'on corrige ici. On remplace d'un coup, à la fin.
      */
-    fun chargerLesOrganisations() {
+    fun chargerLesCoffresDEquipe() {
         viewModelScope.launch {
-            try {
-                organisations = withContext(Dispatchers.IO) { coffre.organisations() }
+            val liste = try {
+                withContext(Dispatchers.IO) { coffre.organisations() }
             } catch (_: Exception) {
                 organisations = emptyList()
+                return@launch
             }
+            organisations = liste
+
+            val ouverts = coffresOuverts.toMutableMap()
+            val echecs = echecsDOrganisation.toMutableMap()
+            val lectures = mutableListOf<LectureDuCoffre>()
+
+            for (organisation in liste) {
+                val ouvert = ouverts[organisation.id] ?: withContext(Dispatchers.IO) {
+                    coffre.ouvrirLOrganisation(organisation)
+                }.fold(
+                    onSuccess = { it },
+                    onFailure = { erreur ->
+                        echecs[organisation.id] = (erreur as? Coffre.EchecDOuverture)?.motif
+                            ?: EchecDOrganisation.Reseau(erreur.message ?: "erreur inconnue")
+                        null
+                    },
+                )
+                if (ouvert == null) continue
+                ouverts[organisation.id] = ouvert
+                echecs -= organisation.id
+
+                for (collection in ouvert.collections) {
+                    try {
+                        val brute = withContext(Dispatchers.IO) {
+                            coffre.elementsDeCollection(ouvert, collection.id)
+                        }
+                        lectures += Coffre.marquerCommeDEquipe(
+                            brute,
+                            appartenanceDe(ouvert, collection),
+                        )
+                    } catch (e: Exception) {
+                        echecs[organisation.id] =
+                            EchecDOrganisation.Reseau(e.message ?: "collection illisible")
+                    }
+                }
+            }
+            coffresOuverts = ouverts
+            echecsDOrganisation = echecs
+            partagesDEquipe = lectures
         }
     }
 
-    /** Ouvre une organisation, et sa première collection. */
+    /** Entre dans une organisation pour n'en voir qu'elle, et ouvre sa première collection. */
     fun ouvrirUneOrganisation(organisation: Organisation) {
         viewModelScope.launch {
             occupe = true
             message = null
             try {
-                val resultat = withContext(Dispatchers.IO) {
-                    coffre.ouvrirLOrganisation(organisation)
+                // Déjà ouverte pour l'accueil : on réutilise **la même** clé. En rouvrir une
+                // seconde en ferait vivre deux pour une seule équipe, dont une que personne
+                // ne rendrait.
+                val deja = coffresOuverts[organisation.id]
+                val resultat = if (deja != null) {
+                    Result.success(deja)
+                } else {
+                    withContext(Dispatchers.IO) { coffre.ouvrirLOrganisation(organisation) }
                 }
                 resultat.onSuccess { ouvert ->
-                    organisationOuverte?.close()
+                    coffresOuverts = coffresOuverts + (organisation.id to ouvert)
                     organisationOuverte = ouvert
                     echecsDOrganisation = echecsDOrganisation - organisation.id
                     val premiere = ouvert.collections.firstOrNull()
@@ -546,7 +668,14 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             try {
                 collectionOuverte = collection
                 lectureDeCollection = withContext(Dispatchers.IO) {
-                    coffre.elementsDeCollection(ouvert, collection.id)
+                    // Marquée ici aussi, et ce n'est pas une redite : l'origine décide de la
+                    // **route d'écriture**. Une ligne lue par ce chemin-ci et laissée sans
+                    // marque se réécrirait par l'API personnelle — elle sortirait de
+                    // l'équipe en silence, ce qui est précisément ce que l'origine empêche.
+                    Coffre.marquerCommeDEquipe(
+                        coffre.elementsDeCollection(ouvert, collection.id),
+                        appartenanceDe(ouvert, collection),
+                    )
                 }
                 message = null
             } catch (e: Exception) {
@@ -558,12 +687,31 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Revient au coffre personnel. La clé d'organisation est rendue au cœur. */
+    /**
+     * Revient à l'accueil — qui contient **aussi** les équipes.
+     *
+     * On ne referme plus l'organisation ici. C'est [coffresOuverts] qui possède les coffres
+     * ouverts, et l'accueil affiche leur contenu : la refermer en sortant de sa collection
+     * rendrait une clé dont la liste a encore besoin pour se réécrire. Les clés se rendent
+     * au verrouillage et à la déconnexion, par [rendreLesClesDEquipe].
+     */
     fun revenirAuCoffrePersonnel() {
-        organisationOuverte?.close()
         organisationOuverte = null
         collectionOuverte = null
         lectureDeCollection = LectureDuCoffre()
+    }
+
+    /**
+     * Rend toutes les Org Keys au cœur.
+     *
+     * Les laisser derrière ferait qu'un écran verrouillé garde de quoi déchiffrer une équipe
+     * entière. C'est la contrepartie de les avoir gardées ouvertes.
+     */
+    private fun rendreLesClesDEquipe() {
+        coffresOuverts.values.forEach { it.close() }
+        coffresOuverts = emptyMap()
+        partagesDEquipe = emptyList()
+        revenirAuCoffrePersonnel()
     }
 
     /** Accepte une invitation, puis relit la liste : l'organisation devient lisible. */
@@ -574,10 +722,9 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             try {
                 withContext(Dispatchers.IO) { coffre.accepterLOrganisation(organisation.id) }
                 echecsDOrganisation = echecsDOrganisation - organisation.id
-                organisations = withContext(Dispatchers.IO) { coffre.organisations() }
-                organisations.firstOrNull { it.id == organisation.id }?.let {
-                    ouvrirUneOrganisation(it)
-                }
+                // Le contenu accepté rejoint l'accueil, il n'attend pas qu'on entre quelque
+                // part : c'est tout l'objet de la fusion.
+                chargerLesCoffresDEquipe()
             } catch (e: Exception) {
                 message = messageLisible(e)
             } finally {
@@ -866,38 +1013,86 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      *   un doublon silencieux. D'où un paramètre explicite plutôt qu'une devinette sur un
      *   identifiant vide.
      */
+    /**
+     * Où part une écriture : le coffre personnel, ou une collection d'équipe précise.
+     *
+     * **Elle ne se déduit plus de l'écran.** Tant que l'accueil ne montrait que le coffre
+     * personnel, « ce qu'on regarde » suffisait à router. Depuis la fusion, ce repère a
+     * disparu : une ligne d'équipe se modifie depuis l'accueil, où aucune organisation n'est
+     * ouverte. Router sur l'écran enregistrerait par `/api/vault/items`, ce qui créerait une
+     * **copie privée** au lieu de mettre à jour l'original — l'équipe ne verrait jamais la
+     * modification, et son auteur croirait l'avoir faite.
+     */
+    private sealed interface Destination {
+        data object Personnelle : Destination
+
+        data class Equipe(
+            val ouvert: Coffre.CoffreDOrganisation,
+            val collection: String,
+        ) : Destination
+    }
+
+    /**
+     * La destination d'une écriture, d'après l'**origine** de l'élément.
+     *
+     * @param entree `null` pour une création : elle n'a pas encore d'origine, et suit donc
+     *   ce qu'on regarde — créer depuis l'accueil crée dans le coffre personnel, comme sur
+     *   iOS.
+     * @throws ErreurApi.Reseau si l'élément vient d'une équipe dont la clé n'est plus
+     *   ouverte. **On refuse d'écrire plutôt que de retomber sur le coffre personnel** : le
+     *   repli silencieux produirait exactement la copie privée décrite ci-dessus, sans
+     *   qu'aucune erreur ne le dise. Un refus visible coûte un rafraîchissement ; le repli
+     *   coûte la modification de quelqu'un d'autre.
+     */
+    private fun destinationDe(entree: EntreeDuCoffre.Lisible?): Destination {
+        val appartenance = (entree?.origine as? OrigineDuCoffre.Equipe)?.appartenance
+        if (appartenance != null) {
+            val ouvert = coffresOuverts[appartenance.organisation]
+                ?: throw ErreurApi.Reseau(
+                    "Le coffre d'équipe « ${appartenance.nomEquipe} » n'est plus ouvert. " +
+                        "Rafraîchissez la liste avant d'enregistrer.",
+                )
+            return Destination.Equipe(ouvert, appartenance.collection)
+        }
+        if (entree != null) return Destination.Personnelle
+        val ouvert = organisationOuverte
+        val collection = collectionOuverte
+        return if (ouvert != null && collection != null) {
+            Destination.Equipe(ouvert, collection.id)
+        } else {
+            Destination.Personnelle
+        }
+    }
+
     fun enregistrerUnElement(
         entree: EntreeDuCoffre.Lisible?,
         element: ElementDuCoffre,
         surFin: (Boolean) -> Unit = {},
     ) {
-        val ouvert = organisationOuverte
-        val collection = collectionOuverte
         viewModelScope.launch {
             occupe = true
             message = null
             try {
+                val destination = destinationDe(entree)
                 withContext(Dispatchers.IO) {
-                    // L'écriture suit **ce qu'on regarde**. Router sur autre chose — le
-                    // dernier écran, un état retenu ailleurs — ferait enregistrer un élément
-                    // d'équipe dans le coffre personnel, et il sortirait de l'équipe sans
-                    // qu'aucune erreur ne le dise.
-                    if (ouvert != null && collection != null) {
-                        if (entree == null) {
-                            coffre.creerDansCollection(ouvert, collection.id, element)
+                    when (destination) {
+                        is Destination.Equipe -> if (entree == null) {
+                            coffre.creerDansCollection(
+                                destination.ouvert, destination.collection, element,
+                            )
                         } else {
-                            coffre.mettreAJourDansCollection(ouvert, collection.id, entree, element)
+                            coffre.mettreAJourDansCollection(
+                                destination.ouvert, destination.collection, entree, element,
+                            )
                         }
-                    } else {
-                        if (entree == null) coffre.creer(element)
-                        else coffre.mettreAJour(entree.id, element)
+                        Destination.Personnelle -> if (entree == null) {
+                            coffre.creer(element)
+                        } else {
+                            coffre.mettreAJour(entree.id, element)
+                        }
                     }
                 }
-                if (ouvert != null && collection != null) {
-                    ouvrirUneCollection(collection)
-                } else {
-                    rafraichir()
-                }
+                relireApres()
                 surFin(true)
             } catch (e: Exception) {
                 message = messageLisible(e)
@@ -906,6 +1101,18 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 occupe = false
             }
         }
+    }
+
+    /**
+     * Ce qu'on relit après une écriture.
+     *
+     * Depuis l'accueil, [rafraichir] relit le coffre personnel **et** les équipes : une
+     * modification d'équipe faite depuis la liste fondue doit y revenir, et ne relire que le
+     * personnel la ferait disparaître de l'écran jusqu'au prochain passage.
+     */
+    private fun relireApres() {
+        val collection = collectionOuverte
+        if (collection != null) ouvrirUneCollection(collection) else rafraichir()
     }
 
     /**
@@ -920,21 +1127,23 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      * jamais su ouvrir ne peut donc pas être détruite depuis ici.
      */
     fun supprimerUnElement(entree: EntreeDuCoffre.Lisible, surFin: (Boolean) -> Unit = {}) {
-        val ouvert = organisationOuverte
-        val collection = collectionOuverte
         viewModelScope.launch {
             occupe = true
             message = null
             try {
+                // Routée sur l'origine, comme l'enregistrement — et l'enjeu est le même à
+                // l'envers : supprimer par l'API personnelle un élément qui n'y est pas
+                // rendrait un `404`, ou pire, effacerait un homonyme.
+                val destination = destinationDe(entree)
                 withContext(Dispatchers.IO) {
-                    if (ouvert != null && collection != null) {
-                        coffre.supprimerDansCollection(ouvert, collection.id, entree)
-                    } else {
-                        coffre.supprimer(entree.id)
+                    when (destination) {
+                        is Destination.Equipe -> coffre.supprimerDansCollection(
+                            destination.ouvert, destination.collection, entree,
+                        )
+                        Destination.Personnelle -> coffre.supprimer(entree.id)
                     }
                 }
-                if (ouvert != null && collection != null) ouvrirUneCollection(collection)
-                else rafraichir()
+                relireApres()
                 surFin(true)
             } catch (e: Exception) {
                 message = messageLisible(e)
@@ -952,7 +1161,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         // Les clés d'organisation vivent en mémoire du cœur : les rendre fait partie du
         // verrouillage, au même titre que la clé du coffre. Les laisser derrière ferait
         // qu'un écran verrouillé garde de quoi déchiffrer une équipe entière.
-        revenirAuCoffrePersonnel()
+        rendreLesClesDEquipe()
         organisations = emptyList()
         echecsDOrganisation = emptyMap()
     }
@@ -967,6 +1176,11 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             biometrieActivee = false
             deverrouille = false
             lecture = LectureDuCoffre()
+            // Et les équipes avec : une déconnexion qui laisse les Org Keys ouvertes est un
+            // verrouillage moins complet que le verrouillage.
+            rendreLesClesDEquipe()
+            organisations = emptyList()
+            echecsDOrganisation = emptyMap()
         }
     }
 

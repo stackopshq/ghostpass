@@ -279,6 +279,21 @@ private fun EcranDeRemplissage(
  * Le rapprochement passe par [RapprochementDeSite], **le même objet que la liste du coffre**
  * — pas une seconde règle écrite ici. Deux règles qui divergeraient proposeraient des
  * identifiants différents selon l'endroit d'où l'on regarde.
+ *
+ * ## Le coffre entier, et pas seulement le sien
+ *
+ * On lit `coffreComplet`, pas `lecture`. La distinction n'est pas cosmétique : c'est le
+ * défaut trouvé le même jour dans l'extension iOS, dont le cache ne contenait que le coffre
+ * personnel. Pour un compte dont **tous** les mots de passe vivent en organisation — celui
+ * de Clara — le remplissage annonçait « Aucun identifiant » sur tous les sites, ce qui se
+ * lit comme une application cassée. Les éléments d'équipe ne sont pas un supplément
+ * d'affichage : ils sont le contenu du coffre.
+ *
+ * **Ce qui reste vrai, et qu'il faut dire** : hors ligne, seul le coffre personnel est
+ * proposé. Il a un cache ([StockageDeSession.elementsEnCache]) ; les collections d'équipe
+ * n'en ont pas, et se relisent par le réseau. La phrase ci-dessous compte donc les
+ * illisibles du coffre entier, mais un remplissage hors ligne ne verra que le personnel —
+ * ce n'est pas corrigé ici, et mieux vaut l'écrire que de le laisser croire réglé.
  */
 @Composable
 private fun Proposition(
@@ -287,7 +302,7 @@ private fun Proposition(
     surChoix: (Identifiants) -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
-    val lecture = modele.lecture
+    val lecture = modele.coffreComplet
 
     val avecIdentifiants = lecture.lisibles.filter {
         it.element.data is ContenuDElement.Connexion
