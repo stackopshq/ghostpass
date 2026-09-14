@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Découverte de l'appareil et de l'équipe de signature, partagée par les deux poseurs.
+# Découverte de l'appareil et de l'équipe de signature.
 #
-# `appareil.sh` (équipe d'entreprise, application complète) et `appareil-perso.sh`
-# (équipe personnelle, application seule) faisaient la même chose de deux façons. Ce
-# n'était pas seulement de la duplication : le jour où l'on corrige un piège d'un côté,
-# l'autre le garde — et c'est le côté qu'on n'a pas regardé qui posera la mauvaise
-# application sur le mauvais appareil.
+# Écrit pour être partagé entre deux poseurs — `appareil.sh` et son cousin en équipe
+# personnelle — parce que corriger un piège d'un seul côté laisse l'autre le garder, et
+# que c'est le côté qu'on n'a pas regardé qui pose la mauvaise application sur le mauvais
+# appareil. Le cousin a depuis disparu, l'adhésion payante l'ayant rendu inutile ; ce
+# fichier reste séparé, la découverte n'ayant rien à voir avec la construction.
 #
 # Ce fichier se source, il ne s'exécute pas.
 

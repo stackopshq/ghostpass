@@ -59,9 +59,14 @@ mais le signe que le compromis a été pesé ailleurs dans le même sens.
   restent lisibles, aucune migration n'est nécessaire.
 - Le code ne pose toujours pas `kSecAttrAccessGroup` : le défaut suffit, et une constante
   en dur devrait porter le préfixe d'équipe, qui varie selon la signature.
-- La variante « équipe personnelle » (`project-perso.yml`) retire le fichier
-  d'habilitations en entier : elle conserve donc le comportement d'avant. Le remplissage
-  automatique y est de toute façon hors de portée.
+- Le repli de `SharedStore` sur le conteneur privé quand le groupe d'applications manque
+  est conservé, bien que la variante « équipe personnelle » qui le motivait ait été
+  supprimée le 14 septembre 2026, l'adhésion payante rendant le groupe provisionnable.
+  Ce repli reste juste : il fait fonctionner l'application seule quand le groupe est
+  indisponible pour une raison quelconque. Mais il est **silencieux**, et c'est son
+  défaut — l'extension lit alors un conteneur vide et annonce un coffre sans identifiant.
+  Les réglages affichent désormais l'état du partage, précisément pour que ce repli cesse
+  de se confondre avec un coffre vide.
 
 ## Ce que ça ne change pas
 

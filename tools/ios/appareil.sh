@@ -4,19 +4,19 @@
 #
 #   ./tools/ios/appareil.sh
 #
-# ─── Ce que ce script fait et que son cousin ne peut pas ───
+# ─── Ce qu'il suppose ───
 #
-# `appareil-perso.sh` signe avec une équipe personnelle et pose l'application seule. Ce
-# n'est pas un choix de confort : une équipe personnelle ne peut provisionner ni le groupe
+# Une **adhésion payante**. Une équipe personnelle ne peut provisionner ni le groupe
 # d'applications ni le fournisseur d'identifiants — Xcode répond « the selected team does
-# not have a program membership that is eligible for this feature ». Le remplissage
-# automatique était donc, jusqu'ici, la seule fonction qu'aucun essai sur matériel n'a
-# jamais couverte.
+# not have a program membership that is eligible for this feature ».
 #
-# Ce script-ci suppose une adhésion payante. Dès que le remplissage aura été éprouvé sur
-# un vrai téléphone, `appareil-perso.sh` et `project-perso.yml` n'auront plus de raison
-# d'être : ils existaient pour contourner cette limite, et c'est la variante `.essai`
-# qu'ils produisent qui a causé le décalage de schéma SSO relevé le 31 août.
+# Il a existé pour cette raison une variante « équipe personnelle », qui posait
+# l'application seule sous un identifiant suffixé `.essai`. Elle a été supprimée le
+# 14 septembre 2026, le remplissage automatique ayant enfin été éprouvé sur un iPhone.
+# Elle laisse deux leçons : c'est son identifiant suffixé qui avait causé le décalage de
+# schéma SSO du 31 août, et c'est elle qui avait immobilisé le groupe
+# `group.ch.stackops.ghostpass` sous une équipe personnelle — identifiant que le compte
+# payant n'a jamais pu récupérer, seulement contourner en le suffixant `.coffre`.
 #
 # ─── Ce qu'il ne prouve pas ───
 #
@@ -68,8 +68,8 @@ if ! xcodebuild -project "$IOS/Ghostpass.xcodeproj" -scheme Ghostpass \
   if grep -qa "program membership that is eligible" "$JOURNAL"; then
     echo >&2
     echo "L'équipe $EQUIPE n'a pas d'adhésion payante : elle ne peut provisionner ni le" >&2
-    echo "groupe d'applications ni le fournisseur d'identifiants. Utilisez" >&2
-    echo "tools/ios/appareil-perso.sh, ou précisez l'équipe d'entreprise :" >&2
+    echo "groupe d'applications ni le fournisseur d'identifiants. Précisez l'équipe" >&2
+    echo "d'entreprise :" >&2
     echo >&2
     echo "  DEVELOPMENT_TEAM=XXXXXXXXXX $0" >&2
   fi
@@ -84,7 +84,7 @@ APP="$(find "$IOS/.build-appareil/Build/Products" -name "Ghostpass.app" -maxdept
 # On regarde donc avant de poser, plutôt que de chercher ensuite pourquoi rien ne vient.
 if [[ ! -d "$APP/PlugIns/GhostpassAutoFill.appex" ]]; then
   echo "L'extension de remplissage n'est pas dans le paquet construit." >&2
-  echo "Le projet engendré est-il bien celui de project.yml, et non la variante perso ?" >&2
+  echo "La cible GhostpassAutoFill est-elle bien dans project.yml et embarquée ?" >&2
   exit 1
 fi
 

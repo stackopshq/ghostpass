@@ -30,12 +30,6 @@ apps/ios/GhostpassCrypto.xcframework/
 # Rapports de tests iOS (conservés en cas d'échec, régénérables)
 apps/ios/TestResults/
 apps/ios/.build/
-# Le répertoire de compilation de la variante « équipe personnelle », et le projet qu'elle
-# génère. Tous deux sont produits par tools/ios/appareil-perso — ils n'ont pas plus à être
-# versionnés que `.build/` ou `Ghostpass.xcodeproj`, et 3 000 objets de compilation étaient
-# entrés dans l'historique faute de cette ligne.
-apps/ios/.build-perso/
-apps/ios/GhostpassPerso.xcodeproj/
 __pycache__/
 
 # Métadonnées du Finder, jamais utiles à personne.
