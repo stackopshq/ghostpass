@@ -29,67 +29,11 @@ done
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IOS="$ROOT/apps/ios"
 
-say() { printf "\n\033[1m▸ %s\033[0m\n" "$*" >&2; }
+# shellcheck source=tools/ios/lib-appareil.sh
+source "$ROOT/tools/ios/lib-appareil.sh"
 
-# ── L'appareil ────────────────────────────────────────────────────────────────
-# Découvert, pas codé en dur : le script doit servir à quelqu'un d'autre, avec un autre
-# appareil.
-#
-# `GHOSTPASS_APPAREIL` choisit par le nom quand plusieurs sont branchés. Sans lui, le
-# script prenait le premier venu **en silence** — on croyait poser sur l'iPhone et l'on
-# posait sur l'iPad. Il affiche donc le nom de celui qu'il retient, et refuse de choisir
-# seul quand il y a plusieurs candidats.
-CANDIDATS="$(xcrun devicectl list devices 2>/dev/null |
-  awk '$0 ~ /connected/ && $0 !~ /no DDI/ && $0 !~ /unavailable/ {
-         nom = $1; for (i = 2; $i !~ /coredevice\.local/; i++) nom = nom " " $i
-         print nom "\t" $(i+1) }')"
-
-if [[ -n "${GHOSTPASS_APPAREIL:-}" ]]; then
-  CANDIDATS="$(printf '%s\n' "$CANDIDATS" | grep -i -- "$GHOSTPASS_APPAREIL" || true)"
-fi
-
-NOMBRE="$(printf '%s' "$CANDIDATS" | grep -c . || true)"
-if [[ "$NOMBRE" -gt 1 ]]; then
-  echo "Plusieurs appareils sont branchés — précisez lequel :" >&2
-  printf '%s\n' "$CANDIDATS" | cut -f1 | sed 's/^/  /' >&2
-  echo >&2
-  echo "  GHOSTPASS_APPAREIL=\"iPad\" $0" >&2
-  exit 1
-fi
-NOM="$(printf '%s' "$CANDIDATS" | cut -f1)"
-DEVICE="$(printf '%s' "$CANDIDATS" | cut -f2)"
-if [[ -z "$DEVICE" ]]; then
-  echo "Aucun iPhone utilisable n'est branché." >&2
-  echo >&2
-  echo "  1. Brancher le téléphone en USB — avec un câble de données, pas d'alimentation." >&2
-  echo "  2. Le déverrouiller et répondre « Se fier » à l'alerte." >&2
-  echo "  3. Activer Réglages > Confidentialité et sécurité > Mode développeur." >&2
-  echo "     Ce menu n'apparaît qu'après une première tentative depuis Xcode." >&2
-  echo >&2
-  echo "État vu par le Mac :" >&2
-  xcrun devicectl list devices 2>&1 | sed -n '1,6p' >&2
-  exit 1
-fi
-say "Appareil : ${NOM:-inconnu} ($DEVICE)"
-
-# ── L'équipe ──────────────────────────────────────────────────────────────────
-# Lue depuis le certificat de développement, dont le champ OU porte l'identifiant
-# d'équipe. Xcode le crée au premier build vers un appareil ; s'il manque, c'est que ce
-# premier build n'a jamais eu lieu.
-EQUIPE="${DEVELOPMENT_TEAM:-}"
-if [[ -z "$EQUIPE" ]]; then
-  EQUIPE="$(security find-certificate -c "Apple Development" -p 2>/dev/null |
-    openssl x509 -noout -subject 2>/dev/null |
-    tr ',' '\n' | awk -F= '/OU/ {gsub(/ /, "", $2); print $2; exit}')"
-fi
-if [[ -z "$EQUIPE" ]]; then
-  echo "Aucun certificat « Apple Development » dans le trousseau." >&2
-  echo "Xcode le crée au premier build vers un appareil : ouvrez" >&2
-  echo "apps/ios/Ghostpass.xcodeproj, choisissez votre équipe personnelle sur les deux" >&2
-  echo "cibles, lancez une fois, puis revenez ici." >&2
-  exit 1
-fi
-say "Équipe : $EQUIPE"
+trouver_l_appareil
+trouver_l_equipe
 
 # ── Construction et pose ──────────────────────────────────────────────────────
 say "Bindings et projet"
