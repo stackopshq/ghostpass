@@ -180,7 +180,26 @@ comportement sous mémoire contrainte.
 
 ## Ce qui n'est pas prêt et qu'il vaut mieux savoir
 
-- `GET /api/mfa` doit être déployé avant que l'écran de second facteur ne fonctionne
-  contre un serveur en production.
-- Le journal du compte suppose que `/api/account/audit` et `/api/account/activity` soient
-  servis par la version déployée.
+- ~~`GET /api/mfa` doit être déployé…~~ **Fait.** Vérifié le 14 septembre 2026 contre
+  `ghostpass.stackops.ch` : les trois routes — `/api/mfa`, `/api/account/audit`,
+  `/api/account/activity` — répondent `401 {"error":"non authentifié"}`, c'est-à-dire
+  **notre** message et non un 404 de Fastify. Elles sont donc enregistrées et servies ;
+  seule l'authentification manquait à la requête d'essai.
+
+  La distinction vaut d'être notée, parce qu'elle a servi deux fois aujourd'hui : un 404
+  portant un message à nous dit « la route existe et refuse », un 404 nu dit « la route
+  n'existe pas ». C'est ainsi qu'on a su que le SSO mobile était déployé mais désactivé,
+  et non absent.
+
+- Le **SSO mobile fonctionne**, vérifié le 14 septembre 2026 de bout en bout côté serveur :
+  `GET /api/auth/sso/mobile/start` avec un défi PKCE S256 valide rend un `302` vers
+  Cloudflare Access, avec le bon `redirect_uri`, un `state` et un `nonce`.
+
+  Il a traversé trois états en une journée, et c'est le message qui les distinguait :
+  `404` nu de Fastify — la route n'existe pas — puis `404 {"error":"SSO mobile désactivé"}`
+  — elle existe, la configuration manque — puis `400 {"error":"requête invalide"}` — elle
+  est configurée, c'est la requête d'essai qui était incomplète. Trois diagnostics
+  opposés derrière deux fois le même code HTTP.
+
+  Reste à éprouver le **client iOS** contre lui : `SsoMobile.swift` n'a jamais parlé à
+  autre chose qu'un banc.
