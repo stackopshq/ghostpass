@@ -54,6 +54,11 @@ n'est pas notre cas.
 Ces deux points sont juridiques. Ils sont mentionnés ici parce qu'ils conditionnent la
 publication, pas parce que ce document sait y répondre.
 
+L'annexe technique que les deux démarches réclament — primitives, paramètres, gestion des
+clés, ce que le serveur détient — est rédigée et vérifiable :
+[`anssi-dossier-technique.md`](anssi-dossier-technique.md). Elle décrit le code, pas le
+droit, et le dit.
+
 ### Fiche App Store Connect
 
 - Politique de confidentialité : une URL est **obligatoire**. Brouillon dans
