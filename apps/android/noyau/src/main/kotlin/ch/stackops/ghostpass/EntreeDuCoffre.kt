@@ -27,11 +27,28 @@ sealed interface EntreeDuCoffre {
     /** Millisecondes depuis l'epoch, telles que le serveur les rend. Voir [ElementChiffre]. */
     val misAJourLe: Long?
 
+    /**
+     * **D'où vient cette ligne, et par quelle route elle se réécrit.**
+     *
+     * Elle voyage avec l'élément depuis son déchiffrement jusqu'au bouton qui l'enregistre,
+     * et ce n'est pas décoratif : le coffre personnel et les collections d'équipe ne
+     * s'écrivent pas par les mêmes routes. Enregistrer un élément d'équipe par l'API
+     * personnelle en créerait une **copie privée** au lieu de mettre à jour l'original —
+     * l'équipe ne verrait jamais la modification, et son auteur croirait l'avoir faite.
+     *
+     * Tant que l'écran d'accueil ne montrait que le coffre personnel, router sur « ce qu'on
+     * regarde » suffisait. Depuis que les deux listes n'en font qu'une, ce repère a disparu :
+     * il n'y a plus d'écran d'équipe où l'on serait entré. L'origine remplace donc le
+     * contexte d'écran, et c'est le seul repère qui reste juste.
+     */
+    val origine: OrigineDuCoffre
+
     /** Une ligne ouverte. */
     data class Lisible(
         override val id: String,
         val element: ElementDuCoffre,
         override val misAJourLe: Long? = null,
+        override val origine: OrigineDuCoffre = OrigineDuCoffre.Personnel,
     ) : EntreeDuCoffre
 
     /**
@@ -45,7 +62,52 @@ sealed interface EntreeDuCoffre {
         override val id: String,
         val raison: RaisonDIllisibilite,
         override val misAJourLe: Long? = null,
+        override val origine: OrigineDuCoffre = OrigineDuCoffre.Personnel,
     ) : EntreeDuCoffre
+}
+
+/**
+ * Où vit un élément partagé, et ce qu'on a le droit d'y faire.
+ *
+ * Transposition exacte de l'`Appartenance` d'iOS, jusqu'aux noms : les deux plateformes
+ * montrent la même étiquette et prennent la même décision d'écriture, et deux définitions
+ * qui divergeraient produiraient deux comportements sans qu'aucune erreur ne le dise.
+ */
+data class Appartenance(
+    val organisation: String,
+    val collection: String,
+    val nomEquipe: String,
+    val nomCollection: String,
+    /**
+     * Peut-on écrire dans cette collection ?
+     *
+     * La permission **effective** que le serveur calcule par collection, et non le rôle
+     * dans l'organisation : un membre ordinaire peut n'avoir que la lecture ici et
+     * l'écriture ailleurs. S'en remettre au rôle proposait « Modifier » sur une collection
+     * en lecture seule, et l'échec arrivait après la saisie.
+     */
+    val peutEcrire: Boolean,
+)
+
+/** Le coffre d'où sort une ligne : le sien, ou celui d'une équipe. */
+sealed interface OrigineDuCoffre {
+    /** L'appartenance, quand il y en a une. Nulle pour le coffre personnel. */
+    val appartenance: Appartenance? get() = null
+
+    data object Personnel : OrigineDuCoffre
+
+    data class Equipe(override val appartenance: Appartenance) : OrigineDuCoffre
+
+    val estDEquipe: Boolean get() = this is Equipe
+
+    /**
+     * Ce que la pastille affiche : « équipe · collection ».
+     *
+     * Les deux, parce que savoir **laquelle** compte dès qu'on appartient à plusieurs
+     * équipes, et qu'une collection n'a de sens qu'associée à la sienne.
+     */
+    val etiquette: String?
+        get() = appartenance?.let { "${it.nomEquipe} · ${it.nomCollection}" }
 }
 
 /**

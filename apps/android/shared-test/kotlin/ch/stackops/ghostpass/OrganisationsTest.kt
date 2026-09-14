@@ -164,6 +164,125 @@ class OrganisationsTest {
         assertTrue("deux organisations doivent avoir deux clés", refuse)
     }
 
+    // ─── Le coffre d'accueil fond le personnel et l'équipe ───
+
+    private fun lisible(nom: String, origine: OrigineDuCoffre = OrigineDuCoffre.Personnel) =
+        EntreeDuCoffre.Lisible(
+            id = nom,
+            element = ElementDuCoffre(
+                name = nom, notes = null, folder = null,
+                data = ContenuDElement.NoteSecrete(Note("x")),
+            ),
+            origine = origine,
+        )
+
+    private val appartenance = Appartenance(
+        organisation = "org-1", collection = "col-1",
+        nomEquipe = "Équipe StackOps", nomCollection = "Coffre commun",
+        peutEcrire = true,
+    )
+
+    /**
+     * **Le coffre d'accueil contient les deux, et l'on sait lesquels sont d'équipe.**
+     *
+     * Le défaut que cela corrige : quelqu'un dont tout vit dans une organisation voyait
+     * « aucun élément » et concluait à une perte de données.
+     *
+     * Le test n'affirme pas « il y a au moins un élément » — il serait vert sans la fusion,
+     * le coffre personnel suffisant à le satisfaire. Il exige **les deux noms** et la
+     * **marque** qui les distingue : retirer la fusion fait disparaître le second, retirer
+     * le marquage fait disparaître l'étiquette.
+     */
+    @Test
+    fun leCoffreDAccueilFondLePersonnelEtLEquipe() {
+        val personnel = LectureDuCoffre(entrees = listOf(lisible("Forgejo")))
+        val equipe = Coffre.marquerCommeDEquipe(
+            LectureDuCoffre(entrees = listOf(lisible("Routeur de l'agence"))),
+            appartenance,
+        )
+
+        val fondu = Coffre.fusionner(personnel, listOf(equipe))
+        val noms = fondu.lisibles.map { it.element.name }
+
+        assertTrue("l'élément personnel a disparu de l'accueil : $noms", "Forgejo" in noms)
+        assertTrue(
+            "l'élément d'équipe n'est pas dans l'accueil — c'est le défaut qui ressemble à " +
+                "une perte de données : $noms",
+            "Routeur de l'agence" in noms,
+        )
+
+        val duPersonnel = fondu.lisibles.first { it.element.name == "Forgejo" }
+        val delEquipe = fondu.lisibles.first { it.element.name == "Routeur de l'agence" }
+        assertEquals(OrigineDuCoffre.Personnel, duPersonnel.origine)
+        assertEquals(
+            "l'étiquette doit nommer l'équipe ET la collection : avec plusieurs équipes, " +
+                "« Coffre commun » seul ne dit pas de laquelle il s'agit",
+            "Équipe StackOps · Coffre commun",
+            delEquipe.origine.etiquette,
+        )
+    }
+
+    /**
+     * Une ligne d'équipe **illisible** garde sa marque.
+     *
+     * Sans elle, elle se lirait comme un élément personnel abîmé, et l'on irait chercher le
+     * défaut dans le mauvais coffre — alors que la cause est presque toujours une clé
+     * d'organisation qu'on n'a pas encore reçue.
+     */
+    @Test
+    fun uneLigneDEquipeIllisibleGardeSaMarque() {
+        val equipe = Coffre.marquerCommeDEquipe(
+            LectureDuCoffre(
+                entrees = listOf(
+                    EntreeDuCoffre.Illisible("x", RaisonDIllisibilite.CleManquante),
+                ),
+            ),
+            appartenance,
+        )
+        val entree = equipe.entrees.single()
+        assertTrue("une ligne illisible d'équipe doit rester marquée", entree.origine.estDEquipe)
+        assertEquals("Équipe StackOps · Coffre commun", entree.origine.etiquette)
+    }
+
+    /**
+     * Le tri mêle vraiment les deux origines, au lieu de les accoler.
+     *
+     * Deux listes concaténées se lisent comme deux listes, pas comme un coffre. Le contrôle
+     * est concluant parce que l'ordre attendu **alterne** : une simple concaténation
+     * donnerait `Alpha, Zoulou, Bravo`, qui n'est pas l'ordre demandé.
+     */
+    @Test
+    fun lOrdreMeleLesDeuxOrigines() {
+        val personnel = LectureDuCoffre(entrees = listOf(lisible("Alpha"), lisible("Zoulou")))
+        val equipe = Coffre.marquerCommeDEquipe(
+            LectureDuCoffre(entrees = listOf(lisible("Bravo"))), appartenance)
+        assertEquals(
+            listOf("Alpha", "Bravo", "Zoulou"),
+            Coffre.fusionner(personnel, listOf(equipe)).lisibles.map { it.element.name },
+        )
+    }
+
+    /**
+     * Sans équipe, la lecture personnelle traverse **inchangée**.
+     *
+     * Le contrôle du contrôle : si la fusion réordonnait ou recopiait toujours, les tests
+     * ci-dessus passeraient pour une raison qui n'est pas la fusion. Ici on vérifie aussi
+     * que les registres et dossiers du coffre personnel survivent — ils ne viennent que de
+     * lui, et une fusion maladroite les perdrait en silence.
+     */
+    @Test
+    fun sansEquipeLaLecturePersonnelleEstIntacte() {
+        val personnel = LectureDuCoffre(
+            entrees = listOf(lisible("Zoulou"), lisible("Alpha")),
+            dossiersVides = listOf("Travail"),
+            favoris = setOf("Zoulou"),
+        )
+        val fondu = Coffre.fusionner(personnel, emptyList())
+        assertEquals(listOf("Zoulou", "Alpha"), fondu.lisibles.map { it.element.name })
+        assertEquals(listOf("Travail"), fondu.dossiersVides)
+        assertEquals(setOf("Zoulou"), fondu.favoris)
+    }
+
     // ─── Une organisation ne se laisse pas tomber non plus ───
 
     /**

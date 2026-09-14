@@ -1051,6 +1051,67 @@ class Coffre {
             return cle to donnees
         }
 
+        /**
+         * Marque toutes les lignes d'une lecture comme venant d'une collection d'équipe.
+         *
+         * **Les illisibles aussi.** Une ligne d'équipe qu'on n'a pas su ouvrir doit rester
+         * reconnaissable comme telle : sans marque, elle se lirait comme un élément personnel
+         * abîmé, et l'on chercherait le défaut dans le mauvais coffre.
+         */
+        fun marquerCommeDEquipe(
+            lecture: LectureDuCoffre,
+            appartenance: Appartenance,
+        ): LectureDuCoffre = lecture.copy(
+            entrees = lecture.entrees.map { entree ->
+                when (entree) {
+                    is EntreeDuCoffre.Lisible ->
+                        entree.copy(origine = OrigineDuCoffre.Equipe(appartenance))
+                    is EntreeDuCoffre.Illisible ->
+                        entree.copy(origine = OrigineDuCoffre.Equipe(appartenance))
+                }
+            },
+        )
+
+        /**
+         * **Fond le coffre personnel et les collections d'équipe en une seule liste.**
+         *
+         * C'est le modèle d'iOS, et le défaut qu'il corrige est le plus grave qu'ait connu ce
+         * portage : quelqu'un dont tout le contenu vit dans une organisation ouvrait
+         * l'application, voyait « aucun élément », et concluait que ses données avaient
+         * disparu. Elles étaient là — ailleurs, derrière une navigation qu'il ne connaissait
+         * pas. Aucune erreur, et l'apparence exacte d'une perte de données.
+         *
+         * Le tri est fait sur le **nom, sans tenir compte de la casse** : deux listes
+         * concaténées donneraient tous les éléments personnels puis tous ceux d'équipe, ce qui
+         * se lit comme deux listes accolées plutôt que comme un coffre.
+         *
+         * Les registres et les dossiers ne viennent que du coffre personnel : une collection
+         * d'équipe n'en porte pas, et les fusionner ferait apparaître les dossiers d'une équipe
+         * comme les siens.
+         */
+        fun fusionner(
+            personnel: LectureDuCoffre,
+            equipes: List<LectureDuCoffre>,
+        ): LectureDuCoffre {
+            if (equipes.isEmpty()) return personnel
+            val toutes = personnel.entrees + equipes.flatMap { it.entrees }
+            return personnel.copy(entrees = toutes.sortedWith(PAR_NOM))
+        }
+
+        /**
+         * L'ordre de la liste fondue : par nom, insensible à la casse.
+         *
+         * Une ligne illisible n'a **pas** de nom — le nom vit dans le chiffré, et en
+         * inventer un serait mentir. Elle se range donc en fin de liste plutôt qu'en tête,
+         * où une chaîne vide l'aurait mise : la première place attire l'œil, et ce n'est pas
+         * là qu'on veut ce qu'on ne sait pas lire.
+         */
+        internal val PAR_NOM: Comparator<EntreeDuCoffre> =
+            compareBy<EntreeDuCoffre> { it !is EntreeDuCoffre.Lisible }
+                .thenBy(String.CASE_INSENSITIVE_ORDER) {
+                    (it as? EntreeDuCoffre.Lisible)?.element?.name ?: ""
+                }
+
         /** L'inverse : rend le couple `(encryptedKey, encryptedData)` à envoyer au serveur. */
         fun sceller(element: ElementDuCoffre, compte: Account): Pair<String, String> {
             val scelle = compte.encryptItem(CodecDElement.ecrire(element))
