@@ -54,6 +54,34 @@ struct SettingsView: View {
                     }
                 }
 
+                // ─── Ce que voit le remplissage automatique ───
+                //
+                // L'extension est un processus séparé qui ne lit **que** la copie déposée
+                // dans le conteneur partagé. Quand cette copie manque, elle affiche
+                // « Aucun identifiant » — un message qui décrit son écran sans rien dire
+                // de la cause, et qui ressemble à s'y méprendre à un défaut d'appariement
+                // de domaine. Rien dans l'application ne permettait de trancher : ni
+                // l'état du partage ni le contenu de la copie n'étaient visibles quelque
+                // part.
+                //
+                // Cette section ne répare rien ; elle rend lisible un état invisible, ce
+                // qui vaut mieux qu'un second écran silencieux.
+                GhostSection(
+                    titre: "Remplissage automatique",
+                    note:
+                        "L'extension ne voit pas le serveur : elle lit une copie chiffrée déposée par l'application. Une copie vide ne propose rien, quel que soit le site."
+                ) {
+                    ligneDeDiagnostic(
+                        "Conteneur partagé",
+                        SharedStore.isShared ? "actif" : "indisponible",
+                        alerte: !SharedStore.isShared)
+                    GhostDivider()
+                    ligneDeDiagnostic(
+                        "Copie locale",
+                        elementsEnCopie.map { "\($0) élément(s)" } ?? "absente",
+                        alerte: (elementsEnCopie ?? 0) == 0)
+                }
+
                 GhostSection(
                     titre: "Icônes des sites",
                     note:
@@ -115,6 +143,25 @@ struct SettingsView: View {
             }
         }
         .tint(Color.gpAccentText)
+    }
+
+    /// Le nombre d'éléments dans la copie locale, ou `nil` si elle n'existe pas.
+    ///
+    /// On compte les enregistrements chiffrés **sans les déchiffrer** : la question est
+    /// « l'application a-t-elle déposé quelque chose », pas « ce dépôt est-il lisible ».
+    /// Les confondre ferait passer un dépôt réussi mais illisible pour une absence.
+    private var elementsEnCopie: Int? { VaultCache.load()?.count }
+
+    private func ligneDeDiagnostic(_ titre: String, _ valeur: String, alerte: Bool)
+        -> some View
+    {
+        HStack {
+            Text(verbatim: titre).foregroundStyle(Color.gpInk)
+            Spacer()
+            Text(verbatim: valeur).foregroundStyle(alerte ? Color.gpDanger : Color.gpMuted)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 
     private func vignette(_ cas: Apparence) -> some View {

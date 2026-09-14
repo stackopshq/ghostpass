@@ -124,6 +124,37 @@ final class AutoFillStore: ObservableObject {
         }
     }
 
+    /// Les identifiants rangés en organisation.
+    ///
+    /// Ils manquaient entièrement : `VaultCache` ne dépose que le coffre personnel, si
+    /// bien qu'un compte dont tous les mots de passe vivent en équipe donnait une copie
+    /// locale vide — et « Aucun identifiant » sur tous les sites. Voir `TeamCache`.
+    ///
+    /// L'Org Key se déballe ici comme dans l'application, avec la clé privée du compte et
+    /// les deux blobs déposés. Aucun réseau : c'est la règle de l'extension.
+    ///
+    /// Une organisation qui ne s'ouvre pas est **ignorée sans un mot**, contrairement à
+    /// l'application qui montre le trou. Le remplissage n'est pas un endroit où lire un
+    /// diagnostic : il doit aboutir en quelques secondes, et une ligne « illisible » n'y
+    /// serait jamais remplissable. Le coffre personnel, lui, reste proposé.
+    private func coffresDEquipe(with account: Account) -> [VaultEntry] {
+        guard let coffres = TeamCache.load() else { return [] }
+        var trouvees: [VaultEntry] = []
+        for coffre in coffres {
+            guard
+                let org = try? account.openOrg(
+                    adminPublicKey: coffre.adminPublicKey, sealed: coffre.encryptedOrgKey)
+            else { continue }
+            for dto in coffre.items {
+                guard let item = try? org.ouvrir(dto),
+                    !VaultStore.isRegistry(item), item.data.isLogin
+                else { continue }
+                trouvees.append(VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt))
+            }
+        }
+        return trouvees
+    }
+
     /// Déchiffre la copie locale. Pas d'appel réseau : le remplissage doit aboutir même
     /// dans un ascenseur, et l'extension n'a pas de session à elle.
     private func load(with account: Account) {
@@ -134,7 +165,10 @@ final class AutoFillStore: ObservableObject {
             else { return nil }
             return VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt)
         }
-        .sorted { $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending }
+        entries += coffresDEquipe(with: account)
+        entries.sort {
+            $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending
+        }
         isUnlocked = true
         if !entries.isEmpty && proposables.isEmpty && demande == .codeAUsageUnique {
             // Le coffre n'est pas vide : il ne contient simplement aucun code. Le dire,

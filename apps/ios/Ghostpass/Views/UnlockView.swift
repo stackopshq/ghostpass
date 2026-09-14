@@ -69,6 +69,21 @@ struct UnlockView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { demanderLaBiometrie() }
         }
+        // Troisième chemin : la condition devient vraie **après** l'apparition.
+        //
+        // `canUnlockWithBiometrics` lit la session partagée, donc un fichier protégé par
+        // `completeFileProtection`, et l'interrogation de `LAContext`. Rien ne garantit
+        // que les deux aboutissent avant le premier `onAppear` — auquel cas les deux
+        // chemins précédents passent leur garde sans rien faire, le bouton paraît, et il
+        // faut le toucher. C'est ce que Clara observe sur son iPhone ; je n'ai pas pu
+        // reproduire l'ordre exact, et ce chemin-ci couvre le cas sans supposer lequel
+        // des deux tarde.
+        //
+        // `biometrieDemandee` reste le garde : on ne pose la question qu'une fois par
+        // présentation, refus compris.
+        .onChange(of: store.canUnlockWithBiometrics) { _, possible in
+            if possible { demanderLaBiometrie() }
+        }
         // L'adresse peut changer sous les doigts : on redemande, mais seulement quand elle
         // devient plausible, pour ne pas interroger un serveur à chaque caractère tapé.
         .task(id: serveurEffectif) { await interrogerLeSSO() }

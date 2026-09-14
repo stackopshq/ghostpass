@@ -66,6 +66,10 @@ struct CoffrePartageOuvert {
     let organisation: Organisation
     let collections: [OrgCollectionDTO]
     let org: Org
+    /// Les deux blobs qui ont permis de déballer l'Org Key, conservés pour que la copie
+    /// locale du remplissage puisse refaire la même opération sans réseau. Voir `TeamCache`.
+    let adminPublicKey: String
+    let encryptedOrgKey: String
 }
 
 /// Un membre d'équipe, vu par un administrateur.

@@ -312,6 +312,7 @@ final class VaultStore: ObservableObject {
         token = nil
         api = nil
         VaultCache.clear()
+        TeamCache.clear()
         for key in [
             Keychain.Key.token, Keychain.Key.masterPassword, Keychain.Key.biometricsEnabled,
         ] {
@@ -523,10 +524,17 @@ final class VaultStore: ObservableObject {
         guard !equipes.isEmpty else { return }
 
         var partages: [VaultEntry] = []
+        // Ce que le remplissage automatique lira, sans réseau. Voir `TeamCache` : sans ce
+        // dépôt, un coffre entièrement rangé en organisation donne une copie locale vide,
+        // et l'extension annonce « Aucun identifiant » sur tous les sites.
+        var aDeposer: [CoffreDEquipeEnCache] = []
         for equipe in equipes where equipe.etat == .active {
             guard let ouvert = await ouvrirLOrganisation(equipe) else { continue }
+            var dtosDeLEquipe: [EncryptedItemDTO] = []
             for collection in ouvert.collections {
-                let entrees = await itemsPartages(ouvert, collection: collection.id)
+                let dtos = await dtosPartages(ouvert, collection: collection.id)
+                dtosDeLEquipe += dtos
+                let entrees = Self.lectureDEquipe(dtos, ouvert.org)
                 partages += entrees.map { entree in
                     var marquee = entree
                     marquee.origine = .equipe(
@@ -537,7 +545,18 @@ final class VaultStore: ObservableObject {
                     return marquee
                 }
             }
+            aDeposer.append(
+                CoffreDEquipeEnCache(
+                    organisation: equipe.id, nom: equipe.nom,
+                    adminPublicKey: ouvert.adminPublicKey,
+                    encryptedOrgKey: ouvert.encryptedOrgKey,
+                    items: dtosDeLEquipe))
         }
+
+        // Déposé **avant** le garde sur `partages` : une organisation active dont toutes
+        // les collections sont vides doit tout de même remplacer un dépôt périmé, sans
+        // quoi le remplissage continuerait de proposer des éléments retirés depuis.
+        TeamCache.save(aDeposer)
 
         guard !partages.isEmpty else { return }
         entries = (entries + partages).sorted {
@@ -1356,7 +1375,8 @@ final class VaultStore: ObservableObject {
             let org = try account.openOrg(adminPublicKey: adminPublicKey, sealed: scellee)
             let collections = try await api.orgCollections(token: token, org: organisation.id)
             return CoffrePartageOuvert(
-                organisation: organisation, collections: collections, org: org)
+                organisation: organisation, collections: collections, org: org,
+                adminPublicKey: adminPublicKey, encryptedOrgKey: scellee)
         } catch {
             errorMessage = error.localizedDescription
             return nil
@@ -1364,6 +1384,41 @@ final class VaultStore: ObservableObject {
     }
 
     /// Les items d'une collection, déchiffrés sous l'Org Key.
+    /// Les enregistrements bruts d'une collection, tels que le serveur les détient.
+    ///
+    /// Séparé du déchiffrement pour que l'affichage et le dépôt local se partagent un
+    /// seul appel réseau — les redemander serait payer deux fois la même chose, et laisser
+    /// les deux vues diverger si le coffre change entre les deux.
+    private func dtosPartages(_ ouvert: CoffrePartageOuvert, collection: String) async
+        -> [EncryptedItemDTO]
+    {
+        guard let api, let token else { return [] }
+        do {
+            return try await api.orgItems(
+                token: token, org: ouvert.organisation.id, collection: collection)
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
+        }
+    }
+
+    /// Déchiffre des enregistrements d'équipe déjà récupérés.
+    static func lectureDEquipe(_ dtos: [EncryptedItemDTO], _ org: Org) -> [VaultEntry] {
+        dtos.map { dto -> VaultEntry in
+            // Même règle que le coffre personnel : une collection d'équipe dont une ligne
+            // ne s'ouvre pas doit montrer le trou. C'est même plus vrai ici — l'élément a
+            // été scellé par quelqu'un d'autre, et son absence se lirait comme « cette
+            // personne ne l'a pas encore créé ».
+            guard let item = try? org.ouvrir(dto) else {
+                return VaultEntry.illisible(id: dto.id, updatedAt: dto.updatedAt)
+            }
+            return VaultEntry(id: dto.id, item: item, updatedAt: dto.updatedAt)
+        }
+        .sorted {
+            $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending
+        }
+    }
+
     func itemsPartages(_ ouvert: CoffrePartageOuvert, collection: String) async -> [VaultEntry] {
         guard let api, let token else { return [] }
         do {
