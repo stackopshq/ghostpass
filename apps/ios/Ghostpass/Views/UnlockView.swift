@@ -127,7 +127,15 @@ struct UnlockView: View {
             return
         }
         biometrieDemandee = true
-        Task { await store.unlockWithBiometrics() }
+        Task {
+            // Le garde ne vaut que pour une question **posée**. Quand le trousseau répond
+            // qu'il n'était pas en état de la présenter — cas de tout `onAppear` de
+            // lancement, l'application n'étant pas encore au premier plan — on rouvre le
+            // garde pour que le passage à `.active` reprenne la main. Sans cela le
+            // déclenchement automatique se consommait dans le vide et il fallait toucher
+            // le bouton : constaté sur iPhone, jamais sur simulateur.
+            if await store.unlockWithBiometrics() == false { biometrieDemandee = false }
+        }
     }
 
     private var enseigne: some View {

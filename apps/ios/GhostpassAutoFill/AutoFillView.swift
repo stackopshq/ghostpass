@@ -21,6 +21,11 @@ struct AutoFillView: View {
     /// pour cela — une extension ne peut pas interroger `UIApplication.shared`.
     @State private var masquer = false
 
+    /// La question biométrique a-t-elle été **posée** ? Voir `unlockWithBiometrics` :
+    /// une question avortée parce que l'hôte n'avait pas encore rendu l'extension active
+    /// ne compte pas, sans quoi le déclenchement automatique se consomme dans le vide.
+    @State private var biometrieDemandee = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -50,7 +55,12 @@ struct AutoFillView: View {
             ) { _ in masquer = true }
             .onReceive(
                 NotificationCenter.default.publisher(for: .NSExtensionHostDidBecomeActive)
-            ) { _ in masquer = false }
+            ) { _ in
+                masquer = false
+                // L'hôte vient de rendre l'extension active : c'est l'instant où le
+                // trousseau accepte enfin de présenter la demande.
+                demanderLaBiometrie()
+            }
             .navigationTitle("GhostPass")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -156,12 +166,19 @@ struct AutoFillView: View {
             }
             .padding(20)
         }
-        .onAppear {
-            // La biométrie d'emblée : c'est le geste attendu, et le remplissage doit
-            // aboutir en quelques secondes.
-            if store.canUseBiometrics {
-                Task { await store.unlockWithBiometrics() }
-            }
+        .onAppear(perform: demanderLaBiometrie)
+    }
+
+    /// La biométrie d'emblée : c'est le geste attendu, et le remplissage doit aboutir en
+    /// quelques secondes.
+    ///
+    /// Deux chemins y mènent — l'apparition et le moment où l'hôte rend l'extension
+    /// active — et le garde ne se referme que sur une question réellement posée.
+    private func demanderLaBiometrie() {
+        guard !biometrieDemandee, !store.isUnlocked, store.canUseBiometrics else { return }
+        biometrieDemandee = true
+        Task {
+            if await store.unlockWithBiometrics() == false { biometrieDemandee = false }
         }
     }
 

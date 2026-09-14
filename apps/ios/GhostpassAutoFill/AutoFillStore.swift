@@ -104,8 +104,13 @@ final class AutoFillStore: ObservableObject {
         }
     }
 
-    func unlockWithBiometrics() async {
-        guard canUseBiometrics else { return }
+    /// Rend `false` quand la question **n'a pas pu être posée** — voir la même règle dans
+    /// `VaultStore`. Le trousseau refuse tant que l'hôte n'a pas rendu l'extension active,
+    /// et c'est l'état de son premier `onAppear` : sans cette distinction, le
+    /// déclenchement automatique se consomme dans le vide et il faut toucher l'icône.
+    @discardableResult
+    func unlockWithBiometrics() async -> Bool {
+        guard canUseBiometrics else { return false }
         isBusy = true
         let prompt = tr("Remplir depuis votre coffre GhostPass")
         let lecture = await Task.detached {
@@ -115,12 +120,18 @@ final class AutoFillStore: ObservableObject {
         switch lecture {
         case .succes(let password):
             await unlock(password: password)
-        case .interrompue, .indisponible:
-            // Même règle que dans l'application : ne rien reprocher à une protection qui
-            // ne s'est pas présentée. Le champ du mot de passe maître reste là.
-            break
+            return true
+        case .interrompue:
+            // Un refus explicite : on ne redemande pas. Le champ du mot de passe maître
+            // reste là, et on ne reproche rien à une protection qui n'a pas échoué.
+            return true
+        case .indisponible:
+            // La question n'a pas été posée. L'appelant doit pouvoir la reprendre quand
+            // l'hôte rend l'extension active.
+            return false
         case .echec:
             errorMessage = tr("\(Biometrics.label) n'a pas permis d'ouvrir le coffre.")
+            return true
         }
     }
 

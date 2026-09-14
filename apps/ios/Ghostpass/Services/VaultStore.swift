@@ -342,8 +342,17 @@ final class VaultStore: ObservableObject {
 
     /// Déverrouille sans saisie : la biométrie autorise la relecture du mot de passe
     /// maître, et c'est toujours lui qui ouvre le coffre côté Rust.
-    func unlockWithBiometrics() async {
-        guard Keychain.get(Keychain.Key.biometricsEnabled) == "1" else { return }
+    /// Rend `false` quand la question **n'a pas pu être posée** — à distinguer d'un refus.
+    ///
+    /// Le trousseau rend `interactionNotAllowed` tant que l'application n'est pas au
+    /// premier plan, et c'est exactement l'état d'un `onAppear` de lancement. L'appelant a
+    /// besoin de le savoir : son garde « une seule question par présentation » doit
+    /// s'appliquer à une question posée, jamais à une question avortée. Sans cette
+    /// distinction, le déclenchement automatique se consommait sur un refus du système et
+    /// la reprise au premier plan ne partait plus — il fallait toucher le bouton.
+    @discardableResult
+    func unlockWithBiometrics() async -> Bool {
+        guard Keychain.get(Keychain.Key.biometricsEnabled) == "1" else { return false }
         isBusy = true
         let prompt = "Déverrouiller votre coffre GhostPass"
         // La demande biométrique bloque le fil sur lequel elle est faite.
@@ -355,14 +364,21 @@ final class VaultStore: ObservableObject {
         case .succes(let password):
             NSLog("GP-BIO relecture=ok")
             await unlockOffline(password: password)
-        case .interrompue, .indisponible:
-            // Rien n'a échoué : l'utilisateur a refusé, ou le système n'était pas en état
-            // de présenter la demande. Le mot de passe maître reste offert, et le silence
-            // vaut mieux qu'une accusation portée contre une protection qui n'a rien fait.
+            return true
+        case .interrompue:
+            // Un refus explicite. Rien n'a échoué, et redemander harcèlerait celle qui
+            // vient de dire non : la question compte comme posée.
             NSLog("GP-BIO relecture=interrompue")
+            return true
+        case .indisponible:
+            // La question n'a **pas** été posée : le trousseau n'était pas en état de la
+            // présenter — application pas encore au premier plan, le plus souvent.
+            NSLog("GP-BIO relecture=indisponible")
+            return false
         case .echec(let statut):
             NSLog("GP-BIO relecture=échec statut=%d", Int(statut))
             errorMessage = tr("\(Biometrics.label) n'a pas permis d'ouvrir le coffre.")
+            return true
         }
     }
 

@@ -77,9 +77,20 @@ struct SettingsView: View {
                         alerte: !SharedStore.isShared)
                     GhostDivider()
                     ligneDeDiagnostic(
-                        "Copie locale",
-                        elementsEnCopie.map { "\($0) élément(s)" } ?? "absente",
+                        "Coffre personnel",
+                        elementsEnCopie.map { "\($0) élément(s)" } ?? "absent",
                         alerte: (elementsEnCopie ?? 0) == 0)
+                    GhostDivider()
+                    // Compté à part, et c'est la leçon : la première version de cette
+                    // section ne comptait que le coffre personnel. Elle affichait donc
+                    // « 0 » avec la même assurance, que les coffres d'équipe fussent
+                    // déposés ou non — un indicateur qui ne mesure pas ce qu'on lui
+                    // demande vaut moins que pas d'indicateur du tout, puisqu'on le croit.
+                    ligneDeDiagnostic(
+                        "Coffres d'équipe",
+                        equipesEnCopie.map { "\($0.elements) élément(s) · \($0.coffres) coffre(s)" }
+                            ?? "absents",
+                        alerte: (equipesEnCopie?.elements ?? 0) == 0)
                 }
 
                 GhostSection(
@@ -151,6 +162,15 @@ struct SettingsView: View {
     /// « l'application a-t-elle déposé quelque chose », pas « ce dépôt est-il lisible ».
     /// Les confondre ferait passer un dépôt réussi mais illisible pour une absence.
     private var elementsEnCopie: Int? { VaultCache.load()?.count }
+
+    /// Ce que le dépôt d'équipe contient : combien de coffres, et combien d'éléments en
+    /// tout. Les deux comptes séparément, parce qu'ils se trompent différemment — des
+    /// coffres sans éléments veut dire « ouverts mais vides », zéro coffre veut dire
+    /// « rien n'a été déposé ».
+    private var equipesEnCopie: (coffres: Int, elements: Int)? {
+        guard let coffres = TeamCache.load() else { return nil }
+        return (coffres.count, coffres.reduce(0) { $0 + $1.items.count })
+    }
 
     private func ligneDeDiagnostic(_ titre: String, _ valeur: String, alerte: Bool)
         -> some View
