@@ -190,12 +190,22 @@ final class VaultFlowTests: XCTestCase {
 
     private func ouvrirReglages(_ app: XCUIApplication) {
         // Les réglages ont leur propre roue dans la barre : ils ne sont plus dans le menu.
+        //
+        // La reprise n'est pas de la prudence décorative. Ce fichier porte déjà la leçon
+        // pour le menu : « un tap sur une barre de navigation encore en cours de mise en
+        // page ne porte pas — XCUITest calcule un point de frappe {-1, -1} ». En sortant
+        // les réglages du menu, j'ai écrit une aide qui tapait **une fois**, et le
+        // parcours a échoué sur « l'écran des réglages ne s'est pas ouvert » — un message
+        // qui accuse l'écran alors que le geste n'avait jamais porté. Le dépôt savait ;
+        // c'est moi qui ai recommencé.
         let roue = app.buttons["button.preferences"]
-        XCTAssertTrue(roue.waitForExistence(timeout: 20), "la roue des réglages est absente")
-        roue.tap()
-        XCTAssertTrue(
-            app.buttons["button.doneSettings"].waitForExistence(timeout: 20),
-            "l'écran des réglages ne s'est pas ouvert")
+        XCTAssertTrue(roue.waitForExistence(timeout: 30), "la roue des réglages est absente")
+        let termine = app.buttons["button.doneSettings"]
+        for _ in 0..<4 {
+            taper(roue)
+            if termine.waitForExistence(timeout: 5) { return }
+        }
+        XCTFail("l'écran des réglages ne s'est pas ouvert après quatre tentatives")
     }
 
     /// Ouvre le menu du coffre et frappe une de ses entrées.

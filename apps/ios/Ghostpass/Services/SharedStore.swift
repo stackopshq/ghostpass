@@ -11,7 +11,19 @@ import Foundation
 /// jeton de session, lui, reste dans le trousseau : celui-là ouvre le compte côté serveur.
 enum SharedStore {
     /// Doit correspondre au groupe déclaré dans les deux fichiers `.entitlements`.
-    static let appGroup = "group.ch.stackops.ghostpass"
+    /// Suffixé `.coffre`, et ce n'est pas de la décoration.
+    ///
+    /// `group.ch.stackops.ghostpass` est **immobilisé** : les identifiants de groupe sont uniques
+    /// chez Apple, toutes équipes confondues, et celui-ci a été pris par l'équipe
+    /// personnelle lors d'un essai antérieur. Une équipe personnelle ne s'administre pas
+    /// sur le portail : l'identifiant n'est pas récupérable, seulement contournable.
+    ///
+    /// Le symptôme, côté Xcode, était trompeur : « Communication with Apple failed. An
+    /// Application Group with Identifier … is not available », suivi de « No profiles
+    /// were found ». La première moitié fait croire à une panne de réseau — les serveurs
+    /// d'Apple répondaient — et la seconde à un défaut de profil, alors que le profil ne
+    /// pouvait pas naître tant que l'habilitation ne se provisionnait pas.
+    static let appGroup = "group.ch.stackops.ghostpass.coffre"
 
     /// Racine partagée, ou le conteneur privé de l'application si le groupe n'est pas
     /// disponible — sans entitlement, l'application continue de fonctionner seule, et

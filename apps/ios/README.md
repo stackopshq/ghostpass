@@ -109,7 +109,7 @@ que d'être acceptée en apparence puis perdue.
 L'extension `GhostpassAutoFill` fournit les identifiants aux autres applications et à
 Safari. C'est un **processus séparé**, lancé par iOS au moment où un champ réclame un
 identifiant : elle ne voit de GhostPass que ce qui a été déposé dans le groupe
-d'applications `group.ch.stackops.ghostpass` — le coffre chiffré et les blobs
+d'applications `group.ch.stackops.ghostpass.coffre` — le coffre chiffré et les blobs
 d'ouverture. Elle ne parle jamais au serveur : un remplissage doit aboutir en quelques
 secondes, réseau ou pas.
 
