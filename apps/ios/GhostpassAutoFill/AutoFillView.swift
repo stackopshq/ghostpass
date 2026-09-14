@@ -186,7 +186,25 @@ struct AutoFillView: View {
         guard !biometrieDemandee, !store.isUnlocked, store.canUseBiometrics else { return }
         biometrieDemandee = true
         Task {
-            if await store.unlockWithBiometrics() == false { biometrieDemandee = false }
+            // On réessaie brièvement au lieu de s'en remettre à une seule notification.
+            //
+            // La version précédente attendait `NSExtensionHostDidBecomeActive` pour
+            // reprendre une demande que le trousseau avait refusée. Elle a marché une
+            // fois, puis plus : cette notification **n'arrive pas toujours**, notamment
+            // quand l'extension est déjà active à son apparition — il n'y a alors aucun
+            // changement d'état à signaler, et la reprise n'est jamais déclenchée.
+            //
+            // Quatre essais à 300 ms couvrent la fenêtre pendant laquelle l'hôte finit de
+            // rendre l'extension active, et s'arrêtent dès que la question est réellement
+            // posée. Borné : une boucle sans fin poserait Face ID en rafale.
+            for _ in 0..<4 {
+                if store.isUnlocked { return }
+                if await store.unlockWithBiometrics() { return }
+                try? await Task.sleep(for: .milliseconds(300))
+            }
+            // Jamais posée : on rouvre le garde pour que le bouton, ou une éventuelle
+            // notification tardive, puisse encore la poser.
+            biometrieDemandee = false
         }
     }
 
