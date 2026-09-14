@@ -21,7 +21,7 @@ final class AutoFillStore: ObservableObject {
     /// Fournir l'identifiant désigné sans demander ? **Non**, tant que ce chemin n'aura
     /// pas été compris — voir le commentaire de `load`. Un drapeau nommé plutôt qu'un code
     /// retiré : l'effacer ferait disparaître avec lui ce qu'on a appris en essayant.
-    private static let fournitureAutomatique = false
+    private static let fournitureAutomatique = true
 
     /// L'hôte a-t-il rendu l'extension active ?
     ///
@@ -244,8 +244,25 @@ final class AutoFillStore: ObservableObject {
     private func fournir(_ entry: VaultEntry) {
         if hoteActif {
             pick(entry)
-        } else {
-            enAttenteDeFourniture = entry
+            return
+        }
+        // Retenue le temps que l'hôte redevienne actif — mais **pas indéfiniment**.
+        //
+        // `hoteEstActif()` vient d'une notification, et cette notification n'arrive pas
+        // toujours : c'est ce qui a rendu la demande biométrique intermittente une heure
+        // durant. Une fourniture qui l'attendrait sans garde-fou resterait en suspens pour
+        // toujours, et la feuille se fermerait sans rien remplir — exactement le symptôme
+        // qu'on vient de chasser. Au bout d'une seconde on livre quand même : une réponse
+        // peut-être mal reçue vaut mieux qu'une réponse jamais donnée.
+        enAttenteDeFourniture = entry
+        Task { @MainActor in
+            for _ in 0..<5 {
+                try? await Task.sleep(for: .milliseconds(200))
+                if enAttenteDeFourniture == nil { return }
+                if hoteActif { hoteEstActif(); return }
+            }
+            hoteActif = true
+            hoteEstActif()
         }
     }
 
