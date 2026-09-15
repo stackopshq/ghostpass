@@ -1,0 +1,4 @@
+name,url,username,password,note
+banque.exemple.ch,https://banque.exemple.ch/,clara,coffre-fort-42,
+banque.exemple.ch,https://banque.exemple.ch/,clara,coffre-fort-42,
+intranet,https://intranet.exemple.lan:8443/,clara,"  espaces  ",

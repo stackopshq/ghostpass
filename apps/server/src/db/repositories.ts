@@ -1,4 +1,5 @@
 import type { DB } from "./database.js";
+import { chiffrerAuRepos } from "../services/secretAtRest.js";
 import type {
   AuditLogRow,
   CollectionAccessRow,
@@ -35,6 +36,14 @@ export interface NewUser {
 }
 
 export const users = {
+  /// Efface l'utilisateur. La cascade du schéma emporte coffre, sessions,
+  /// clés d'accès, seconds facteurs, historique de connexion, appartenances
+  /// et accès aux collections. `audit_log` est en `ON DELETE SET NULL` et doit
+  /// donc être anonymisé AVANT l'appel — voir `routes/account.ts`.
+  async deleteById(db: DB, id: string): Promise<void> {
+    await db.deleteFrom("users").where("id", "=", id).execute();
+  },
+
   async create(db: DB, u: NewUser): Promise<void> {
     await db
       .insertInto("users")
@@ -68,9 +77,13 @@ export const users = {
 
   async setMfaSecret(db: DB, userId: string, secret: string): Promise<void> {
     // (Re)configure le secret, repasse en non activé et réinitialise l'anti-rejeu.
+    //
+    // Le chiffrement au repos se fait ICI, à l'unique point d'écriture, et non
+    // chez l'appelant : un secret TOTP qui arriverait en base par un autre
+    // chemin serait alors en clair sans que rien ne le signale.
     await db
       .updateTable("users")
-      .set({ mfa_secret: secret, mfa_enabled: 0, mfa_last_counter: 0 })
+      .set({ mfa_secret: chiffrerAuRepos(secret), mfa_enabled: 0, mfa_last_counter: 0 })
       .where("id", "=", userId)
       .execute();
   },
@@ -637,6 +650,11 @@ export interface NewMember {
 }
 
 export const orgMembers = {
+  /// Toutes les appartenances d'une personne, tous statuts confondus.
+  listByUser(db: DB, userId: string): Promise<OrgMemberRow[]> {
+    return db.selectFrom("org_members").selectAll().where("user_id", "=", userId).execute();
+  },
+
   async create(db: DB, m: NewMember): Promise<void> {
     await db
       .insertInto("org_members")
@@ -764,6 +782,22 @@ export const collections = {
   findById(db: DB, id: string): Promise<CollectionRow | undefined> {
     return db.selectFrom("collections").selectAll().where("id", "=", id).executeTakeFirst();
   },
+  /// Retire une collection. Les cascades du schéma emportent avec elle ses
+  /// items et ses lignes d'accès — c'est précisément pourquoi la route qui
+  /// appelle ceci refuse tant qu'il reste un secret : ici, plus rien ne
+  /// protège.
+  ///
+  /// `org_id` est dans la clause à dessein, alors que `id` suffirait : une
+  /// erreur d'appelant supprimerait sinon une collection d'une autre
+  /// organisation sans que rien ne l'arrête.
+  async remove(db: DB, args: { id: string; orgId: string }): Promise<boolean> {
+    const r = await db
+      .deleteFrom("collections")
+      .where("id", "=", args.id)
+      .where("org_id", "=", args.orgId)
+      .executeTakeFirst();
+    return (r.numDeletedRows ?? 0n) > 0n;
+  },
 };
 
 export const orgItems = {
@@ -844,6 +878,11 @@ export const orgItems = {
 };
 
 export const collectionAccess = {
+  /// Tous les accès directs d'une personne à des collections.
+  listByUser(db: DB, userId: string): Promise<CollectionAccessRow[]> {
+    return db.selectFrom("collection_access").selectAll().where("user_id", "=", userId).execute();
+  },
+
   /// Accorde (ou met à jour) la permission d'un utilisateur sur une collection.
   async grant(
     db: DB,
@@ -933,6 +972,21 @@ export const ephemeral = {
       .where("key", "=", key)
       .executeTakeFirst();
     await db.deleteFrom("auth_ephemeral").where("key", "=", key).execute();
+    if (!row || row.expires_at < Date.now()) return null;
+    return row.value;
+  },
+
+  /// Variante ATOMIQUE de `take` : le `DELETE … RETURNING` lit et supprime en une seule
+  /// instruction. `take` ci-dessus fait un `SELECT` puis un `DELETE` — deux requêtes concurrentes
+  /// peuvent donc lire la même valeur avant que l'une n'efface, et la dépenser deux fois. C'est
+  /// sans conséquence pour un challenge WebAuthn (la signature échouerait), mais un code SSO à
+  /// usage unique DOIT être indépensable deux fois, y compris sous course.
+  async takeOnce(db: DB, key: string): Promise<string | null> {
+    const row = await db
+      .deleteFrom("auth_ephemeral")
+      .where("key", "=", key)
+      .returning(["value", "expires_at"])
+      .executeTakeFirst();
     if (!row || row.expires_at < Date.now()) return null;
     return row.value;
   },

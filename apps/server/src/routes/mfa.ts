@@ -5,6 +5,7 @@ import { users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
 import { verifyAndConsumeTotp } from "../services/mfa.js";
+import { dechiffrerAuRepos } from "../services/secretAtRest.js";
 import { verifyServerSecret } from "../services/security.js";
 import { generateSecret, otpauthUri, verifyTOTP } from "../services/totp.js";
 
@@ -46,7 +47,7 @@ export function registerMfaRoutes(app: FastifyInstance, db: DB): void {
     const parsed = codeSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "code invalide" });
     const user = req.currentUser!;
-    const secret = user.mfa_secret;
+    const secret = user.mfa_secret ? dechiffrerAuRepos(user.mfa_secret) : null;
     if (!secret) {
       return reply.code(400).send({ error: "aucune configuration 2FA en cours" });
     }

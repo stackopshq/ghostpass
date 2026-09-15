@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // `jsx: preserve` à la racine est ce que Next exige : il compile le JSX
+    // lui-même. Le lanceur de tests, lui, exécute les modules directement, et
+    // se rabat alors sur la transformation CLASSIQUE — celle qui appelle
+    // `React.createElement` et échoue en « React is not defined ». La forme
+    // automatique n'a besoin d'aucun import et rend le même arbre.
+    "jsx": "react-jsx"
+  }
+}

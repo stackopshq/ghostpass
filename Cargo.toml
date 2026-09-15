@@ -4,5 +4,5 @@ members = ["crates/*"]
 
 [workspace.package]
 edition = "2021"
-license = "MIT"
+license = "Elastic-2.0"
 publish = false

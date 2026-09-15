@@ -8,7 +8,7 @@ import type { DB } from "../db/database.js";
 import { webauthnCredentials } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
-import { ORIGIN, RP_ID, RP_NAME, putChallenge, takeChallenge } from "../services/webauthn.js";
+import { RP_ID, RP_NAME, getAllowedOrigins, putChallenge, takeChallenge } from "../services/webauthn.js";
 
 const toB64Url = (u: Uint8Array): string => Buffer.from(u).toString("base64url");
 
@@ -65,7 +65,11 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: DB): void {
         const verification = await verifyRegistrationResponse({
           response: parsed.data.response,
           expectedChallenge,
-          expectedOrigin: ORIGIN,
+          // Voir `auth.ts` : les origines liées valent ici aussi, sinon on
+          // pourrait enregistrer une clé depuis le site et se voir refuser
+          // depuis l'extension, ou l'inverse — une asymétrie qui ne se
+          // découvre qu'au moment de se connecter.
+          expectedOrigin: getAllowedOrigins(),
           expectedRPID: RP_ID,
           requireUserVerification: false,
         });

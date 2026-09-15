@@ -22,6 +22,11 @@ d'IDOR). Les faiblesses portaient sur le durcissement et la résistance au serve
   (login et recover).
 - **Révocation de session** : endpoint `POST /api/auth/logout`.
 - **Anti-rejeu TOTP** : compteur de période consommé (login & disable) ; fenêtre ±1.
+- **Secret TOTP chiffré au repos** (AES-256-GCM, clé serveur `MFA_SECRET_KEY`, 12-factor) depuis
+  le 2026-08-30. Hors périmètre zero-knowledge — le serveur DOIT lire cette graine pour vérifier un
+  code — mais une fuite de base seule ne donne plus les codes 2FA de tous les comptes. La clé est
+  **facultative** : sans elle le serveur démarre et l'écrit à chaque démarrage, plutôt que de
+  refuser de tourner et de mettre dehors une instance auto-hébergée qui monte de version.
 - **Opérations 2FA sensibles** (`setup`, `disable`) re-authentifiées par mot de passe.
 - **`recovery-blob` uniformisé** (réponse leurre déterministe → pas d'énumération).
 - **Email normalisé** côté serveur ; détails d'erreur zod non exposés ; error-handler
@@ -58,8 +63,6 @@ d'injection exploitable, pas de XSS (Svelte échappe ; aucun `{@html}`).
 ### Reporté (durcissement défense-en-profondeur, non bloquant)
 - **Lier `KdfParams` + email en AAD** du chiffrement de l'USK (détecter une altération serveur des
   paramètres même au-dessus des planchers). Touche au format chiffré → migration à prévoir.
-- **Chiffrer le secret TOTP serveur au repos** (clé serveur dédiée, 12-factor) — hors périmètre ZK
-  utilisateur, mais limite l'impact d'une fuite de base.
 - **Zeroize** des plaintexts déchiffrés et de la clé de récupération (Rust).
 - **Validation `EncString`** à la désérialisation (longueur de nonce / ciphertext) ; **AAD liant
   `encrypted_key`↔`encrypted_data`** lors de la ré-enveloppe d'Org Key.

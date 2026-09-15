@@ -1,0 +1,38 @@
+# GhostPass — comment nous signaler une faille.
+#
+# Ce fichier existe parce qu'une adresse de signalement qui n'est écrite nulle
+# part n'est pas une adresse de signalement : quelqu'un qui trouve un défaut
+# dans un gestionnaire de mots de passe doit pouvoir nous joindre en trente
+# secondes, sinon il le publie ou le garde.
+#
+# Format : RFC 9116.
+
+# L'ordre des `Contact` est celui de la préférence (RFC 9116 §2.5.3) : une
+# faille va à `contact@`. `privacy@` est la voie de la protection des données,
+# et elle figure ici parce que l'accord de sous-traitance affirme qu'elle y
+# figure : une adresse de recours annoncée mais introuvable n'est pas une voie
+# de recours. La politique elle-même est servie par l'application, sur
+# https://ghostpass.stackops.ch/confidentialite : pas de champ dédié pour elle
+# dans la RFC, et inventer un nom de champ non enregistré ferait trébucher les
+# outils de collecte.
+#
+# `security@` a figuré ici du 2026-08-31 au même jour, et cette boîte n'existe
+# pas. Le raisonnement qui l'a fait écrire était bon et le fait était faux : une
+# adresse de signalement qui rebondit est pire que pas de fichier du tout,
+# puisqu'elle fait croire au chercheur que le message est parti. N'inscrire ici
+# qu'une adresse dont on a vérifié qu'elle reçoit.
+Contact: mailto:contact@stackops.ch
+Contact: mailto:privacy@stackops.ch
+# Obligatoire (RFC 9116 §2.5.5) : sans lui, rien ne distingue ce fichier d'une
+# copie abandonnée. À repousser à chaque revue annuelle ; une date dépassée doit
+# se lire comme « ce fichier n'est plus tenu ».
+Expires: 2027-08-31T00:00:00.000Z
+Preferred-Languages: fr, en
+Canonical: https://ghostpass.stackops.ch/.well-known/security.txt
+Policy: https://git.stackops.ch/stackops/ghostpass/src/branch/main/SECURITY.md
+
+# Ce que nous nous engageons à faire : accuser réception sous 72 heures, vous
+# tenir informé de la correction, et vous créditer si vous le souhaitez.
+#
+# Ce que nous vous demandons : ne pas accéder aux données d'autrui, ne pas
+# dégrader le service, et nous laisser un délai raisonnable avant publication.

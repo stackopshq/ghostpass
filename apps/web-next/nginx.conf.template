@@ -1,0 +1,107 @@
+# Gabarit rempli au démarrage par l'image nginx (envsubst sur ${GHOSTPASS_API}).
+#
+# Le relais et le lot statique partagent une origine unique : c'est ce que
+# WebAuthn exige, et ce que le code de l'interface suppose en appelant `/api/…`
+# sans préfixe.
+
+server {
+    # Port non privilégié : l'image tourne sans droits particuliers.
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # En-têtes que le serveur d'API pose déjà de son côté (helmet) mais que le
+    # lot statique ne recevrait pas autrement.
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy no-referrer always;
+
+    # Tout ce qui appartient au serveur. `/.well-known/webauthn` en fait partie :
+    # c'est lui qui déclare les origines liées, et le servir en statique ferait
+    # échouer l'enrôlement d'une clé sans message clair.
+    location ~ ^/(api|health|\.well-known/webauthn) {
+        proxy_pass ${GHOSTPASS_API};
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Un coffre-fort ne doit jamais servir une réponse d'API mise en cache.
+        proxy_buffering off;
+    }
+
+    # Ressources versionnées et polices : elles existent ou elles n'existent pas.
+    # Sans ce bloc, le repli `/index.html` ci-dessous leur répondrait 200 avec du
+    # HTML — une police absente échouerait alors en silence, l'interface se
+    # rabattrait sur la fonte système, et rien nulle part ne le signalerait.
+    # Mesuré : `GET /fonts/nexiste-pas.woff2` rendait 779 octets de `text/html`.
+    # Les fichiers statiques de la RACINE, eux aussi. Le 2026-08-27, le bloc
+    # ci-dessous ne couvrait que les deux préfixes et `/apple-touch-icon.png`
+    # tombait donc dans le repli ci-dessous : il rendait `index.html` en 200
+    # avec `text/html`. iOS a lu ça comme une icône, et Cloudflare l'a mis en
+    # cache. Un fichier absent doit dire qu'il est absent.
+    location ~ ^/[^/]+\.(png|svg|ico|webmanifest|txt|xml)$ {
+        try_files $uri =404;
+    }
+
+    # `_next` est le préfixe des lots produits par Next, l'équivalent d'`assets`
+    # du temps de Vite. L'oublier ici rendrait `index.html` en 200 pour un lot
+    # manquant — le défaut mesuré le 2026-08-27 sur les icônes, transposé aux
+    # scripts, où il produirait un écran blanc sans message.
+    location ~ ^/(_next|assets|fonts)/ {
+        try_files $uri =404;
+        # Noms portant une empreinte pour les ressources, contenu figé pour les
+        # polices : un an de cache, et une révision change le nom du fichier.
+        #
+        # PAS de `always` ici, contrairement aux en-têtes de sécurité plus haut.
+        # `always` pose l'en-tête AUSSI sur les réponses d'erreur : un 404 sur un
+        # fichier renommé partait alors avec « un an, immuable », et un cache
+        # intermédiaire figeait l'absence pour un an. Mesuré le 2026-08-28 sur
+        # ghostpass.stackops.ch, où deux entrées Cloudflare servaient un 404 sur
+        # la police monospace pendant que l'origine la servait en 200 : les
+        # visiteurs touchés perdaient la police sans que rien ne le signale.
+        #
+        # Sur une réponse d'erreur, mieux vaut aucun en-tête de cache qu'un
+        # en-tête qui promet un an.
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # `security.txt` (RFC 9116). Bloc explicite plutôt que le repli : sans lui,
+    # un fichier absent rendrait `index.html` en 200 avec `text/html`, et un
+    # outil de collecte lirait une page HTML comme une politique de sécurité.
+    # C'est le défaut mesuré le 2026-08-27 sur `/apple-touch-icon.png`, dont le
+    # commentaire est vingt lignes plus haut.
+    location = /.well-known/security.txt {
+        try_files $uri =404;
+        add_header Content-Type "text/plain; charset=utf-8";
+    }
+
+    # La politique de confidentialité. Bloc explicite, et ce n'est pas du zèle :
+    # l'export statique produit `confidentialite.html` à la RACINE, pas un
+    # répertoire. Sans ce bloc, `GET /confidentialite` ne trouve ni le fichier ni
+    # le dossier, tombe dans le repli tout en bas, et rend `index.html` — le
+    # COFFRE, en 200. La page serait bien dans l'image, la revue serait passée,
+    # et l'URL que le juriste d'un acheteur ouvre rendrait un écran de connexion.
+    location ~ ^/confidentialite/?$ {
+        try_files /confidentialite.html =404;
+    }
+
+    # Les liens de partage. L'identifiant désigne un secret qui n'existe pas au
+    # moment de la construction, donc l'export statique ne produit qu'UN fichier
+    # pour cette route ; c'est le navigateur qui y lit l'identifiant réel.
+    #
+    # Ce bloc doit précéder le repli ci-dessous : sans lui, `/s/<id>` rendrait
+    # `index.html`, c'est-à-dire le coffre, et le destinataire d'un lien
+    # verrait un écran de connexion au lieu de son secret.
+    location ~ ^/s/[^/]+/?$ {
+        try_files /s/_gabarit.html =404;
+    }
+
+    # Application à page unique : toute route inconnue rend l'index, sinon un
+    # rechargement sur une URL profonde répond 404.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

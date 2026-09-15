@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import type { DB } from "./db/database.js";
+import { registerAccountRoutes } from "./routes/account.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerEmergencyRoutes } from "./routes/emergency.js";
@@ -21,6 +22,54 @@ import { getAllowedOrigins } from "./services/webauthn.js";
 
 /// Construit l'instance Fastify autour d'une base donnée.
 /// Séparé de `index.ts` pour permettre les tests via `app.inject()` sur une DB en mémoire.
+/// Ce que le journal retient d'une requête : la méthode et le CHEMIN, jamais la
+/// chaîne de requête.
+///
+/// `req.url` en Fastify inclut le `?…`, et `/api/icons?domain=…` y transporte le
+/// domaine d'une entrée du coffre — déchiffré au navigateur, extrait par
+/// `faviconUrl()`, demandé au rendu de CHAQUE ligne. Ouvrir son coffre écrivait
+/// donc la liste de ses domaines dans ce journal, une ligne par entrée.
+///
+/// C'est exactement ce que le sérialiseur refuse par ailleurs pour l'adresse IP,
+/// avec une valeur plus parlante encore : savoir qu'une personne a un compte
+/// chez tel prestataire en dit plus que savoir d'où elle se connecte.
+///
+/// Exportée pour être testable. Un sérialiseur atteint par un symbole interne de
+/// pino ne se teste pas — il se devine.
+/// Ce que le journal retient d'une requête : la méthode et le GABARIT de route.
+///
+/// `req.url` écrit le chemin tel qu'il est arrivé — donc tout secret qui y
+/// voyage, dans le chemin comme dans la chaîne de requête. Deux fuites l'ont
+/// montré le même jour :
+///
+///   - `/api/icons?domain=…` transportait le domaine d'une entrée du coffre,
+///     demandé au rendu de CHAQUE ligne. Retirer la chaîne de requête suffisait
+///     pour celle-là.
+///   - `/api/send/<jeton>` porte son identifiant DANS le chemin. Aucune
+///     suppression de chaîne de requête ne l'atteint.
+///
+/// Le gabarit ferme les deux : `req.routeOptions.url` rend `/api/send/:id`, et
+/// la route la plus bavarde de demain sera couverte sans que personne ait à y
+/// penser. Un journal ne s'oublie pas.
+///
+/// C'est la solution de ghostcal, qui journalise `route_template()`.
+///
+/// Exportée pour être testable. Un sérialiseur atteint par un symbole interne
+/// de pino ne se teste pas — il se devine.
+export function serialiserLaRequete(req: {
+  method: string;
+  url: string;
+  routeOptions?: { url?: string };
+}): { method: string; route: string } {
+  // Repli sur le chemin nu quand aucune route ne correspond : un 404 doit
+  // rester visible sans révéler en entier ce qui a été tenté. On coupe à
+  // l'indice plutôt que par `split("?")[0]`, que `noUncheckedIndexedAccess`
+  // type `string | undefined` — vrai pour le vérificateur, jamais à l'exécution.
+  const separateur = req.url.indexOf("?");
+  const chemin = separateur === -1 ? req.url : req.url.slice(0, separateur);
+  return { method: req.method, route: req.routeOptions?.url ?? chemin };
+}
+
 export function buildApp(db: DB): FastifyInstance {
   const app = Fastify({
     // `info` et non `warn` : à `warn`, Fastify ne journalise NI les requêtes
@@ -35,7 +84,7 @@ export function buildApp(db: DB): FastifyInstance {
     logger: {
       level: process.env.LOG_LEVEL ?? "info",
       serializers: {
-        req: (req) => ({ method: req.method, url: req.url }),
+        req: serialiserLaRequete,
         res: (res) => ({ statusCode: res.statusCode }),
       },
     },
@@ -75,6 +124,7 @@ export function buildApp(db: DB): FastifyInstance {
   app.get("/.well-known/webauthn", async () => ({ origins: getAllowedOrigins() }));
 
   registerAuthRoutes(app, db);
+  registerAccountRoutes(app, db);
   registerAuditRoutes(app, db);
   registerSsoRoutes(app, db);
   registerMfaRoutes(app, db);
@@ -83,7 +133,7 @@ export function buildApp(db: DB): FastifyInstance {
   registerOrgRoutes(app, db);
   registerOrgVaultRoutes(app, db);
   registerOrgAdminRoutes(app, db);
-  registerIconRoutes(app);
+  registerIconRoutes(app, db);
   registerSendRoutes(app, db);
   registerWebAuthnRoutes(app, db);
   registerPasskeyRoutes(app, db);

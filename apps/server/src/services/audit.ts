@@ -29,7 +29,9 @@ export type AuditAction =
   | "org.delete"
   | "emergency.grant"
   | "emergency.request"
-  | "emergency.approve";
+  | "emergency.approve"
+  | "account.export"
+  | "account.delete";
 
 /// Enregistre un événement d'audit. Best-effort : une erreur d'audit ne casse jamais l'action métier.
 export async function recordAudit(

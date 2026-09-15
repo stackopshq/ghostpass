@@ -56,7 +56,7 @@ jobs:
         run: npm test
 
   web:
-    name: Web app (Svelte + WASM)
+    name: Web app (Next + WASM)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -74,15 +74,22 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-          cache-dependency-path: apps/web/package-lock.json
+          cache-dependency-path: apps/web-next/package-lock.json
       - name: Install
-        working-directory: apps/web
+        working-directory: apps/web-next
         run: npm ci
-      - name: Type-check (svelte-check)
-        working-directory: apps/web
-        run: npm run check
+      - name: Type-check (tsc)
+        working-directory: apps/web-next
+        run: npm run typecheck
+      # Ces tests existaient et n'étaient LANCÉS NULLE PART. `apps/web-next`
+      # portait un script `test` et deux fichiers depuis le 2026-08-30 ; ce job
+      # ne faisait que compiler et construire. Une suite qu'aucune CI n'exécute
+      # ne protège de rien : elle passe pour un filet, et n'en est pas un.
+      - name: Tests
+        working-directory: apps/web-next
+        run: npm test
       - name: Build
-        working-directory: apps/web
+        working-directory: apps/web-next
         run: npm run build
 
   # Un job filtré par `if:` disparaît sans un mot du rapport : personne ne remarque que
@@ -293,7 +300,7 @@ jobs:
           # corrompent le cache. Contexte = racine du dépôt, les deux
           # Containerfile y puisent (`crates/` pour le WASM du frontend).
           podman build -f apps/server/Containerfile -t "${IMAGE}:sha-${SHORT}" .
-          podman build -f apps/web/Containerfile    -t "${IMAGE}:sha-${SHORT}-web" .
+          podman build -f apps/web-next/Containerfile -t "${IMAGE}:sha-${SHORT}-web" .
 
           # Le frontend part dans LE MÊME paquet, sous une balise suffixée. Les
           # deux dérivent du même SHORT : elles ne peuvent pas diverger, et un

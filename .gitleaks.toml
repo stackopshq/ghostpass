@@ -30,4 +30,18 @@ paths = [
 # forme longue laissait passer deux trouvailles — vérifié, pas supposé.
 regexes = [
   '''^GEZDGNBVGY3TQOJQ(GEZDGNBVGY3TQOJQ)?$''',
+  # Deux clés d'enveloppe factices d'EnveloppeDuCoffreTest.kt : 32 octets, l'une la suite
+  # 0x00..0x1F, l'autre des 0xFE. Aucune ne sort d'un générateur, et leur forme le montre.
+  #
+  # **Par valeur, et non par chemin.** Une allowlist sur `apps/android/**` couvrirait aussi
+  # un vrai secret collé là par accident — exactement le cas que ce scan existe pour
+  # attraper. Celle-ci ne couvre que ces deux constantes, et **tombe si on les régénère**,
+  # ce qui force à regarder.
+  #
+  # Et non par commentaire `gitleaks:allow` : le scan lit **tout l'historique**
+  # (`--source .` avec `fetch-depth: 0`), et les commits déjà écrits ne portent pas ce
+  # commentaire. Seule une entrée de configuration s'applique rétroactivement — c'est ce
+  # qui débloque les autres PR, que ces deux commits rougissaient toutes.
+  '''^AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=$''',
+  '''^/v7\+/v7\+/v7\+/v7\+/v7\+/v7\+/v7\+/v7\+/v7\+/v7\+/v4=$''',
 ]
