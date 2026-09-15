@@ -109,7 +109,14 @@ struct VaultListView: View {
                             .listRowSeparator(.hidden)
                     }
 
-                    if remplissage.active == false {
+                    // Masqué pendant la prise de vue de la fiche : le bandeau est juste
+                    // dans le produit et désastreux en vitrine — la première image de la
+                    // boutique annoncerait que la fonction principale est éteinte, alors
+                    // qu'elle l'est seulement parce que le banc ne peut pas cocher la case
+                    // (ce réglage vit dans un magasin système que `defaults` n'atteint
+                    // pas). Le drapeau est le même que celui qui lève la protection des
+                    // captures, et il n'existe pas dans les versions de diffusion.
+                    if remplissage.active == false, !GhostpassApp.captureDeFicheDemandee {
                         bandeauDuRemplissage
                             .listRowInsets(
                                 .init(top: 0, leading: 16, bottom: 12, trailing: 16)

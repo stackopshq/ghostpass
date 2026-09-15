@@ -101,7 +101,11 @@ struct SendView: View {
                     "Le lien s'efface une fois ce nombre atteint. Une seule consultation vous dit aussi que quelqu'un d'autre l'a lu avant vous."
             ) {
                 Stepper(value: $consultations, in: 1...100) {
-                    Text(verbatim: String(format: tr("%d consultation(s)"), consultations))
+                    // Interpolation plutôt que `String(format:)` : `String(format:)`
+                    // n'applique aucune règle de pluriel, d'où le « (s) » paresseux que la
+                    // fiche App Store affichait. `tr` reçoit une `LocalizationValue`, qui
+                    // la résout depuis le catalogue.
+                    Text(verbatim: tr("\(consultations) consultations"))
                         .foregroundStyle(Color.gpInk)
                 }
                 .padding(14)
