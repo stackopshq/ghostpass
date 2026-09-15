@@ -50,3 +50,6 @@ apps/android/build/
 apps/android/*/build/
 # Le chemin du SDK est propre à chaque poste.
 apps/android/local.properties
+
+# Produits de compilation de tools/ios/appareil.sh — jamais versionnés.
+apps/ios/.build-appareil/

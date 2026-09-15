@@ -36,16 +36,26 @@ import UIKit
 /// D'où [`estActive`], qui dit si le détournement a pris. Un test le lit ; il n'y a pas de
 /// raison de le croire sur parole plus que le reste.
 struct ProtectionDesCaptures<Contenu: View>: UIViewControllerRepresentable {
+    /// Lève la protection. Voir `GhostpassApp.captureDeFicheDemandee` : cela n'est
+    /// possible qu'en `DEBUG`, et uniquement pour produire les images de la fiche.
+    var desactivee: Bool = false
     @ViewBuilder var contenu: Contenu
 
     func makeUIViewController(context: Context) -> UIViewController {
         let hote = UIHostingController(rootView: contenu)
-        let controleur = ControleurProtege(hote: hote)
-        return controleur
+        // Sans détournement : l'hôte est rendu tel quel, et les captures redeviennent
+        // lisibles. Le seul appelant qui le demande est le script de prise de vue de la
+        // fiche, et seulement en DEBUG.
+        guard !desactivee else { return hote }
+        return ControleurProtege(hote: hote)
     }
 
     func updateUIViewController(_ controleur: UIViewController, context: Context) {
-        (controleur as? ControleurProtege)?.mettreAJour(contenu)
+        if let protege = controleur as? ControleurProtege {
+            protege.mettreAJour(contenu)
+        } else {
+            (controleur as? UIHostingController<Contenu>)?.rootView = contenu
+        }
     }
 }
 

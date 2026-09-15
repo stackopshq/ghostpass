@@ -102,6 +102,10 @@ final class AppStoreShots: XCTestCase {
 
     func testCaptures() {
         let app = XCUIApplication()
+        // Sans cet argument, toutes les images sortent **blanches** : la protection des
+        // captures vide aussi `XCUIScreen.main.screenshot()`. Elle fait son travail ; c'est
+        // ce script qui doit demander à en être dispensé, et il ne l'obtient qu'en DEBUG.
+        app.launchArguments += ["-captures-de-fiche"]
         armerContreLaBoiteSysteme()
         app.launch()
 

@@ -3,6 +3,7 @@ import SwiftUI
 /// Le coffre : la liste des identifiants, posée sur la nuit de la suite.
 struct VaultListView: View {
     @EnvironmentObject private var store: VaultStore
+    @EnvironmentObject private var remplissage: EtatDuRemplissage
     @State private var search = ""
     /// Une seule feuille à la fois : deux modificateurs `.sheet` sur la même vue se
     /// marchent dessus, et c'est la première déclarée qui cesse de s'ouvrir.
@@ -40,6 +41,39 @@ struct VaultListView: View {
         }
     }
 
+    /// Le bandeau qui propose d'activer le remplissage automatique.
+    ///
+    /// **Un bandeau, pas une fenêtre au premier lancement.** Une modale qu'on repousse une
+    /// fois ne revient jamais, et la fonction resterait éteinte sans que rien ne le
+    /// rappelle ; celui-ci reste tant que ce n'est pas activé et disparaît de lui-même dès
+    /// que ça l'est. Il n'y a d'ailleurs rien à rejeter : ce n'est pas une réclame, c'est
+    /// l'état d'une fonction qui ne marche pas.
+    ///
+    /// Il n'apparaît que sur un `false` franc. Tant que le système n'a pas répondu, l'état
+    /// vaut `nil` et l'on n'affiche rien — sans quoi le bandeau clignoterait à chaque
+    /// lancement, le temps de la réponse.
+    private var bandeauDuRemplissage: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(
+                "Remplissage automatique désactivé",
+                systemImage: "rectangle.and.pencil.and.ellipsis"
+            )
+            .font(.system(.subheadline, weight: .semibold))
+            .foregroundStyle(Color.gpInk)
+            Text(
+                "Tant que GhostPass n'est pas autorisé dans les réglages d'iOS, il ne vous proposera jamais vos identifiants dans Safari ni dans les applications."
+            )
+            .font(.footnote)
+            .foregroundStyle(Color.gpMuted)
+            .fixedSize(horizontal: false, vertical: true)
+            Button("Ouvrir les réglages") { remplissage.ouvrirLesReglages() }
+                .buttonStyle(SecondaryButtonStyle())
+                .accessibilityIdentifier("button.enableAutofill")
+        }
+        .glassCard()
+        .accessibilityIdentifier("banner.autofill")
+    }
+
     private var emojiDuCoffre: some View {
         Text(verbatim: Emoji.coffre)
             .font(.title3)
@@ -71,6 +105,15 @@ struct VaultListView: View {
                     if store.isOffline {
                         bandeauHorsLigne
                             .listRowInsets(.init(top: 0, leading: 16, bottom: 8, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+
+                    if remplissage.active == false {
+                        bandeauDuRemplissage
+                            .listRowInsets(
+                                .init(top: 0, leading: 16, bottom: 12, trailing: 16)
+                            )
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                     }

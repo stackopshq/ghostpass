@@ -5,6 +5,7 @@ import SwiftUI
 /// français, n'a pas à modifier les réglages de tout l'appareil pour l'obtenir.
 struct SettingsView: View {
     @EnvironmentObject private var prefs: Preferences
+    @EnvironmentObject private var remplissage: EtatDuRemplissage
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -71,6 +72,31 @@ struct SettingsView: View {
                     note:
                         "L'extension ne voit pas le serveur : elle lit une copie chiffrée déposée par l'application. Une copie vide ne propose rien, quel que soit le site."
                 ) {
+                    // L'état que la section ignorait, et qui précède tous les autres :
+                    // conteneur et copie peuvent être parfaits, si l'extension n'est pas
+                    // autorisée dans iOS elle n'est **jamais appelée**.
+                    if let active = remplissage.active {
+                        if active {
+                            ligneDeDiagnostic("Extension", "autorisée", alerte: false)
+                        } else {
+                            Button {
+                                remplissage.ouvrirLesReglages()
+                            } label: {
+                                HStack {
+                                    Text("Extension").foregroundStyle(Color.gpInk)
+                                    Spacer()
+                                    Text("non autorisée").foregroundStyle(Color.gpDanger)
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote)
+                                        .foregroundStyle(Color.gpMuted)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                            }
+                            .accessibilityIdentifier("button.enableAutofillSettings")
+                        }
+                        GhostDivider()
+                    }
                     ligneDeDiagnostic(
                         "Conteneur partagé",
                         SharedStore.isShared ? "actif" : "indisponible",
