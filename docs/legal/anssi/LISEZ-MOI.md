@@ -17,12 +17,30 @@ document que l'administration a reçu. Un contrôle porte sur la pièce envoyée
 C'est le même raisonnement que pour le courriel de notification au BIS, dont la copie est
 la seule trace de la démarche.
 
+## Les deux brochures, et pourquoi elles sont distinctes
+
+Le formulaire réclame **deux pièces**, et leurs aides le disent :
+
+- **brochure commerciale** — « aperçu du moyen de cryptologie, décrivant ses fonctions
+  principales et les fonctionnalités cryptographiques ». Elle se lit sans être du métier.
+  Source : [`brochure-commerciale.md`](brochure-commerciale.md).
+- **brochure technique** — « spécifications techniques détaillées ». Source :
+  [`../../anssi-dossier-technique.md`](../../anssi-dossier-technique.md).
+
+Joindre la seconde en croyant avoir répondu aux deux est l'erreur facile : elles portent
+des noms voisins et le même sujet, mais l'ANSSI attend deux niveaux de lecture différents.
+
 ## Régénérer
 
+    # La brochure technique
     pandoc docs/anssi-dossier-technique.md \
       --metadata title="GhostPass — dossier technique" \
       --metadata author="StackOps" \
       -o docs/legal/anssi/GhostPass-dossier-technique.docx
+
+    # La brochure commerciale (son titre et son auteur sont dans son en-tête YAML)
+    pandoc docs/legal/anssi/brochure-commerciale.md \
+      -o docs/legal/anssi/GhostPass-brochure-commerciale.docx
 
     pandoc docs/anssi-dossier-technique.md -s --embed-resources \
       --metadata title="GhostPass — dossier technique" -o /tmp/dossier.html
