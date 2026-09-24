@@ -195,7 +195,7 @@ d'exportation. Laisser les trois champs vides.
 | Document général présentant la société | `À TRANCHER` — à produire par l'éditeur |
 | Extrait K bis de moins de trois mois | `À TRANCHER` — à obtenir |
 | Brochure commerciale du moyen | La page produit `https://ghostsuite.cloud/ghostpass/` peut en tenir lieu, en PDF |
-| Brochure technique du moyen | **`docs/anssi-dossier-technique.md`**, à convertir en PDF |
+| Brochure technique du moyen | **prête** : `docs/legal/anssi/GhostPass-dossier-technique.pdf`, 4 pages |
 | Manuel utilisateur | Le README et la page produit, si un document séparé est demandé |
 | Guide administrateur | La documentation d'auto-hébergement du dépôt |
 
