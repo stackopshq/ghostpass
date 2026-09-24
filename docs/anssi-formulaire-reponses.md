@@ -193,13 +193,39 @@ d'exportation. Laisser les trois champs vides.
 | Pièce | État |
 |---|---|
 | Document général présentant la société | `À TRANCHER` — à produire par l'éditeur |
-| Extrait K bis de moins de trois mois | `À TRANCHER` — à obtenir |
+| Extrait K bis de moins de trois mois | **sans objet** — voir ci-dessous |
 | Brochure commerciale du moyen | **prête** : `docs/legal/anssi/GhostPass-brochure-commerciale.pdf`, 2 pages |
 | Brochure technique du moyen | **prête** : `docs/legal/anssi/GhostPass-dossier-technique.pdf`, 4 pages |
 | Manuel utilisateur | Le README et la page produit, si un document séparé est demandé |
 | Guide administrateur | La documentation d'auto-hébergement du dépôt |
 
 ---
+
+### L'extrait K bis, que vous n'avez pas
+
+Le K bis est réservé aux sociétés inscrites au registre du commerce. **StackOps est une
+entreprise individuelle sous régime de micro-entreprise : il n'en existe pas.**
+
+Le formulaire l'a prévu — il demande « un extrait K bis […] **ou un document équivalent** ».
+Deux pièces font l'affaire, et toutes deux se téléchargent gratuitement :
+
+- **l'avis de situation au répertoire SIRENE**, sur `avis-situation-sirene.insee.fr`, avec
+  le numéro SIREN ;
+- **l'extrait d'immatriculation au Registre National des Entreprises**, sur `data.inpi.fr`,
+  souvent mieux reçu car il porte la mention « entreprise individuelle ».
+
+Joindre l'une des deux, datée de moins de trois mois, et **indiquer en clair dans le
+courriel de dépôt** qu'il s'agit du document équivalent au K bis pour une entreprise
+individuelle. Une pièce absente sans explication fait revenir le dossier ; une pièce
+remplacée et nommée, non.
+
+**Ce que cela dit de la question A.1 / A.2** : le formulaire lie l'extrait K bis à la
+personne morale. Ne pas en avoir est un indice en faveur du **A.2, personne physique** —
+une entreprise individuelle n'a pas de personnalité distincte de son exploitant. Cela ne
+tranche pas pour autant : A.2 est décrit comme « le cas où le déclarant est un
+particulier », ce qui décrit mal quelqu'un agissant dans son activité professionnelle.
+`controle@ssi.gouv.fr` répond à ce genre de question, et la poser coûte moins qu'un
+aller-retour.
 
 ## F — Attestation
 
