@@ -73,10 +73,20 @@ ce que le serveur détient — sont rédigées et vérifiables :
 [`bis-autoclassification.md`](bis-autoclassification.md) pour les États-Unis. Elles décrivent le code,
 pas le droit, et le disent.
 
-**App Store Connect exige des documents**, et ce n'est pas une supposition : son
-questionnaire répond que des algorithmes standard employés *à la place* de ceux du système
-d'exploitation obligent à fournir une classification. C'est notre cas — les bibliothèques
-sont embarquées dans le binaire, pas empruntées à iOS. Aucune case à cocher n'en dispense.
+**App Store Connect exige des documents** — son questionnaire répond que des algorithmes
+standard employés *à la place* de ceux du système d'exploitation obligent à fournir une
+classification. C'est notre cas : les bibliothèques sont embarquées dans le binaire, pas
+empruntées à iOS.
+
+**Le document qu'elle réclame est le formulaire français**, pas la classification
+américaine. Constaté le 24 septembre 2026 en atteignant cette étape : Apple demande le
+« formulaire français de déclaration et demande d'autorisation d'opérations relatives à un
+moyen de cryptologie », parce que l'application est distribuée en France. J'avais supposé
+qu'elle voulait le volet américain ; c'était une supposition, pas une lecture.
+
+Les deux démarches restent dues, et aucune ne dépend d'Apple : le BIS parce que distribuer
+mondialement par l'App Store fait de l'éditeur un exportateur, l'ANSSI parce qu'on fournit
+un moyen de cryptologie en France. Seule la seconde bloque la distribution.
 
 La voie retenue est l'**auto-classification** en ECCN 5D992.c, chiffrement de grande
 diffusion. Elle ne dépend d'aucune décision d'ouverture du code, n'attend l'approbation de

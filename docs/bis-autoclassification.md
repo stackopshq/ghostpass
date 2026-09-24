@@ -1,8 +1,17 @@
 # Auto-classification à l'export — GhostPass
 
 Dossier préparatoire à l'**auto-classification** du produit au titre de l'EAR américain, et
-à la notification qui l'accompagne. C'est la pièce qu'App Store Connect réclame sous
-« Documents sur le chiffrement des apps ».
+à la notification qui l'accompagne.
+
+**Ce n'est pas ce qu'App Store Connect réclame**, contrairement à ce que ce document
+affirmait d'abord. Quand Apple écrit « vous devez fournir des documents », elle demande le
+**formulaire français de déclaration** — parce que l'application est distribuée en France,
+et qu'Apple relaie cette exigence-là. Voir [`anssi-dossier-technique.md`](anssi-dossier-technique.md).
+
+La démarche américaine reste due, et pour une autre raison : distribuer mondialement par
+l'App Store fait de l'éditeur un exportateur au sens de l'EAR. L'obligation existe que
+quelqu'un la réclame ou non. Les deux démarches sont donc indépendantes, et aucune ne
+dépend d'Apple.
 
 ## Avertissement, à lire avant de s'en servir
 
@@ -99,8 +108,7 @@ clé de chiffrement, clé privée en clair, ni aucun contenu de coffre.
 ### 1. La notification, avant la première exportation
 
 > **Envoyée le 24 septembre 2026** à `crypt@bis.doc.gov` et `enc@nsa.gov`.
-> Conserver le message et son accusé : c'est la pièce qu'App Store Connect réclame, et
-> celle qu'un contrôle demanderait.
+> Conserver le message et son accusé : c'est la seule trace de la démarche.
 
 | À | Adresse |
 |---|---|
@@ -171,7 +179,7 @@ c'est exactement le genre d'obligation dont on découvre l'existence au contrôl
 
 ## Après l'envoi
 
-- Conserver le message et son accusé : c'est la pièce qu'App Store Connect réclame.
+- Conserver le message et son accusé : c'est la seule trace de la démarche, et ce qu'un contrôle demanderait.
 - Reporter le numéro obtenu dans la fiche, et le cas échéant dans `project.yml` sous
   `INFOPLIST_KEY_ITSEncryptionExportComplianceCode`.
 - Renotifier si la composition cryptographique change. Ajouter une primitive, changer un
