@@ -104,7 +104,7 @@ struct SettingsView: View {
                     GhostDivider()
                     ligneDeDiagnostic(
                         "Coffre personnel",
-                        elementsEnCopie.map { "\($0) élément(s)" } ?? "absent",
+                        elementsEnCopie.map { tr("\($0) éléments en copie") } ?? "absent",
                         alerte: (elementsEnCopie ?? 0) == 0)
                     GhostDivider()
                     // Compté à part, et c'est la leçon : la première version de cette
@@ -114,8 +114,10 @@ struct SettingsView: View {
                     // demande vaut moins que pas d'indicateur du tout, puisqu'on le croit.
                     ligneDeDiagnostic(
                         "Coffres d'équipe",
-                        equipesEnCopie.map { "\($0.elements) élément(s) · \($0.coffres) coffre(s)" }
-                            ?? "absents",
+                        equipesEnCopie.map {
+                            tr("\($0.elements) éléments en copie") + " · "
+                                + tr("\($0.coffres) coffres")
+                        } ?? "absents",
                         alerte: (equipesEnCopie?.elements ?? 0) == 0)
                 }
 

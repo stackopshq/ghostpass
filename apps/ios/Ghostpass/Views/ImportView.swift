@@ -143,7 +143,7 @@ struct ImportView: View {
     private func resultat(_ nombre: Int) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Label {
-                Text("\(nombre) entrées importées.")
+                Text("\(nombre) entrées importées")
             } icon: {
                 Image(systemName: "checkmark.circle.fill")
             }
