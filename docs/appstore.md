@@ -17,7 +17,17 @@ aux claviers actifs. Ce relevé vient du code, pas d'une estimation.
 **Numéros de version** — `MARKETING_VERSION` 1.0, `CURRENT_PROJECT_VERSION` 1. Le second
 doit monter à chaque envoi : App Store Connect refuse deux fois le même.
 
-**Déclaration de chiffrement** — `ITSAppUsesNonExemptEncryption` à `YES`. Voir plus bas.
+**Déclaration de chiffrement** — la clé `ITSAppUsesNonExemptEncryption` est
+**délibérément absente**, et c'est le contraire d'un renoncement.
+
+Elle valait `YES`, ce qui est vrai. Mais `YES` **sans** `ITSEncryptionExportComplianceCode`
+fait refuser l'envoi — « Invalid Export Compliance Code (90592) » —, et ce code n'est
+délivré qu'après examen d'une documentation de conformité qu'App Store Connect ne propose
+de remplir **qu'une fois un build reçu**. La boucle ne se ferme pas.
+
+Sans la clé, les questions sont posées dans l'interface à chaque soumission. Les réponses
+sont dans [`fiche.md`](../apps/ios/AppStore/fiche.md), tirées du code. Répondre là vaut
+exactement ce que valait la clé — et les obligations BIS et ANSSI restent entières.
 
 ## À faire hors du dépôt
 

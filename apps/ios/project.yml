@@ -107,7 +107,22 @@ targets:
         # auprès du BIS américain (la distribution passe par l'App Store), et côté français
         # la déclaration ANSSI de fourniture d'un moyen de cryptologie. Voir
         # docs/appstore.md — ce sont des démarches, pas des réglages de compilation.
-        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: YES
+        # Délibérément **absente** de l'Info.plist, et ce n'est pas un renoncement.
+        #
+        # L'application déclarait `YES`, ce qui est vrai : Argon2id et XChaCha20 sont la
+        # fonction du produit, pas du HTTPS d'appoint. Mais `YES` **sans**
+        # `ITSEncryptionExportComplianceCode` fait refuser l'envoi — « Invalid Export
+        # Compliance Code (90592) » —, et ce code n'est délivré qu'après examen d'une
+        # documentation de conformité... qu'App Store Connect ne propose de remplir
+        # qu'une fois un build reçu. La boucle ne se ferme pas.
+        #
+        # Sans la clé, App Store Connect pose les questions **dans l'interface**, à chaque
+        # soumission. Les réponses sont écrites dans AppStore/fiche.md, tirées du code :
+        # chiffrement oui, propriétaire non, système seul non, authentification seule non,
+        # HTTPS seul non. Répondre là vaut exactement ce que valait la clé.
+        #
+        # Ce que cela ne change pas : les démarches BIS et ANSSI restent entières. Ce sont
+        # des obligations, pas des champs de formulaire. Voir docs/anssi-dossier-technique.md.
         OTHER_LDFLAGS: -lc++
 
   # Remplissage automatique : une cible à part, lancée par iOS dans son propre processus.
