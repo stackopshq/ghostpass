@@ -67,7 +67,7 @@ publication, pas parce que ce document sait y répondre.
 Les deux annexes techniques qu'elles réclament — primitives, paramètres, gestion des clés,
 ce que le serveur détient — sont rédigées et vérifiables :
 [`anssi-dossier-technique.md`](anssi-dossier-technique.md) pour la France,
-[`bis-notification.md`](bis-notification.md) pour les États-Unis. Elles décrivent le code,
+[`bis-autoclassification.md`](bis-autoclassification.md) pour les États-Unis. Elles décrivent le code,
 pas le droit, et le disent.
 
 **App Store Connect exige des documents**, et ce n'est pas une supposition : son
@@ -75,10 +75,18 @@ questionnaire répond que des algorithmes standard employés *à la place* de ce
 d'exploitation obligent à fournir une classification. C'est notre cas — les bibliothèques
 sont embarquées dans le binaire, pas empruntées à iOS. Aucune case à cocher n'en dispense.
 
-La voie du **§742.15(b)**, code source publiquement disponible, devient praticable le
-24 septembre 2026, quand le dépôt est publié sur `https://github.com/stackopshq/ghostpass`.
-Elle ne l'était pas avant : le critère est l'accessibilité réelle du code, pas le nom de la
-licence, et le miroir répondait `404`.
+La voie retenue est l'**auto-classification** en ECCN 5D992.c, chiffrement de grande
+diffusion. Elle ne dépend d'aucune décision d'ouverture du code, n'attend l'approbation de
+personne, et produit la pièce qu'Apple réclame.
+
+**La voie du §742.15(b) — code publiquement disponible — a été écartée pour une raison
+mesurée**, et elle vaut d'être connue : `stackopshq/ghostpass` est bien public, mais le
+code qui chiffre le coffre **dans le binaire livré** n'y est pas. `crates/ghostpass-crypto-ffi`,
+présent dans le miroir, n'est appelé que par l'outillage de test ; c'est `ghost-crypto-ffi`,
+dans le dépôt `ghostsuite` non publié, que compilent `build-xcframework.sh` et
+`build-jni.sh`. Une notification pointant le miroir aurait désigné un dépôt sans le
+chiffrement du produit distribué — pire que pas de notification, puisqu'on la croirait
+faite.
 
 ### Fiche App Store Connect
 
