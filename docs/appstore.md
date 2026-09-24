@@ -52,10 +52,13 @@ exactement ce que valait la clé — et les obligations BIS et ANSSI restent ent
 
 Le chiffrement de GhostPass — Argon2id, XChaCha20-Poly1305 — n'entre dans aucune exemption
 d'Apple. Ce n'est ni du HTTPS d'appoint ni de l'authentification seule : c'est la fonction
-du produit. D'où `ITSAppUsesNonExemptEncryption: YES`, et deux conséquences.
+du produit. Déclarer le contraire serait faux, et deux conséquences en découlent.
 
-**BIS (États-Unis)** — la distribution passe par l'App Store, donc par les États-Unis. Un
-rapport d'auto-classification annuel est en principe attendu, sauf exemption applicable.
+**BIS (États-Unis)** — la distribution passe par l'App Store, donc par les États-Unis.
+**La notification est envoyée le 24 septembre 2026** à `crypt@bis.doc.gov` et
+`enc@nsa.gov`, pour une auto-classification en **ECCN 5D992.c**. Reste le **rapport
+annuel**, qui est récurrent : poser un rappel calendaire, un oubli d'un an ne se remarque
+pas. Voir [`bis-autoclassification.md`](bis-autoclassification.md).
 
 **ANSSI (France)** — la fourniture d'un moyen de cryptologie assurant la confidentialité
 relève d'une déclaration. Ce qui ne fait que de l'authentification en est dispensé ; ce
