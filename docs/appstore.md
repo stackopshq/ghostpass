@@ -236,7 +236,7 @@ Construite pour la première fois le 24 septembre 2026, en `Release`, signée pa
 | Groupe d'applications | `group.ch.stackops.ghostpass.coffre` |
 | Équipe de signature | `9WHCJ5W7S6`, pas l'équipe personnelle |
 | Version | 1.0 (1) |
-| Déclaration de chiffrement | `ITSAppUsesNonExemptEncryption` à `true` |
+| Déclaration de chiffrement | clé **absente** — voir plus haut : les questions se posent dans l'interface |
 | **Le drapeau `-captures-de-fiche`** | **absent du binaire — zéro occurrence** |
 
 La dernière ligne compte : ce drapeau lève la protection des captures d'écran, et il est
