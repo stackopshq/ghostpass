@@ -1,64 +1,76 @@
 {
-  "sourceLanguage" : "fr",
-  "strings" : {
-    "CFBundleDisplayName" : {
-      "comment" : "Bundle display name",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GhostPass"
+  "sourceLanguage": "fr",
+  "strings": {
+    "CFBundleDisplayName": {
+      "comment": "Bundle display name",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GhostPass"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GhostPass"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GhostPass"
           }
         }
       }
     },
-    "CFBundleName" : {
-      "comment" : "Bundle name",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Ghostpass"
-          }
-        }
-      }
-    },
-    "NSCameraUsageDescription" : {
-      "comment" : "Privacy - Camera Usage Description",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "L'appareil photo lit le QR code d'un second facteur. Aucune image n'est enregistrée ni transmise."
-          }
-        }
-      }
-    },
-    "NSFaceIDUsageDescription" : {
-      "comment" : "Privacy - Face ID Usage Description",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Face ID unlocks your vault without retyping your master password."
+    "CFBundleName": {
+      "comment": "Bundle name",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Ghostpass"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Face ID déverrouille votre coffre sans ressaisir le mot de passe maître."
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ghostpass"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription": {
+      "comment": "Privacy - Camera Usage Description",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "L'appareil photo lit le QR code d'un second facteur. Aucune image n'est enregistrée ni transmise."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The camera reads the QR code of a second factor. No image is stored or transmitted."
+          }
+        }
+      }
+    },
+    "NSFaceIDUsageDescription": {
+      "comment": "Privacy - Face ID Usage Description",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID unlocks your vault without retyping your master password."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID déverrouille votre coffre sans ressaisir le mot de passe maître."
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

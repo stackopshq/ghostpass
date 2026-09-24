@@ -21,43 +21,23 @@
         }
       }
     },
-    "« %@ » disparaîtra de la liste. Aucun élément n'est supprimé.": {
+    "%1$@ n'a pas pu être activé (code %2$d).": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“%@” will disappear from the list. No item is deleted."
+            "value": "%1$@ could not be enabled (code %2$d)."
           }
         }
       }
     },
-    "« %@ » disparaîtra définitivement, pour toute l'équipe.": {},
-    "« %@ » sera perdu, sans possibilité de retour.": {
+    "%1$d membres · %2$d collections": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“%@” will be lost, with no way back."
-          }
-        }
-      }
-    },
-    "« Système » suit le réglage de l'appareil, y compris son passage automatique à la nuit.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“System” follows the device setting, including its automatic switch to night."
-          }
-        }
-      }
-    },
-    "(sans nom)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "(no name)"
+            "value": "%1$d members · %2$d collections"
           }
         }
       }
@@ -94,27 +74,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ will no longer be able to open their vault."
-          }
-        }
-      }
-    },
-    "%1$@ n'a pas pu être activé (code %2$d).": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ could not be enabled (code %2$d)."
-          }
-        }
-      }
-    },
-    "%1$d membres · %2$d collections": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d members · %2$d collections"
           }
         }
       }
@@ -156,7 +115,7 @@
         }
       }
     },
-    "%lld éléments examinés": {
+    "%lld coffres": {
       "localizations": {
         "en": {
           "variations": {
@@ -164,13 +123,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld item examined"
+                  "value": "%lld vault"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld items examined"
+                  "value": "%lld vaults"
                 }
               }
             }
@@ -182,13 +141,93 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld élément examiné"
+                  "value": "%lld coffre"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld éléments examinés"
+                  "value": "%lld coffres"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld consultations": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld view"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld views"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld consultation"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld consultations"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld entrées importées": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld entry imported"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld entries imported"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld entrée importée"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld entrées importées"
                 }
               }
             }
@@ -246,12 +285,92 @@
         }
       }
     },
-    "≈ %lld bits": {
+    "%lld éléments en copie": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item cached"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items cached"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld élément en copie"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld éléments en copie"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld éléments examinés": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item examined"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items examined"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld élément examiné"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld éléments examinés"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "(sans nom)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "≈ %lld bits"
+            "value": "(no name)"
           }
         }
       }
@@ -286,16 +405,6 @@
         }
       }
     },
-    "30 jours": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "30 days"
-          }
-        }
-      }
-    },
     "123456": {
       "localizations": {
         "en": {
@@ -306,22 +415,12 @@
         }
       }
     },
-    "À enregistrer dans votre application d'authentification": {
+    "30 jours": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "To store in your authenticator app"
-          }
-        }
-      }
-    },
-    "À importer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "To import"
+            "value": "30 days"
           }
         }
       }
@@ -352,6 +451,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accepting will give you access to the vaults the team shares with you."
+          }
+        }
+      }
+    },
+    "Accorder à un membre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grant to a member"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accorder à un membre"
+          }
+        }
+      }
+    },
+    "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Granted to a specific person. These are the only ones this screen can remove."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran."
           }
         }
       }
@@ -493,39 +625,6 @@
         }
       }
     },
-    "Accorder à un membre": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grant to a member"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accorder à un membre"
-          }
-        }
-      }
-    },
-    "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran.": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Granted to a specific person. These are the only ones this screen can remove."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accordés à une personne en particulier. Ce sont les seuls qui se retirent depuis cet écran."
-          }
-        }
-      }
-    },
     "Actions sensibles": {
       "localizations": {
         "en": {
@@ -612,16 +711,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Email address"
-          }
-        }
-      }
-    },
-    "adresse@exemple.com": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "address@example.com"
           }
         }
       }
@@ -716,22 +805,22 @@
         }
       }
     },
-    "Après 5 minutes": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After 5 minutes"
-          }
-        }
-      }
-    },
     "Après 15 minutes": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "After 15 minutes"
+          }
+        }
+      }
+    },
+    "Après 5 minutes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 5 minutes"
           }
         }
       }
@@ -950,7 +1039,26 @@
         }
       }
     },
-    "Ce code exporte plusieurs comptes depuis une application d'authentification. Affichez le QR code d'un seul compte, depuis le site.": {},
+    "Ce QR code ne contient pas de second facteur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This QR code holds no second factor."
+          }
+        }
+      }
+    },
+    "Ce code exporte plusieurs comptes depuis une application d'authentification. Affichez le QR code d'un seul compte, depuis le site.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This code exports several accounts from an authenticator app. Show the QR code for a single account, from the site itself."
+          }
+        }
+      }
+    },
     "Ce coffre d'équipe n'est plus accessible.": {
       "localizations": {
         "en": {
@@ -993,7 +1101,6 @@
         }
       }
     },
-    "Ce QR code ne contient pas de second facteur.": {},
     "Ce qu'il pourra faire": {
       "localizations": {
         "en": {
@@ -1060,7 +1167,16 @@
         }
       }
     },
-    "Ce serveur ne propose pas le partage de secrets.": {},
+    "Ce serveur ne propose pas le partage de secrets.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This server does not offer secret sharing."
+          }
+        }
+      }
+    },
     "Ces accès ne se retirent pas ici : ils viennent du groupe, et c'est dans le groupe qu'ils se règlent.": {
       "extractionState": "stale",
       "localizations": {
@@ -1088,9 +1204,36 @@
         }
       }
     },
-    "Cet appareil n'a pas de caméra utilisable.": {},
-    "Cet élément appartient à une équipe : il disparaîtra pour tous ses membres, et il n'y a pas de corbeille pour le récupérer.": {},
-    "Cette adresse n'a pas de compte GhostPass sur ce serveur.": {},
+    "Cet appareil n'a pas de caméra utilisable.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device has no usable camera."
+          }
+        }
+      }
+    },
+    "Cet élément appartient à une équipe : il disparaîtra pour tous ses membres, et il n'y a pas de corbeille pour le récupérer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This item belongs to a team: it will disappear for every member, and no trash will bring it back."
+          }
+        }
+      }
+    },
+    "Cette adresse n'a pas de compte GhostPass sur ce serveur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This address has no GhostPass account on this server."
+          }
+        }
+      }
+    },
     "Cette collection est vide.": {
       "localizations": {
         "en": {
@@ -1135,6 +1278,22 @@
         }
       }
     },
+    "Cette personne perdra l'accès qu'un octroi direct lui donnait.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person will lose the access a direct grant gave them."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette personne perdra l'accès qu'un octroi direct lui donnait."
+          }
+        }
+      }
+    },
     "Cette personne perdra l'accès à cette collection.": {
       "extractionState": "stale",
       "localizations": {
@@ -1148,22 +1307,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cette personne perdra l'accès à cette collection."
-          }
-        }
-      }
-    },
-    "Cette personne perdra l'accès qu'un octroi direct lui donnait.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This person will lose the access a direct grant gave them."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cette personne perdra l'accès qu'un octroi direct lui donnait."
           }
         }
       }
@@ -1320,6 +1463,16 @@
         }
       }
     },
+    "Code copié": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code copied"
+          }
+        }
+      }
+    },
     "Code à six chiffres": {
       "localizations": {
         "en": {
@@ -1336,16 +1489,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "One-time code"
-          }
-        }
-      }
-    },
-    "Code copié": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Code copied"
           }
         }
       }
@@ -1480,6 +1623,16 @@
         }
       }
     },
+    "Connexion par SSO": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in with SSO"
+          }
+        }
+      }
+    },
     "Connexion par mot de passe": {
       "localizations": {
         "en": {
@@ -1496,16 +1649,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Signed in with a passkey"
-          }
-        }
-      }
-    },
-    "Connexion par SSO": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Signed in with SSO"
           }
         }
       }
@@ -1546,16 +1689,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Content"
-          }
-        }
-      }
-    },
-    "Copiée": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copied"
           }
         }
       }
@@ -1620,6 +1753,16 @@
         }
       }
     },
+    "Copiée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
+          }
+        }
+      }
+    },
     "Corbeille": {
       "localizations": {
         "en": {
@@ -1651,7 +1794,25 @@
       }
     },
     "Couleur de %@": {
-      "comment": "Sélecteur de couleur"
+      "comment": "Sélecteur de couleur",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ colour"
+          }
+        }
+      }
+    },
+    "Cryptogramme": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Security code"
+          }
+        }
+      }
     },
     "Créer": {
       "localizations": {
@@ -1703,26 +1864,6 @@
         }
       }
     },
-    "Cryptogramme": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Security code"
-          }
-        }
-      }
-    },
-    "Déconnexion": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Signed out"
-          }
-        }
-      }
-    },
     "Demande refusée": {
       "localizations": {
         "en": {
@@ -1749,46 +1890,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Requesting access will notify %1$@, who will have %2$d days to deny it."
-          }
-        }
-      }
-    },
-    "Désactiver %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turn off %@"
-          }
-        }
-      }
-    },
-    "Désactiver le second facteur": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turn off two-factor"
-          }
-        }
-      }
-    },
-    "Déverrouiller": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unlock"
-          }
-        }
-      }
-    },
-    "Déverrouiller avec %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unlock with %@"
           }
         }
       }
@@ -1843,51 +1944,56 @@
         }
       }
     },
-    "Écriture": {
+    "Déconnexion": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write"
+            "value": "Signed out"
           }
         }
       }
     },
-    "Également par le groupe « %@ »": {
-      "extractionState": "stale",
+    "Désactiver %@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Also via the “%@” group"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Également par le groupe « %@ »"
+            "value": "Turn off %@"
           }
         }
       }
     },
-    "Également par son rôle d'administrateur": {
-      "extractionState": "stale",
+    "Désactiver le second facteur": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Also via their administrator role"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Également par son rôle d'administrateur"
+            "value": "Turn off two-factor"
           }
         }
       }
     },
-    "Élément illisible": {},
+    "Déverrouiller": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock"
+          }
+        }
+      }
+    },
+    "Déverrouiller avec %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock with %@"
+          }
+        }
+      }
+    },
     "Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe.": {
       "localizations": {
         "en": {
@@ -1928,24 +2034,32 @@
         }
       }
     },
-    "Envoyer": {},
-    "Envoyer vers ce domaine ?": {},
+    "Envoyer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send"
+          }
+        }
+      }
+    },
+    "Envoyer vers ce domaine ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send to this domain?"
+          }
+        }
+      }
+    },
     "Erreur": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Error"
-          }
-        }
-      }
-    },
-    "et %lld autres": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "and %lld more"
           }
         }
       }
@@ -2060,16 +2174,6 @@
         }
       }
     },
-    "Générer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Generate"
-          }
-        }
-      }
-    },
     "Gestion": {
       "localizations": {
         "en": {
@@ -2126,6 +2230,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Groups"
+          }
+        }
+      }
+    },
+    "Générer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generate"
           }
         }
       }
@@ -2340,8 +2454,6 @@
         }
       }
     },
-    "L'accès à l'appareil photo a été refusé.": {},
-    "L'accès à l'appareil photo est refusé pour GhostPass. Il s'autorise dans les réglages du système.": {},
     "L'accès effectif : rôle, octroi direct et groupes réunis. Seul un octroi direct se retire ici.": {
       "localizations": {
         "en": {
@@ -2358,8 +2470,46 @@
         }
       }
     },
-    "L'authentification a échoué.": {},
-    "L'extension ne voit pas le serveur : elle lit une copie chiffrée déposée par l'application. Une copie vide ne propose rien, quel que soit le site.": {},
+    "L'accès à l'appareil photo a été refusé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera access was denied."
+          }
+        }
+      }
+    },
+    "L'accès à l'appareil photo est refusé pour GhostPass. Il s'autorise dans les réglages du système.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera access is denied for GhostPass. You can allow it in the system settings."
+          }
+        }
+      }
+    },
+    "L'authentification a échoué.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Authentication failed."
+          }
+        }
+      }
+    },
+    "L'extension ne voit pas le serveur : elle lit une copie chiffrée déposée par l'application. Une copie vide ne propose rien, quel que soit le site.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The extension cannot see the server: it reads an encrypted copy left by the app. An empty copy offers nothing, whatever the site."
+          }
+        }
+      }
+    },
     "La clé de l'équipe sera changée et redistribuée aux autres membres. Ce que cette personne a déjà vu reste connu d'elle : les mots de passe concernés doivent être changés.": {
       "localizations": {
         "en": {
@@ -2390,7 +2540,16 @@
         }
       }
     },
-    "La clé peut toujours être collée dans le champ.": {},
+    "La clé peut toujours être collée dans le champ.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The key can still be pasted into the field."
+          }
+        }
+      }
+    },
     "La clé reste chiffrée dans l'élément ; les codes sont calculés sur l'appareil.": {
       "localizations": {
         "en": {
@@ -2421,7 +2580,16 @@
         }
       }
     },
-    "La réponse ne correspond pas à la demande. Réessayez.": {},
+    "La réponse ne correspond pas à la demande. Réessayez.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The response does not match the request. Try again."
+          }
+        }
+      }
+    },
     "Langue": {
       "localizations": {
         "en": {
@@ -2578,7 +2746,16 @@
         }
       }
     },
-    "Le lien est créé, mais n'a pas pu être enregistré : il ne pourra pas être révoqué depuis cette application.": {},
+    "Le lien est créé, mais n'a pas pu être enregistré : il ne pourra pas être révoqué depuis cette application.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link was created but could not be saved: it cannot be revoked from this app."
+          }
+        }
+      }
+    },
     "Le lien s'efface une fois ce nombre atteint. Une seule consultation vous dit aussi que quelqu'un d'autre l'a lu avant vous.": {
       "localizations": {
         "en": {
@@ -2659,7 +2836,26 @@
         }
       }
     },
-    "Le serveur a rendu un lien que l'application ne comprend pas.": {},
+    "Le serveur a rendu un lien que l'application ne comprend pas.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server returned a link the app does not understand."
+          }
+        }
+      }
+    },
+    "Le serveur a renvoyé une réponse anormalement volumineuse.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server returned an abnormally large response."
+          }
+        }
+      }
+    },
     "Le serveur n'a pas répondu.": {
       "localizations": {
         "en": {
@@ -2783,6 +2979,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Length — %lld characters"
+          }
+        }
+      }
+    },
+    "MM": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MM"
           }
         }
       }
@@ -2913,16 +3119,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lowercase"
-          }
-        }
-      }
-    },
-    "MM": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MM"
           }
         }
       }
@@ -3257,7 +3453,16 @@
         }
       }
     },
-    "Ouvrir les réglages": {},
+    "Ouvrir les réglages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
     "Ouvrir maintenant": {
       "localizations": {
         "en": {
@@ -3302,22 +3507,6 @@
         }
       }
     },
-    "Partagé": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shared"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Partagé"
-          }
-        }
-      }
-    },
     "Partager un secret": {
       "localizations": {
         "en": {
@@ -3334,6 +3523,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Share…"
+          }
+        }
+      }
+    },
+    "Partagé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partagé"
           }
         }
       }
@@ -3421,7 +3626,16 @@
         }
       }
     },
-    "Personnel": {},
+    "Personnel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal"
+          }
+        }
+      }
+    },
     "Peut inviter, révoquer et gérer les droits.": {
       "localizations": {
         "en": {
@@ -3548,36 +3762,6 @@
         }
       }
     },
-    "Régénérer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Regenerate"
-          }
-        }
-      }
-    },
-    "Réglages": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Settings"
-          }
-        }
-      }
-    },
-    "Réinitialiser": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reset"
-          }
-        }
-      }
-    },
     "Rejoindre l'équipe": {
       "localizations": {
         "en": {
@@ -3614,23 +3798,22 @@
         }
       }
     },
-    "Remplissage automatique": {},
+    "Remplissage automatique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AutoFill"
+          }
+        }
+      }
+    },
     "Renouvelé toutes les %lld secondes.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Renewed every %lld seconds."
-          }
-        }
-      }
-    },
-    "Réponse du serveur incompréhensible.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The server’s response could not be understood."
           }
         }
       }
@@ -3741,6 +3924,76 @@
         }
       }
     },
+    "Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing has been uploaded yet. The entries will join the vault as they are; none overwrites what is already there."
+          }
+        }
+      }
+    },
+    "Rien à signaler": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to report"
+          }
+        }
+      }
+    },
+    "Réglages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
+      }
+    },
+    "Régénérer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regenerate"
+          }
+        }
+      }
+    },
+    "Réinitialiser": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
+          }
+        }
+      }
+    },
+    "Réponse du serveur incompréhensible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server’s response could not be understood."
+          }
+        }
+      }
+    },
+    "Réponse inattendue du serveur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unexpected response from the server."
+          }
+        }
+      }
+    },
     "Révoquer": {
       "localizations": {
         "en": {
@@ -3757,26 +4010,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Revoke this member?"
-          }
-        }
-      }
-    },
-    "Rien à signaler": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nothing to report"
-          }
-        }
-      }
-    },
-    "Rien n'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n'écrase ce qui s'y trouve déjà.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nothing has been uploaded yet. The entries will join the vault as they are; none overwrites what is already there."
           }
         }
       }
@@ -3811,7 +4044,16 @@
         }
       }
     },
-    "Scanner le QR code": {},
+    "Scanner le QR code": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan the QR code"
+          }
+        }
+      }
+    },
     "Se connecter": {
       "localizations": {
         "en": {
@@ -3822,7 +4064,16 @@
         }
       }
     },
-    "Se connecter avec le SSO": {},
+    "Se connecter avec le SSO": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in with SSO"
+          }
+        }
+      }
+    },
     "Se déconnecter": {
       "localizations": {
         "en": {
@@ -3879,6 +4130,16 @@
         }
       }
     },
+    "Second facteur requis.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Second factor required."
+          }
+        }
+      }
+    },
     "Secret copié": {
       "localizations": {
         "en": {
@@ -3889,7 +4150,16 @@
         }
       }
     },
-    "Secret partagé": {},
+    "Secret partagé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared secret"
+          }
+        }
+      }
+    },
     "Serveur": {
       "localizations": {
         "en": {
@@ -4080,7 +4350,16 @@
         }
       }
     },
-    "Supprimer cet identifiant ?": {},
+    "Supprimer cet identifiant ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this login?"
+          }
+        }
+      }
+    },
     "Supprimer définitivement ?": {
       "localizations": {
         "en": {
@@ -4187,6 +4466,16 @@
         }
       }
     },
+    "Trop courts, ou faits d'une seule sorte de caractères.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too short, or made of a single kind of character."
+          }
+        }
+      }
+    },
     "Très bon": {
       "localizations": {
         "en": {
@@ -4203,16 +4492,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Very weak"
-          }
-        }
-      }
-    },
-    "Trop courts, ou faits d'une seule sorte de caractères.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Too short, or made of a single kind of character."
           }
         }
       }
@@ -4244,22 +4523,22 @@
         }
       }
     },
-    "Un code à six chiffres sera demandé à chaque connexion, en plus du mot de passe maître.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A six-digit code will be required at each sign-in, in addition to the master password."
-          }
-        }
-      }
-    },
     "Un code vous sera demandé à chaque connexion. Vos appareils déjà connectés le restent.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "A code will be asked at each sign-in. Devices already signed in stay signed in."
+          }
+        }
+      }
+    },
+    "Un code à six chiffres sera demandé à chaque connexion, en plus du mot de passe maître.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A six-digit code will be required at each sign-in, in addition to the master password."
           }
         }
       }
@@ -4324,26 +4603,6 @@
         }
       }
     },
-    "Vérification…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checking…"
-          }
-        }
-      }
-    },
-    "Vérifier les fuites": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check for breaches"
-          }
-        }
-      }
-    },
     "Verrouillage": {
       "localizations": {
         "en": {
@@ -4364,7 +4623,16 @@
         }
       }
     },
-    "Visez le QR code affiché par le site.": {},
+    "Visez le QR code affiché par le site.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Point at the QR code the site shows."
+          }
+        }
+      }
+    },
     "Votre clé de récupération": {
       "localizations": {
         "en": {
@@ -4405,7 +4673,16 @@
         }
       }
     },
-    "Votre serveur héberge ce partage sur « %@ », qui n'est pas son propre domaine. C'est là que la clé de déchiffrement arrivera quand le destinataire ouvrira le lien. N'acceptez que si ce domaine vous est connu.": {},
+    "Votre serveur héberge ce partage sur « %@ », qui n'est pas son propre domaine. C'est là que la clé de déchiffrement arrivera quand le destinataire ouvrira le lien. N'acceptez que si ce domaine vous est connu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your server hosts this share on “%@”, which is not its own domain. That is where the decryption key will land when the recipient opens the link. Accept only if you know that domain."
+          }
+        }
+      }
+    },
     "Vous consultez le coffre de quelqu'un d'autre. Cet accès est enregistré dans son journal.": {
       "localizations": {
         "en": {
@@ -4426,6 +4703,56 @@
         }
       }
     },
+    "Vérification…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking…"
+          }
+        }
+      }
+    },
+    "Vérifier les fuites": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for breaches"
+          }
+        }
+      }
+    },
+    "adresse@exemple.com": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "address@example.com"
+          }
+        }
+      }
+    },
+    "et %lld autres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "and %lld more"
+          }
+        }
+      }
+    },
+    "la biométrie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "biometrics"
+          }
+        }
+      }
+    },
     "vous@exemple.ch": {
       "localizations": {
         "en": {
@@ -4436,162 +4763,126 @@
         }
       }
     },
-    "%lld consultations": {
+    "« %@ » disparaîtra de la liste. Aucun élément n'est supprimé.": {
       "localizations": {
         "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld view"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld views"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld consultation"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld consultations"
-                }
-              }
-            }
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” will disappear from the list. No item is deleted."
           }
         }
       }
     },
-    "%lld éléments en copie": {
+    "« %@ » disparaîtra définitivement, pour toute l'équipe.": {
       "localizations": {
         "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld item cached"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld items cached"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld élément en copie"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld éléments en copie"
-                }
-              }
-            }
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” will be gone for good, for the whole team."
           }
         }
       }
     },
-    "%lld coffres": {
+    "« %@ » sera perdu, sans possibilité de retour.": {
       "localizations": {
         "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld vault"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld vaults"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld coffre"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld coffres"
-                }
-              }
-            }
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” will be lost, with no way back."
           }
         }
       }
     },
-    "%lld entrées importées": {
+    "« Système » suit le réglage de l'appareil, y compris son passage automatique à la nuit.": {
       "localizations": {
         "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld entry imported"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld entries imported"
-                }
-              }
-            }
+          "stringUnit": {
+            "state": "translated",
+            "value": "“System” follows the device setting, including its automatic switch to night."
+          }
+        }
+      }
+    },
+    "À enregistrer dans votre application d'authentification": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To store in your authenticator app"
+          }
+        }
+      }
+    },
+    "À importer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To import"
+          }
+        }
+      }
+    },
+    "Écriture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write"
+          }
+        }
+      }
+    },
+    "Également par le groupe « %@ »": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also via the “%@” group"
           }
         },
         "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld entrée importée"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld entrées importées"
-                }
-              }
-            }
+          "stringUnit": {
+            "state": "translated",
+            "value": "Également par le groupe « %@ »"
+          }
+        }
+      }
+    },
+    "Également par son rôle d'administrateur": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also via their administrator role"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Également par son rôle d'administrateur"
+          }
+        }
+      }
+    },
+    "Élément illisible": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unreadable item"
+          }
+        }
+      }
+    },
+    "≈ %lld bits": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈ %lld bits"
           }
         }
       }

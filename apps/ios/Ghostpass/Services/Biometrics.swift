@@ -16,13 +16,20 @@ enum Biometrics {
 
     /// Nom à afficher : « Face ID », « Touch ID », ou un libellé neutre si l'appareil
     /// annonce une biométrie que cette version de l'app ne connaît pas.
+    // `@MainActor` parce que le repli passe par le catalogue, et que `tr` lit les
+    // préférences de l'application. Tous les appelants — `VaultStore`, `AutoFillStore`
+    // et les vues — y sont déjà isolés ; l'annotation ne restreint donc personne, elle
+    // rend explicite ce qui l'était de fait.
+    @MainActor
     static var label: String {
         let context = LAContext()
         _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
         switch context.biometryType {
         case .faceID: return "Face ID"
         case .touchID: return "Touch ID"
-        default: return "la biométrie"
+        // Traduit : ce repli s'interpole dans des phrases du catalogue, et un littéral
+        // aurait donné « Unlock with la biométrie » sur une interface anglaise.
+        default: return tr("la biométrie")
         }
     }
 

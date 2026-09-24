@@ -37,7 +37,10 @@ final class Preferences: ObservableObject {
 
     private let defaults = UserDefaults(suiteName: SharedStore.appGroup)
 
-    private enum Clefs {
+    // `fileprivate` et non `private` : `trHorsFilPrincipal`, en bas de ce fichier, relit la
+    // langue dans le même magasin. Deux littéraux pour une même clé finiraient par diverger,
+    // et la divergence ne se verrait que sur une interface à moitié traduite.
+    fileprivate enum Clefs {
         static let apparence = "gp.apparence"
         static let langue = "gp.langue"
         static let icones = "gp.icones"
@@ -86,6 +89,29 @@ func tr(_ valeur: String.LocalizationValue) -> String {
     String(
         localized: valeur, bundle: Preferences.shared.bundle,
         locale: Preferences.shared.locale ?? .autoupdatingCurrent)
+}
+
+/// La même traduction, appelable **hors du fil principal**.
+///
+/// `errorDescription` de `LocalizedError` est imposée non isolée par le protocole : `tr`
+/// n'y est pas appelable. Sans cette variante, ces messages resteraient des littéraux
+/// français au milieu d'une interface anglaise — et ce sont justement ceux qu'on lit
+/// quand quelque chose va mal.
+///
+/// Elle relit la langue depuis `UserDefaults` plutôt que depuis `Preferences`, qui est
+/// isolée au fil principal. C'est le **même magasin**, écrit par le même code : les deux
+/// chemins ne peuvent pas diverger sur la valeur, seulement sur l'instant où ils la
+/// lisent, et une préférence de langue ne change pas en cours de requête.
+func trHorsFilPrincipal(_ valeur: String.LocalizationValue) -> String {
+    let lus = UserDefaults(suiteName: SharedStore.appGroup)
+    let code = Langue(rawValue: lus?.string(forKey: Preferences.Clefs.langue) ?? "")?.code
+    guard let code,
+        let chemin = Bundle.main.path(forResource: code, ofType: "lproj"),
+        let paquet = Bundle(path: chemin)
+    else {
+        return String(localized: valeur, locale: .autoupdatingCurrent)
+    }
+    return String(localized: valeur, bundle: paquet, locale: Locale(identifier: code))
 }
 
 /// Combien de temps le coffre reste ouvert une fois l'application quittée.

@@ -12,12 +12,16 @@ enum APIError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .badURL: return "Adresse de serveur invalide."
+        // Traduit, et non un littéral : ces messages remontent tels quels à l'écran, et un
+        // littéral ne traverse pas le catalogue — ils seraient restés en français au
+        // milieu d'une interface anglaise. Le message d'un `.http` vient du serveur et
+        // porte déjà la langue que celui-ci a choisie.
+        case .badURL: return trHorsFilPrincipal("Adresse de serveur invalide.")
         case .http(_, let message): return message
-        case .mfaRequired: return "Second facteur requis."
-        case .malformedResponse: return "Réponse inattendue du serveur."
+        case .mfaRequired: return trHorsFilPrincipal("Second facteur requis.")
+        case .malformedResponse: return trHorsFilPrincipal("Réponse inattendue du serveur.")
         case .reponseTropGrande:
-            return "Le serveur a renvoyé une réponse anormalement volumineuse."
+            return trHorsFilPrincipal("Le serveur a renvoyé une réponse anormalement volumineuse.")
         }
     }
 }

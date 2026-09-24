@@ -1,52 +1,58 @@
 {
-  "sourceLanguage" : "fr",
-  "strings" : {
-    "CFBundleDisplayName" : {
-      "comment" : "Bundle display name",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GhostPass"
+  "sourceLanguage": "fr",
+  "strings": {
+    "CFBundleDisplayName": {
+      "comment": "Bundle display name",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GhostPass"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GhostPass"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GhostPass"
           }
         }
       }
     },
-    "CFBundleName" : {
-      "comment" : "Bundle name",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "GhostpassAutoFill"
+    "CFBundleName": {
+      "comment": "Bundle name",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "GhostpassAutoFill"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GhostpassAutoFill"
           }
         }
       }
     },
-    "NSFaceIDUsageDescription" : {
-      "comment" : "Privacy - Face ID Usage Description",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Face ID unlocks your vault to fill in your credentials."
+    "NSFaceIDUsageDescription": {
+      "comment": "Privacy - Face ID Usage Description",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID unlocks your vault to fill in your credentials."
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Face ID déverrouille votre coffre pour remplir vos identifiants."
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID déverrouille votre coffre pour remplir vos identifiants."
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }
