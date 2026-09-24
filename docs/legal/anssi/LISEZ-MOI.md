@@ -32,25 +32,32 @@ des noms voisins et le même sujet, mais l'ANSSI attend deux niveaux de lecture 
 
 ## Régénérer
 
-    # La brochure technique
-    pandoc docs/anssi-dossier-technique.md \
-      --metadata title="GhostPass — dossier technique" \
-      --metadata author="StackOps" \
-      -o docs/legal/anssi/GhostPass-dossier-technique.docx
+    docs/legal/anssi/produire-les-pieces.sh
 
-    # La brochure commerciale (son titre et son auteur sont dans son en-tête YAML)
-    pandoc docs/legal/anssi/brochure-commerciale.md \
-      -o docs/legal/anssi/GhostPass-brochure-commerciale.docx
+Le script produit les trois pièces en PDF et en DOCX, **et retire des documents envoyés
+les passages destinés à la lecture interne**.
 
-    pandoc docs/anssi-dossier-technique.md -s --embed-resources \
-      --metadata title="GhostPass — dossier technique" -o /tmp/dossier.html
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-      --headless --disable-gpu --no-pdf-header-footer \
-      --print-to-pdf=docs/legal/anssi/GhostPass-dossier-technique.pdf file:///tmp/dossier.html
+C'est sa raison d'être. `anssi-dossier-technique.md` est un document de travail : il porte
+un avertissement qui s'adresse à l'éditrice — « je ne suis pas juriste », « à faire
+relire » — et une section « À compléter avant dépôt ». Utiles dans le dépôt, ils n'ont rien
+à faire dans une pièce envoyée à une administration : ils parlent du processus de
+rédaction, pas du produit déclaré. Converti à la main, le document partait avec. Clara l'a
+vu avant l'envoi.
 
-**Le PDF passe par le navigateur et non par pandoc seul** : `pandoc -o x.pdf` réclame un
-moteur LaTeX, soit plusieurs gigaoctets installés pour une conversion. Chrome était déjà
-là.
+Le script se termine par un contrôle qui relit **les PDF produits** et refuse d'aboutir
+s'il y reste une trace interne. Deux choses ont failli le rendre inutile, et elles sont
+écrites dans le fichier :
+
+- il lisait les PDF avec `pandoc`, qui **ne lit pas le PDF en entrée**. Il échouait en
+  silence, `grep` cherchait dans du vide, et le contrôle restait vert alors que le
+  nettoyage était désactivé. Remplacé par `pdftotext`, et **éprouvé par mutation** : sans
+  le nettoyage, il rougit sur la bonne pièce ;
+- le drapeau `-exit-on-error` de `pdftotext` rend 99 sur des avertissements bénins, ce qui
+  rendait le contrôle faussement rouge. C'est le **texte vide** qui fait foi : si rien ne
+  sort du PDF, le contrôle n'a rien lu et doit le dire plutôt que de conclure.
+
+Si `pdftotext` manque, le script sort en **2** — ni vert ni rouge, mais « pas pu
+regarder ».
 
 **Si un dépôt est refait, dater les fichiers plutôt que les écraser** —
 `GhostPass-dossier-technique-2027-01-15.pdf` — pour garder ce qui a été envoyé la fois
