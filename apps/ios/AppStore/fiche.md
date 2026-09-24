@@ -13,7 +13,6 @@ Relevé le 24 septembre 2026. Ce qui n'y figure pas est prêt.
 | Ce qu'il reste | Pourquoi ça ne peut pas se faire ici |
 |---|---|
 | Fusionner la page d'assistance, **puis vérifier que l'URL répond** | L'API de la forge exige un jeton ; une clé SSH n'y donne pas accès |
-| Créer le **compte de démonstration** sur une instance joignable depuis l'extérieur | Sans lui, l'examinateur ne voit rien et refuse pour « fonctionnalité incomplète » |
 | Trancher la **note 3 du §740.17(b)** et mener les démarches BIS et ANSSI | Questions de droit ; l'annexe technique qu'elles réclament est écrite |
 | Coller la fiche dans App Store Connect et répondre au questionnaire de confidentialité | Les réponses exactes sont plus bas, mot pour mot |
 | Construire une **archive de diffusion signée** et l'envoyer | Jamais fait : seules des versions de développement ont été posées sur appareil |
@@ -221,9 +220,30 @@ lui donner de quoi entrer, et lui dire quoi faire.
 
 | Champ | Valeur |
 |---|---|
-| Compte de démonstration | **[à créer]** — un compte réel sur une instance jointe depuis l'extérieur |
-| Mot de passe | **[à créer]** |
-| Serveur à saisir au premier écran | **[l'adresse publique de l'instance]** |
+| Compte de démonstration | `appstore-review@stackops.ch` — **créé le 24 septembre 2026** |
+| Mot de passe | **pas écrit ici** — voir ci-dessous |
+| Serveur à saisir au premier écran | `https://ghostpass.stackops.ch` |
+
+Le coffre contient **9 éléments** de démonstration : identifiants avec adresses de sites,
+note sécurisée, carte, et un mot de passe volontairement faible pour que l'écran de santé
+ait quelque chose à montrer.
+
+Éprouvé de bout en bout le jour de sa création, contre l'instance publique : inscription,
+connexion, et lecture des neuf éléments. Ce n'est pas un compte préparé « en principe ».
+
+**Le mot de passe ne figure pas dans le dépôt.** Un secret en clair dans un dépôt reste
+dans son historique même retiré, et le balayage de secrets le refuserait à juste titre. Il
+est à coller directement dans App Store Connect, et à ranger dans le coffre personnel de
+l'éditrice.
+
+**Deux choses à savoir sur cette instance :**
+
+- Elle est derrière Cloudflare, qui **bannit `Python-urllib`** (erreur 1010). Les signatures
+  de `curl`, de `CFNetwork` — donc de l'application — et l'absence de signature passent
+  toutes. Vérifié avant d'écrire cette ligne : l'application de l'examinateur ne sera pas
+  bloquée.
+- Le compte est **jetable**. Après publication, le supprimer ou en changer le mot de passe
+  est une bonne habitude : ses identifiants auront transité par App Store Connect.
 
 Texte proposé pour la zone « Notes » :
 
@@ -247,8 +267,9 @@ Texte proposé pour la zone « Notes » :
 
 **Deux pièges connus, à traiter avant l'envoi et non pendant l'examen :**
 
-1. Le compte de démonstration doit vivre sur une instance **joignable depuis l'extérieur**.
-   Un examinateur ne peut pas atteindre un serveur de développement.
+1. ~~Le compte de démonstration doit vivre sur une instance joignable depuis l'extérieur.~~
+   **Fait** : `appstore-review@stackops.ch` sur `https://ghostpass.stackops.ch`, créé et
+   éprouvé le 24 septembre. Reste à recopier ses identifiants dans App Store Connect.
 2. Le remplissage automatique exige le **groupe d'applications** et l'habilitation de
    fournisseur d'identifiants, tous deux hors de portée d'une équipe personnelle. La
    version envoyée doit être signée par l'équipe de l'entreprise `9WHCJ5W7S6`, sans quoi
