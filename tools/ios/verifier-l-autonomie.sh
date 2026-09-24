@@ -61,11 +61,31 @@ EDITEUR='stackops\.ch'
 
 # Les bundles de tests ne sont jamais soumis, et portent légitimement des jeux d'essai qui
 # nomment l'éditeur. Les inclure ferait rougir un contrôle sur du code qui ne part pas.
+#
+# ─── Les frameworks de test d'Apple, mesuré le 25 septembre 2026 ───
+#
+# Le paquet examiné est un build **Debug pour simulateur** : Xcode y injecte ses propres
+# frameworks de test, absents de toute archive de diffusion. `XCTestSupport` contient le
+# sélecteur `upgradeCapability:toVersion:`, où le motif de vitrine lit « upgrade ». Le
+# contrôle rougissait donc sur du code d'Apple, et son message — « l'application soumise
+# contiendrait de quoi la faire relire au titre des achats intégrés » — accusait un paquet
+# qui ne contient rien de tel.
+#
+# Vérifié plutôt que supposé : l'archive Release et l'IPA envoyé à Apple ne portent
+# **aucun** framework de test. C'est donc le paquet examiné qui diffère de celui qui part,
+# pas le produit qui est en faute.
+#
+# C'est le même piège que sur Android, où le vocabulaire du commerce recoupe celui des
+# bibliothèques de plateforme — `SubscriptionCountStateFlow`, `isPremiumVibratorEnabled`.
+# Le script Android l'avait appris et écrit ; celui-ci ne l'avait pas.
 lister_les_fichiers_livres() {
   find "$APP" -type f \
     ! -name '*.png' ! -name '*.jpg' \
     ! -path '*/_CodeSignature/*' \
     ! -path '*.xctest/*' \
+    ! -path '*/Frameworks/XCTest*' \
+    ! -path '*/Frameworks/libXCTest*' \
+    ! -path '*/Frameworks/Testing.framework/*' \
     -print0
 }
 
