@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -279,4 +280,36 @@ fun ValeurFigee(intitule: String, valeur: String) {
             Text(valeur, color = couleurs.attenue, style = TextStyle(fontSize = 15.sp))
         }
     }
+}
+
+/**
+ * La carte d'une section — le `GhostSection` d'iOS, sans son intitulé.
+ *
+ * Opacité 0,7 comme là-bas, et non les 0,65 de `carteDeVerre` : une section de réglages
+ * porte des lignes séparées par des filets, et le fond doit y être un peu plus posé que
+ * sous un formulaire. L'écart vient d'iOS, où les deux existent déjà.
+ */
+@Composable
+fun CarteDeSection(contenu: @Composable () -> Unit) {
+    val couleurs = LocalCouleurs.current
+    val forme = RoundedCornerShape(GP.rayonCarte)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .background(couleurs.surface.copy(alpha = 0.7f), forme)
+            .border(1.dp, couleurs.bordure, forme),
+    ) { contenu() }
+}
+
+/** Un filet de séparation entre deux lignes d'une même carte — le `GhostDivider` d'iOS. */
+@Composable
+fun FiletDeSection() {
+    val couleurs = LocalCouleurs.current
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 14.dp)
+            .height(1.dp)
+            .background(couleurs.bordure),
+    )
 }

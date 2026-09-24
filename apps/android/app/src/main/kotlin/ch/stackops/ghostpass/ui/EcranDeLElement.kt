@@ -37,6 +37,7 @@ import ch.stackops.ghostpass.theme.ChampGhost
 import ch.stackops.ghostpass.theme.FondGhost
 import ch.stackops.ghostpass.theme.GP
 import ch.stackops.ghostpass.theme.IntituleDeSection
+import androidx.activity.compose.BackHandler
 import ch.stackops.ghostpass.theme.LienDiscret
 import ch.stackops.ghostpass.theme.LocalCouleurs
 import ch.stackops.ghostpass.theme.carteDeVerre
@@ -131,6 +132,22 @@ private fun CorpsDeLElement(
 
     var confirmeLaSuppression by rememberSaveable { mutableStateOf(false) }
 
+    // Le générateur est posé **par-dessus** le formulaire, et non à côté : il recouvre
+    // l'écran le temps qu'on choisisse, puis rend la main. C'est la feuille modale d'iOS,
+    // dont le retour arrière est le seul autre moyen de sortir.
+    var genereUnMotDePasse by rememberSaveable { mutableStateOf(false) }
+    if (genereUnMotDePasse) {
+        BackHandler { genereUnMotDePasse = false }
+        EcranDuGenerateur(
+            surAnnuler = { genereUnMotDePasse = false },
+            surUtiliser = { propose ->
+                motDePasse = propose
+                genereUnMotDePasse = false
+            },
+        )
+        return
+    }
+
     Box(Modifier.fillMaxSize()) {
         FondGhost()
         Column(
@@ -207,6 +224,14 @@ private fun CorpsDeLElement(
                                 typeDeClavier = KeyboardType.Password,
                                 onChange = { motDePasse = it },
                             )
+                            // Sous le champ, et **seulement** sous le champ « mot de passe » :
+                            // c'est là qu'on se demande quoi mettre. Le placer dans un menu
+                            // d'écran obligerait à savoir qu'il existe avant d'en avoir
+                            // besoin. iOS le présente au même endroit.
+                            LienDiscret(
+                                texte = "Générer un mot de passe",
+                                identifiant = "button.openGenerator",
+                            ) { genereUnMotDePasse = true }
                             ChampGhost(
                                 intitule = "Adresses (une par ligne)",
                                 valeur = adresses,

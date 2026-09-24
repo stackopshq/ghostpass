@@ -7,4 +7,27 @@
     <!-- Décrit le service dans les réglages du système. Aucun tarif, aucun renvoi vers un
          achat : l\'application est gratuite et doit le rester jusque dans ses chaînes (§7). -->
     <string name="service_de_remplissage">GhostPass remplit vos identifiants, après déverrouillage.</string>
+    <!-- ─── Les pluriels ───
+
+         **Jamais « caractère(s) ».** iOS a affiché « 1 mots de passe à revoir » et
+         « 1 consultation(s) » ; la parenthèse est la forme qui ne se trompe jamais et ne se
+         lit bien jamais non plus. Android sait faire, et c'est `plurals` qu'il faut.
+
+         `one` et `other` : en français, `one` couvre 0 et 1 — « 0 caractère », « 1
+         caractère ». C'est `PluralRules` qui le décide, d'après la langue de la
+         configuration, pas d'après le dossier où vit la ressource. Tant que l'application
+         n'est qu'en français ces chaînes vivent dans `values/` ; le jour où elle se traduit,
+         elles descendront dans `values-fr/` et les deux formes seront déjà en place. -->
+    <plurals name="generateur_longueur">
+        <item quantity="one">Longueur — %d caractère</item>
+        <item quantity="other">Longueur — %d caractères</item>
+    </plurals>
+    <plurals name="coffre_illisibles_ecartes">
+        <item quantity="one">%d élément illisible ne peut pas être filtré : il n\'a pas de nom à comparer.</item>
+        <item quantity="other">%d éléments illisibles ne peuvent pas être filtrés : ils n\'ont pas de nom à comparer.</item>
+    </plurals>
+    <plurals name="remplissage_illisibles">
+        <item quantity="one">%d élément du coffre n\'a pas pu être ouvert et n\'est pas proposé ici.</item>
+        <item quantity="other">%d éléments du coffre n\'ont pas pu être ouverts et ne sont pas proposés ici.</item>
+    </plurals>
 </resources>

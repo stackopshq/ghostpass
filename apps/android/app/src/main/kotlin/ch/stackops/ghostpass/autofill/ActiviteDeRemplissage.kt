@@ -38,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -352,8 +353,13 @@ private fun Proposition(
         // prendre ici : un compte, faute d'une ligne à proposer.
         if (lecture.nombreDIllisibles > 0) {
             Text(
-                "${lecture.nombreDIllisibles} élément(s) du coffre n'ont pas pu être ouverts " +
-                    "et ne sont pas proposés ici.",
+                // Un élément illisible est le cas le plus fréquent, et « 1 élément(s) …
+                // n'ont pas pu » se trompe alors deux fois : sur le nom et sur le verbe.
+                LocalContext.current.resources.getQuantityString(
+                    R.plurals.remplissage_illisibles,
+                    lecture.nombreDIllisibles,
+                    lecture.nombreDIllisibles,
+                ),
                 color = couleurs.attenue,
                 fontSize = 12.sp,
             )

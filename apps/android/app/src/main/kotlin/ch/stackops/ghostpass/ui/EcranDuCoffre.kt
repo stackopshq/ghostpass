@@ -44,6 +44,7 @@ import ch.stackops.ghostpass.EtatDAppartenance
 import ch.stackops.ghostpass.ModeleDuCoffre
 import ch.stackops.ghostpass.Organisation
 import ch.stackops.ghostpass.OrigineDuCoffre
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.RaisonDIllisibilite
 import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.ChampGhost
@@ -200,8 +201,15 @@ fun EcranDuCoffre(
                     if (recherche.isNotEmpty() && illisiblesEcartees > 0) {
                         item {
                             Text(
-                                "$illisiblesEcartees élément(s) illisible(s) ne peuvent pas " +
-                                    "être filtrés : ils n'ont pas de nom à comparer.",
+                                // « élément(s) illisible(s) » : deux parenthèses sur une
+                                // même ligne, et l'une d'elles est fausse dans les deux
+                                // cas. `plurals` accorde aussi le verbe, ce qu'aucune
+                                // parenthèse ne sait faire.
+                                LocalContext.current.resources.getQuantityString(
+                                    R.plurals.coffre_illisibles_ecartes,
+                                    illisiblesEcartees,
+                                    illisiblesEcartees,
+                                ),
                                 color = couleurs.attenue,
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(vertical = 6.dp),
