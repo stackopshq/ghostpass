@@ -89,42 +89,66 @@ clé de chiffrement, clé privée en clair, ni aucun contenu de coffre.
 
 ### 1. La notification, avant la première exportation
 
+> **Envoyée le 24 septembre 2026** à `crypt@bis.doc.gov` et `enc@nsa.gov`.
+> Conserver le message et son accusé : c'est la pièce qu'App Store Connect réclame, et
+> celle qu'un contrôle demanderait.
+
 | À | Adresse |
 |---|---|
 | Bureau of Industry and Security | `crypt@bis.doc.gov` |
 | National Security Agency | `enc@nsa.gov` |
 
-Projet de message :
+Projet de message. **Copier le bloc ci-dessous tel quel** : il est en texte brut, sans
+tableau ni balise, parce qu'un courriel ne rend pas le markdown — un tableau collé depuis
+ce fichier arriverait en barres verticales chez le destinataire.
 
-> Subject: Mass market encryption self-classification — GhostPass
->
-> Pursuant to §740.17(b)(1) of the Export Administration Regulations, this is notification
-> of the self-classification of a mass market encryption item.
->
-> **Product:** GhostPass, a zero-knowledge password manager (iOS, Android, and server).
-> **ECCN:** 5D992.c
-> **Submitter:** StackOps, sole proprietorship of Kevin Allioli,
-> Saint-Julien-en-Genevois (Haute-Savoie), France.
-> **Contact:** contact@stackops.ch
->
-> **Description.** Encryption and decryption happen on the user's device. The server stores
-> only ciphertext it cannot read. The software is source-available under the Elastic
-> License 2.0 and can be self-hosted.
->
-> **Cryptographic functions.** No algorithm is implemented by this project: the code calls
-> published, auditable libraries.
->
-> | Purpose | Primitive | Publication |
-> |---|---|---|
-> | Key derivation from the master password | Argon2id, 64 MiB, 3 passes, 256-bit output | RFC 9106 |
-> | Vault encryption | XChaCha20-Poly1305, 256-bit key | RFC 8439 and the XChaCha extension |
-> | Share envelopes | AES-256-GCM, 96-bit nonce | NIST FIPS 197, SP 800-38D |
-> | Sealing organisation keys | crypto_box (X25519 + ChaCha20-Poly1305) | RFC 7748, RFC 8439 |
-> | Key agreement | X25519 | RFC 7748 |
-> | Key separation | HKDF-SHA-256 | RFC 5869 |
-> | Digests | SHA-256 | NIST FIPS 180-4 |
->
-> No proprietary or non-published algorithm is used.
+```text
+Subject: Mass market encryption self-classification - GhostPass
+
+To the Bureau of Industry and Security and the National Security Agency,
+
+Pursuant to Section 740.17(b)(1) of the Export Administration Regulations, this
+is notification of the self-classification of a mass market encryption item.
+
+PRODUCT
+  Name:     GhostPass
+  Type:     Zero-knowledge password manager (iOS, Android, and server)
+  ECCN:     5D992.c
+  Licence:  Elastic License 2.0 (source-available); the server can be self-hosted
+
+SUBMITTER
+  StackOps, sole proprietorship of Kevin Allioli
+  Saint-Julien-en-Genevois (Haute-Savoie), France
+  Contact: contact@stackops.ch
+
+DESCRIPTION
+  Encryption and decryption happen on the user's device. The server stores only
+  ciphertext it cannot read: it holds no master password, no encryption key, and
+  no plaintext vault content, and cannot reconstruct them.
+
+CRYPTOGRAPHIC FUNCTIONS
+  No algorithm is implemented by this project. The code calls published,
+  auditable libraries.
+
+  Key derivation from the master password
+      Argon2id, 64 MiB memory, 3 passes, 256-bit output       RFC 9106
+  Vault encryption
+      XChaCha20-Poly1305, 256-bit key, 192-bit nonce          RFC 8439 (XChaCha extension)
+  Share envelopes
+      AES-256-GCM, 256-bit key, 96-bit nonce                  NIST FIPS 197, SP 800-38D
+  Sealing organisation keys
+      crypto_box: X25519 with ChaCha20-Poly1305               RFC 7748, RFC 8439
+  Key agreement
+      X25519                                                  RFC 7748
+  Key separation
+      HKDF-SHA-256                                            RFC 5869
+  Digests
+      SHA-256                                                 NIST FIPS 180-4
+
+  No proprietary or non-published algorithm is used.
+
+Kind regards,
+```
 
 ### 2. Le rapport annuel
 
