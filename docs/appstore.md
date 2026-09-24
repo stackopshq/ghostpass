@@ -263,6 +263,28 @@ consommer un numéro de version : App Store Connect refuse deux fois le même
 Aucune clé n'est présente sur la machine de construction au 24 septembre, et Transporter
 n'y est pas installé.
 
+## Le changement d'adresse publique, et ce qu'il entraîne
+
+L'instance publique passe de `ghostpass.stackops.ch` à **`pass.ghostsuite.cloud`**. Ce
+sont **deux serveurs distincts, avec deux bases distinctes** — vérifié plutôt que
+supposé : un compte créé sur l'un ne s'ouvre pas sur l'autre.
+
+Conséquences relevées le 24 septembre 2026 :
+
+- **La fiche App Store vise la nouvelle adresse.** C'est celle que l'examinateur saisira,
+  et la seule qui vivra encore quand l'examen aura lieu.
+- **Le compte de démonstration existe sur les deux**, le temps de la bascule.
+- **La politique de confidentialité publiée est à corriger.** Elle nomme
+  `ghostpass.stackops.ch` dans le tableau des destinataires, à la ligne Cloudflare. Ce
+  document est juridique et il est **déjà en ligne** ; Apple le lira. La correction
+  appartient à l'éditrice, pas au dépôt — elle est signalée ici pour ne pas être
+  découverte après coup. Le texte source vit dans `site/content/confidentialite.md` du
+  dépôt `ghostsuite`.
+- Les mentions de l'ancienne adresse dans le code iOS sont des **commentaires et des
+  valeurs de test**, pas des adresses en dur : `ServerAddress.swift` et `VaultStore.swift`
+  s'en servent comme exemple de saisie, `ContractTests.swift` comme domaine d'essai. Rien à
+  changer pour que le produit fonctionne — l'adresse est saisie par l'utilisateur.
+
 ## Ce qui n'est pas prêt et qu'il vaut mieux savoir
 
 - ~~`GET /api/mfa` doit être déployé…~~ **Fait.** Vérifié le 14 septembre 2026 contre

@@ -222,14 +222,26 @@ lui donner de quoi entrer, et lui dire quoi faire.
 |---|---|
 | Compte de démonstration | `appstore-review@stackops.ch` — **créé le 24 septembre 2026** |
 | Mot de passe | **pas écrit ici** — voir ci-dessous |
-| Serveur à saisir au premier écran | `https://ghostpass.stackops.ch` |
+| Serveur à saisir au premier écran | `https://pass.ghostsuite.cloud` |
 
 Le coffre contient **9 éléments** de démonstration : identifiants avec adresses de sites,
 note sécurisée, carte, et un mot de passe volontairement faible pour que l'écran de santé
 ait quelque chose à montrer.
 
-Éprouvé de bout en bout le jour de sa création, contre l'instance publique : inscription,
-connexion, et lecture des neuf éléments. Ce n'est pas un compte préparé « en principe ».
+Éprouvé de bout en bout le jour de sa création : inscription, connexion, et lecture des
+neuf éléments. Ce n'est pas un compte préparé « en principe ».
+
+**Le compte existe sur les deux instances**, et c'est délibéré. L'adresse publique passe
+de `ghostpass.stackops.ch` à `pass.ghostsuite.cloud` ; ce sont **deux serveurs distincts
+avec deux bases distinctes**, pas un alias — vérifié, le compte créé sur l'un ne s'ouvre
+pas sur l'autre. C'est la nouvelle qui figure dans la fiche, la seule qui vivra encore
+quand l'examen aura lieu. L'ancienne reste en état de marche le temps de la bascule.
+
+**Un piège sur cette vérification, à connaître avant de conclure quoi que ce soit** :
+`/api/auth/prelogin` rend `200` et des paramètres KDF pour **n'importe quelle** adresse,
+y compris une qui n'existe pas. C'est délibéré — le serveur ne révèle pas quels comptes
+existent — et cela veut dire qu'une réponse 200 ne prouve pas qu'un compte est là. Seul un
+`login` réel tranche.
 
 **Le mot de passe ne figure pas dans le dépôt.** Un secret en clair dans un dépôt reste
 dans son historique même retiré, et le balayage de secrets le refuserait à juste titre. Il
@@ -268,8 +280,9 @@ Texte proposé pour la zone « Notes » :
 **Deux pièges connus, à traiter avant l'envoi et non pendant l'examen :**
 
 1. ~~Le compte de démonstration doit vivre sur une instance joignable depuis l'extérieur.~~
-   **Fait** : `appstore-review@stackops.ch` sur `https://ghostpass.stackops.ch`, créé et
-   éprouvé le 24 septembre. Reste à recopier ses identifiants dans App Store Connect.
+   **Fait** : `appstore-review@stackops.ch`, créé et éprouvé le 24 septembre sur les deux
+   instances — `pass.ghostsuite.cloud`, la nouvelle, et `ghostpass.stackops.ch` le temps de
+   la bascule. Reste à recopier ses identifiants dans App Store Connect.
 2. Le remplissage automatique exige le **groupe d'applications** et l'habilitation de
    fournisseur d'identifiants, tous deux hors de portée d'une équipe personnelle. La
    version envoyée doit être signée par l'équipe de l'entreprise `9WHCJ5W7S6`, sans quoi
