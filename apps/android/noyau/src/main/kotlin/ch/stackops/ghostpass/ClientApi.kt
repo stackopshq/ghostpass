@@ -100,6 +100,31 @@ private data class StatutSso(val enabled: Boolean = false)
 @Serializable
 private data class StatutDuSecondFacteur(val enabled: Boolean = false)
 
+/** Une connexion, telle que le serveur l'a enregistrée. */
+@Serializable
+data class ConnexionDto(
+    val ip: String? = null,
+    val userAgent: String? = null,
+    /** Un appareil jamais vu jusque-là. C'est ce qui mérite un regard. */
+    val newDevice: Boolean = false,
+    val createdAt: Long = 0,
+)
+
+@Serializable
+private data class EnveloppeDeConnexions(val events: List<ConnexionDto> = emptyList())
+
+/** Une action sensible sur le compte. */
+@Serializable
+data class ActionDto(
+    val action: String = "",
+    val target: String? = null,
+    val ip: String? = null,
+    val createdAt: Long = 0,
+)
+
+@Serializable
+private data class EnveloppeDActions(val events: List<ActionDto> = emptyList())
+
 /**
  * Ce que le serveur rend pour configurer un second facteur : le secret, et l'URI que lit
  * une application d'authentification.
@@ -360,6 +385,25 @@ class ClientApi(baseUrl: String) {
             ),
         )
     }
+
+    // ─── Le journal du compte ───
+
+    /** Les connexions enregistrées : adresse, appareil, et si celui-ci était inconnu. */
+    fun connexionsDuCompte(jeton: String): List<ConnexionDto> =
+        json.decodeFromString(
+            EnveloppeDeConnexions.serializer(),
+            requete("GET", "/api/account/activity", jeton = jeton),
+        ).events
+
+    /**
+     * Les actions sensibles : second facteur retiré, accès d'urgence accordé, clé d'équipe
+     * renouvelée. **C'est là qu'un accès illégitime laisse une trace.**
+     */
+    fun actionsDuCompte(jeton: String): List<ActionDto> =
+        json.decodeFromString(
+            EnveloppeDActions.serializer(),
+            requete("GET", "/api/account/audit", jeton = jeton),
+        ).events
 
     // ─── Les coffres d'équipe ───
 

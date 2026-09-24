@@ -298,6 +298,22 @@ class Coffre {
         api.retirerLeSecondFacteur(j, empreinte, code)
     }
 
+    // ─── Le journal du compte ───
+
+    /** Les connexions enregistrées, les plus récentes telles que le serveur les ordonne. */
+    fun connexionsDuCompte(): List<ConnexionDto> {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return api.connexionsDuCompte(j)
+    }
+
+    /** Les actions sensibles enregistrées sur le compte. */
+    fun actionsDuCompte(): List<ActionDto> {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return api.actionsDuCompte(j)
+    }
+
     /** Ouvre et ordonne une liste d'éléments chiffrés, d'où qu'elle vienne. */
     fun relire(elements: List<ElementChiffre>): LectureDuCoffre = lecture(elements, compte)
 

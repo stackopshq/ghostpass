@@ -82,6 +82,7 @@ fun EcranDuCoffre(
     surReglages: () -> Unit = {},
     surImport: () -> Unit = {},
     surSecondFacteur: () -> Unit = {},
+    surJournal: () -> Unit = {},
 ) {
     val couleurs = LocalCouleurs.current
     val lecture = modele.lectureAffichee
@@ -106,6 +107,7 @@ fun EcranDuCoffre(
             if (reglagesOuverts) {
                 MenuDeReglages(
                     modele, surCorbeille, surSante, surReglages, surImport, surSecondFacteur,
+                    surJournal,
                 ) {
                     reglagesOuverts = false
                 }
@@ -300,6 +302,7 @@ private fun MenuDeReglages(
     surReglages: () -> Unit,
     surImport: () -> Unit,
     surSecondFacteur: () -> Unit,
+    surJournal: () -> Unit,
     surFermer: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
@@ -321,6 +324,11 @@ private fun MenuDeReglages(
         LienDiscret("Réglages", identifiant = "button.settings.open") {
             surFermer()
             surReglages()
+        }
+
+        LienDiscret("Journal du compte", identifiant = "button.activity") {
+            surFermer()
+            surJournal()
         }
 
         LienDiscret("Second facteur", identifiant = "button.mfa") {

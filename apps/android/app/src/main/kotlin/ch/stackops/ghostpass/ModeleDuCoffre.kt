@@ -1108,6 +1108,41 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      * laisserait un coffre à moitié rempli sans dire où il s'est arrêté ; continuer et
      * compter permet de rejouer le fichier — les doublons se voient, une absence non.
      */
+    // ─── Le journal du compte ───
+
+    /**
+     * Trois états là encore, et pour la même raison qu'au second facteur.
+     *
+     * **Un journal qu'on n'a pas pu lire n'est pas un journal vide.** Les aplatir sur une
+     * liste vide dirait « rien ne s'est passé sur ce compte » à quelqu'un dont on n'a rien
+     * lu — sur le seul écran capable de révéler une intrusion, c'est le pire des replis
+     * silencieux.
+     */
+    sealed interface EtatDuJournal {
+        data object EnLecture : EtatDuJournal
+        data class Lu(
+            val connexions: List<ConnexionDto>,
+            val actions: List<ActionDto>,
+        ) : EtatDuJournal
+        data class Indisponible(val cause: String) : EtatDuJournal
+    }
+
+    var journal by mutableStateOf<EtatDuJournal>(EtatDuJournal.EnLecture)
+
+    fun lireLeJournal() {
+        viewModelScope.launch {
+            journal = EtatDuJournal.EnLecture
+            journal = try {
+                val (connexions, actions) = withContext(Dispatchers.IO) {
+                    coffre.connexionsDuCompte() to coffre.actionsDuCompte()
+                }
+                EtatDuJournal.Lu(connexions, actions)
+            } catch (e: Exception) {
+                EtatDuJournal.Indisponible(e.message ?: "Le serveur n'a pas répondu.")
+            }
+        }
+    }
+
     // ─── Le second facteur du compte ───
 
     /**
