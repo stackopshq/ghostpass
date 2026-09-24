@@ -1108,6 +1108,132 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      * laisserait un coffre à moitié rempli sans dire où il s'est arrêté ; continuer et
      * compter permet de rejouer le fichier — les doublons se voient, une absence non.
      */
+    // ─── L'accès d'urgence ───
+
+    sealed interface EtatDesUrgences {
+        data object EnLecture : EtatDesUrgences
+        data class Lu(
+            val confies: List<LienDUrgenceDto>,
+            val recus: List<LienDUrgenceDto>,
+        ) : EtatDesUrgences
+        data class Indisponible(val cause: String) : EtatDesUrgences
+    }
+
+    var liensDUrgence by mutableStateOf<EtatDesUrgences>(EtatDesUrgences.EnLecture)
+
+    /** Le coffre d'un donneur, ouvert. `null` tant qu'on n'en a ouvert aucun. */
+    var coffreDUrgenceOuvert by mutableStateOf<Coffre.CoffreDUrgenceOuvert?>(null)
+        private set
+
+    fun lireLesLiensDUrgence() {
+        viewModelScope.launch {
+            liensDUrgence = EtatDesUrgences.EnLecture
+            liensDUrgence = try {
+                val liens = withContext(Dispatchers.IO) { coffre.liensDUrgence() }
+                EtatDesUrgences.Lu(liens.asGrantor, liens.asGrantee)
+            } catch (e: Exception) {
+                EtatDesUrgences.Indisponible(e.message ?: "Le serveur n'a pas répondu.")
+            }
+        }
+    }
+
+    fun inviterUnContactDUrgence(
+        email: String,
+        role: String,
+        joursDAttente: Int,
+        surFin: (Boolean) -> Unit,
+    ) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) {
+                    coffre.inviterUnContactDUrgence(email, role, joursDAttente)
+                }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let {
+                // Le message du serveur est repris tel quel : « utilisateur introuvable » et
+                // « contact déjà invité » demandent deux gestes différents, et un message
+                // unique les rendrait indiscernables.
+                message = it.message ?: "L'invitation a échoué."
+            }
+            if (resultat.isSuccess) lireLesLiensDUrgence()
+            surFin(resultat.isSuccess)
+        }
+    }
+
+    fun agirSurUnLienDUrgence(id: String, action: String) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) { coffre.agirSurUnLienDUrgence(id, action) }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = it.message }
+            // **On relit toujours**, même après un échec : le serveur arbitre les états, et
+            // un écran qui garderait le sien après un refus montrerait un bouton qui ne
+            // marche plus.
+            lireLesLiensDUrgence()
+        }
+    }
+
+    fun revoquerUnLienDUrgence(id: String) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) { coffre.revoquerUnLienDUrgence(id) }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = it.message }
+            lireLesLiensDUrgence()
+        }
+    }
+
+    fun ouvrirUnCoffreDUrgence(id: String) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) { coffre.ouvrirUnCoffreDUrgence(id) }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let {
+                // Le serveur refuse par 403 tant que le délai court : son message dit
+                // « délai en cours ou non demandé », ce qui est exactement l'information
+                // utile. On ne la remplace pas par « erreur ».
+                message = it.message ?: "Le coffre n'a pas pu être ouvert."
+            }
+            coffreDUrgenceOuvert = resultat.getOrNull()
+        }
+    }
+
+    fun fermerLeCoffreDUrgence() {
+        coffreDUrgenceOuvert = null
+    }
+
+    fun reprendreLeCompte(
+        ouvert: Coffre.CoffreDUrgenceOuvert,
+        nouveauMotDePasse: String,
+        surFin: (Boolean) -> Unit,
+    ) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) { coffre.reprendreLeCompte(ouvert, nouveauMotDePasse) }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = it.message ?: "La reprise a échoué." }
+            if (resultat.isSuccess) {
+                message = "Compte repris. Communiquez le nouveau mot de passe à son titulaire."
+            }
+            surFin(resultat.isSuccess)
+        }
+    }
+
     // ─── La clé de récupération ───
 
     /**

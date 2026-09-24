@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.IOException
@@ -99,6 +100,36 @@ private data class StatutSso(val enabled: Boolean = false)
 
 @Serializable
 private data class StatutDuSecondFacteur(val enabled: Boolean = false)
+
+/** Un lien d'urgence, dans l'un ou l'autre sens. */
+@Serializable
+data class LienDUrgenceDto(
+    val id: String = "",
+    val contactEmail: String = "",
+    val role: String = "view",
+    val waitDays: Int = 0,
+    val status: String = "invited",
+    val requestedAt: Long? = null,
+    /** Seulement dans le sens « je suis le contact » : le délai est-il écoulé. */
+    val available: Boolean? = null,
+)
+
+@Serializable
+data class LiensDUrgenceDto(
+    val asGrantor: List<LienDUrgenceDto> = emptyList(),
+    val asGrantee: List<LienDUrgenceDto> = emptyList(),
+)
+
+/** Ce que le serveur rend quand l'accès est ouvert : l'enveloppe, et le coffre du donneur. */
+@Serializable
+data class AccesDUrgenceDto(
+    val role: String = "view",
+    val sealedUserKey: String = "",
+    val grantorPublicKey: String = "",
+    val grantorEmail: String = "",
+    val grantorKdfParams: String = "",
+    val items: List<ElementChiffre> = emptyList(),
+)
 
 /** Ce que le serveur rend pour tenter une récupération — vrai kit, ou leurres. */
 @Serializable
@@ -390,6 +421,89 @@ class ClientApi(baseUrl: String) {
             "POST", "/api/mfa/disable", jeton = jeton,
             corps = json.encodeToString(
                 CHAMPS, mapOf("masterPasswordHash" to empreinteDuMotDePasse, "code" to code),
+            ),
+        )
+    }
+
+    // ─── L'accès d'urgence ───
+    //
+    // **Le seul endroit du produit où une clé de coffre est scellée vers un tiers.** Tout
+    // le reste est scellé pour soi-même ou pour une organisation dont on est membre ; ici,
+    // on confie la lecture de son coffre à quelqu'un d'autre, sous condition de délai.
+    //
+    // Le serveur ne peut rien lire : il garde une enveloppe scellée vers la clé publique du
+    // contact, qu'il ne sait pas ouvrir. Ce qu'il tient, c'est **le temps** — la demande, le
+    // délai, l'approbation. C'est la seule part du protocole qu'il puisse arbitrer, et c'est
+    // pourquoi le client ne décide jamais si l'accès est ouvert.
+
+    fun inviterUnContactDUrgence(
+        jeton: String,
+        email: String,
+        role: String,
+        joursDAttente: Int,
+        cleUtilisateurScellee: String,
+    ) {
+        requete(
+            "POST", "/api/emergency", jeton = jeton,
+            corps = json.encodeToString(
+                JsonObject.serializer(),
+                buildJsonObject {
+                    put("email", email)
+                    put("role", role)
+                    put("waitDays", joursDAttente)
+                    put("sealedUserKey", cleUtilisateurScellee)
+                },
+            ),
+        )
+    }
+
+    fun liensDUrgence(jeton: String): LiensDUrgenceDto =
+        json.decodeFromString(
+            LiensDUrgenceDto.serializer(),
+            requete("GET", "/api/emergency", jeton = jeton),
+        )
+
+    /**
+     * `accept` et `request` appartiennent au contact, `approve` et `reject` au donneur.
+     *
+     * **Le serveur vérifie qui a le droit de quoi**, et le client ne fait que transmettre.
+     * Reproduire la règle ici donnerait deux arbitres, et le jour où ils divergeraient,
+     * c'est l'écran qui aurait tort en silence.
+     */
+    fun agirSurUnLienDUrgence(jeton: String, id: String, action: String) {
+        requete("POST", "/api/emergency/$id/$action", jeton = jeton)
+    }
+
+    fun revoquerUnLienDUrgence(jeton: String, id: String) {
+        requete("DELETE", "/api/emergency/$id", jeton = jeton)
+    }
+
+    /**
+     * L'accès lui-même : l'enveloppe scellée et le coffre du donneur.
+     *
+     * Le serveur refuse par 403 tant que le délai court. **C'est lui qui tranche** : le
+     * client affiche une date prévue, il ne s'en sert jamais pour décider.
+     */
+    fun accesDUrgence(jeton: String, id: String): AccesDUrgenceDto =
+        json.decodeFromString(
+            AccesDUrgenceDto.serializer(),
+            requete("GET", "/api/emergency/$id/access", jeton = jeton),
+        )
+
+    fun reprendreLeCompte(
+        jeton: String,
+        id: String,
+        nouvelleEmpreinteDuMotDePasse: String,
+        nouvelleCleUtilisateur: String,
+    ) {
+        requete(
+            "POST", "/api/emergency/$id/takeover", jeton = jeton,
+            corps = json.encodeToString(
+                CHAMPS,
+                mapOf(
+                    "newMasterPasswordHash" to nouvelleEmpreinteDuMotDePasse,
+                    "newEncryptedUserKey" to nouvelleCleUtilisateur,
+                ),
             ),
         )
     }

@@ -84,6 +84,7 @@ fun EcranDuCoffre(
     surSecondFacteur: () -> Unit = {},
     surJournal: () -> Unit = {},
     surCleDeRecuperation: () -> Unit = {},
+    surUrgence: () -> Unit = {},
 ) {
     val couleurs = LocalCouleurs.current
     val lecture = modele.lectureAffichee
@@ -108,7 +109,7 @@ fun EcranDuCoffre(
             if (reglagesOuverts) {
                 MenuDeReglages(
                     modele, surCorbeille, surSante, surReglages, surImport, surSecondFacteur,
-                    surJournal, surCleDeRecuperation,
+                    surJournal, surCleDeRecuperation, surUrgence,
                 ) {
                     reglagesOuverts = false
                 }
@@ -305,6 +306,7 @@ private fun MenuDeReglages(
     surSecondFacteur: () -> Unit,
     surJournal: () -> Unit,
     surCleDeRecuperation: () -> Unit,
+    surUrgence: () -> Unit,
     surFermer: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
@@ -326,6 +328,11 @@ private fun MenuDeReglages(
         LienDiscret("Réglages", identifiant = "button.settings.open") {
             surFermer()
             surReglages()
+        }
+
+        LienDiscret("Accès d'urgence", identifiant = "button.emergency") {
+            surFermer()
+            surUrgence()
         }
 
         LienDiscret("Clé de récupération", identifiant = "button.recoveryKey") {

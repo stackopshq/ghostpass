@@ -66,3 +66,26 @@ data class RemiseDeRecuperation(
 private fun champ(objet: kotlinx.serialization.json.JsonObject, nom: String): String =
     objet[nom]?.jsonPrimitive?.content?.takeIf { it.isNotEmpty() }
         ?: throw ErreurApi.ReponseIllisible()
+
+/**
+ * Ce que `EmergencyVault.takeover()` rend, à transmettre tel quel au serveur.
+ *
+ * Mêmes noms de serde, même raison d'exister que les deux classes ci-dessus :
+ * `master_password_hash` et `encrypted_user_key`. Et le même coût si l'un d'eux se perd — un
+ * compte dont le mot de passe ne marche plus, chez quelqu'un qui, par hypothèse, n'est pas
+ * là pour le signaler.
+ */
+data class RepriseDUrgence(
+    val empreinteDuMotDePasse: String,
+    val cleUtilisateur: String,
+) {
+    companion object {
+        fun depuisLeCoeur(json: String): RepriseDUrgence {
+            val objet = Json.parseToJsonElement(json).jsonObject
+            return RepriseDUrgence(
+                empreinteDuMotDePasse = champ(objet, "master_password_hash"),
+                cleUtilisateur = champ(objet, "encrypted_user_key"),
+            )
+        }
+    }
+}

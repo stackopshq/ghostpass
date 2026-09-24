@@ -21,6 +21,7 @@ import ch.stackops.ghostpass.ui.EcranDeLElement
 import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
 import ch.stackops.ghostpass.ui.EcranDImport
 import ch.stackops.ghostpass.ui.EcranDeLaSante
+import ch.stackops.ghostpass.ui.EcranDeLUrgence
 import ch.stackops.ghostpass.ui.EcranDeLaCleDeRecuperation
 import ch.stackops.ghostpass.ui.EcranDuJournal
 import ch.stackops.ghostpass.ui.EcranDuSecondFacteur
@@ -95,6 +96,7 @@ class ActivitePrincipale : FragmentActivity() {
                 var secondFacteurOuvert by remember { mutableStateOf(false) }
                 var journalOuvert by remember { mutableStateOf(false) }
                 var cleDeRecuperationOuverte by remember { mutableStateOf(false) }
+                var urgenceOuverte by remember { mutableStateOf(false) }
 
                 // Verrouiller pendant une édition ferme l'édition. Sans cela, l'écran
                 // resterait posé sur un coffre fermé : le formulaire garderait à l'écran des
@@ -119,10 +121,16 @@ class ActivitePrincipale : FragmentActivity() {
                 BackHandler(
                     enabled = edition != null || modele.corbeilleOuverte ||
                         modele.santeOuverte || reglagesOuverts || importOuvert ||
-                        secondFacteurOuvert || journalOuvert || cleDeRecuperationOuverte,
+                        secondFacteurOuvert || journalOuvert || cleDeRecuperationOuverte ||
+                        urgenceOuverte,
                 ) {
                     when {
                         edition != null -> edition = null
+                        // Le coffre d'un donneur se referme avant l'écran qui y mène : un
+                        // retour arrière qui sauterait les deux ferait perdre de vue qu'on
+                        // lisait le coffre de quelqu'un d'autre.
+                        modele.coffreDUrgenceOuvert != null -> modele.fermerLeCoffreDUrgence()
+                        urgenceOuverte -> urgenceOuverte = false
                         cleDeRecuperationOuverte -> cleDeRecuperationOuverte = false
                         journalOuvert -> journalOuvert = false
                         secondFacteurOuvert -> secondFacteurOuvert = false
@@ -150,6 +158,13 @@ class ActivitePrincipale : FragmentActivity() {
                 if (!modele.deverrouille && cleDeRecuperationOuverte) {
                     cleDeRecuperationOuverte = false
                 }
+                // Le coffre d'un donneur ne survit **surtout** pas au verrouillage : ce sont
+                // les identifiants de quelqu'un d'autre, et il ne les a pas confiés à un
+                // téléphone posé sur une table.
+                if (!modele.deverrouille) {
+                    if (urgenceOuverte) urgenceOuverte = false
+                    if (modele.coffreDUrgenceOuvert != null) modele.fermerLeCoffreDUrgence()
+                }
 
                 when {
                     !modele.deverrouille -> EcranDeDeverrouillage(modele)
@@ -164,6 +179,7 @@ class ActivitePrincipale : FragmentActivity() {
                     cleDeRecuperationOuverte -> EcranDeLaCleDeRecuperation(modele) {
                         cleDeRecuperationOuverte = false
                     }
+                    urgenceOuverte -> EcranDeLUrgence(modele) { urgenceOuverte = false }
                     modele.corbeilleOuverte -> EcranDeLaCorbeille(modele) {
                         modele.fermerLaCorbeille()
                     }
@@ -217,6 +233,7 @@ class ActivitePrincipale : FragmentActivity() {
                             modele.message = null
                             cleDeRecuperationOuverte = true
                         },
+                        surUrgence = { modele.message = null; urgenceOuverte = true },
                     )
                 }
 

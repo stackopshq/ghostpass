@@ -301,6 +301,127 @@ class Coffre {
         api.retirerLeSecondFacteur(j, empreinte, code)
     }
 
+    // ─── L'accès d'urgence ───
+
+    /**
+     * Confie la lecture de son coffre à un contact, sous condition de délai.
+     *
+     * **C'est le seul endroit du produit où la clé d'un coffre est scellée vers un tiers.**
+     * Tout le reste est scellé pour soi-même, ou pour une organisation dont on est membre.
+     * Ici la clé du coffre part, enveloppée vers la clé publique du contact, et le serveur
+     * la garde sans pouvoir l'ouvrir.
+     *
+     * La clé publique vient du **serveur**, pas de l'utilisateur : c'est ce qui rend
+     * l'opération possible sans échange hors bande, et c'est aussi ce qui en fixe la limite.
+     * Un serveur malveillant pourrait annoncer sa propre clé et lire le coffre. Le modèle de
+     * menace l'assume — c'est la même hypothèse que pour les coffres d'équipe — et c'est la
+     * raison pour laquelle l'écran nomme le contact et son rôle en toutes lettres avant de
+     * demander confirmation : ce qu'on ne peut pas empêcher par la cryptographie, on le rend
+     * au moins visible.
+     */
+    fun inviterUnContactDUrgence(email: String, role: String, joursDAttente: Int) {
+        val c = compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val contact = api.clePubliqueAnnoncee(j, email)
+        val scelle = c.sealUserKeyFor(contact.publicKey)
+        api.inviterUnContactDUrgence(j, email, role, joursDAttente, scelle)
+    }
+
+    fun liensDUrgence(): LiensDUrgenceDto {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return api.liensDUrgence(j)
+    }
+
+    fun agirSurUnLienDUrgence(id: String, action: String) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.agirSurUnLienDUrgence(j, id, action)
+    }
+
+    fun revoquerUnLienDUrgence(id: String) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.revoquerUnLienDUrgence(j, id)
+    }
+
+    /**
+     * Le coffre d'un donneur, ouvert par l'enveloppe qu'il nous avait scellée.
+     *
+     * **Les registres sont écartés**, comme partout ailleurs : ce sont des données de
+     * l'application, et les montrer ici ferait apparaître des lignes au nom illisible dans
+     * le coffre de quelqu'un d'autre — au moment précisément le moins propice aux questions.
+     *
+     * Les lignes qui ne s'ouvrent pas **gardent leur place**, elles. C'est la règle §5, et
+     * elle vaut ici plus qu'ailleurs : un contact qui hérite d'un coffre doit savoir qu'il
+     * existe des éléments qu'il ne peut pas lire — typiquement ceux d'une équipe, scellés
+     * sous une Org Key dont il n'est pas membre. Leur absence se lirait « il n'y avait que
+     * ça », et personne ne saurait jamais qu'il manque quelque chose.
+     */
+    fun ouvrirUnCoffreDUrgence(id: String): CoffreDUrgenceOuvert {
+        val c = compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val acces = api.accesDUrgence(j, id)
+        val coffre = c.openEmergency(acces.grantorPublicKey, acces.sealedUserKey)
+        val entrees = acces.items.mapNotNull { chiffre ->
+            val element = try {
+                ouvrirEnUrgence(chiffre, coffre)
+            } catch (e: Exception) {
+                return@mapNotNull EntreeDuCoffre.Illisible(
+                    chiffre.id, RaisonDIllisibilite.CleManquante, chiffre.updatedAt,
+                )
+            }
+            if (element.estUnRegistre) null
+            else EntreeDuCoffre.Lisible(chiffre.id, element, chiffre.updatedAt)
+        }
+        return CoffreDUrgenceOuvert(
+            lien = id,
+            role = acces.role,
+            donneur = acces.grantorEmail,
+            kdfParams = acces.grantorKdfParams,
+            entrees = entrees.sortedWith(
+                compareBy(String.CASE_INSENSITIVE_ORDER) {
+                    (it as? EntreeDuCoffre.Lisible)?.element?.name ?: ""
+                },
+            ),
+            coffre = coffre,
+        )
+    }
+
+    /**
+     * Reprise : impose un nouveau mot de passe maître au donneur.
+     *
+     * **Cela l'exclut de son propre coffre** tant qu'il ne l'apprend pas. Le serveur révoque
+     * en outre toutes ses sessions. C'est l'opération la plus lourde du produit, et l'écran
+     * qui la déclenche doit le dire avant, pas après.
+     *
+     * Le calcul est fait par le cœur, qui rechiffre la clé du coffre sous le nouveau mot de
+     * passe : le contact n'apprend rien de plus qu'il ne savait déjà, puisqu'il lisait
+     * le coffre.
+     */
+    fun reprendreLeCompte(ouvert: CoffreDUrgenceOuvert, nouveauMotDePasse: String) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val remise = RepriseDUrgence.depuisLeCoeur(
+            ouvert.coffre.takeover(ouvert.donneur, ouvert.kdfParams, nouveauMotDePasse),
+        )
+        api.reprendreLeCompte(
+            j, ouvert.lien, remise.empreinteDuMotDePasse, remise.cleUtilisateur,
+        )
+    }
+
+    /** Un coffre d'urgence ouvert : ce qu'on y lit, et de quoi le reprendre. */
+    class CoffreDUrgenceOuvert(
+        val lien: String,
+        val role: String,
+        val donneur: String,
+        val kdfParams: String,
+        val entrees: List<EntreeDuCoffre>,
+        val coffre: uniffi.ghost_crypto_ffi.EmergencyVault,
+    )
+
     // ─── La clé de récupération ───
 
     /**
@@ -1121,35 +1242,49 @@ class Coffre {
          * « champ manquant », et un client qui construirait l'enveloppe ailleurs, autrement,
          * finirait par diverger. La conversion tient donc ici, une fois.
          */
-        fun ouvrir(chiffre: ElementChiffre, compte: Account): ElementDuCoffre {
-            val enveloppe = buildJsonObject {
+        fun ouvrir(chiffre: ElementChiffre, compte: Account): ElementDuCoffre =
+            CodecDElement.lire(compte.decryptItem(enveloppeDe(chiffre)))
+
+        /**
+         * L'enveloppe que le cœur attend, construite **une seule fois**.
+         *
+         * Les noms sont ceux de serde — `encrypted_key`, `encrypted_data` — et le passage du
+         * camelCase du DTO à ce snake_case est exactement l'endroit qui dérive. Il en
+         * existait deux copies, une par clé d'ouverture, et le commentaire d'à côté disait
+         * déjà que « le second à diverger serait celui qu'on regarde le moins ». L'accès
+         * d'urgence en aurait ajouté une troisième, ouverte par une clé qu'on n'emploie
+         * qu'une fois dans la vie d'un compte — c'est-à-dire précisément celle dont personne
+         * ne verrait qu'elle a cessé de marcher.
+         */
+        private fun enveloppeDe(chiffre: ElementChiffre): String = json.encodeToString(
+            kotlinx.serialization.json.JsonObject.serializer(),
+            buildJsonObject {
                 put("encrypted_key", chiffre.encryptedKey)
                 put("encrypted_data", chiffre.encryptedData)
-            }
-            val clair = compte.decryptItem(json.encodeToString(
-                kotlinx.serialization.json.JsonObject.serializer(), enveloppe))
-            return CodecDElement.lire(clair)
-        }
+            },
+        )
+
+        /**
+         * La même ouverture, **par le coffre d'urgence** d'un donneur.
+         *
+         * `EmergencyVault` porte la même méthode qu'`Account` : c'est la clé qui change, pas
+         * le format. Rien de spécifique n'est donc à écrire ici — et c'est voulu.
+         */
+        fun ouvrirEnUrgence(
+            chiffre: ElementChiffre,
+            coffre: uniffi.ghost_crypto_ffi.EmergencyVault,
+        ): ElementDuCoffre = CodecDElement.lire(coffre.decryptItem(enveloppeDe(chiffre)))
 
         /**
          * La même ouverture, **sous l'Org Key** d'une organisation.
          *
          * L'enveloppe se construit à l'identique — c'est la clé qui change, pas le format.
-         * Deux constructions séparées finiraient par diverger sur le passage camelCase
-         * vers snake_case, et le second à diverger serait celui qu'on regarde le moins.
+         * Elle passe donc par [enveloppeDe], et il n'en existe plus qu'une construction.
          */
         fun ouvrirSousOrg(
             chiffre: ElementChiffre,
             org: uniffi.ghost_crypto_ffi.Org,
-        ): ElementDuCoffre {
-            val enveloppe = buildJsonObject {
-                put("encrypted_key", chiffre.encryptedKey)
-                put("encrypted_data", chiffre.encryptedData)
-            }
-            val clair = org.decryptItem(
-                json.encodeToString(kotlinx.serialization.json.JsonObject.serializer(), enveloppe))
-            return CodecDElement.lire(clair)
-        }
+        ): ElementDuCoffre = CodecDElement.lire(org.decryptItem(enveloppeDe(chiffre)))
 
         /**
          * Le scellement **sous l'Org Key**, pendant exact de [ouvrirSousOrg].
