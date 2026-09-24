@@ -245,7 +245,11 @@ fun ChampGhost(
 ) {
     val couleurs = LocalCouleurs.current
     Column(verticalArrangement = Arrangement.spacedBy(GP.ecartLibelle)) {
-        IntituleDeSection(intitule)
+        // Un intitulé vide **n'affiche rien**, plutôt qu'une ligne vide. Le cas se présente
+        // quand le champ vit déjà dans une section qui porte son nom : répéter « Mot de
+        // passe maître » juste au-dessus du champ du même nom fait lire deux réglages là
+        // où il n'y en a qu'un.
+        if (intitule.isNotBlank()) IntituleDeSection(intitule)
         TextField(
             value = valeur,
             onValueChange = onChange,

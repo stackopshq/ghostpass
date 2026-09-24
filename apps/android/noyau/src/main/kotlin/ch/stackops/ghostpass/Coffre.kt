@@ -248,6 +248,56 @@ class Coffre {
         return api.elements(j)
     }
 
+    // ─── Le second facteur du compte ───
+
+    /**
+     * Le second facteur est-il actif ?
+     *
+     * **`null` veut dire « ce serveur ne propose pas la fonction »**, et non « non ». Le
+     * serveur répond alors 404, ce qui n'est pas une panne : l'instance est simplement plus
+     * ancienne que la fonctionnalité. Les aplatir sur `false` ferait proposer d'activer un
+     * second facteur qui n'existe pas là-bas, et l'échec surviendrait après que
+     * l'utilisateur a saisi son mot de passe maître.
+     */
+    fun secondFacteurActif(): Boolean? {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return try {
+            api.secondFacteurActif(j)
+        } catch (e: ErreurApi.Http) {
+            if (e.statut == 404) null else throw e
+        }
+    }
+
+    /**
+     * Prépare un second facteur : le serveur rend le secret et l'URI `otpauth`.
+     *
+     * Le mot de passe maître **ne traverse pas** : le cœur Rust en dérive l'empreinte
+     * d'authentification, et c'est elle qui part. C'est la même empreinte qu'à la connexion,
+     * et le serveur ne peut rien en faire d'autre que la comparer.
+     */
+    fun preparerLeSecondFacteur(motDePasse: String): ConfigurationDuSecondFacteur {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val s = session ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val empreinte = masterPasswordHash(motDePasse, s.email, s.kdfParams)
+        return api.preparerLeSecondFacteur(j, empreinte)
+    }
+
+    fun confirmerLeSecondFacteur(code: String) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.confirmerLeSecondFacteur(j, code)
+    }
+
+    fun retirerLeSecondFacteur(motDePasse: String, code: String) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val s = session ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val empreinte = masterPasswordHash(motDePasse, s.email, s.kdfParams)
+        api.retirerLeSecondFacteur(j, empreinte, code)
+    }
+
     /** Ouvre et ordonne une liste d'éléments chiffrés, d'où qu'elle vienne. */
     fun relire(elements: List<ElementChiffre>): LectureDuCoffre = lecture(elements, compte)
 

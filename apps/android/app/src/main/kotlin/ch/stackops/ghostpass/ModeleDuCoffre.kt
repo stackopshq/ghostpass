@@ -1108,6 +1108,89 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      * laisserait un coffre à moitié rempli sans dire où il s'est arrêté ; continuer et
      * compter permet de rejouer le fichier — les doublons se voient, une absence non.
      */
+    // ─── Le second facteur du compte ───
+
+    /**
+     * Trois états, jamais deux — et c'est la correction qu'iOS a dû faire.
+     *
+     * Là-bas, `actif` valant `nil` disait deux choses à la fois : « je charge » et « j'ai
+     * échoué ». La roue tournait donc indéfiniment dès que le serveur refusait la route, et
+     * l'écran ne disait rien. Ici les trois cas sont des types distincts, et le compilateur
+     * ne laisse pas les confondre.
+     */
+    sealed interface EtatDuSecondFacteur {
+        data object EnLecture : EtatDuSecondFacteur
+        data class Lu(val actif: Boolean) : EtatDuSecondFacteur
+        data class Indisponible(val cause: String) : EtatDuSecondFacteur
+    }
+
+    var secondFacteur by mutableStateOf<EtatDuSecondFacteur>(EtatDuSecondFacteur.EnLecture)
+
+    fun lireLeSecondFacteur() {
+        viewModelScope.launch {
+            secondFacteur = EtatDuSecondFacteur.EnLecture
+            secondFacteur = try {
+                val actif = withContext(Dispatchers.IO) { coffre.secondFacteurActif() }
+                if (actif == null) {
+                    // 404 : l'instance est plus ancienne que la fonctionnalité. Ce n'est pas
+                    // une panne, et le dire ainsi évite d'envoyer chercher un problème de
+                    // réseau qui n'existe pas.
+                    EtatDuSecondFacteur.Indisponible(
+                        "Ce serveur ne propose pas encore le second facteur.",
+                    )
+                } else {
+                    EtatDuSecondFacteur.Lu(actif)
+                }
+            } catch (e: Exception) {
+                EtatDuSecondFacteur.Indisponible(e.message ?: "Le serveur n'a pas répondu.")
+            }
+        }
+    }
+
+    fun preparerLeSecondFacteur(
+        motDePasse: String,
+        surFin: (ConfigurationDuSecondFacteur?) -> Unit,
+    ) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) { coffre.preparerLeSecondFacteur(motDePasse) }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = it.message }
+            surFin(resultat.getOrNull())
+        }
+    }
+
+    fun confirmerLeSecondFacteur(code: String, surFin: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) { coffre.confirmerLeSecondFacteur(code) }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = it.message }
+            if (resultat.isSuccess) secondFacteur = EtatDuSecondFacteur.Lu(true)
+            surFin(resultat.isSuccess)
+        }
+    }
+
+    fun retirerLeSecondFacteur(motDePasse: String, code: String, surFin: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) { coffre.retirerLeSecondFacteur(motDePasse, code) }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = it.message }
+            if (resultat.isSuccess) secondFacteur = EtatDuSecondFacteur.Lu(false)
+            surFin(resultat.isSuccess)
+        }
+    }
+
     fun importerDesElements(
         elements: List<ElementDuCoffre>,
         surFin: (Int) -> Unit = {},

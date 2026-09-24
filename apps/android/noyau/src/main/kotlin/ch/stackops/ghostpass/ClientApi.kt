@@ -97,6 +97,19 @@ data class PartageCree(
 @Serializable
 private data class StatutSso(val enabled: Boolean = false)
 
+@Serializable
+private data class StatutDuSecondFacteur(val enabled: Boolean = false)
+
+/**
+ * Ce que le serveur rend pour configurer un second facteur : le secret, et l'URI que lit
+ * une application d'authentification.
+ */
+@Serializable
+data class ConfigurationDuSecondFacteur(
+    val secret: String,
+    val otpauthUri: String = "",
+)
+
 /** Le corps d'erreur du serveur, y compris le signal de second facteur. */
 @Serializable
 private data class ErreurServeur(
@@ -277,6 +290,76 @@ class ClientApi(baseUrl: String) {
                     "code" to code, "codeVerifier" to verificateur)),
             ),
         )
+
+    // ─── Le second facteur du compte ───
+    //
+    // Il protège la **connexion au serveur**, pas le coffre : celui-ci reste chiffré par le
+    // mot de passe maître, que le serveur ne connaît pas. Quelqu'un qui volerait le second
+    // facteur n'obtiendrait que des enveloppes illisibles — mais il obtiendrait aussi la
+    // possibilité de les **effacer**, ce qui suffit à justifier la protection.
+
+    /**
+     * Le second facteur est-il actif sur ce compte ?
+     *
+     * `null` n'existe pas ici : un serveur qui ne connaît pas la route lève
+     * [ErreurApi.Http] avec un 404, et c'est à l'appelant de le distinguer d'une panne.
+     * Rendre `false` serait un repli silencieux — l'écran proposerait d'activer une
+     * fonction que ce serveur n'a pas, et l'échec arriverait à l'étape suivante.
+     */
+    fun secondFacteurActif(jeton: String): Boolean =
+        json.decodeFromString(
+            StatutDuSecondFacteur.serializer(),
+            requete("GET", "/api/mfa", jeton = jeton),
+        ).enabled
+
+    /**
+     * Prépare un second facteur, et **remet la configuration à zéro**.
+     *
+     * À n'appeler que lorsque le statut a répondu « inactif », sous peine de détruire un
+     * secret en place : quelqu'un dont l'application d'authentification fonctionne se
+     * retrouverait avec des codes refusés, sans rien avoir demandé.
+     *
+     * Le mot de passe maître ne traverse pas : c'est son empreinte d'authentification,
+     * calculée par le cœur Rust, qui part.
+     */
+    fun preparerLeSecondFacteur(jeton: String, empreinteDuMotDePasse: String): ConfigurationDuSecondFacteur =
+        json.decodeFromString(
+            ConfigurationDuSecondFacteur.serializer(),
+            requete(
+                "POST", "/api/mfa/setup", jeton = jeton,
+                corps = json.encodeToString(
+                    CHAMPS, mapOf("masterPasswordHash" to empreinteDuMotDePasse),
+                ),
+            ),
+        )
+
+    /**
+     * Confirme la configuration par un premier code.
+     *
+     * **Tant qu'elle n'est pas confirmée, le compte reste accessible sans second facteur.**
+     * C'est ce qui évite de s'enfermer dehors avec une application d'authentification mal
+     * configurée — l'horloge décalée d'une minute, le mauvais compte choisi.
+     */
+    fun confirmerLeSecondFacteur(jeton: String, code: String) {
+        requete(
+            "POST", "/api/mfa/activate", jeton = jeton,
+            corps = json.encodeToString(CHAMPS, mapOf("code" to code)),
+        )
+    }
+
+    /**
+     * Retire le second facteur. **Les deux sont exigés** : le mot de passe maître et un code
+     * valide. Un téléphone déverrouillé trouvé sur une table ne doit pas suffire à retirer
+     * la protection.
+     */
+    fun retirerLeSecondFacteur(jeton: String, empreinteDuMotDePasse: String, code: String) {
+        requete(
+            "POST", "/api/mfa/disable", jeton = jeton,
+            corps = json.encodeToString(
+                CHAMPS, mapOf("masterPasswordHash" to empreinteDuMotDePasse, "code" to code),
+            ),
+        )
+    }
 
     // ─── Les coffres d'équipe ───
 
