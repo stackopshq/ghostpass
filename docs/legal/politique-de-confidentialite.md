@@ -79,7 +79,7 @@ effacement immédiat détruirait celles des autres utilisateurs.
 
 | Destinataire | Ce qu'il fait | Où |
 |---|---|---|
-| **Cloudflare, Inc.** | Achemine le trafic vers `ghostpass.stackops.ch` | États-Unis |
+| **Cloudflare, Inc.** | Achemine le trafic vers les instances de la suite : `pass.ghostsuite.cloud`, `cal.ghostsuite.cloud`, `bit.ghostsuite.cloud` | États-Unis |
 | **Infomaniak** (Swiss Backup) | Reçoit les sauvegardes, **déjà chiffrées** avant de partir | Suisse |
 | **OVH** | Héberge la machine, si votre organisation a choisi une instance dédiée | France — Gravelines et Roubaix |
 
