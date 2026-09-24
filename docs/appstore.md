@@ -183,6 +183,53 @@ partagé et le contenu de la copie locale. C'est elle qui a désigné le quatri�
 **Ce qui n'a toujours jamais tourné ailleurs que sur simulateur** : les passkeys, et le
 comportement sous mémoire contrainte.
 
+## L'archive de diffusion
+
+Construite pour la première fois le 24 septembre 2026, en `Release`, signée par l'équipe
+`9WHCJ5W7S6` :
+
+    tools/ios/build-xcframework.sh
+    xcodegen generate --spec project.yml          # depuis apps/ios
+    xcodebuild archive -project Ghostpass.xcodeproj -scheme Ghostpass \
+      -configuration Release -destination 'generic/platform=iOS' \
+      -archivePath …/Ghostpass.xcarchive \
+      DEVELOPMENT_TEAM=9WHCJ5W7S6 -allowProvisioningUpdates
+
+**Ce que l'archive prouve, et que rien n'avait prouvé jusque-là :**
+
+| Vérifié sur l'archive | Résultat |
+|---|---|
+| L'extension de remplissage est dans le paquet | `PlugIns/GhostpassAutoFill.appex` |
+| Habilitation de fournisseur d'identifiants | présente |
+| Groupe d'applications | `group.ch.stackops.ghostpass.coffre` |
+| Équipe de signature | `9WHCJ5W7S6`, pas l'équipe personnelle |
+| Version | 1.0 (1) |
+| Déclaration de chiffrement | `ITSAppUsesNonExemptEncryption` à `true` |
+| **Le drapeau `-captures-de-fiche`** | **absent du binaire — zéro occurrence** |
+
+La dernière ligne compte : ce drapeau lève la protection des captures d'écran, et il est
+compilé sous `#if DEBUG`. Qu'il soit **introuvable** dans le binaire de diffusion est la
+preuve qu'aucun argument de lancement ne peut désarmer la protection en production. C'était
+une affirmation ; c'est maintenant une mesure.
+
+`apps/ios/ExportOptions.plist` décrit l'export. L'équipe y est **écrite**, jamais
+découverte, pour la raison donnée dans le fichier.
+
+### Ce qui bloque l'export, et qui n'est pas dans le dépôt
+
+    xcodebuild -exportArchive … → EXPORT FAILED
+    error: No profiles for 'ch.stackops.ghostpass' were found
+    error: Unable to log in with account 'clara@cyberloutre.fr'
+
+Les cinq profils présents sur la machine sont des profils de **développement** — ceux que
+la signature automatique a créés en posant l'application sur les iPhone. L'export en
+`app-store-connect` réclame des profils de **distribution**, qu'Xcode crée en se
+connectant au compte. Cette connexion échoue : la session a expiré ou l'authentification à
+deux facteurs attend une réponse.
+
+À faire hors du dépôt : **Xcode > Réglages > Comptes**, se reconnecter avec
+`clara@cyberloutre.fr`, puis relancer l'export. L'archive, elle, n'est pas à refaire.
+
 ## Ce qui n'est pas prêt et qu'il vaut mieux savoir
 
 - ~~`GET /api/mfa` doit être déployé…~~ **Fait.** Vérifié le 14 septembre 2026 contre

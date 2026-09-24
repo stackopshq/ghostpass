@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Options d'export de l'archive de diffusion.
+
+	     `app-store-connect` produit un .ipa destiné à l'envoi, pas à une installation
+	     directe : il est signé avec le profil de distribution, non de développement.
+
+	     `teamID` est écrit ici plutôt que découvert. Un certificat d'équipe personnelle
+	     cohabite dans le trousseau de la machine de construction, et signer avec lui donne
+	     une application qui s'installe, se lance, et dont le remplissage automatique ne
+	     voit rien — le groupe d'applications n'étant pas provisionnable. Le symptôme serait
+	     « aucun identifiant proposé », à mille lieues de la cause. -->
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>teamID</key>
+	<string>9WHCJ5W7S6</string>
+	<key>destination</key>
+	<string>export</string>
+	<!-- Les symboles accompagnent l'envoi : sans eux, un rapport de plantage venu de
+	     l'App Store arrive en adresses brutes et ne se lit pas. -->
+	<key>uploadSymbols</key>
+	<true/>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<!-- Pas d'amincissement : l'App Store s'en charge lui-même par appareil. En demander
+	     ici produirait plusieurs variantes dont aucune n'est ce qu'Apple attend. -->
+	<key>stripSwiftSymbols</key>
+	<true/>
+</dict>
+</plist>
