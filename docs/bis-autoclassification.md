@@ -23,24 +23,33 @@ coûterait le plus cher.
 |---|---|---|
 | **Auto-classification** | Classer soi-même, notifier, puis rapporter chaque année | **Retenue** |
 | CCATS | Demande formelle au BIS, instruction de plusieurs semaines | Inutile pour un produit de grande diffusion à algorithmes publics |
-| §742.15(b), code publiquement disponible | Que le code **de chiffrement** soit public | Le miroir public `stackopshq/ghostpass` ne contient **pas** le cœur employé par les applications — voir ci-dessous |
+| §742.15(b), code publiquement disponible | Que le code de chiffrement **de l'objet exporté** soit public | Le miroir publie le serveur et le chiffrement du client web, mais **pas** le cœur qu'embarquent les applications mobiles — voir ci-dessous |
 
-### Le piège du miroir, et pourquoi la troisième voie ne tenait pas
+### Ce que le miroir publie, et pourquoi la troisième voie ne couvrait pas tout
 
-`stackopshq/ghostpass` est public. Mais le code qui chiffre le coffre **dans le binaire
-livré** n'y est pas :
+`stackopshq/ghostpass` est public, et ce qu'il expose répond à un choix de produit
+délibéré : **on publie ce qui pourrait trahir la promesse de connaissance nulle**, et pas
+le reste.
 
-- `crates/ghostpass-crypto-ffi`, présent dans le dépôt public, n'est appelé que par
-  l'outillage de test — `seed-vault`, qui amorce les bancs de captures et de parcours.
-- `ghost-crypto-ffi`, dans le dépôt `ghostsuite` **non publié**, est ce que compilent
-  `tools/ios/build-xcframework.sh` et `tools/android/build-jni.sh`. C'est lui qui part
-  dans l'IPA.
+| Dans le miroir | Statut |
+|---|---|
+| `apps/server` | public |
+| `apps/web-next` | public |
+| `crates/` | public — dont `ghostpass-crypto-wasm`, **le chiffrement du client web**, que `web-next` importe et dont il copie le WebAssembly |
+| `apps/ios`, `apps/android` | **exclus** |
 
-Une notification pointant le miroir aurait donc désigné un dépôt qui ne contient pas le
-chiffrement du produit distribué. Pire que pas de notification : on la croirait faite.
+Un auditeur peut donc vérifier ce qui compte : que le serveur ne détient rien qui ouvre un
+coffre, et comment le client web chiffre. Le code mobile est exclu par choix — Apple et
+Google distribuent de toute façon des binaires.
 
-Cette voie redeviendrait praticable si `ghostsuite` — ou au moins ses `crates/ghost-crypto*` —
-était publié. C'est une décision de produit, pas une conséquence de l'export.
+**Pourquoi le §742.15(b) ne suffisait pas pour autant.** Le cœur qu'embarquent les
+applications mobiles est `ghost-crypto-ffi`, dans le dépôt `ghostsuite` non publié : c'est
+lui que compilent `tools/ios/build-xcframework.sh` et `tools/android/build-jni.sh`, et lui
+qui part dans l'IPA soumis à Apple. Une notification fondée sur la publicité du code aurait
+donc désigné un dépôt qui ne contient pas le chiffrement de l'objet exporté.
+
+L'auto-classification ne pose pas ce problème : elle porte sur le produit, pas sur
+l'accessibilité de ses sources.
 
 ## Classification proposée
 
