@@ -64,10 +64,21 @@ n'est pas notre cas.
 Ces deux points sont juridiques. Ils sont mentionnés ici parce qu'ils conditionnent la
 publication, pas parce que ce document sait y répondre.
 
-L'annexe technique que les deux démarches réclament — primitives, paramètres, gestion des
-clés, ce que le serveur détient — est rédigée et vérifiable :
-[`anssi-dossier-technique.md`](anssi-dossier-technique.md). Elle décrit le code, pas le
-droit, et le dit.
+Les deux annexes techniques qu'elles réclament — primitives, paramètres, gestion des clés,
+ce que le serveur détient — sont rédigées et vérifiables :
+[`anssi-dossier-technique.md`](anssi-dossier-technique.md) pour la France,
+[`bis-notification.md`](bis-notification.md) pour les États-Unis. Elles décrivent le code,
+pas le droit, et le disent.
+
+**App Store Connect exige des documents**, et ce n'est pas une supposition : son
+questionnaire répond que des algorithmes standard employés *à la place* de ceux du système
+d'exploitation obligent à fournir une classification. C'est notre cas — les bibliothèques
+sont embarquées dans le binaire, pas empruntées à iOS. Aucune case à cocher n'en dispense.
+
+La voie du **§742.15(b)**, code source publiquement disponible, devient praticable le
+24 septembre 2026, quand le dépôt est publié sur `https://github.com/stackopshq/ghostpass`.
+Elle ne l'était pas avant : le critère est l'accessibilité réelle du code, pas le nom de la
+licence, et le miroir répondait `404`.
 
 ### Fiche App Store Connect
 
