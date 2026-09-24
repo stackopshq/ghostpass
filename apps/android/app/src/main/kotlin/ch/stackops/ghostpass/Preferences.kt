@@ -47,6 +47,21 @@ class Preferences(contexte: Context) {
     )
         private set
 
+    /**
+     * Afficher l'icône des sites plutôt que leur initiale.
+     *
+     * Allumé par défaut, comme sur iOS et sur le web : une liste de pastilles grises se
+     * reconnaît moins vite qu'une liste de logos, et le relais est celui du serveur de
+     * l'utilisateur, pas celui d'un tiers.
+     *
+     * Le réglage est réel et n'a rien de cosmétique : le coffre est chiffré de bout en
+     * bout, le serveur n'en connaît pas le contenu ; réclamer une icône, en revanche, lui
+     * nomme un domaine. C'est le seul endroit de l'application où l'utilisateur échange
+     * une information contre du confort, et il doit pouvoir refuser.
+     */
+    var afficheLesIcones by mutableStateOf(prefs.getBoolean(CLE_ICONES, true))
+        private set
+
     fun choisirLApparence(valeur: Apparence) {
         apparence = valeur
         prefs.edit().putString(CLE_APPARENCE, valeur.cle).apply()
@@ -57,9 +72,17 @@ class Preferences(contexte: Context) {
         prefs.edit().putString(CLE_VERROUILLAGE, valeur.cle).apply()
     }
 
+    fun afficherLesIcones(valeur: Boolean) {
+        afficheLesIcones = valeur
+        prefs.edit().putBoolean(CLE_ICONES, valeur).apply()
+    }
+
     private companion object {
         const val CLE_APPARENCE = "gp.apparence"
         const val CLE_VERROUILLAGE = "gp.verrouillage"
+        // La même clé que sur iOS (`gp.icones`), pour que les deux applications se lisent
+        // de la même façon dans un rapport de bogue.
+        const val CLE_ICONES = "gp.icones"
     }
 }
 

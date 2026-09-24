@@ -26,7 +26,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
@@ -37,7 +36,6 @@ import androidx.fragment.app.FragmentActivity
 import ch.stackops.ghostpass.BiometrieDeLAppareil
 import ch.stackops.ghostpass.CollectionDOrganisation
 import ch.stackops.ghostpass.ContenuDElement
-import ch.stackops.ghostpass.CouleurDEquipe
 import ch.stackops.ghostpass.EchecDOrganisation
 import ch.stackops.ghostpass.EntreeDuCoffre
 import ch.stackops.ghostpass.EtatDAppartenance
@@ -602,7 +600,9 @@ private fun LigneLisible(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Pastille(element.name)
+        // La première adresse de l'élément, celle qui nomme le site. Un élément sans
+        // identifiants — une note, une carte — n'en a aucune, et garde son initiale.
+        PastilleDuSite(element.name, element.identifiants?.uris?.firstOrNull())
         Column(Modifier.weight(1f)) {
             Text(element.name, color = couleurs.encre, fontSize = 15.sp)
             val detail = when (val d = element.data) {
@@ -788,28 +788,5 @@ private fun BandeDeDossiers(modele: ModeleDuCoffre) {
                 nouveau = ""
             }
         }
-    }
-}
-
-/**
- * La pastille d'initiale, teintée par la règle de couleur partagée.
- *
- * La même couleur pour le même nom sur les trois clients : [CouleurDEquipe], la somme des
- * octets UTF-8 modulo huit. Aucun hachage de bibliothèque, parce qu'aucun n'est garanti
- * stable d'une exécution à l'autre.
- */
-@Composable
-private fun Pastille(nom: String) {
-    val argb = CouleurDEquipe.couleurArgb(CouleurDEquipe.attribuee(nom))!!
-    Box(
-        Modifier.size(32.dp).background(Color(argb).copy(alpha = 0.9f), RoundedCornerShape(10.dp)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            nom.take(1).uppercase(),
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
     }
 }

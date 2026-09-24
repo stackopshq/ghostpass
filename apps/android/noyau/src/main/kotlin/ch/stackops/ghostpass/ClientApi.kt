@@ -174,6 +174,14 @@ data class ConfigurationDuSecondFacteur(
     val otpauthUri: String = "",
 )
 
+/**
+ * Le jeton qui autorise les requêtes d'icônes, et sa date d'expiration.
+ *
+ * `expiresAt` est lu mais **ne sert à rien décider** : voir [ClientApi.jetonDIcone].
+ */
+@Serializable
+data class JetonDIcone(val token: String = "", val expiresAt: Long = 0)
+
 /** Le corps d'erreur du serveur, y compris le signal de second facteur. */
 @Serializable
 private data class ErreurServeur(
@@ -267,6 +275,23 @@ class ClientApi(baseUrl: String) {
             requete("POST", "/api/auth/login", corps = json.encodeToString(CHAMPS, charge)),
         )
     }
+
+    /**
+     * Le jeton que l'URL d'icône accrochera, valable douze heures côté serveur.
+     *
+     * Il se redemande **à chaque rafraîchissement du coffre**, et non à sa seule
+     * expiration : si l'exploitant n'a pas posé `ICON_TOKEN_SECRET`, le serveur tire sa clé
+     * de signature *au démarrage*, et tous les jetons émis avant un redémarrage deviennent
+     * invalides sans avoir expiré. Se fier à `expiresAt` laisserait alors les icônes muettes
+     * jusqu'à douze heures, sans rien d'autre à l'écran qu'une liste d'initiales — le repli
+     * normal, donc un symptôme qui ne se signale pas. Une requête par rafraîchissement est
+     * un prix bien plus faible.
+     */
+    fun jetonDIcone(jeton: String): JetonDIcone =
+        json.decodeFromString(
+            JetonDIcone.serializer(),
+            requete("GET", "/api/icons/token", jeton = jeton),
+        )
 
     /** La liste des éléments chiffrés. Le serveur ne sait pas ce qu'ils contiennent. */
     fun elements(jeton: String): List<ElementChiffre> =

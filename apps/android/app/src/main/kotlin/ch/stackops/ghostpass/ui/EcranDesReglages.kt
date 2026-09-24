@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -46,10 +49,15 @@ import ch.stackops.ghostpass.theme.reperes
 /**
  * Les réglages : apparence, verrouillage, et ce que voit le remplissage automatique.
  *
- * C'est le `SettingsView.swift` d'iOS, **amputé de deux sections et le disant**. Voir
- * [PourquoiPasDeLangueNiDIcones] : les ajouter reviendrait à proposer des réglages qui ne
- * commandent rien, et la charte §8 tranche — « un réglage grisé est pire que son absence
- * quand la fonction ne peut pas exister ».
+ * C'est le `SettingsView.swift` d'iOS, **amputé d'une section et le disant**. Voir
+ * [PourquoiPasDeLangue] : l'ajouter reviendrait à proposer un réglage qui ne commande rien,
+ * et la charte §8 tranche — « un réglage grisé est pire que son absence quand la fonction
+ * ne peut pas exister ».
+ *
+ * L'interrupteur des icônes, lui, **commande quelque chose depuis aujourd'hui** : la liste
+ * du coffre affiche les favicons relayés par le serveur, et l'éteindre les remplace par des
+ * initiales. C'était la seconde section absente ; c'était une fonction à porter, et elle
+ * l'est.
  *
  * Jusqu'ici Android n'avait qu'un menu de trois entrées sous la barre du coffre. La roue
  * crantée n'avait donc aucun écran à ouvrir ; elle en a un maintenant.
@@ -103,6 +111,40 @@ fun EcranDesReglages(
                         identifiant = "row.lock." + cas.cle,
                     ) { reglages.choisirLeVerrouillage(cas) }
                 }
+            }
+        }
+
+        SectionGhost(
+            titre = "Icônes des sites",
+            note = "Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le " +
+                "contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun " +
+                "tiers n'est sollicité.",
+        ) {
+            val couleurs = LocalCouleurs.current
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Afficher les logos", color = couleurs.encre, fontSize = 15.sp)
+                Box(Modifier.weight(1f))
+                Switch(
+                    checked = reglages.afficheLesIcones,
+                    onCheckedChange = { reglages.afficherLesIcones(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = couleurs.surAccent,
+                        checkedTrackColor = couleurs.accent,
+                        checkedBorderColor = Color.Transparent,
+                        uncheckedThumbColor = couleurs.attenue,
+                        uncheckedTrackColor = couleurs.surface2,
+                        uncheckedBorderColor = couleurs.bordure,
+                    ),
+                    // L'état entre dans l'identifiant : sous FLAG_SECURE l'arbre
+                    // d'accessibilité est le seul regard possible, et un témoin doit pouvoir
+                    // distinguer un interrupteur allumé d'un interrupteur éteint.
+                    modifier = Modifier.reperes(
+                        "toggle.icons" + if (reglages.afficheLesIcones) ".on" else ".off",
+                    ),
+                )
             }
         }
 
@@ -323,26 +365,24 @@ private fun ouvrirLesReglagesDeRemplissage(contexte: android.content.Context) {
 }
 
 /**
- * **Les deux sections d'iOS qui ne sont pas ici, et pourquoi.**
+ * **La section d'iOS qui n'est pas ici, et pourquoi.**
  *
- * Ce n'est pas un oubli, et le nommer vaut mieux que de laisser le prochain lecteur
- * comparer les deux écrans en se demandant ce qui a été perdu.
+ * Ce n'est pas un oubli, et le nommer vaut mieux que de laisser le prochain lecteur comparer
+ * les deux écrans en se demandant ce qui a été perdu.
  *
- *  - **Langue.** iOS propose « Système / Français / English » parce qu'il a un catalogue de
- *    traductions. Android n'en a aucun : toutes ses chaînes sont en français, dans le code
- *    ou dans `values/`. Une liste qui ne proposerait que « Français » ne commanderait rien.
- *    Y ajouter « English » serait pire : le réglage se cocherait et l'écran resterait en
- *    français — un réglage qui ment est pire qu'un réglage absent. **Ce qu'il faudrait** :
- *    sortir les chaînes du code vers `values/strings.xml`, ajouter `values-en/`, et poser
- *    les locales par `AppCompatDelegate.setApplicationLocales`.
+ * **Langue.** iOS propose « Système / Français / English » parce qu'il a un catalogue de
+ * traductions. Android n'en a aucun : toutes ses chaînes sont en français, dans le code ou
+ * dans `values/`. Une liste qui ne proposerait que « Français » ne commanderait rien. Y
+ * ajouter « English » serait pire : le réglage se cocherait et l'écran resterait en français
+ * — un réglage qui ment est pire qu'un réglage absent. **Ce qu'il faudrait** : sortir les
+ * chaînes du code vers `values/strings.xml`, ajouter `values-en/`, et poser les locales par
+ * `AppCompatDelegate.setApplicationLocales`.
  *
- *  - **Icônes des sites.** L'interrupteur d'iOS commande l'affichage des favicons, que le
- *    serveur relaie par `GET /api/icons?domain=…`. Android ne les affiche pas du tout : sa
- *    liste montre une initiale colorée. L'interrupteur n'aurait donc rien à éteindre.
- *    **Ce qu'il faudrait** : un chargeur d'images vers cette route, avec le jeton d'icônes,
- *    et un cache — puis l'interrupteur devient honnête.
+ * C'est une fonction à porter, pas un réglage à ajouter. L'inscrire ici avant elle
+ * déplacerait l'échec du moment où l'on configure au moment où quelqu'un s'en sert.
  *
- * Les deux sont des fonctions à porter, pas des réglages à ajouter. Les inscrire ici avant
- * elles déplacerait l'échec du moment où l'on configure au moment où quelqu'un s'en sert.
+ * L'autre absente — les **icônes des sites** — ne l'est plus : le chargeur existe
+ * ([PastilleDuSite]), il passe par le jeton d'icônes, et il ne touche jamais le disque. Son
+ * interrupteur est ci-dessus, et il éteint quelque chose.
  */
-private object PourquoiPasDeLangueNiDIcones
+private object PourquoiPasDeLangue

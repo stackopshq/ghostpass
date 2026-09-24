@@ -251,6 +251,29 @@ class Coffre {
         return api.elements(j)
     }
 
+    // ─── Les icônes des sites ───
+
+    /** L'adresse du serveur de la session ouverte, pour y accrocher les URL d'icônes. */
+    val adresseDuServeur: String? get() = session?.adresseServeur
+
+    /**
+     * Demande un jeton d'icône. `null` si le serveur refuse ou ne connaît pas la route.
+     *
+     * L'échec ne remonte pas en exception : une instance plus ancienne que le relais
+     * d'icônes répond `404`, ce qui n'est pas une panne, et une bannière d'erreur pour des
+     * logos serait du bruit. Sans jeton, la liste reste parfaitement lisible avec ses
+     * initiales — voir [IconeDeSite.url], qui ne fabrique alors aucune URL.
+     */
+    fun jetonDIcone(): String? {
+        val api = client ?: return null
+        val j = jeton ?: return null
+        return try {
+            api.jetonDIcone(j).token.ifEmpty { null }
+        } catch (_: ErreurApi) {
+            null
+        }
+    }
+
     // ─── Le second facteur du compte ───
 
     /**

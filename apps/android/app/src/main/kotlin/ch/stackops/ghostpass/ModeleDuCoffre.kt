@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import ch.stackops.ghostpass.ui.oublierLesIcones
 
 /**
  * L'état du coffre tel que les écrans le voient.
@@ -45,6 +46,21 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
     /** La liste affichée vient-elle du cache plutôt que du serveur ? */
     var horsLigne by mutableStateOf(false)
         private set
+
+    /**
+     * Le jeton qui autorise les requêtes d'icônes. `null` tant qu'on ne l'a pas.
+     *
+     * Sans lui, [IconeDeSite.url] ne fabrique **aucune** URL, et la pastille reste une
+     * initiale : c'est le point, et pas une précaution. Une URL sans jeton tirerait une
+     * requête vouée au 401 par élément de la liste, et la seule trace visible serait
+     * l'initiale — c'est-à-dire le repli prévu pour « ce site n'a pas d'icône ». Le contrat
+     * rompu porterait l'apparence d'un cas nominal, sur tous les éléments à la fois.
+     */
+    var jetonDIcone by mutableStateOf<String?>(null)
+        private set
+
+    /** L'adresse du serveur, pour y accrocher les URL d'icônes. */
+    val serveurDesIcones: String get() = coffre.adresseDuServeur ?: serveurEnregistre
 
     /** Une session est-elle déjà enregistrée sur cet appareil ? */
     val sessionEnregistree: Coffre.Session? get() = stockage.session()
@@ -138,6 +154,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 // contenu avec eux**. Sans cela, quelqu'un dont les mots de passe vivent en
                 // équipe voit une liste vide et conclut que l'application ne marche pas.
                 chargerLesCoffresDEquipe()
+                rafraichirLeJetonDIcone()
             } catch (e: Exception) {
                 horsLigne = true
                 // Le coffre reste affiché tel qu'il est : une erreur de réseau ne doit pas
@@ -146,6 +163,23 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 message = if (lecture.entrees.isEmpty()) messageLisible(e) else null
             }
         }
+    }
+
+    /**
+     * Redemande le jeton d'icône, **à chaque rafraîchissement** et non à son expiration.
+     *
+     * Le serveur le signe avec `ICON_TOKEN_SECRET` si l'exploitant l'a posé ; sinon il tire
+     * sa clé au démarrage, et tous les jetons meurent au redémarrage **sans avoir expiré**.
+     * Se fier à `expiresAt` laisserait les icônes muettes jusqu'à douze heures — et muettes
+     * veut dire « une liste d'initiales », qui est aussi ce qu'on voit quand tout va bien.
+     *
+     * Un échec ne dit rien à l'utilisateur : la liste reste lisible, et une bannière pour
+     * des logos serait du bruit. En revanche il ne faut **pas** garder l'ancien jeton : un
+     * jeton invalide fait tirer une requête par élément visible, toutes rejetées, pour le
+     * même résultat à l'écran.
+     */
+    private suspend fun rafraichirLeJetonDIcone() {
+        jetonDIcone = withContext(Dispatchers.IO) { coffre.jetonDIcone() }
     }
 
     // ─── Le SSO (§8, docs/sso-mobile.md) ───
@@ -1542,6 +1576,10 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         rendreLesClesDEquipe()
         organisations = emptyList()
         echecsDOrganisation = emptyMap()
+        // Les icônes chargées nomment les sites du coffre, et le jeton ouvre la route qui
+        // les nomme : les deux partent avec les clés.
+        oublierLesIcones()
+        jetonDIcone = null
     }
 
     fun fermerLaSession() {
@@ -1559,6 +1597,8 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             rendreLesClesDEquipe()
             organisations = emptyList()
             echecsDOrganisation = emptyMap()
+            oublierLesIcones()
+            jetonDIcone = null
         }
     }
 

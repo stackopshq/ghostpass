@@ -8,6 +8,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +28,8 @@ import ch.stackops.ghostpass.ui.EcranDuJournal
 import ch.stackops.ghostpass.ui.EcranDuSecondFacteur
 import ch.stackops.ghostpass.ui.EcranDesReglages
 import ch.stackops.ghostpass.ui.EcranDuCoffre
+import ch.stackops.ghostpass.ui.ContexteDIcones
+import ch.stackops.ghostpass.ui.LocalIconesDesSites
 
 /**
  * L'écran unique de l'application : le coffre s'il est ouvert, l'entrée sinon.
@@ -87,6 +90,17 @@ class ActivitePrincipale : FragmentActivity() {
                     Apparence.SYSTEME -> isSystemInDarkTheme()
                 },
             ) {
+                // Les icônes des sites voyagent par un `CompositionLocal` : la pastille est
+                // au fond de la liste, et faire descendre le réglage, l'adresse et le jeton
+                // à travers quatre composables les ferait traverser aussi tous les écrans
+                // qui n'en ont que faire.
+                CompositionLocalProvider(
+                    LocalIconesDesSites provides ContexteDIcones(
+                        actif = reglages.afficheLesIcones,
+                        serveur = modele.serveurDesIcones,
+                        jeton = modele.jetonDIcone,
+                    ),
+                ) {
                 // Trois écrans et pas de bibliothèque de navigation : l'état tient en une
                 // variable, et une dépendance de navigation pour trois destinations coûte
                 // plus qu'elle ne range.
@@ -242,6 +256,7 @@ class ActivitePrincipale : FragmentActivity() {
                 // une boîte qui recouvre l'application ne se contourne ni par un retour
                 // arrière ni par un changement d'écran.
                 BoitesDePartage(modele)
+                }
             }
         }
     }
