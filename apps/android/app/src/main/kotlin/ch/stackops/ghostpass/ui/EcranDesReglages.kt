@@ -51,15 +51,10 @@ import ch.stackops.ghostpass.theme.reperes
 /**
  * Les réglages : apparence, verrouillage, et ce que voit le remplissage automatique.
  *
- * C'est le `SettingsView.swift` d'iOS, **amputé d'une section et le disant**. Voir
- * [PourquoiPasDeLangue] : l'ajouter reviendrait à proposer un réglage qui ne commande rien,
- * et la charte §8 tranche — « un réglage grisé est pire que son absence quand la fonction
- * ne peut pas exister ».
- *
- * L'interrupteur des icônes, lui, **commande quelque chose depuis aujourd'hui** : la liste
- * du coffre affiche les favicons relayés par le serveur, et l'éteindre les remplace par des
- * initiales. C'était la seconde section absente ; c'était une fonction à porter, et elle
- * l'est.
+ * C'est le `SettingsView.swift` d'iOS, **au complet**. Il ne l'a pas toujours été : deux
+ * sections y ont manqué — les icônes des sites et la langue —, et leur absence était écrite
+ * ici plutôt que comblée par des réglages qui n'auraient rien commandé. Voir
+ * [PourquoiCesDeuxSectionsSeSontFaitAttendre].
  *
  * Jusqu'ici Android n'avait qu'un menu de trois entrées sous la barre du coffre. La roue
  * crantée n'avait donc aucun écran à ouvrir ; elle en a un maintenant.
@@ -417,24 +412,30 @@ private fun ouvrirLesReglagesDeRemplissage(contexte: android.content.Context) {
 }
 
 /**
- * **La section d'iOS qui n'est pas ici, et pourquoi.**
+ * **Les deux sections qui ont manqué, et ce qu'il a fallu pour qu'elles existent.**
  *
- * Ce n'est pas un oubli, et le nommer vaut mieux que de laisser le prochain lecteur comparer
- * les deux écrans en se demandant ce qui a été perdu.
+ * Elles ont été refusées deux fois, et le refus était juste : la charte §8 tranche qu'« un
+ * réglage grisé est pire que son absence quand la fonction ne peut pas exister ». Un
+ * interrupteur d'icônes n'avait rien à éteindre — la liste montrait une initiale colorée et
+ * ne demandait aucune image au serveur. Une liste de langues n'avait rien à choisir — toutes
+ * les chaînes étaient en français, dans le code. Les inscrire ici avant leurs fonctions
+ * aurait déplacé l'échec du moment où l'on configure au moment où quelqu'un s'en sert.
  *
- * **Langue.** iOS propose « Système / Français / English » parce qu'il a un catalogue de
- * traductions. Android n'en a aucun : toutes ses chaînes sont en français, dans le code ou
- * dans `values/`. Une liste qui ne proposerait que « Français » ne commanderait rien. Y
- * ajouter « English » serait pire : le réglage se cocherait et l'écran resterait en français
- * — un réglage qui ment est pire qu'un réglage absent. **Ce qu'il faudrait** : sortir les
- * chaînes du code vers `values/strings.xml`, ajouter `values-en/`, et poser les locales par
- * `AppCompatDelegate.setApplicationLocales`.
+ * Ce qu'il a fallu, dans l'ordre :
  *
- * C'est une fonction à porter, pas un réglage à ajouter. L'inscrire ici avant elle
- * déplacerait l'échec du moment où l'on configure au moment où quelqu'un s'en sert.
+ *  - **Icônes.** Un chargeur vers `GET /api/icons?domain=…`, avec le jeton que cette route
+ *    exige désormais, et **rien sur le disque** : les URL portent le domaine, et toute
+ *    couche de cache qui les écrit transforme la liste des sites du coffre en fichier
+ *    lisible. Voir [PastilleDuSite] et `IconesSansDisqueTest`.
+ *  - **Langue.** Les chaînes sorties du code vers `values/strings.xml`, un `values-en/` en
+ *    face, et la locale posée par `AppCompatDelegate.setApplicationLocales`. Le plus long
+ *    des deux, et de loin : la traduction n'est pas un réglage qu'on branche, c'est trois
+ *    cent quatre-vingts phrases à déplacer — dont celles que `:noyau` écrivait et ne pouvait
+ *    pas traduire.
  *
- * L'autre absente — les **icônes des sites** — ne l'est plus : le chargeur existe
- * ([PastilleDuSite]), il passe par le jeton d'icônes, et il ne touche jamais le disque. Son
- * interrupteur est ci-dessus, et il éteint quelque chose.
+ * Ce qui reste de ce refus est sa leçon, et elle vaut pour la prochaine section absente :
+ * **on écrit pourquoi, on ne pose pas l'interrupteur.** Un lecteur qui compare les deux
+ * écrans trouve alors une raison plutôt qu'un oubli, et celui qui porte la fonction trouve
+ * la liste de ce qu'elle demande.
  */
-private object PourquoiPasDeLangue
+private object PourquoiCesDeuxSectionsSeSontFaitAttendre
