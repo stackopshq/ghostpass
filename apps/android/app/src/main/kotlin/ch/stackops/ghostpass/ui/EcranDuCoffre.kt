@@ -28,13 +28,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
+import ch.stackops.ghostpass.BiometrieDeLAppareil
 import ch.stackops.ghostpass.CollectionDOrganisation
 import ch.stackops.ghostpass.ContenuDElement
 import ch.stackops.ghostpass.CouleurDEquipe
@@ -51,6 +51,7 @@ import ch.stackops.ghostpass.theme.FondGhost
 import ch.stackops.ghostpass.theme.GP
 import ch.stackops.ghostpass.theme.LienDiscret
 import ch.stackops.ghostpass.theme.LocalCouleurs
+import ch.stackops.ghostpass.theme.reperes
 
 /**
  * La liste du coffre — personnel ou d'équipe.
@@ -298,11 +299,16 @@ private fun MenuDeReglages(
         }
 
         if (modele.biometriePossible) {
+            // Le même nom qu'à l'écran d'entrée, et pour la même raison : « empreinte » en
+            // dur ment sur un appareil à reconnaissance faciale. Deux formulations
+            // différentes pour la même fonction feraient en outre douter qu'il s'agisse de
+            // la même — on active ici ce sur quoi on appuie là-bas.
+            val nomDuGeste = BiometrieDeLAppareil.nom(activite)
             LienDiscret(
                 texte = if (modele.biometrieActivee) {
-                    "Désactiver le déverrouillage par empreinte"
+                    "Désactiver le déverrouillage par $nomDuGeste"
                 } else {
-                    "Activer le déverrouillage par empreinte"
+                    "Activer le déverrouillage par $nomDuGeste"
                 },
                 identifiant = "button.biometricToggle",
             ) {
@@ -456,7 +462,7 @@ private fun Pastilledechoix(
             )
             .border(1.dp, couleurs.bordure, forme)
             .clickable(onClick = surClic)
-            .semantics { contentDescription = identifiant }
+            .reperes(identifiant)
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Text(
@@ -544,15 +550,22 @@ private fun LigneLisible(
                 fontSize = 18.sp,
                 modifier = Modifier
                     .clickable(onClick = surFavori)
-                    // L'état entre dans la description, et pour deux raisons qui vont
-                    // ensemble. Un lecteur d'écran annonce « ★ » comme « étoile blanche »,
-                    // ce qui n'apprend rien ; et une description qui porte l'état est la
-                    // seule chose qu'une machine puisse lire, puisqu'une description
-                    // remplace le texte du nœud plutôt que de s'y ajouter.
-                    .semantics {
-                        contentDescription = "button.favorite." + entree.id +
-                            if (favori) ".on" else ".off"
-                    }
+                    // Deux emplacements, désormais, pour deux lecteurs différents.
+                    //
+                    // L'état entre dans l'**identifiant**, parce qu'une machine doit pouvoir
+                    // distinguer une étoile allumée d'une étoile éteinte : le « ★ » est du
+                    // texte de nœud, qu'un lecteur d'écran annonce « étoile blanche » et
+                    // qu'une description écraserait. Il entre aussi dans la **description**,
+                    // mais en français — c'est ce qui se prononce.
+                    //
+                    // Avant `testTag`, ces deux besoins se disputaient la même propriété :
+                    // l'identifiant y logeait, et l'étoile se lisait « button.favorite.<id>.on »
+                    // à voix haute.
+                    .reperes(
+                        identifiant = "button.favorite." + entree.id +
+                            if (favori) ".on" else ".off",
+                        description = if (favori) "Retirer des favoris" else "Ajouter aux favoris",
+                    )
                     .padding(6.dp),
             )
         }

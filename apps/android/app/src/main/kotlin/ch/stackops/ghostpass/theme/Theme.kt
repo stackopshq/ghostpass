@@ -20,6 +20,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -153,6 +156,35 @@ object GP {
     val largeurMax: Dp = 420.dp
 }
 
+/**
+ * **`testTagsAsResourceId` est posé ici, et c'est ce qui rend les `testTag` observables.**
+ *
+ * Sans ce drapeau, un `testTag` n'existe que pour les tests Compose ; il ne remonte dans
+ * l'arbre d'accessibilité d'Android ni pour UiAutomator, ni pour `uiautomator dump`. Avec
+ * lui, chaque `testTag` devient le `resource-id` du nœud — un champ qui **ne se prononce
+ * pas**, et que `By.res` sait lire.
+ *
+ * Il est posé à la racine du thème plutôt qu'à chaque activité : les deux activités du
+ * produit — l'écran principal et celui du remplissage — passent par ici, et l'oublier dans
+ * l'une des deux rendrait ses témoins aveugles **sans rien afficher d'anormal**. C'est
+ * exactement la classe de panne silencieuse qu'on cherche à éviter : un témoin qui ne
+ * trouve plus rien accuse le produit.
+ *
+ * ## Vérifié à l'écran, et le premier contrôle mentait
+ *
+ * `uiautomator dump` montre bien les `resource-id` — le `FLAG_SECURE` du produit noircit les
+ * captures d'image, pas l'arbre d'accessibilité. Le premier dépouillement n'en a pourtant
+ * montré aucun, et la conclusion « le drapeau ne se propage pas aux descendants » était
+ * fausse : **l'APK installé était périmé**. `:app:assembleDebugAndroidTest` compile bien le
+ * paquet de test, mais ne reconstruit pas `app-debug.apk` ; l'installer après lui revient à
+ * mesurer le code d'avant.
+ *
+ * Ce n'est pas une anecdote de construction, c'est l'instrument qui n'a pas su rougir : il a
+ * rendu un arbre parfaitement bien formé, d'une application parfaitement lancée, et rien
+ * dans sa sortie ne disait de quelle version. Reconstruire explicitement et regarder
+ * l'horodatage de l'APK avant de l'installer coûte une ligne.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ThemeGhostPass(
     sombre: Boolean = isSystemInDarkTheme(),
@@ -181,7 +213,9 @@ fun ThemeGhostPass(
         )
     }
     CompositionLocalProvider(LocalCouleurs provides couleurs) {
-        MaterialTheme(colorScheme = schema, content = contenu)
+        MaterialTheme(colorScheme = schema) {
+            Box(Modifier.semantics { testTagsAsResourceId = true }) { contenu() }
+        }
     }
 }
 

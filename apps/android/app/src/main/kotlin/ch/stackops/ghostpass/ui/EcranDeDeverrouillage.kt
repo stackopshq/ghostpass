@@ -33,6 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
+import ch.stackops.ghostpass.BiometrieDeLAppareil
 import ch.stackops.ghostpass.ModeleDuCoffre
 import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BoutonPrincipal
@@ -40,6 +41,7 @@ import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.ChampGhost
 import ch.stackops.ghostpass.theme.FondGhost
 import ch.stackops.ghostpass.theme.GP
+import ch.stackops.ghostpass.theme.IconeBiometrique
 import ch.stackops.ghostpass.theme.LienDiscret
 import ch.stackops.ghostpass.theme.LocalCouleurs
 import ch.stackops.ghostpass.theme.ValeurFigee
@@ -231,10 +233,26 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                         // raccourcit les déverrouillages suivants (ADR-0002). Le champ reste
                         // donc au-dessus, et ceci est une action secondaire — pas l'inverse.
                         if (sessionEnregistree && modele.biometrieActivee) {
+                            // **Une icône seule, comme iOS** — le geste attendu se reconnaît
+                            // à son symbole plus vite qu'il ne se lit.
+                            //
+                            // Cet alignement était bloqué : `BoutonSecondaire` se servait de
+                            // la `contentDescription` comme identifiant de témoin, si bien
+                            // qu'un bouton sans texte n'avait plus rien à annoncer — ou
+                            // annonçait « button.biometric » à haute voix. `testTag` a séparé
+                            // les deux (voir `reperes`), et le bouton peut enfin porter les
+                            // deux repères à la fois.
+                            //
+                            // Le libellé écrit était en outre **faux** : « par empreinte », en
+                            // dur, sur un appareil à reconnaissance faciale. L'icône comme le
+                            // nom suivent désormais le matériel.
+                            val genre = BiometrieDeLAppareil.genre(contexte)
                             BoutonSecondaire(
-                                texte = "Déverrouiller par empreinte",
+                                texte = "Déverrouiller avec ${BiometrieDeLAppareil.nom(contexte)}",
                                 actif = !modele.occupe,
                                 identifiant = "button.biometric",
+                                description = "Déverrouiller avec ${BiometrieDeLAppareil.nom(contexte)}",
+                                contenu = { IconeBiometrique(genre, couleurs.accentTexte) },
                             ) { modele.deverrouillerParBiometrie(activite) }
                         }
 

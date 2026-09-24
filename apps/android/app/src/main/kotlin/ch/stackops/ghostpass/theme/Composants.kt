@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 
@@ -39,6 +40,35 @@ import androidx.compose.ui.semantics.semantics
  * Portés de `Theme.swift`, pas approchés : ce sont eux qui font que l'application est le
  * petit frère de celle d'iOS plutôt qu'un cousin (§10).
  */
+
+/**
+ * Les deux repères d'un composant — et les confondre a coûté une icône.
+ *
+ * `identifiant` est ce par quoi un témoin **désigne** le composant ; `description` est ce
+ * qu'un lecteur d'écran **prononce**. Ils logeaient au même endroit : la
+ * `contentDescription` portait l'identifiant. Un composant ne pouvait donc pas avoir les
+ * deux à la fois — lui donner une voix lui faisait perdre son nom de témoin, et garder son
+ * nom de témoin le faisait annoncer « button.biometric » à haute voix.
+ *
+ * Le blocage était visible à l'écran : iOS pose sur son bouton biométrique une **icône
+ * seule**, dont le nom parlé (« Déverrouiller avec Face ID ») est distinct de
+ * l'identifiant de test. Android ne pouvait pas le suivre, et affichait un libellé en
+ * toutes lettres à la place.
+ *
+ * `testTag` est l'emplacement prévu pour le premier. Le drapeau `testTagsAsResourceId`,
+ * posé une fois à la racine du thème (voir [ThemeGhostPass]), le fait remonter dans l'arbre
+ * d'accessibilité comme `resource-id` — un champ qu'UiAutomator lit par `By.res`, et qui
+ * **ne se prononce pas**. Les deux repères redeviennent indépendants.
+ */
+fun Modifier.reperes(identifiant: String?, description: String? = null): Modifier = this
+    .then(if (identifiant != null) Modifier.testTag(identifiant) else Modifier)
+    .then(
+        if (description != null) {
+            Modifier.semantics { contentDescription = description }
+        } else {
+            Modifier
+        },
+    )
 
 /**
  * Action principale : un bloc d'accent plein, pleine largeur, qui **rayonne**.
@@ -52,6 +82,7 @@ fun BoutonPrincipal(
     actif: Boolean,
     occupe: Boolean = false,
     identifiant: String? = null,
+    description: String? = null,
     onClick: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
@@ -72,7 +103,7 @@ fun BoutonPrincipal(
                 onClick = onClick,
             )
             .padding(vertical = 14.dp)
-            .then(if (identifiant != null) Modifier.semantics { contentDescription = identifiant } else Modifier),
+            .reperes(identifiant, description),
         contentAlignment = Alignment.Center,
     ) {
         if (occupe) {
@@ -92,13 +123,24 @@ fun BoutonPrincipal(
     }
 }
 
-/** Action secondaire : le même bloc, mais creusé plutôt que plein. */
+/**
+ * Action secondaire : le même bloc, mais creusé plutôt que plein.
+ *
+ * `contenu` remplace le texte quand le geste se reconnaît mieux à un symbole qu'il ne se
+ * lit — le bouton biométrique d'iOS, qui porte une icône seule. Le bouton garde alors sa
+ * forme, sa surface et sa zone de toucher ; seul ce qu'il montre change. `texte` reste
+ * exigé parce qu'il sert de repli : un composant qui n'aurait *que* son icône n'aurait
+ * rien à dire si l'icône venait à manquer, et une icône absente se lit comme un bouton
+ * vide plutôt que comme un défaut.
+ */
 @Composable
 fun BoutonSecondaire(
     texte: String,
     actif: Boolean = true,
     destructif: Boolean = false,
     identifiant: String? = null,
+    description: String? = null,
+    contenu: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
@@ -118,20 +160,24 @@ fun BoutonSecondaire(
                 onClick = onClick,
             )
             .padding(vertical = 12.dp)
-            .then(if (identifiant != null) Modifier.semantics { contentDescription = identifiant } else Modifier),
+            .reperes(identifiant, description),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            texte,
-            // Le rôle décide de la couleur. Le lire ici plutôt qu'à chaque appel corrige la
-            // classe entière, y compris les boutons qui n'existent pas encore : côté iOS,
-            // « Supprimer ce groupe » portait bien un rôle destructif et s'affichait en
-            // bleu, parce qu'un style personnalisé écrase le rendu que le système donne au
-            // rôle. Le défaut paraît juste à la lecture et faux à l'écran.
-            color = if (destructif) couleurs.danger else couleurs.accentTexte,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-        )
+        if (contenu != null) {
+            contenu()
+        } else {
+            Text(
+                texte,
+                // Le rôle décide de la couleur. Le lire ici plutôt qu'à chaque appel corrige
+                // la classe entière, y compris les boutons qui n'existent pas encore : côté
+                // iOS, « Supprimer ce groupe » portait bien un rôle destructif et s'affichait
+                // en bleu, parce qu'un style personnalisé écrase le rendu que le système donne
+                // au rôle. Le défaut paraît juste à la lecture et faux à l'écran.
+                color = if (destructif) couleurs.danger else couleurs.accentTexte,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
     }
 }
 
@@ -155,7 +201,7 @@ fun LienDiscret(
         modifier = modifierExterne
             .clickable(enabled = actif, onClick = onClick)
             .padding(top = 2.dp)
-            .then(if (identifiant != null) Modifier.semantics { contentDescription = identifiant } else Modifier),
+            .reperes(identifiant),
     )
 }
 
@@ -218,13 +264,7 @@ fun ChampGhost(
             modifier = Modifier
                 .fillMaxWidth()
                 .champGhost()
-                .then(
-                    if (identifiant != null) {
-                        Modifier.semantics { contentDescription = identifiant }
-                    } else {
-                        Modifier
-                    },
-                ),
+                .reperes(identifiant),
         )
     }
 }

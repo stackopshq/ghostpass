@@ -10,6 +10,7 @@ import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
+import java.util.regex.Pattern
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotNull
@@ -145,7 +146,7 @@ class ParcoursDeBoutEnBoutTest {
         etape("4. Modification de cet élément") {
             ouvrirLElement(nom)
             poser("field.username", "clara.vanacker")
-            toucherJusqua("button.save", By.desc("button.settings"), "le retour au coffre")
+            toucherJusqua("button.save", By.res("button.settings"), "le retour au coffre")
             attendre(
                 By.text("clara.vanacker"),
                 "la modification n'est pas revenue du serveur",
@@ -168,7 +169,7 @@ class ParcoursDeBoutEnBoutTest {
             ouvrirLesReglages()
             toucher("button.lock")
             attendre(
-                By.desc("field.master"),
+                By.res("field.master"),
                 "le verrouillage n'a pas ramené à l'écran d'entrée",
             )
             poser("field.master", motDePasse)
@@ -182,7 +183,7 @@ class ParcoursDeBoutEnBoutTest {
             ouvrirLeFormulaireDEssai()
             ouvrirLApplication()
             attendre(
-                By.desc("field.master"),
+                By.res("field.master"),
                 "LE COFFRE EST RESTÉ OUVERT après un passage à l'arrière-plan. C'est ce que " +
                     "le commentaire d'`onStop` annonce depuis le premier jour, et ce que " +
                     "`FLAG_SECURE` suppose en cachant la vignette d'un coffre ouvert",
@@ -226,7 +227,7 @@ class ParcoursDeBoutEnBoutTest {
         etape("1. Le bouton d'authentification unique") {
             poser("field.server", serveur)
             attendre(
-                By.desc("button.sso"),
+                By.res("button.sso"),
                 "le bouton d'authentification unique n'apparaît pas alors qu'une adresse de " +
                     "serveur est saisie",
             )
@@ -248,14 +249,14 @@ class ParcoursDeBoutEnBoutTest {
 
         etape("3. Le SSO n'ouvre pas le coffre : le mot de passe maître reste demandé") {
             attendre(
-                By.desc("field.master"),
+                By.res("field.master"),
                 "l'écran ne demande pas le mot de passe maître après le SSO",
             )
             assertNull(
                 "le coffre s'est ouvert sans mot de passe maître : le SSO authentifie " +
                     "l'identité, il n'ouvre pas le coffre. Les confondre est la première " +
                     "erreur de conception d'un client à connaissance nulle",
-                appareil.findObject(By.desc("button.settings")),
+                appareil.findObject(By.res("button.settings")),
             )
             poser("field.master", motDePasse)
             toucher("button.submit")
@@ -331,7 +332,7 @@ class ParcoursDeBoutEnBoutTest {
         assertNull(
             "l'étoile des favoris est proposée sur un élément d'équipe : elle y écrirait un " +
                 "favori dans un registre personnel, que personne ne relirait de ce côté",
-            appareil.findObject(By.descStartsWith("button.favorite.")),
+            appareil.findObject(parPrefixe("button.favorite.")),
         )
 
         neGarderQue("Forgejo")
@@ -348,7 +349,7 @@ class ParcoursDeBoutEnBoutTest {
         assertNotNull(
             "aucune étoile sur un élément personnel : l'assertion précédente ne mesurerait " +
                 "alors qu'un écran vide",
-            appareil.findObject(By.descStartsWith("button.favorite.")),
+            appareil.findObject(parPrefixe("button.favorite.")),
         )
         neGarderQue("")
     }
@@ -414,7 +415,7 @@ class ParcoursDeBoutEnBoutTest {
      */
     private fun coffreDEquipe() {
         val organisation = attendre(
-            By.descStartsWith("chip.org."),
+            parPrefixe("chip.org."),
             "aucune organisation n'apparaît : l'application n'interroge pas `/api/orgs`, et " +
                 "un coffre d'équipe reste invisible — c'est le défaut du coffre vide",
             30_000,
@@ -448,7 +449,7 @@ class ParcoursDeBoutEnBoutTest {
         assertNull(
             "toucher une ligne illisible a ouvert un éditeur : enregistrer par-dessus " +
                 "détruirait un contenu jamais lu",
-            appareil.wait(Until.findObject(By.desc("button.save")), 3_000),
+            appareil.wait(Until.findObject(By.res("button.save")), 3_000),
         )
 
         // ─── L'écriture d'équipe ───
@@ -457,7 +458,7 @@ class ParcoursDeBoutEnBoutTest {
         // collection par défaut : « Nouveau » doit être proposé, et l'enregistrement doit
         // partir vers `/api/orgs/…/items` et non vers le coffre personnel.
         attendre(
-            By.desc("button.new"),
+            By.res("button.new"),
             "« Nouveau » manque dans une collection où le membre a le droit d'écrire",
         )
         toucher("button.new")
@@ -465,7 +466,7 @@ class ParcoursDeBoutEnBoutTest {
         poser("field.name", nomDEquipe)
         poser("field.username", "operateur")
         poser("field.password", "papier")
-        toucherJusqua("button.save", By.desc("button.settings"), "le retour à la collection")
+        toucherJusqua("button.save", By.res("button.settings"), "le retour à la collection")
         attendre(
             By.text(nomDEquipe),
             "l'élément créé n'est pas revenu de la collection d'équipe. S'il est parti dans " +
@@ -501,7 +502,7 @@ class ParcoursDeBoutEnBoutTest {
             appareil.findObject(By.text(MARQUE_DEQUIPE)),
         )
         neGarderQue("")
-        toucher(By.descStartsWith("chip.org."), "l'organisation")
+        toucher(parPrefixe("chip.org."), "l'organisation")
         attendre(By.text(nomDEquipe), "le retour à la collection d'équipe", 30_000)
 
         // La suppression d'équipe est **définitive**, et le libellé doit le dire — il n'y a
@@ -511,7 +512,7 @@ class ParcoursDeBoutEnBoutTest {
             By.text("Supprimer définitivement"),
             "le libellé de suppression d'équipe promet une corbeille qui n'existe pas",
         )
-        toucherJusqua("button.cancel", By.desc("button.settings"), "le retour à la collection")
+        toucherJusqua("button.cancel", By.res("button.settings"), "le retour à la collection")
 
         // Et l'on revient au coffre personnel, qui doit être intact.
         toucher("chip.personal")
@@ -529,7 +530,7 @@ class ParcoursDeBoutEnBoutTest {
         repeat(3) {
             ligneDuCoffre(nom).click()
             appareil.waitForIdle()
-            if (appareil.wait(Until.hasObject(By.desc("field.name")), 5_000) == true) return
+            if (appareil.wait(Until.hasObject(By.res("field.name")), 5_000) == true) return
         }
         throw AssertionError(
             "l'élément « $nom » ne s'ouvre pas après trois touchers.\nÉcran : ${ecranActuel()}",
@@ -551,7 +552,7 @@ class ParcoursDeBoutEnBoutTest {
 
     /** Ouvre le menu de réglages, où vivent le verrouillage, la corbeille et la biométrie. */
     private fun ouvrirLesReglages() {
-        toucherJusqua("button.settings", By.desc("button.lock"), "le menu de réglages")
+        toucherJusqua("button.settings", By.res("button.lock"), "le menu de réglages")
     }
 
     /**
@@ -606,12 +607,15 @@ class ParcoursDeBoutEnBoutTest {
         // coffre **relu**, pas d'un état local. C'est la différence entre « on a écrit » et
         // « le serveur a gardé ».
         //
-        // L'état se lit dans la description et non dans le texte : une `contentDescription`
-        // **remplace** le texte du nœud d'accessibilité au lieu de s'y ajouter, si bien que
-        // le « ★ » n'est visible d'aucune machine. Le premier jet attendait ce caractère et
-        // ne l'a jamais vu, sur un écran qui l'affichait.
+        // L'état se lit dans l'**identifiant** et non dans le texte : le « ★ » est du texte
+        // de nœud, et la description qui le doublait le remplaçait au lieu de s'y ajouter —
+        // si bien qu'aucune machine ne voyait le caractère. Le premier jet l'attendait et ne
+        // l'a jamais vu, sur un écran qui l'affichait.
+        //
+        // Depuis `testTag`, l'état vit dans le `resource-id` et la description dit
+        // « Ajouter aux favoris » en français : les deux lecteurs sont servis séparément.
         attendre(
-            By.desc("button.favorite.$identifiant.on"),
+            By.res("button.favorite.$identifiant.on"),
             "le favori n'est pas revenu du coffre après écriture : le registre a peut-être " +
                 "été écrit sous un nom sans octet NUL, ou pas écrit du tout",
             30_000,
@@ -638,7 +642,7 @@ class ParcoursDeBoutEnBoutTest {
     }
 
     /**
-     * L'identifiant serveur d'un élément, tel que l'étoile le porte dans sa description.
+     * L'identifiant serveur d'un élément, tel que l'étoile le porte dans son `resource-id`.
      *
      * On apparie par **recouvrement vertical**, et non par intersection des boîtes : le nom
      * est à gauche de la ligne, l'étoile à droite, et leurs rectangles ne se touchent pas.
@@ -647,13 +651,13 @@ class ParcoursDeBoutEnBoutTest {
      */
     private fun identifiantDe(nom: String): String {
         val ligne = attendre(By.text(nom), "l'élément « $nom »").visibleBounds
-        val etoile = appareil.findObjects(By.descStartsWith("button.favorite."))
+        val etoile = appareil.findObjects(parPrefixe("button.favorite."))
             .firstOrNull { it.visibleBounds.centerY() in ligne.top..ligne.bottom }
             ?: throw AssertionError(
                 "aucune étoile sur la ligne de « $nom » — l'étoile n'est proposée que dans " +
                     "le coffre personnel, jamais sur un élément d'équipe",
             )
-        return etoile.contentDescription
+        return etoile.resourceName
             .removePrefix("button.favorite.")
             .removeSuffix(".on")
             .removeSuffix(".off")
@@ -694,7 +698,7 @@ class ParcoursDeBoutEnBoutTest {
         // porte ce nom dans son propre champ, si bien qu'attendre le nom était satisfait
         // sans que l'écran ait changé. Les étapes suivantes se déroulaient alors dans
         // l'éditeur, en accusant tout autre chose.
-        toucherJusqua("button.cancel", By.desc("button.settings"), "le retour au coffre")
+        toucherJusqua("button.cancel", By.res("button.settings"), "le retour au coffre")
     }
 
     // ─── La corbeille ───
@@ -717,9 +721,9 @@ class ParcoursDeBoutEnBoutTest {
         repeat(3) {
             ligneDuCoffre(nomDeLElement).click()
             appareil.waitForIdle()
-            if (appareil.wait(Until.hasObject(By.desc("button.delete")), 4_000) == true) return@repeat
+            if (appareil.wait(Until.hasObject(By.res("button.delete")), 4_000) == true) return@repeat
         }
-        attendre(By.desc("button.delete"), "l'éditeur de l'élément")
+        attendre(By.res("button.delete"), "l'éditeur de l'élément")
 
         // Deux gestes, et on **attend le changement de libellé entre les deux**. Les
         // enchaîner à l'aveugle laissait la seconde pression atterrir ailleurs si l'écran
@@ -733,7 +737,7 @@ class ParcoursDeBoutEnBoutTest {
         toucher("button.delete")
 
         // L'éditeur doit s'être refermé avant qu'on regarde la liste.
-        attendre(By.desc("button.settings"), "le retour au coffre après la suppression", 30_000)
+        attendre(By.res("button.settings"), "le retour au coffre après la suppression", 30_000)
         appareil.wait(Until.gone(By.text(nomDeLElement)), 30_000)
         assertNull(
             "l'élément supprimé est resté dans le coffre.\n" +
@@ -886,7 +890,7 @@ class ParcoursDeBoutEnBoutTest {
 
             // On attend **notre écran**, pas un champ : la distinction compte, car c'est
             // l'écran qui manquait, pas le champ.
-            if (appareil.wait(Until.hasObject(By.desc("field.master")), 15_000) == true) {
+            if (appareil.wait(Until.hasObject(By.res("field.master")), 15_000) == true) {
                 ouvert = true
                 break
             }
@@ -944,7 +948,7 @@ class ParcoursDeBoutEnBoutTest {
             ?: throw AssertionError("GhostPass n'est pas installé sur cet appareil.")
         contexte.startActivity(intention)
         attendre(
-            By.desc("field.master"),
+            By.res("field.master"),
             "l'écran d'entrée ne s'est pas affiché. L'application a-t-elle bien été " +
                 "réinitialisée (`pm clear`) avant ce parcours ?",
             20_000,
@@ -965,17 +969,18 @@ class ParcoursDeBoutEnBoutTest {
      * Le nœud **éditable** d'un champ, qui n'est pas celui qui porte son identifiant.
      *
      * Mesuré, et c'est le genre d'écart qui fait chercher au mauvais endroit : un
-     * `TextField` de Compose portant `Modifier.semantics { contentDescription = … }` produit
-     * **deux** nœuds d'accessibilité aux mêmes coordonnées — l'un porte la description et
-     * aucun texte, l'autre porte le texte et aucune description. `setText` sur le premier
-     * ne fait rien, et ne se plaint pas.
+     * `TextField` de Compose portant un repère produit **deux** nœuds d'accessibilité aux
+     * mêmes coordonnées — l'un porte le repère et aucun texte, l'autre porte le texte et
+     * aucun repère. `setText` sur le premier ne fait rien, et ne se plaint pas.
      *
-     * On repère donc par la description, puis on prend le champ de saisie qui occupe la
-     * même place. Un clic au bon endroit aurait suffi à un humain ; il faut le dire à la
-     * machine.
+     * On repère donc par l'identifiant, puis on prend le champ de saisie qui occupe la même
+     * place. Un clic au bon endroit aurait suffi à un humain ; il faut le dire à la machine.
+     *
+     * Le dédoublement n'a pas changé avec `testTag` : il vient de la façon dont Compose
+     * projette un `TextField` dans l'arbre d'Android, pas de la propriété qu'on y pose.
      */
     private fun champEditable(identifiant: String): UiObject2 {
-        val repere = amenerDansLaZoneSure(By.desc(identifiant), "le champ « $identifiant »")
+        val repere = amenerDansLaZoneSure(By.res(identifiant), "le champ « $identifiant »")
         val zone = repere.visibleBounds
         val editable = appareil.findObjects(By.clazz("android.widget.EditText"))
             .firstOrNull { Rect.intersects(it.visibleBounds, zone) }
@@ -1015,7 +1020,19 @@ class ParcoursDeBoutEnBoutTest {
         )
     }
 
-    private fun toucher(identifiant: String) = toucher(By.desc(identifiant), "« $identifiant »")
+    /**
+     * Un identifiant dont on ne connaît que le début — l'étoile d'un élément, la pastille
+     * d'une organisation : leur nom porte un identifiant serveur qu'on ne connaît pas ici.
+     *
+     * `By.res` n'a pas de variante « commence par », seulement une variante à expression
+     * régulière — et elle veut la correspondance **entière**. `Pattern.quote` est ce qui
+     * empêche les points de l'identifiant (« chip.org. ») de valoir « n'importe quel
+     * caractère » : sans lui, le motif resterait juste, mais par chance.
+     */
+    private fun parPrefixe(prefixe: String): BySelector =
+        By.res(Pattern.compile(Pattern.quote(prefixe) + ".*"))
+
+    private fun toucher(identifiant: String) = toucher(By.res(identifiant), "« $identifiant »")
 
     private fun toucher(selecteur: BySelector, quoi: String) {
         avecRepriseSurObsolescence { amenerDansLaZoneSure(selecteur, quoi).click() }
@@ -1151,9 +1168,16 @@ class ParcoursDeBoutEnBoutTest {
     private fun ecranActuel(): String {
         val vus = appareil.findObjects(By.pkg(appareil.currentPackageName))
             .mapNotNull { objet ->
+                // **`resourceName` d'abord, et il a failli manquer.** Depuis le passage à
+                // `testTag`, c'est lui qui porte les identifiants (« button.save »,
+                // « field.master ») : les omettre aurait laissé ce message ne montrer que
+                // les textes français, c'est-à-dire précisément ce qu'on ne cherche pas
+                // quand un sélecteur ne trouve rien. Le parcours serait resté aussi juste et
+                // beaucoup plus difficile à lire quand il tombe.
+                val identifiant = runCatching { objet.resourceName }.getOrNull()
                 val texte = runCatching { objet.text }.getOrNull()
                 val description = runCatching { objet.contentDescription }.getOrNull()
-                listOfNotNull(texte, description).firstOrNull { it.isNotBlank() }
+                listOfNotNull(identifiant, texte, description).firstOrNull { it.isNotBlank() }
             }
             .distinct()
             .take(40)
