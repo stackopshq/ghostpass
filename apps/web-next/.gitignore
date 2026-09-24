@@ -10,6 +10,15 @@ node_modules/
 next-env.d.ts
 tsconfig.tsbuildinfo
 
+# `out/` — la leçon du dessus, apprise pour un répertoire et pas pour l'autre.
+#
+# `next.config` fixe `output: "export"` : la construction n'écrit pas seulement
+# dans `.next/`, elle dépose le lot statique dans `out/`. C'est lui que le
+# Containerfile copie dans l'image nginx, donc c'est bien la sortie de
+# construction — et il n'était ignoré nulle part. Constaté en montant Next de
+# 16.2.11 à 16.3.6 : `git status` proposait d'ajouter le lot entier.
+out/
+
 # Copié à la construction depuis crates/ (voir le script `prebuild`), donc
 # jamais une source. Une copie versionnée serait périmée au premier cargo build.
 public/ghostpass_crypto_wasm_bg.wasm
