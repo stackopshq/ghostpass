@@ -285,6 +285,34 @@ Conséquences relevées le 24 septembre 2026 :
   s'en servent comme exemple de saisie, `ContractTests.swift` comme domaine d'essai. Rien à
   changer pour que le produit fonctionne — l'adresse est saisie par l'utilisateur.
 
+## Les adresses de contact, et une qui ne répond pas
+
+Relevé le 24 septembre 2026. Les adresses **qui existent** chez l'éditeur :
+`compta@`, `contact@`, `dmarc@`, `noc@` et `privacy@stackops.ch`.
+
+| Usage | Adresse | Pour App Store Connect |
+|---|---|---|
+| Questions de données personnelles | `privacy@stackops.ch` | questionnaire de confidentialité |
+| Assistance et contact général | `contact@stackops.ch` | contact d'assistance |
+
+**Deux inexactitudes corrigées ou signalées :**
+
+- Les conditions générales donnaient `support@stackops.ch` comme contact principal.
+  **Cette adresse n'existe pas.** Corrigé : un contrat qui donne une adresse morte ne donne
+  pas d'adresse.
+- **Le `security.txt` servi en production déclare `security@stackops.ch`, qui n'existe pas
+  non plus.** Le fichier source du dépôt — `apps/web-next/public/.well-known/security.txt`
+  — dit bien `contact@stackops.ch` : c'est le **déploiement qui est périmé**, pas le code.
+
+Ce second point n'est pas cosmétique. Quelqu'un qui trouve une faille dans un gestionnaire
+de mots de passe et écrit à l'adresse annoncée n'obtient rien, et le fichier dit lui-même
+pourquoi il existe : « une adresse de signalement qui n'est écrite nulle part n'est pas une
+adresse de signalement ». Elle est écrite, elle ne répond pas, ce qui est pire — on croit
+avoir prévenu.
+
+**À faire : redéployer `web-next` sur `pass.ghostsuite.cloud`**, puis vérifier que
+`/.well-known/security.txt` sert bien `contact@`. Ce n'est pas un changement de code.
+
 ## Ce qui n'est pas prêt et qu'il vaut mieux savoir
 
 - ~~`GET /api/mfa` doit être déployé…~~ **Fait.** Vérifié le 14 septembre 2026 contre
