@@ -11,10 +11,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.stackops.ghostpass.ModeleDuCoffre
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BarreDeFeuille
 import ch.stackops.ghostpass.theme.BoutonPrincipal
 import ch.stackops.ghostpass.theme.ChampGhost
@@ -51,8 +53,8 @@ fun EcranDeRecuperationDuCompte(
 
     EcranGhost(identifiant = "screen.recoverAccount") {
         BarreDeFeuille(
-            titre = "Mot de passe oublié",
-            gauche = "Annuler",
+            titre = stringResource(R.string.recuperation_titre),
+            gauche = stringResource(R.string.recuperation_annuler),
             identifiantGauche = "button.cancelRecovery",
             surGauche = {
                 modele.message = null
@@ -61,20 +63,21 @@ fun EcranDeRecuperationDuCompte(
         )
 
         SectionGhost(
-            note = "Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste " +
-                "intact : rien n'est perdu, rien n'est déchiffré côté serveur.",
+            note = stringResource(R.string.recuperation_note),
         ) {
             Column {
                 // L'adresse et le compte viennent de l'écran d'entrée : les redemander ne
                 // servirait qu'à les faire retaper, et une faute de frappe ici enverrait la
                 // demande au mauvais compte.
-                Box(Modifier.padding(14.dp)) { ValeurFigee("Adresse e-mail", email) }
+                Box(Modifier.padding(14.dp)) {
+                    ValeurFigee(stringResource(R.string.recuperation_adresse), email)
+                }
                 FiletDeSection()
                 Box(Modifier.padding(14.dp)) {
                     ChampGhost(
-                        intitule = "Clé de récupération",
+                        intitule = stringResource(R.string.recuperation_cle),
                         valeur = cle,
-                        invite = "Les mots notés à la création",
+                        invite = stringResource(R.string.recuperation_cle_invite),
                         identifiant = "field.recoveryKey",
                         onChange = { cle = it },
                     )
@@ -82,9 +85,9 @@ fun EcranDeRecuperationDuCompte(
                 FiletDeSection()
                 Box(Modifier.padding(14.dp)) {
                     ChampGhost(
-                        intitule = "Nouveau mot de passe maître",
+                        intitule = stringResource(R.string.recuperation_nouveau_mot_de_passe),
                         valeur = nouveau,
-                        invite = "Huit caractères au minimum",
+                        invite = stringResource(R.string.recuperation_huit_caracteres_invite),
                         identifiant = "field.newMaster",
                         secret = true,
                         typeDeClavier = KeyboardType.Password,
@@ -95,7 +98,11 @@ fun EcranDeRecuperationDuCompte(
         }
 
         if (nouveau.isNotEmpty() && nouveau.length < 8) {
-            Text("Huit caractères au minimum.", color = couleurs.attenue, fontSize = 12.sp)
+            Text(
+                stringResource(R.string.recuperation_huit_caracteres),
+                color = couleurs.attenue,
+                fontSize = 12.sp,
+            )
         }
 
         modele.message?.let {
@@ -107,7 +114,11 @@ fun EcranDeRecuperationDuCompte(
             )
         }
 
-        BoutonPrincipal("Réinitialiser", actif = pret, identifiant = "button.submitRecovery") {
+        BoutonPrincipal(
+            stringResource(R.string.recuperation_reinitialiser),
+            actif = pret,
+            identifiant = "button.submitRecovery",
+        ) {
             modele.recupererLeCompte(serveur, email, cle, nouveau) { fait ->
                 if (fait) surReussite()
             }
@@ -115,8 +126,7 @@ fun EcranDeRecuperationDuCompte(
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                "Toutes les sessions ouvertes seront fermées, y compris sur vos autres " +
-                    "appareils. Il faudra s'y reconnecter avec le nouveau mot de passe.",
+                stringResource(R.string.recuperation_sessions_fermees),
                 color = couleurs.attenue,
                 fontSize = 12.sp,
             )

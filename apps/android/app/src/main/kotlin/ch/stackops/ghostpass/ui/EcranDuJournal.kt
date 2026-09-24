@@ -1,5 +1,6 @@
 package ch.stackops.ghostpass.ui
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,15 +31,13 @@ import ch.stackops.ghostpass.ActionDto
 import ch.stackops.ghostpass.ConnexionDto
 import ch.stackops.ghostpass.JournalDuCompte
 import ch.stackops.ghostpass.ModeleDuCoffre
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BarreDeFeuille
 import ch.stackops.ghostpass.theme.EcranGhost
 import ch.stackops.ghostpass.theme.FiletDeSection
 import ch.stackops.ghostpass.theme.LocalCouleurs
 import ch.stackops.ghostpass.theme.SectionGhost
 import ch.stackops.ghostpass.theme.reperes
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Le journal du compte : connexions et actions sensibles.
@@ -57,8 +58,8 @@ fun EcranDuJournal(
 
     EcranGhost(identifiant = "screen.activity") {
         BarreDeFeuille(
-            titre = "Journal du compte",
-            gauche = "Terminé",
+            titre = stringResource(R.string.journal_titre),
+            gauche = stringResource(R.string.journal_termine),
             identifiantGauche = "button.closeActivity",
             surGauche = surFermer,
         )
@@ -81,13 +82,14 @@ fun EcranDuJournal(
 
             is ModeleDuCoffre.EtatDuJournal.Lu -> {
                 SectionGhost(
-                    titre = "Actions sensibles",
-                    note = "Ce qui retire une protection ou ouvre le coffre à quelqu'un " +
-                        "d'autre. Une ligne que vous ne reconnaissez pas mérite de changer " +
-                        "votre mot de passe maître.",
+                    titre = stringResource(R.string.journal_actions),
+                    note = stringResource(R.string.journal_actions_note),
                 ) {
                     if (etat.actions.isEmpty()) {
-                        Vide("Aucune action enregistrée.", "text.noActions")
+                        Vide(
+                            stringResource(R.string.journal_aucune_action),
+                            "text.noActions",
+                        )
                     } else {
                         Column {
                             etat.actions.forEachIndexed { rang, action ->
@@ -99,12 +101,14 @@ fun EcranDuJournal(
                 }
 
                 SectionGhost(
-                    titre = "Connexions",
-                    note = "Un appareil inconnu signalé ici, que vous ne reconnaissez pas, " +
-                        "veut dire que quelqu'un connaît votre mot de passe maître.",
+                    titre = stringResource(R.string.journal_connexions),
+                    note = stringResource(R.string.journal_connexions_note),
                 ) {
                     if (etat.connexions.isEmpty()) {
-                        Vide("Aucune connexion enregistrée.", "text.noLogins")
+                        Vide(
+                            stringResource(R.string.journal_aucune_connexion),
+                            "text.noLogins",
+                        )
                     } else {
                         Column {
                             etat.connexions.forEachIndexed { rang, connexion ->
@@ -127,7 +131,7 @@ private fun Indisponible(cause: String) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            "⚠ Le journal n'a pas pu être lu.",
+            stringResource(R.string.journal_illisible),
             color = couleurs.danger,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
@@ -137,7 +141,7 @@ private fun Indisponible(cause: String) {
         Text(
             // La phrase compte autant que le reste : un écran vide se lit « rien ne s'est
             // passé », ce qui est rassurant et faux.
-            "Ceci ne veut pas dire qu'il ne s'est rien passé : rien n'a pu être lu.",
+            stringResource(R.string.journal_illisible_note),
             color = couleurs.attenue,
             fontSize = 12.sp,
         )
@@ -158,7 +162,14 @@ private fun Vide(texte: String, identifiant: String) {
 @Composable
 private fun LigneDAction(action: ActionDto) {
     val couleurs = LocalCouleurs.current
+    val contexte = LocalContext.current
     val sensible = JournalDuCompte.estSensible(action.action)
+    // Le `when` des intitulés a quitté `:noyau` pour `IntituleDuJournal.kt`, qui rend une
+    // ressource plutôt qu'une phrase. Son `null` est un cas utile et non un défaut : un
+    // serveur plus récent peut journaliser une action que cette version ne nomme pas, et la
+    // ligne brute vaut mieux qu'une ligne absente sur l'écran dont l'objet est de révéler
+    // l'inattendu.
+    val intitule = intituleDuJournal(action.action)
     Row(
         Modifier.fillMaxWidth().padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -174,13 +185,13 @@ private fun LigneDAction(action: ActionDto) {
         }
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                JournalDuCompte.intitule(action.action),
+                if (intitule != null) stringResource(intitule) else action.action,
                 color = if (sensible) couleurs.encre else couleurs.attenue,
                 fontSize = 14.sp,
                 fontWeight = if (sensible) FontWeight.Medium else FontWeight.Normal,
             )
             Text(
-                detail(action.createdAt, action.ip, action.target),
+                detail(contexte, action.createdAt, action.ip, action.target),
                 color = couleurs.attenue,
                 fontSize = 12.sp,
             )
@@ -191,6 +202,7 @@ private fun LigneDAction(action: ActionDto) {
 @Composable
 private fun LigneDeConnexion(connexion: ConnexionDto) {
     val couleurs = LocalCouleurs.current
+    val contexte = LocalContext.current
     Column(
         Modifier.fillMaxWidth().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -199,10 +211,14 @@ private fun LigneDeConnexion(connexion: ConnexionDto) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(quand(connexion.createdAt), color = couleurs.encre, fontSize = 14.sp)
+            Text(
+                quand(contexte, connexion.createdAt),
+                color = couleurs.encre,
+                fontSize = 14.sp,
+            )
             if (connexion.newDevice) {
                 Text(
-                    "Nouvel appareil",
+                    stringResource(R.string.journal_nouvel_appareil),
                     color = couleurs.surAccent,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -231,9 +247,9 @@ private fun LigneDeConnexion(connexion: ConnexionDto) {
  * pareil. Les morceaux vides sont écartés plutôt qu'affichés comme des séparateurs
  * orphelins.
  */
-private fun detail(quand: Long, ip: String?, cible: String?): String =
+private fun detail(contexte: Context, quand: Long, ip: String?, cible: String?): String =
     listOfNotNull(
-        quand(quand),
+        quand(contexte, quand),
         cible?.takeIf { it.isNotEmpty() },
         ip?.takeIf { it.isNotEmpty() },
     ).joinToString(" · ")
@@ -241,11 +257,13 @@ private fun detail(quand: Long, ip: String?, cible: String?): String =
 /**
  * L'horodatage du serveur, en millisecondes, rendu dans le fuseau de l'appareil.
  *
- * `Locale.getDefault()` et non `Locale.ROOT` : une date se lit dans la langue de celui qui
- * la regarde. Le format court suffit — le journal se parcourt, il ne s'archive pas.
+ * Le motif n'est pas une chaîne traduisible — c'est une grammaire de `SimpleDateFormat`,
+ * qu'un traducteur casserait en silence. Mais il n'a pas à être **écrit en dur** non plus :
+ * « d MMM yyyy, HH:mm » est un ordre français, et un anglophone y lisait « 4 Mar 2026,
+ * 14:30 » là où il attend « Mar 4, 2026, 2:30 PM ». [DateLisible] demande au système le
+ * motif de la langue affichée.
  */
-private fun quand(millisecondes: Long): String {
-    if (millisecondes <= 0) return "date inconnue"
-    val format = SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault())
-    return format.format(Date(millisecondes))
+private fun quand(contexte: Context, millisecondes: Long): String {
+    if (millisecondes <= 0) return contexte.getString(R.string.journal_date_inconnue)
+    return DateLisible.jourEtHeure(contexte, millisecondes)
 }

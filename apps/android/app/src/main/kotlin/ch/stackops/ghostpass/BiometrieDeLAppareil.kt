@@ -61,12 +61,14 @@ object BiometrieDeLAppareil {
      * Deux formulations différentes pour la même fonction feraient douter qu'il s'agisse de
      * la même.
      */
-    fun nom(contexte: Context): String = when (genre(contexte)) {
-        Genre.EMPREINTE -> "empreinte"
-        Genre.VISAGE -> "reconnaissance faciale"
-        Genre.IRIS -> "reconnaissance de l'iris"
-        Genre.PLUSIEURS, Genre.INCONNU -> "biométrie"
-    }
+    fun nom(contexte: Context): String = contexte.getString(
+        when (genre(contexte)) {
+            Genre.EMPREINTE -> R.string.biometrie_empreinte
+            Genre.VISAGE -> R.string.biometrie_visage
+            Genre.IRIS -> R.string.biometrie_iris
+            Genre.PLUSIEURS, Genre.INCONNU -> R.string.biometrie_generique
+        },
+    )
 
     /**
      * Le symbole qui va avec ce nom se dessine — voir `IconeBiometrique` dans le thème.

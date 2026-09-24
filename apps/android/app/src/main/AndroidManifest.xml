@@ -17,7 +17,31 @@
         android:fullBackupContent="@xml/regles_de_sauvegarde"
         android:dataExtractionRules="@xml/regles_de_sauvegarde"
         android:usesCleartextTraffic="false"
+        android:localeConfig="@xml/locales_config"
         android:networkSecurityConfig="@xml/securite_reseau">
+
+        <!-- La langue choisie, rangée par AppCompat et **par lui seul**.
+
+             `autoStoreLocales` lui fait persister le choix et le réappliquer au
+             démarrage. On pourrait le garder dans `Preferences` comme l'apparence et le
+             délai de verrouillage ; ce serait une seconde source de vérité, et elle
+             divergerait de la première : sur Android 13 et au-delà, le système possède son
+             propre réglage de langue par application, que `setApplicationLocales` alimente.
+             Deux stockages donneraient un écran des réglages et un écran du système qui ne
+             disent pas la même chose — exactement le genre de désaccord qu'on ne remarque
+             que lorsqu'un utilisateur s'en plaint.
+
+             Le coût est un accès disque au lancement, documenté par AppCompat. Pour une
+             application qui dérive déjà une clé Argon2id avant d'afficher quoi que ce soit,
+             il ne se mesure pas. -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
 
         <activity
             android:name=".ActivitePrincipale"

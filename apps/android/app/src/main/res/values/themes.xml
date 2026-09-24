@@ -3,8 +3,14 @@
     <!-- Le thème de la fenêtre avant que Compose ne prenne la main. Sa couleur de fond est
          celle de la nuit du produit : sans cela, un aplat blanc apparaît le temps d'une
          image au lancement, et c'est exactement ce qui fait qu'une application paraît
-         bricolée. `NoActionBar` parce que l'écran porte son propre en-tête. -->
-    <style name="Theme.GhostPass" parent="android:Theme.Material.NoActionBar">
+         bricolée. `NoActionBar` parce que l'écran porte son propre en-tête.
+
+         Le parent est `Theme.AppCompat` et non `android:Theme.Material` depuis que la
+         langue se règle dans l'application : `AppCompatActivity` refuse de démarrer sous un
+         thème qui n'en descend pas — « You need to use a Theme.AppCompat theme (or
+         descendant) with this activity ». Rien d'autre ne change à l'écran : Compose peint
+         tout, et ce thème ne sert qu'au fond de la fenêtre avant sa première image. -->
+    <style name="Theme.GhostPass" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@color/nuit</item>
         <item name="android:statusBarColor">@color/nuit</item>
         <item name="android:navigationBarColor">@color/nuit</item>

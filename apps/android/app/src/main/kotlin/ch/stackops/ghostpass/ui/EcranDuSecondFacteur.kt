@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import ch.stackops.ghostpass.ConfigurationDuSecondFacteur
 import ch.stackops.ghostpass.ModeleDuCoffre
 import ch.stackops.ghostpass.ModeleDuCoffre.EtatDuSecondFacteur
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BarreDeFeuille
 import ch.stackops.ghostpass.theme.BoutonPrincipal
 import ch.stackops.ghostpass.theme.BoutonSecondaire
@@ -69,8 +71,10 @@ fun EcranDuSecondFacteur(
     val etat = modele.secondFacteur
     EcranGhost(identifiant = "screen.mfa") {
         BarreDeFeuille(
-            titre = "Second facteur",
-            gauche = if (configuration == null || confirme) "Terminé" else "Annuler",
+            titre = stringResource(R.string.mfa_titre),
+            gauche = stringResource(
+                if (configuration == null || confirme) R.string.mfa_termine else R.string.mfa_annuler,
+            ),
             identifiantGauche = "button.closeMfa",
             surGauche = surFermer,
         )
@@ -147,7 +151,7 @@ private fun Indisponible(cause: String) {
     ) {
         Text("🔓", fontSize = 30.sp)
         Text(
-            "Second facteur indisponible",
+            stringResource(R.string.mfa_indisponible),
             color = couleurs.encre,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
@@ -170,24 +174,22 @@ private fun Activation(
         Modifier.fillMaxWidth().carteDeVerre(marge = 14.dp),
     ) {
         Text(
-            "🛡 Un code à six chiffres sera demandé à chaque connexion, en plus du mot de " +
-                "passe maître.",
+            stringResource(R.string.mfa_presentation),
             color = couleurs.attenue,
             fontSize = 13.sp,
         )
     }
 
     SectionGhost(
-        titre = "Mot de passe maître",
-        note = "Il est vérifié sur cet appareil et n'en sort pas : le serveur n'en reçoit " +
-            "qu'une empreinte.",
+        titre = stringResource(R.string.mfa_mot_de_passe_maitre),
+        note = stringResource(R.string.mfa_mot_de_passe_maitre_note),
     ) {
         Box(Modifier.padding(14.dp)) {
             ChampGhost(
                 // Sans intitulé : la section au-dessus porte déjà « Mot de passe maître ».
                 intitule = "",
                 valeur = motDePasse,
-                invite = "Votre mot de passe",
+                invite = stringResource(R.string.mfa_invite_mot_de_passe),
                 identifiant = "field.mfaMaster",
                 secret = true,
                 typeDeClavier = KeyboardType.Password,
@@ -196,7 +198,11 @@ private fun Activation(
         }
     }
 
-    BoutonPrincipal("Configurer", actif = actif, identifiant = "button.mfaSetup") {
+    BoutonPrincipal(
+        stringResource(R.string.mfa_configurer),
+        actif = actif,
+        identifiant = "button.mfaSetup",
+    ) {
         surConfigurer()
     }
     Erreur(message)
@@ -216,9 +222,8 @@ private fun AScanner(
     var copie by remember { mutableStateOf(false) }
 
     SectionGhost(
-        titre = "À enregistrer dans votre application d'authentification",
-        note = "Ce secret ne sera plus affiché. Sans lui et sans votre application, la " +
-            "connexion deviendra impossible — gardez un moyen de secours.",
+        titre = stringResource(R.string.mfa_secret_titre),
+        note = stringResource(R.string.mfa_secret_note),
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
@@ -232,7 +237,9 @@ private fun AScanner(
                 modifier = Modifier.reperes("text.mfaSecret"),
             )
             BoutonSecondaire(
-                texte = if (copie) "Secret copié" else "Copier le secret",
+                texte = stringResource(
+                    if (copie) R.string.mfa_secret_copie else R.string.mfa_copier_le_secret,
+                ),
                 identifiant = "button.copyMfaSecret",
             ) {
                 copierDansLePressePapiers(contexte, configuration.secret)
@@ -242,10 +249,8 @@ private fun AScanner(
     }
 
     SectionGhost(
-        titre = "Confirmer",
-        note = "Tant que ce code n'est pas validé, le compte reste accessible sans second " +
-            "facteur. C'est ce qui évite de s'enfermer dehors avec une application mal " +
-            "configurée.",
+        titre = stringResource(R.string.mfa_confirmer),
+        note = stringResource(R.string.mfa_confirmer_note),
     ) {
         Box(Modifier.padding(14.dp)) {
             ChampGhost(
@@ -259,7 +264,11 @@ private fun AScanner(
         }
     }
 
-    BoutonPrincipal("Activer", actif = actif, identifiant = "button.mfaActivate") { surActiver() }
+    BoutonPrincipal(
+        stringResource(R.string.mfa_activer),
+        actif = actif,
+        identifiant = "button.mfaActivate",
+    ) { surActiver() }
     Erreur(message)
 }
 
@@ -278,14 +287,13 @@ private fun Reussite() {
             Text("✓", color = couleurs.succes, fontSize = 34.sp)
         }
         Text(
-            "Le second facteur est actif.",
+            stringResource(R.string.mfa_actif),
             color = couleurs.encre,
             fontSize = 16.sp,
             modifier = Modifier.reperes("text.mfaActive"),
         )
         Text(
-            "Un code vous sera demandé à chaque connexion. Vos appareils déjà connectés le " +
-                "restent.",
+            stringResource(R.string.mfa_actif_note),
             color = couleurs.attenue,
             fontSize = 12.sp,
         )
@@ -308,21 +316,23 @@ private fun Desactivation(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text("✓", color = couleurs.succes, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Text("Le second facteur est actif sur ce compte.", color = couleurs.succes, fontSize = 13.sp)
+        Text(
+            stringResource(R.string.mfa_actif_sur_ce_compte),
+            color = couleurs.succes,
+            fontSize = 13.sp,
+        )
     }
 
     SectionGhost(
-        titre = "Le retirer",
-        note = "Les deux sont exigés : le mot de passe maître et un code valide. Un " +
-            "téléphone déverrouillé trouvé sur une table ne doit pas suffire à retirer la " +
-            "protection.",
+        titre = stringResource(R.string.mfa_le_retirer),
+        note = stringResource(R.string.mfa_le_retirer_note),
     ) {
         Column {
             Box(Modifier.padding(14.dp)) {
                 ChampGhost(
-                    intitule = "Mot de passe maître",
+                    intitule = stringResource(R.string.mfa_mot_de_passe_maitre),
                     valeur = motDePasse,
-                    invite = "Votre mot de passe",
+                    invite = stringResource(R.string.mfa_invite_mot_de_passe),
                     identifiant = "field.mfaMasterOff",
                     secret = true,
                     typeDeClavier = KeyboardType.Password,
@@ -332,7 +342,7 @@ private fun Desactivation(
             FiletDeSection()
             Box(Modifier.padding(14.dp)) {
                 ChampGhost(
-                    intitule = "Code à six chiffres",
+                    intitule = stringResource(R.string.mfa_code),
                     valeur = code,
                     invite = "123456",
                     identifiant = "field.mfaCodeOff",
@@ -344,7 +354,7 @@ private fun Desactivation(
     }
 
     BoutonSecondaire(
-        texte = "Désactiver le second facteur",
+        texte = stringResource(R.string.mfa_desactiver),
         actif = actif,
         destructif = true,
         identifiant = "button.mfaDisable",
@@ -357,7 +367,7 @@ private fun Erreur(message: String?) {
     val couleurs = LocalCouleurs.current
     if (message != null) {
         Text(
-            "⚠ $message",
+            stringResource(R.string.mfa_erreur, message),
             color = couleurs.danger,
             fontSize = 12.sp,
             modifier = Modifier.reperes("text.mfaError"),

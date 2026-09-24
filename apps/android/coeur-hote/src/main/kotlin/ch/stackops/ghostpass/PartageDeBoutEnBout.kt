@@ -14,7 +14,7 @@ package ch.stackops.ghostpass
  * puisque la page servie par ce domaine lit `location.hash`.
  *
  *     partager <serveur> <email> <mdp> <secret> [hôte approuvé…]
- *         → PRET <lien> | ADEMANDER <hôte> <id> <jeton> | REFUSE <raison>
+ *         → PRET <lien> | ADEMANDER <hôte> <id> <jeton> | REFUSE <motif>
  *
  *     revoquer <serveur> <email> <mdp> <id> <jeton>
  *         → REVOQUE
@@ -45,7 +45,7 @@ object PartageDeBoutEnBout {
                                 resultat.cree.deleteToken,
                         )
                     is Coffre.Partage.Refuse ->
-                        println("REFUSE ${resultat.raison}")
+                        println("REFUSE ${resultat.motif}")
                 }
             }
             "revoquer" -> {

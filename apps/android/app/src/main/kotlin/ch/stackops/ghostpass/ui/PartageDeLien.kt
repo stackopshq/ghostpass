@@ -13,11 +13,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.stackops.ghostpass.ModeleDuCoffre
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BoutonPrincipal
 import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.LienDiscret
@@ -56,42 +58,43 @@ private fun ConfirmationDeDestination(modele: ModeleDuCoffre) {
 
     AlertDialog(
         onDismissRequest = { modele.refuserLaDestination() },
-        title = { Text("Ce lien part ailleurs", fontWeight = FontWeight.Bold) },
+        title = {
+            Text(stringResource(R.string.partage_destination_titre), fontWeight = FontWeight.Bold)
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    "Votre serveur a rendu un lien vers ${attente.hote}, qui n'est pas " +
-                        "l'adresse que vous avez saisie.",
+                    stringResource(R.string.partage_destination_corps, attente.hote),
                     color = couleurs.encre,
                     fontSize = 14.sp,
                 )
                 Text(
-                    "La clé de déchiffrement voyage dans ce lien. La page servie par ce " +
-                        "domaine peut la lire : l'accepter revient à laisser votre serveur " +
-                        "choisir qui recevra le secret en clair.",
+                    stringResource(R.string.partage_destination_cle),
                     color = couleurs.attenue,
                     fontSize = 13.sp,
                 )
                 LienDiscret(
-                    texte = if (memoriser) {
-                        "☑ Retenir ${attente.hote} pour ce serveur"
-                    } else {
-                        "☐ Retenir ${attente.hote} pour ce serveur"
-                    },
+                    // La case cochée est un signe, pas un mot : elle reste ici, et la
+                    // ressource dit où elle se pose dans la phrase.
+                    texte = stringResource(
+                        R.string.partage_retenir_hote,
+                        if (memoriser) "☑" else "☐",
+                        attente.hote,
+                    ),
                     identifiant = "button.rememberHost",
                 ) { memoriser = !memoriser }
             }
         },
         confirmButton = {
             BoutonPrincipal(
-                texte = "Continuer",
+                texte = stringResource(R.string.partage_continuer),
                 actif = true,
                 identifiant = "button.trustHost",
             ) { modele.confirmerLaDestination(memoriser) }
         },
         dismissButton = {
             BoutonSecondaire(
-                texte = "Annuler et révoquer",
+                texte = stringResource(R.string.partage_annuler_et_revoquer),
                 destructif = true,
                 identifiant = "button.revokeShare",
             ) { modele.refuserLaDestination() }
@@ -109,15 +112,14 @@ private fun LienAMontrer(modele: ModeleDuCoffre) {
 
     AlertDialog(
         onDismissRequest = { modele.lienDePartage = null },
-        title = { Text("Lien de partage", fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.partage_lien_titre), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(lien, color = couleurs.encre, fontSize = 12.sp)
                 Text(
                     // La clé est dans le lien : le tronquer le rendrait inutilisable, et le
                     // dire évite qu'on le recopie à la main en oubliant ce qui suit le « # ».
-                    "Ce lien contient la clé, après le « # ». Transmettez-le entier, et par " +
-                        "un autre canal que le secret lui-même.",
+                    stringResource(R.string.partage_lien_avertissement),
                     color = couleurs.attenue,
                     fontSize = 12.sp,
                 )
@@ -125,14 +127,21 @@ private fun LienAMontrer(modele: ModeleDuCoffre) {
         },
         confirmButton = {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BoutonPrincipal(texte = "Copier", actif = true, identifiant = "button.copyLink") {
+                BoutonPrincipal(
+                    texte = stringResource(R.string.partage_copier),
+                    actif = true,
+                    identifiant = "button.copyLink",
+                ) {
                     presse.setText(AnnotatedString(lien))
                     modele.lienDePartage = null
                 }
             }
         },
         dismissButton = {
-            BoutonSecondaire(texte = "Fermer", identifiant = "button.closeLink") {
+            BoutonSecondaire(
+                texte = stringResource(R.string.partage_fermer),
+                identifiant = "button.closeLink",
+            ) {
                 modele.lienDePartage = null
             }
         },

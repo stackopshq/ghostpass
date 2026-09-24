@@ -19,10 +19,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.stackops.ghostpass.ModeleDuCoffre
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BarreDeFeuille
 import ch.stackops.ghostpass.theme.BoutonPrincipal
 import ch.stackops.ghostpass.theme.BoutonSecondaire
@@ -50,8 +52,10 @@ fun EcranDeLaCleDeRecuperation(
 
     EcranGhost(identifiant = "screen.recoveryKey") {
         BarreDeFeuille(
-            titre = "Clé de récupération",
-            gauche = if (cle == null) "Annuler" else "Terminé",
+            titre = stringResource(R.string.cle_titre),
+            gauche = stringResource(
+                if (cle == null) R.string.cle_annuler else R.string.cle_termine,
+            ),
             identifiantGauche = "button.closeRecovery",
             surGauche = surFermer,
         )
@@ -82,19 +86,17 @@ private fun Presentation(actif: Boolean, message: String?, surCreer: () -> Unit)
             }
         }
         Text(
-            "Un coffre chiffré de bout en bout ne se rouvre pas sans son mot de passe " +
-                "maître : personne, pas même le serveur, ne peut le retrouver à votre place.",
+            stringResource(R.string.cle_pas_de_second_exemplaire),
             color = couleurs.attenue,
             fontSize = 14.sp,
         )
         Text(
-            "La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que " +
-                "dans ce coffre.",
+            stringResource(R.string.cle_seule_issue),
             color = couleurs.attenue,
             fontSize = 14.sp,
         )
         BoutonPrincipal(
-            "Créer une clé de récupération",
+            stringResource(R.string.cle_creer),
             actif = actif,
             identifiant = "button.createRecovery",
         ) { surCreer() }
@@ -116,9 +118,8 @@ private fun Resultat(cle: String) {
     var copiee by remember { mutableStateOf(false) }
 
     SectionGhost(
-        titre = "Votre clé de récupération",
-        note = "Elle ne sera plus affichée. Sans elle, un mot de passe maître oublié rend " +
-            "le coffre définitivement illisible.",
+        titre = stringResource(R.string.cle_votre),
+        note = stringResource(R.string.cle_plus_jamais_affichee),
     ) {
         Text(
             cle,
@@ -133,7 +134,7 @@ private fun Resultat(cle: String) {
     }
 
     BoutonSecondaire(
-        texte = if (copiee) "Copiée" else "Copier la clé",
+        texte = stringResource(if (copiee) R.string.cle_copiee else R.string.cle_copier),
         identifiant = "button.copyRecovery",
     ) {
         val presse = contexte.getSystemService(ClipboardManager::class.java)

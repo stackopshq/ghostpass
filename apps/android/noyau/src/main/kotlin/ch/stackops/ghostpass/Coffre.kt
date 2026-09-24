@@ -988,8 +988,24 @@ class Coffre {
             val inscription: PartageEnCours?,
         ) : Partage
 
-        /** Refusé sans appel : rétrogradation de schéma, ou lien sans hôte. */
-        data class Refuse(val raison: String) : Partage
+        /**
+         * Refusé sans appel : rétrogradation de schéma, ou lien sans jeton de révocation.
+         *
+         * Le refus porte un **motif**, et non la phrase qui l'explique. Il en portait une :
+         * ce module est du Kotlin de la JVM, sans accès aux ressources Android, et cette
+         * phrase-là serait restée en français dans une application en anglais. Le motif, lui,
+         * ne dépend d'aucune langue ; c'est `EcranDuCoffre` qui lui associe un texte.
+         */
+        data class Refuse(val motif: MotifDeRefus) : Partage
+
+        /** Les deux façons dont un lien de partage peut être refusé d'emblée. */
+        enum class MotifDeRefus {
+            /** Le serveur a rendu un lien en clair alors qu'il est joint en HTTPS. */
+            RETROGRADATION_DE_SCHEMA,
+
+            /** Lien vers un autre domaine, sans jeton de révocation : impossible à reprendre. */
+            SANS_JETON_DE_REVOCATION,
+        }
     }
 
     /**
@@ -1039,19 +1055,13 @@ class Coffre {
             // Une rétrogradation de schéma ne se confirme pas, elle se refuse — et le
             // partage créé doit partir avec.
             revoquerSiPossible(cree)
-            return Partage.Refuse(
-                "Le serveur a rendu un lien en clair alors qu'il est joint en HTTPS. " +
-                    "Le partage a été annulé.",
-            )
+            return Partage.Refuse(Partage.MotifDeRefus.RETROGRADATION_DE_SCHEMA)
         }
         if (cree.deleteToken == null) {
             // Une destination étrangère sans jeton de révocation : on ne pourrait pas
             // reprendre le partage si l'utilisateur refusait. On refuse donc d'emblée
             // plutôt que de poser une question dont une des réponses est impossible à tenir.
-            return Partage.Refuse(
-                "Le serveur a rendu un lien vers un autre domaine sans jeton de révocation : " +
-                    "impossible de reprendre ce partage. Rien ne sera affiché.",
-            )
+            return Partage.Refuse(Partage.MotifDeRefus.SANS_JETON_DE_REVOCATION)
         }
         return Partage.ADemander(AdresseServeur.hote(lien).orEmpty(), lien, cree, inscription)
     }

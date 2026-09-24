@@ -16,35 +16,13 @@ import org.junit.Test
  *    cherchait ;
  *  - **il noie la ligne qui compte.** « Second facteur désactivé » au milieu de trente
  *    connexions ordinaires, sans marque, ne se remarque pas.
+ *
+ * La **première** moitié a déménagé : les intitulés sont devenus des chaînes de ressource,
+ * qui n'existent pas sur la JVM du poste. Son témoin est `JournalTraduitTest`, dans les
+ * tests instrumentés — et il y gagne, puisqu'il peut désormais vérifier les **deux**
+ * langues. Ce qui reste ici est la seconde : le classement, qui ne dépend d'aucune langue.
  */
 class JournalDuCompteTest {
-
-    @Test
-    fun lesActionsConnuesSeLisentEnFrancais() {
-        assertEquals("Second facteur désactivé", JournalDuCompte.intitule("mfa.disable"))
-        assertEquals("Connexion par mot de passe", JournalDuCompte.intitule("login.password"))
-        assertEquals("Clé d'équipe renouvelée", JournalDuCompte.intitule("org.key.rotate"))
-        assertEquals("Accès d'urgence accordé", JournalDuCompte.intitule("emergency.approve"))
-    }
-
-    /**
-     * **Une action inconnue s'affiche telle quelle**, et ne disparaît pas.
-     *
-     * C'est le point de ce fichier. Une version plus récente du serveur journalisera des
-     * actions que cette version de l'application ne connaît pas ; les masquer reviendrait à
-     * cacher la nouveauté même que le journal doit révéler. Une ligne brute est laide et
-     * utile ; une ligne absente est propre et fausse.
-     */
-    @Test
-    fun uneActionInconnueEstRendueTelleQuelle() {
-        assertEquals(
-            "une action que cette version ne connaît pas a disparu du journal : c'est " +
-                "précisément la ligne inattendue qu'on y cherchait",
-            "account.exported.v2",
-            JournalDuCompte.intitule("account.exported.v2"),
-        )
-        assertEquals("", JournalDuCompte.intitule(""))
-    }
 
     @Test
     fun lesActionsQuiRetirentUneProtectionSontSignalees() {

@@ -21,11 +21,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.stackops.ghostpass.EntreeDuCoffre
 import ch.stackops.ghostpass.ModeleDuCoffre
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.FondGhost
 import ch.stackops.ghostpass.theme.GP
@@ -61,10 +63,13 @@ fun EcranDeLaCorbeille(modele: ModeleDuCoffre, surFin: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("Corbeille", color = couleurs.encre, fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.corbeille_titre), color = couleurs.encre,
+                    fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Box(Modifier.widthIn(max = 120.dp)) {
-                    BoutonSecondaire("Retour", identifiant = "button.backFromTrash") { surFin() }
+                    BoutonSecondaire(
+                        stringResource(R.string.corbeille_retour),
+                        identifiant = "button.backFromTrash",
+                    ) { surFin() }
                 }
             }
 
@@ -75,7 +80,11 @@ fun EcranDeLaCorbeille(modele: ModeleDuCoffre, surFin: () -> Unit) {
 
             if (lecture.entrees.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("La corbeille est vide.", color = couleurs.attenue, fontSize = 14.sp)
+                    Text(
+                        stringResource(R.string.corbeille_vide),
+                        color = couleurs.attenue,
+                        fontSize = 14.sp,
+                    )
                 }
             } else {
                 LazyColumn(
@@ -125,18 +134,29 @@ private fun LigneDeCorbeille(
                 is EntreeDuCoffre.Lisible -> entree.element.name
                 // Une ligne illisible garde sa place ici aussi, et ne prétend pas avoir un
                 // nom : il vit dans le chiffré.
-                is EntreeDuCoffre.Illisible -> "Élément illisible"
+                // La même clé qu'au coffre : c'est la même ligne, dite au même endroit du
+                // produit, et deux clés jumelles finiraient par se traduire différemment.
+                is EntreeDuCoffre.Illisible -> stringResource(R.string.coffre_element_illisible)
             },
             color = couleurs.encre,
             fontSize = 15.sp,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.widthIn(max = 140.dp)) {
-                BoutonSecondaire("Restaurer", identifiant = "button.restore") { surRestaurer() }
+                BoutonSecondaire(
+                    stringResource(R.string.corbeille_restaurer),
+                    identifiant = "button.restore",
+                ) { surRestaurer() }
             }
             Box(Modifier.widthIn(max = 180.dp)) {
                 BoutonSecondaire(
-                    texte = if (confirmeLaPurge) "Confirmer" else "Détruire",
+                    texte = stringResource(
+                        if (confirmeLaPurge) {
+                            R.string.corbeille_confirmer
+                        } else {
+                            R.string.corbeille_detruire
+                        },
+                    ),
                     destructif = true,
                     identifiant = "button.purge",
                 ) { surPurger() }

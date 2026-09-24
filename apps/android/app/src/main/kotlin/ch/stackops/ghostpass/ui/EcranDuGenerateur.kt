@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -113,7 +114,7 @@ fun EcranDuGenerateur(
                         Force(GenerateurDeMotDePasse.bits(reglages))
                         Spacer(Modifier.weight(1f))
                         LienDiscret(
-                            texte = "↻ Régénérer",
+                            texte = stringResource(R.string.generateur_regenerer),
                             identifiant = "button.regenerate",
                         ) { regenerer(reglages) }
                     }
@@ -159,22 +160,36 @@ fun EcranDuGenerateur(
 
             // ─── Les jeux de caractères ───
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                IntituleDeSection("Caractères")
+                IntituleDeSection(stringResource(R.string.generateur_caracteres))
                 CarteDeSection {
                     Column {
-                        Bascule("Minuscules", "a-z", reglages.minuscules, "toggle.lowercase") {
+                        // Les exemples ne sont pas des mots : ils montrent les caractères
+                        // eux-mêmes, et restent donc en dur à côté des noms traduits.
+                        Bascule(
+                            stringResource(R.string.generateur_minuscules),
+                            "a-z", reglages.minuscules, "toggle.lowercase",
+                        ) {
                             regenerer(reglages.copy(minuscules = it))
                         }
                         FiletDeSection()
-                        Bascule("Majuscules", "A-Z", reglages.majuscules, "toggle.uppercase") {
+                        Bascule(
+                            stringResource(R.string.generateur_majuscules),
+                            "A-Z", reglages.majuscules, "toggle.uppercase",
+                        ) {
                             regenerer(reglages.copy(majuscules = it))
                         }
                         FiletDeSection()
-                        Bascule("Chiffres", "0-9", reglages.chiffres, "toggle.digits") {
+                        Bascule(
+                            stringResource(R.string.generateur_chiffres),
+                            "0-9", reglages.chiffres, "toggle.digits",
+                        ) {
                             regenerer(reglages.copy(chiffres = it))
                         }
                         FiletDeSection()
-                        Bascule("Symboles", "!@#$…", reglages.symboles, "toggle.symbols") {
+                        Bascule(
+                            stringResource(R.string.generateur_symboles),
+                            "!@#$…", reglages.symboles, "toggle.symbols",
+                        ) {
                             regenerer(reglages.copy(symboles = it))
                         }
                     }
@@ -205,10 +220,13 @@ private fun BarreDuGenerateur(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.widthIn(max = 100.dp)) {
-            BoutonSecondaire("Annuler", identifiant = "button.cancelGenerator") { surAnnuler() }
+            BoutonSecondaire(
+                stringResource(R.string.generateur_annuler),
+                identifiant = "button.cancelGenerator",
+            ) { surAnnuler() }
         }
         Text(
-            "Générer",
+            stringResource(R.string.generateur_titre),
             color = couleurs.encre,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
@@ -216,7 +234,7 @@ private fun BarreDuGenerateur(
         )
         Box(Modifier.widthIn(max = 100.dp)) {
             BoutonSecondaire(
-                texte = "Utiliser",
+                texte = stringResource(R.string.generateur_utiliser),
                 actif = peutUtiliser,
                 identifiant = "button.usePassword",
             ) { surUtiliser() }
@@ -237,10 +255,14 @@ private fun BarreDuGenerateur(
 private fun Force(bits: Double) {
     val couleurs = LocalCouleurs.current
     val (libelle, couleur) = when (GenerateurDeMotDePasse.force(bits)) {
-        GenerateurDeMotDePasse.Force.EXCELLENT -> "Excellent" to couleurs.succes
-        GenerateurDeMotDePasse.Force.SOLIDE -> "Solide" to couleurs.succes
-        GenerateurDeMotDePasse.Force.CORRECT -> "Correct" to couleurs.accentTexte
-        GenerateurDeMotDePasse.Force.FAIBLE -> "Faible" to couleurs.danger
+        GenerateurDeMotDePasse.Force.EXCELLENT ->
+            stringResource(R.string.generateur_force_excellent) to couleurs.succes
+        GenerateurDeMotDePasse.Force.SOLIDE ->
+            stringResource(R.string.generateur_force_solide) to couleurs.succes
+        GenerateurDeMotDePasse.Force.CORRECT ->
+            stringResource(R.string.generateur_force_correct) to couleurs.accentTexte
+        GenerateurDeMotDePasse.Force.FAIBLE ->
+            stringResource(R.string.generateur_force_faible) to couleurs.danger
     }
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -253,6 +275,8 @@ private fun Force(bits: Double) {
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.reperes("text.strength"),
         )
+        // « ≈ 42 bits » : un nombre et son unité, qui s'écrivent de la même façon partout.
+        // Rien à traduire, donc rien à sortir en ressource.
         Text("≈ ${bits.toInt()} bits", color = couleurs.attenue, fontSize = 11.sp)
     }
 }

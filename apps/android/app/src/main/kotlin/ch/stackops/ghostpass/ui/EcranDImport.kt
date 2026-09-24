@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,13 +74,12 @@ fun EcranDImport(
             contexte.contentResolver.openInputStream(uri)?.use { it.readBytes() }
         }.getOrNull()
         if (lu == null) {
-            echec = "Le fichier n'a pas pu être lu."
+            echec = contexte.getString(R.string.import_echec_lecture)
             return@rememberLauncherForActivityResult
         }
         val elements = ImportCsv.elements(String(lu, Charsets.UTF_8))
         if (elements.isEmpty()) {
-            echec = "Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont " +
-                "pas reconnues."
+            echec = contexte.getString(R.string.import_aucune_entree)
             return@rememberLauncherForActivityResult
         }
         nomDuFichier = nomLisible(contexte, uri)
@@ -88,8 +88,10 @@ fun EcranDImport(
 
     EcranGhost(identifiant = "screen.import") {
         BarreDeFeuille(
-            titre = "Importer",
-            gauche = if (deposes == null) "Annuler" else "Terminé",
+            titre = stringResource(R.string.import_titre),
+            gauche = stringResource(
+                if (deposes == null) R.string.import_annuler else R.string.import_termine,
+            ),
             identifiantGauche = "button.closeImport",
             surGauche = surFermer,
         )
@@ -136,8 +138,7 @@ private fun Presentation(echec: String?, actif: Boolean, surChoisir: () -> Unit)
             }
         }
         Text(
-            "Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes " +
-                "de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues.",
+            stringResource(R.string.import_presentation),
             color = couleurs.attenue,
             fontSize = 14.sp,
         )
@@ -145,18 +146,20 @@ private fun Presentation(echec: String?, actif: Boolean, surChoisir: () -> Unit)
             // Cette phrase n'est pas de la prudence d'usage : un export CSV est un fichier
             // qui contient tous les mots de passe **en clair**, souvent déposé dans le
             // dossier des téléchargements et oublié là.
-            "Le fichier est lu sur l'appareil et rien d'autre n'en sort : chaque entrée est " +
-                "chiffrée avant d'être déposée. Pensez à l'effacer ensuite — un export CSV " +
-                "contient vos mots de passe en clair.",
+            stringResource(R.string.import_avertissement),
             color = couleurs.attenue,
             fontSize = 12.sp,
         )
-        BoutonPrincipal("Choisir un fichier", actif = actif, identifiant = "button.pickCsv") {
+        BoutonPrincipal(
+            stringResource(R.string.import_choisir),
+            actif = actif,
+            identifiant = "button.pickCsv",
+        ) {
             surChoisir()
         }
         if (echec != null) {
             Text(
-                "⚠ $echec",
+                stringResource(R.string.import_erreur, echec),
                 color = couleurs.danger,
                 fontSize = 12.sp,
                 modifier = Modifier.reperes("text.importError"),
@@ -176,15 +179,14 @@ private fun Apercu(
     val contexte = LocalContext.current
 
     SectionGhost(
-        titre = "À importer",
-        note = "Rien n'est encore déposé. Les entrées rejoindront le coffre telles " +
-            "quelles ; aucune n'écrase ce qui s'y trouve déjà.",
+        titre = stringResource(R.string.import_a_importer),
+        note = stringResource(R.string.import_a_importer_note),
     ) {
         Column {
-            LigneDeValeur("Fichier", nomDuFichier)
+            LigneDeValeur(stringResource(R.string.import_fichier), nomDuFichier)
             FiletDeSection()
             LigneDeValeur(
-                "Entrées trouvées",
+                stringResource(R.string.import_entrees_trouvees),
                 contexte.resources.getQuantityString(
                     R.plurals.import_entrees, trouves.size, trouves.size,
                 ),
@@ -192,7 +194,7 @@ private fun Apercu(
         }
     }
 
-    SectionGhost(titre = "Aperçu") {
+    SectionGhost(titre = stringResource(R.string.import_apercu)) {
         Column {
             // Les premières seulement : une liste de deux cents lignes n'apprendrait rien
             // de plus sur la bonne lecture des colonnes, qui est la seule question ici.
@@ -256,8 +258,13 @@ private fun Resultat(nombre: Int, message: String?) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text(
-            "✓ " + contexte.resources.getQuantityString(
-                R.plurals.import_importees, nombre, nombre,
+            // Le « ✓ » vit dans la ressource plutôt que devant elle : une langue qui pose
+            // sa ponctuation autrement doit pouvoir déplacer la marque avec la phrase.
+            stringResource(
+                R.string.import_resultat,
+                contexte.resources.getQuantityString(
+                    R.plurals.import_importees, nombre, nombre,
+                ),
             ),
             color = couleurs.encre,
             fontSize = 17.sp,
@@ -271,7 +278,7 @@ private fun Resultat(nombre: Int, message: String?) {
             Text(message, color = couleurs.danger, fontSize = 12.sp)
         }
         Text(
-            "N'oubliez pas d'effacer le fichier CSV : il contient vos mots de passe en clair.",
+            stringResource(R.string.import_penser_a_effacer),
             color = couleurs.attenue,
             fontSize = 12.sp,
         )
@@ -307,5 +314,5 @@ private fun nomLisible(contexte: android.content.Context, uri: Uri): String {
             if (colonne >= 0 && curseur.moveToFirst()) curseur.getString(colonne) else null
         }
     }.getOrNull()
-    return nom ?: uri.lastPathSegment ?: "fichier"
+    return nom ?: uri.lastPathSegment ?: contexte.getString(R.string.import_nom_par_defaut)
 }

@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +35,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.DisposableEffect
 import ch.stackops.ghostpass.Apparence
+import ch.stackops.ghostpass.Langue
 import ch.stackops.ghostpass.ModeleDuCoffre
 import ch.stackops.ghostpass.Preferences
 import ch.stackops.ghostpass.R
@@ -70,16 +72,15 @@ fun EcranDesReglages(
 ) {
     EcranGhost(identifiant = "screen.settings") {
         BarreDeFeuille(
-            titre = "Réglages",
-            gauche = "Terminé",
+            titre = stringResource(R.string.reglages_titre),
+            gauche = stringResource(R.string.reglages_termine),
             identifiantGauche = "button.doneSettings",
             surGauche = surFermer,
         )
 
         SectionGhost(
-            titre = "Apparence",
-            note = "« Système » suit le réglage de l'appareil, y compris son passage " +
-                "automatique à la nuit.",
+            titre = stringResource(R.string.reglages_apparence),
+            note = stringResource(R.string.reglages_apparence_note),
         ) {
             // Trois vignettes plutôt qu'une liste déroulante : le choix est visuel, et
             // l'aperçu vaut mieux qu'un nom.
@@ -98,15 +99,14 @@ fun EcranDesReglages(
         }
 
         SectionGhost(
-            titre = "Verrouillage",
-            note = "Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le " +
-                "disque — et son contenu est masqué dans le sélecteur d'applications.",
+            titre = stringResource(R.string.reglages_verrouillage),
+            note = stringResource(R.string.reglages_verrouillage_note),
         ) {
             Column {
                 Verrouillage.entries.forEachIndexed { index, cas ->
                     if (index > 0) FiletDeSection()
                     LigneDeChoix(
-                        libelle = cas.libelle,
+                        libelle = stringResource(cas.libelle),
                         choisie = reglages.verrouillage == cas,
                         identifiant = "row.lock." + cas.cle,
                     ) { reglages.choisirLeVerrouillage(cas) }
@@ -115,17 +115,19 @@ fun EcranDesReglages(
         }
 
         SectionGhost(
-            titre = "Icônes des sites",
-            note = "Le coffre est chiffré de bout en bout : le serveur n'en connaît pas le " +
-                "contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun " +
-                "tiers n'est sollicité.",
+            titre = stringResource(R.string.reglages_icones),
+            note = stringResource(R.string.reglages_icones_note),
         ) {
             val couleurs = LocalCouleurs.current
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Afficher les logos", color = couleurs.encre, fontSize = 15.sp)
+                Text(
+                    stringResource(R.string.reglages_afficher_les_logos),
+                    color = couleurs.encre,
+                    fontSize = 15.sp,
+                )
                 Box(Modifier.weight(1f))
                 Switch(
                     checked = reglages.afficheLesIcones,
@@ -145,6 +147,25 @@ fun EcranDesReglages(
                         "toggle.icons" + if (reglages.afficheLesIcones) ".on" else ".off",
                     ),
                 )
+            }
+        }
+
+        SectionGhost(
+            titre = stringResource(R.string.reglages_langue),
+            note = stringResource(R.string.reglages_langue_note),
+        ) {
+            Column {
+                Langue.entries.forEachIndexed { index, cas ->
+                    if (index > 0) FiletDeSection()
+                    LigneDeChoix(
+                        libelle = stringResource(cas.libelle),
+                        choisie = reglages.langue == cas,
+                        // `systeme` plutôt qu'une chaîne vide : l'étiquette de locale de
+                        // « Système » est `null`, et un identifiant de témoin qui finirait
+                        // par « row.language. » ne désignerait plus rien.
+                        identifiant = "row.language." + (cas.etiquette ?: "systeme"),
+                    ) { reglages.choisirLaLangue(cas) }
+                }
             }
         }
 
@@ -190,13 +211,16 @@ private fun RemplissageAutomatique(modele: ModeleDuCoffre) {
     val equipes = modele.partagesDEquipe
 
     SectionGhost(
-        titre = "Remplissage automatique",
-        note = "Le service ne voit pas le serveur : il lit le coffre déjà ouvert par " +
-            "l'application. Un coffre verrouillé ne propose rien, quel que soit le site.",
+        titre = stringResource(R.string.reglages_remplissage),
+        note = stringResource(R.string.reglages_remplissage_note),
     ) {
         Column {
             when (actif) {
-                true -> LigneDeDiagnostic("Service", "autorisé", alerte = false)
+                true -> LigneDeDiagnostic(
+                    stringResource(R.string.reglages_service),
+                    stringResource(R.string.reglages_autorise),
+                    alerte = false,
+                )
                 false -> Row(
                     Modifier
                         .fillMaxWidth()
@@ -205,9 +229,17 @@ private fun RemplissageAutomatique(modele: ModeleDuCoffre) {
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Service", color = couleurs.encre, fontSize = 15.sp)
+                    Text(
+                        stringResource(R.string.reglages_service),
+                        color = couleurs.encre,
+                        fontSize = 15.sp,
+                    )
                     Box(Modifier.weight(1f))
-                    Text("non autorisé", color = couleurs.danger, fontSize = 14.sp)
+                    Text(
+                        stringResource(R.string.reglages_non_autorise),
+                        color = couleurs.danger,
+                        fontSize = 14.sp,
+                    )
                     Text(
                         " ›",
                         color = couleurs.attenue,
@@ -219,14 +251,14 @@ private fun RemplissageAutomatique(modele: ModeleDuCoffre) {
                 // vaut mieux que de montrer « non autorisé » avec un bouton qui n'ouvrirait
                 // aucun écran.
                 null -> LigneDeDiagnostic(
-                    "Service",
-                    "indisponible sur cet Android",
+                    stringResource(R.string.reglages_service),
+                    stringResource(R.string.reglages_indisponible),
                     alerte = true,
                 )
             }
             FiletDeSection()
             LigneDeDiagnostic(
-                "Coffre personnel",
+                stringResource(R.string.reglages_coffre_personnel),
                 contexte.resources.getQuantityString(
                     R.plurals.reglages_elements, personnels, personnels,
                 ),
@@ -234,15 +266,22 @@ private fun RemplissageAutomatique(modele: ModeleDuCoffre) {
             )
             FiletDeSection()
             LigneDeDiagnostic(
-                "Coffres d'équipe",
+                stringResource(R.string.reglages_coffres_equipe),
                 if (equipes.isEmpty()) {
-                    "aucun"
+                    stringResource(R.string.reglages_aucun)
                 } else {
                     val elements = equipes.sumOf { it.entrees.size }
-                    contexte.resources.getQuantityString(
-                        R.plurals.reglages_elements, elements, elements,
-                    ) + " · " + contexte.resources.getQuantityString(
-                        R.plurals.reglages_coffres, equipes.size, equipes.size,
+                    // Les deux comptes sont recollés par une ressource plutôt que par un
+                    // « · » posé dans le code : le séparateur et l'ordre appartiennent à la
+                    // langue, et une phrase faite de bouts concaténés ne se traduit pas.
+                    stringResource(
+                        R.string.reglages_deux_comptes,
+                        contexte.resources.getQuantityString(
+                            R.plurals.reglages_elements, elements, elements,
+                        ),
+                        contexte.resources.getQuantityString(
+                            R.plurals.reglages_coffres, equipes.size, equipes.size,
+                        ),
                     )
                 },
                 alerte = equipes.isNotEmpty() && equipes.sumOf { it.entrees.size } == 0,
@@ -252,7 +291,7 @@ private fun RemplissageAutomatique(modele: ModeleDuCoffre) {
             // liste se lirait « il n'y a rien ». On le compte donc à part.
             val illisibles = coffreComplet.nombreDIllisibles
             LigneDeDiagnostic(
-                "Non déchiffrés",
+                stringResource(R.string.reglages_non_dechiffres),
                 contexte.resources.getQuantityString(
                     R.plurals.reglages_elements, illisibles, illisibles,
                 ),
@@ -291,7 +330,11 @@ private fun LigneDeChoix(
             // choisie des autres, et le « ✓ » est un texte de nœud parmi d'autres.
             .reperes(
                 identifiant = identifiant + if (choisie) ".on" else ".off",
-                description = if (choisie) "$libelle, choisi" else libelle,
+                description = if (choisie) {
+                    stringResource(R.string.reglages_choisi, libelle)
+                } else {
+                    libelle
+                },
             )
             .padding(horizontal = 14.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -323,7 +366,11 @@ private fun Vignette(cas: Apparence, choisie: Boolean, surClic: () -> Unit) {
             .clickable(onClick = surClic)
             .reperes(
                 identifiant = "tile.apparence." + cas.cle + if (choisie) ".on" else ".off",
-                description = if (choisie) "${cas.libelle}, choisi" else cas.libelle,
+                description = if (choisie) {
+                    stringResource(R.string.reglages_choisi, stringResource(cas.libelle))
+                } else {
+                    stringResource(cas.libelle)
+                },
             )
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -331,7 +378,12 @@ private fun Vignette(cas: Apparence, choisie: Boolean, surClic: () -> Unit) {
     ) {
         val teinte = if (choisie) couleurs.accentTexte else couleurs.attenue
         Text(cas.symbole, color = teinte, fontSize = 19.sp)
-        Text(cas.libelle, color = teinte, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(
+            stringResource(cas.libelle),
+            color = teinte,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 

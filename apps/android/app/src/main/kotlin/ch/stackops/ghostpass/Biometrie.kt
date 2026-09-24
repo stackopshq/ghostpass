@@ -63,7 +63,7 @@ object Biometrie {
             .setTitle(titre)
             .setSubtitle(sousTitre)
             .setAllowedAuthenticators(AUTHENTIFICATEURS)
-            .setNegativeButtonText("Mot de passe maître")
+            .setNegativeButtonText(activite.getString(R.string.biometrie_mot_de_passe_maitre))
             .setConfirmationRequired(false)
             .build()
 

@@ -7,47 +7,18 @@ package ch.stackops.ghostpass
  * journal illisible ne sert donc à rien : « mfa.disable » ne dit rien à personne, et c'est
  * justement la ligne qu'il faut remarquer.
  *
- * La traduction et le classement vivent ici, dans `:noyau`, et non dans l'écran : ce sont
- * des règles — quelle action est sensible, comment elle se nomme en français — et une règle
- * enfouie dans un `when` de composable ne s'éprouve qu'à l'œil.
+ * Le **classement** vit ici, dans `:noyau` : « quelle action est sensible » est une règle,
+ * et une règle enfouie dans un `when` de composable ne s'éprouve qu'à l'œil.
+ *
+ * La **traduction**, elle, a quitté ce fichier. Elle y était pour la même raison — et c'était
+ * l'erreur : ce module est du Kotlin de la JVM, sans accès aux ressources Android. « Second
+ * facteur désactivé » écrit ici ne pouvait pas se traduire, et le journal serait resté en
+ * français quelle que soit la langue choisie. Le `when` est passé dans
+ * `ui/IntituleDuJournal.kt`, où il associe le même code de serveur à une chaîne de
+ * ressource. Le code (`mfa.disable`) reste la clé des deux côtés : c'est lui qui est stable,
+ * pas sa formulation.
  */
 object JournalDuCompte {
-
-    /**
-     * Ce qu'une action veut dire, en français.
-     *
-     * **Les identifiants inconnus sont rendus tels quels plutôt que masqués.** Une version
-     * plus récente du serveur peut en journaliser de nouveaux, et une ligne brute reste plus
-     * utile qu'une ligne absente — surtout dans un journal dont l'objet est de révéler
-     * l'inattendu. Masquer ce qu'on ne connaît pas reviendrait à cacher précisément la
-     * nouveauté qu'on cherche.
-     */
-    fun intitule(action: String): String = when (action) {
-        "login.password" -> "Connexion par mot de passe"
-        "login.passkey" -> "Connexion par passkey"
-        "login.sso" -> "Connexion par SSO"
-        "logout" -> "Déconnexion"
-        "mfa.enable" -> "Second facteur activé"
-        "mfa.disable" -> "Second facteur désactivé"
-        "recovery.reset" -> "Mot de passe réinitialisé par clé de récupération"
-        "passkey.add" -> "Passkey ajoutée"
-        "passkey.remove" -> "Passkey retirée"
-        "webauthn.add" -> "Clé de sécurité ajoutée"
-        "webauthn.remove" -> "Clé de sécurité retirée"
-        "emergency.grant" -> "Accès d'urgence confié"
-        "emergency.request" -> "Accès d'urgence demandé"
-        "emergency.approve" -> "Accès d'urgence accordé"
-        "org.member.add" -> "Membre ajouté à une équipe"
-        "org.member.role" -> "Rôle d'un membre modifié"
-        "org.key.rotate" -> "Clé d'équipe renouvelée"
-        "org.group.create" -> "Groupe créé"
-        "org.group.delete" -> "Groupe supprimé"
-        "org.group.member.add" -> "Membre ajouté à un groupe"
-        "org.group.member.remove" -> "Membre retiré d'un groupe"
-        "org.group.access.grant" -> "Accès accordé à une collection"
-        "org.group.access.revoke" -> "Accès retiré à une collection"
-        else -> action
-    }
 
     /**
      * Les actions qui méritent d'être remarquées.

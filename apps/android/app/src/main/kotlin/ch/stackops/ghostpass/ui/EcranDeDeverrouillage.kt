@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -116,7 +117,8 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                 // Rien ne s'ouvre : le serveur a invalidé toutes les sessions. Le champ est
                 // vidé et l'écran dit quoi faire, plutôt que de laisser croire à un échec.
                 motDePasse = ""
-                modele.message = "Mot de passe réinitialisé. Connectez-vous avec le nouveau."
+                modele.message =
+                    contexte.getString(R.string.deverrouillage_mot_de_passe_reinitialise)
             },
         )
         return
@@ -161,11 +163,14 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                     verticalArrangement = Arrangement.spacedBy(GP.ecartChamps),
                 ) {
                     if (sessionEnregistree) {
-                        ValeurFigee("Compte", modele.emailEnregistre)
+                        ValeurFigee(
+                            stringResource(R.string.deverrouillage_compte),
+                            modele.emailEnregistre,
+                        )
                         ChampGhost(
-                            intitule = "Mot de passe maître",
+                            intitule = stringResource(R.string.deverrouillage_mot_de_passe_maitre),
                             valeur = motDePasse,
-                            invite = "Votre mot de passe",
+                            invite = stringResource(R.string.deverrouillage_invite_mot_de_passe),
                             identifiant = "field.master",
                             secret = true,
                             typeDeClavier = KeyboardType.Password,
@@ -173,7 +178,7 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                         )
                     } else {
                         ChampGhost(
-                            intitule = "Serveur",
+                            intitule = stringResource(R.string.deverrouillage_serveur),
                             valeur = serveur,
                             // Le domaine est celui que la RFC 2606 réserve aux exemples : il
                             // ne résout nulle part, donc personne ne se connectera par
@@ -186,17 +191,17 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                             onChange = { serveur = it },
                         )
                         ChampGhost(
-                            intitule = "Adresse e-mail",
+                            intitule = stringResource(R.string.deverrouillage_adresse_email),
                             valeur = email,
-                            invite = "vous@exemple.ch",
+                            invite = stringResource(R.string.deverrouillage_invite_email),
                             identifiant = "field.email",
                             typeDeClavier = KeyboardType.Email,
                             onChange = { email = it },
                         )
                         ChampGhost(
-                            intitule = "Mot de passe maître",
+                            intitule = stringResource(R.string.deverrouillage_mot_de_passe_maitre),
                             valeur = motDePasse,
-                            invite = "Votre mot de passe",
+                            invite = stringResource(R.string.deverrouillage_invite_mot_de_passe),
                             identifiant = "field.master",
                             secret = true,
                             typeDeClavier = KeyboardType.Password,
@@ -204,7 +209,8 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                         )
                         if (modele.secondFacteurRequis) {
                             ChampGhost(
-                                intitule = "Code à six chiffres",
+                                intitule =
+                                    stringResource(R.string.deverrouillage_code_six_chiffres),
                                 valeur = codeTotp,
                                 invite = "123456",
                                 identifiant = "field.totp",
@@ -226,7 +232,13 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
 
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         BoutonPrincipal(
-                            texte = if (sessionEnregistree) "Déverrouiller" else "Se connecter",
+                            texte = stringResource(
+                                if (sessionEnregistree) {
+                                    R.string.deverrouillage_deverrouiller
+                                } else {
+                                    R.string.deverrouillage_se_connecter
+                                },
+                            ),
                             actif = !modele.occupe && motDePasse.isNotEmpty(),
                             occupe = modele.occupe,
                             identifiant = "button.submit",
@@ -251,7 +263,7 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                         // erreur de conception d'un client à connaissance nulle.
                         if (!sessionEnregistree) {
                             LienDiscret(
-                                texte = "S'identifier par authentification unique",
+                                texte = stringResource(R.string.deverrouillage_sso),
                                 actif = !modele.occupe && serveur.isNotBlank(),
                                 identifiant = "button.sso",
                             ) { modele.demarrerLeSso(contexte, serveur) }
@@ -275,11 +287,15 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                             // dur, sur un appareil à reconnaissance faciale. L'icône comme le
                             // nom suivent désormais le matériel.
                             val genre = BiometrieDeLAppareil.genre(contexte)
+                            val libelle = stringResource(
+                                R.string.deverrouillage_avec_biometrie,
+                                BiometrieDeLAppareil.nom(contexte),
+                            )
                             BoutonSecondaire(
-                                texte = "Déverrouiller avec ${BiometrieDeLAppareil.nom(contexte)}",
+                                texte = libelle,
                                 actif = !modele.occupe,
                                 identifiant = "button.biometric",
-                                description = "Déverrouiller avec ${BiometrieDeLAppareil.nom(contexte)}",
+                                description = libelle,
                                 contenu = { IconeBiometrique(genre, couleurs.accentTexte) },
                             ) { modele.deverrouillerParBiometrie(activite) }
                         }
@@ -290,7 +306,7 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                         // enregistrée, elle l'invalide avec toutes les autres.
                         if (!sessionEnregistree) {
                             LienDiscret(
-                                texte = "Mot de passe maître oublié",
+                                texte = stringResource(R.string.deverrouillage_mot_de_passe_oublie),
                                 actif = !modele.occupe && serveur.isNotBlank() &&
                                     email.isNotBlank(),
                                 identifiant = "button.forgotMaster",
@@ -302,11 +318,13 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
 
                         if (modele.sessionEnregistree != null) {
                             LienDiscret(
-                                texte = if (sessionEnregistree) {
-                                    "Utiliser un autre compte"
-                                } else {
-                                    "Revenir au coffre enregistré"
-                                },
+                                texte = stringResource(
+                                    if (sessionEnregistree) {
+                                        R.string.deverrouillage_autre_compte
+                                    } else {
+                                        R.string.deverrouillage_revenir_au_coffre
+                                    },
+                                ),
                                 identifiant = "button.switchAccount",
                             ) {
                                 sessionEnregistree = !sessionEnregistree
@@ -367,17 +385,21 @@ private fun Enseigne(sessionEnregistree: Boolean) {
             )
         }
         Text(
-            "GhostPass",
+            // La marque, et non une chaîne d'écran : `app_name` existe déjà et dit la même
+            // chose. Elle ne se traduit pas — une traduction en créerait une seconde.
+            stringResource(R.string.app_name),
             color = couleurs.encre,
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold,
         )
         Text(
-            if (sessionEnregistree) {
-                "Coffre enregistré sur cet appareil"
-            } else {
-                "Coffre chiffré de bout en bout"
-            },
+            stringResource(
+                if (sessionEnregistree) {
+                    R.string.deverrouillage_coffre_enregistre
+                } else {
+                    R.string.deverrouillage_coffre_chiffre
+                },
+            ),
             color = couleurs.attenue,
             fontSize = 13.sp,
         )

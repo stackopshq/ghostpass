@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Les langues que l'application sait parler.
+
+     Ce fichier n'est pas décoratif : c'est lui qui fait apparaître GhostPass dans
+     « Paramètres › Applications › GhostPass › Langue » sur Android 13 et au-delà. Sans
+     lui, le réglage interne fonctionnerait et l'écran du système resterait muet — deux
+     endroits pour la même question, dont un qui ment.
+
+     `fr` en premier parce que c'est la langue source : les chaînes de `values/` sont
+     françaises, et `values-en/` les traduit. L'inverse aurait demandé un `values-fr/`
+     complet et un `values/` anglais, pour le même résultat et un dossier de plus. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="fr" />
+    <locale android:name="en" />
+</locale-config>

@@ -75,6 +75,18 @@ if [[ -x "$RACINE/apps/android/gradlew" ]]; then
   fi
 fi
 
+titre "Les deux catalogues de chaînes se répondent-ils ?"
+# Rapide et bête, donc exactement à sa place ici. Ce qu'il attrape n'est visible nulle part
+# ailleurs : une clé absente de `values-en/` ne produit **aucune** erreur — Android retombe
+# sur le français, l'application se lance, les tests passent, et l'écran est à moitié
+# traduit. Le repli a la forme d'un succès.
+if [[ -x "$RACINE/tools/android/temoin-des-traductions.sh" ]]; then
+  sortie="$("$RACINE/tools/android/temoin-des-traductions.sh" 2>&1)"
+  etat=$?
+  [[ $etat -eq 0 ]] || echo "$sortie"
+  verdict $etat "values/ et values-en/ ont les mêmes clés"
+fi
+
 titre "Le contrat vendoré est-il à jour ?"
 if [[ -f "$SUITE/assets/vecteurs/contrat.json" ]]; then
   # Une copie vendorée **et fausse** est la pire des deux situations : les tests passent,

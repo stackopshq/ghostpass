@@ -1,8 +1,5 @@
 package ch.stackops.ghostpass
 
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Les mots de l'accès d'urgence — rôles, états, délais.
@@ -20,19 +17,16 @@ object UrgenceDuCompte {
      * de passe maître au donneur — ce qui l'exclut de son propre coffre. L'écart entre les
      * deux est énorme et ne se lit pas dans les mots « lecture » et « reprise » : c'est
      * pourquoi chacun porte une explication en toutes lettres, montrée avant le choix.
+     *
+     * **L'intitulé et l'explication ne sont plus ici.** Ce module est du Kotlin de la JVM,
+     * sans accès aux ressources Android : une phrase écrite ici ne pourrait pas se
+     * traduire, et l'écran d'urgence resterait en français quelle que soit la langue
+     * choisie. Ce qui reste — la clé du serveur et la règle de lecture — est ce qui ne
+     * dépend d'aucune langue. `EcranDeLUrgence` associe chaque cas à sa chaîne.
      */
-    enum class Role(val cle: String, val intitule: String, val explication: String) {
-        LECTURE(
-            "view",
-            "Lecture seule",
-            "Le contact pourra lire vos identifiants, sans rien y changer ni vous en priver.",
-        ),
-        REPRISE(
-            "takeover",
-            "Reprise du compte",
-            "Le contact pourra en plus choisir un nouveau mot de passe maître — ce qui vous " +
-                "exclura de votre propre coffre.",
-        ),
+    enum class Role(val cle: String) {
+        LECTURE("view"),
+        REPRISE("takeover"),
         ;
 
         companion object {
@@ -49,13 +43,17 @@ object UrgenceDuCompte {
         }
     }
 
-    /** Où en est un lien. **Les valeurs viennent du serveur ; on ne les invente pas.** */
-    enum class Etat(val cle: String, val intitule: String) {
-        INVITE("invited", "Invitation envoyée"),
-        ACCEPTE("accepted", "Contact accepté"),
-        DEMANDE("requested", "Accès demandé"),
-        OUVERT("granted", "Accès ouvert"),
-        REFUSE("rejected", "Demande refusée"),
+    /**
+     * Où en est un lien. **Les valeurs viennent du serveur ; on ne les invente pas.**
+     *
+     * L'intitulé se lit côté écran, pour la raison donnée sur [Role].
+     */
+    enum class Etat(val cle: String) {
+        INVITE("invited"),
+        ACCEPTE("accepted"),
+        DEMANDE("requested"),
+        OUVERT("granted"),
+        REFUSE("rejected"),
         ;
 
         companion object {
@@ -75,7 +73,4 @@ object UrgenceDuCompte {
         if (Etat.parCle(etat) != Etat.DEMANDE || demandeLe == null) return null
         return demandeLe + joursDAttente.toLong() * 86_400_000L
     }
-
-    fun dateLisible(millisecondes: Long): String =
-        SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault()).format(Date(millisecondes))
 }

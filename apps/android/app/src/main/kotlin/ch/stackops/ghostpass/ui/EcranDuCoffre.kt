@@ -1,5 +1,6 @@
 package ch.stackops.ghostpass.ui
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +28,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +88,7 @@ fun EcranDuCoffre(
     surUrgence: () -> Unit = {},
 ) {
     val couleurs = LocalCouleurs.current
+    val contexte = LocalContext.current
     val lecture = modele.lectureAffichee
     var recherche by rememberSaveable { mutableStateOf("") }
     var reglagesOuverts by rememberSaveable { mutableStateOf(false) }
@@ -130,7 +134,7 @@ fun EcranDuCoffre(
                 // Dire d'où vient ce qu'on montre. Une liste du dernier passage présentée
                 // comme à jour ferait croire qu'un élément ajouté ailleurs n'existe pas.
                 Text(
-                    "Hors ligne — dernier état connu.",
+                    stringResource(R.string.coffre_hors_ligne),
                     color = couleurs.attenue,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
@@ -146,9 +150,9 @@ fun EcranDuCoffre(
             if (lecture.entrees.isNotEmpty() || recherche.isNotEmpty()) {
                 Box(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
                     ChampGhost(
-                        intitule = "Rechercher",
+                        intitule = stringResource(R.string.coffre_rechercher),
                         valeur = recherche,
-                        invite = "Nom, identifiant, dossier",
+                        invite = stringResource(R.string.coffre_invite_recherche),
                         identifiant = "field.search",
                         onChange = { recherche = it },
                     )
@@ -160,7 +164,7 @@ fun EcranDuCoffre(
             if (filtrees.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        messageDeListeVide(modele, recherche),
+                        messageDeListeVide(contexte, modele, recherche),
                         color = couleurs.attenue,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 24.dp),
@@ -262,7 +266,7 @@ private fun BarreDOutils(
             modifier = Modifier.semantics { hideFromAccessibility() },
         )
         Text(
-            modele.collectionOuverte?.nom ?: "Coffre",
+            modele.collectionOuverte?.nom ?: stringResource(R.string.coffre_titre),
             color = couleurs.encre,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
@@ -272,7 +276,10 @@ private fun BarreDOutils(
         // c'est donc bien la permission de l'écran, et non celle d'une origine.
         if (modele.peutEcrire) {
             Box(Modifier.widthIn(max = 110.dp)) {
-                BoutonSecondaire("Nouveau", identifiant = "button.new") { surNouveau() }
+                BoutonSecondaire(
+                    stringResource(R.string.coffre_nouveau),
+                    identifiant = "button.new",
+                ) { surNouveau() }
             }
         }
         Box(Modifier.widthIn(max = 60.dp)) {
@@ -323,32 +330,41 @@ private fun MenuDeReglages(
         // **La roue crantée a enfin un écran à ouvrir.** Elle n'en avait aucun tant que
         // les réglages tenaient dans ces trois entrées ; la poser alors aurait été un
         // bouton qui n'ouvre rien, ce qui se lit comme une panne.
-        LienDiscret("Réglages", identifiant = "button.settings.open") {
+        LienDiscret(
+            stringResource(R.string.coffre_reglages),
+            identifiant = "button.settings.open",
+        ) {
             surFermer()
             surReglages()
         }
 
-        LienDiscret("Accès d'urgence", identifiant = "button.emergency") {
+        LienDiscret(
+            stringResource(R.string.coffre_acces_urgence),
+            identifiant = "button.emergency",
+        ) {
             surFermer()
             surUrgence()
         }
 
-        LienDiscret("Clé de récupération", identifiant = "button.recoveryKey") {
+        LienDiscret(
+            stringResource(R.string.coffre_cle_de_recuperation),
+            identifiant = "button.recoveryKey",
+        ) {
             surFermer()
             surCleDeRecuperation()
         }
 
-        LienDiscret("Journal du compte", identifiant = "button.activity") {
+        LienDiscret(stringResource(R.string.coffre_journal), identifiant = "button.activity") {
             surFermer()
             surJournal()
         }
 
-        LienDiscret("Second facteur", identifiant = "button.mfa") {
+        LienDiscret(stringResource(R.string.coffre_second_facteur), identifiant = "button.mfa") {
             surFermer()
             surSecondFacteur()
         }
 
-        LienDiscret("Santé du coffre", identifiant = "button.health") {
+        LienDiscret(stringResource(R.string.coffre_sante), identifiant = "button.health") {
             surFermer()
             surSante()
         }
@@ -356,13 +372,15 @@ private fun MenuDeReglages(
         // L'import écrit dans le coffre **personnel** : le proposer depuis une collection
         // d'équipe laisserait croire qu'il y déposera. On ne l'offre donc qu'à l'accueil.
         if (modele.collectionOuverte == null) {
-            LienDiscret("Importer un CSV", identifiant = "button.import") {
+            LienDiscret(stringResource(R.string.coffre_import_csv), identifiant = "button.import") {
                 surFermer()
                 surImport()
             }
         }
 
-        LienDiscret("Corbeille", identifiant = "button.trash") {
+        // Le même libellé que le titre de l'écran qu'il ouvre : une seule clé pour les deux,
+        // sinon les deux mots se mettraient à diverger d'une traduction à l'autre.
+        LienDiscret(stringResource(R.string.corbeille_titre), identifiant = "button.trash") {
             surFermer()
             surCorbeille()
         }
@@ -374,11 +392,14 @@ private fun MenuDeReglages(
             // la même — on active ici ce sur quoi on appuie là-bas.
             val nomDuGeste = BiometrieDeLAppareil.nom(activite)
             LienDiscret(
-                texte = if (modele.biometrieActivee) {
-                    "Désactiver le déverrouillage par $nomDuGeste"
-                } else {
-                    "Activer le déverrouillage par $nomDuGeste"
-                },
+                texte = stringResource(
+                    if (modele.biometrieActivee) {
+                        R.string.coffre_biometrie_desactiver
+                    } else {
+                        R.string.coffre_biometrie_activer
+                    },
+                    nomDuGeste,
+                ),
                 identifiant = "button.biometricToggle",
             ) {
                 if (modele.biometrieActivee) {
@@ -389,20 +410,19 @@ private fun MenuDeReglages(
             }
         }
 
-        LienDiscret("Verrouiller", identifiant = "button.lock") {
+        LienDiscret(stringResource(R.string.coffre_verrouiller), identifiant = "button.lock") {
             surFermer()
             modele.verrouiller()
         }
 
         // La déconnexion oublie la session, le cache **et** l'enveloppe biométrique. Elle
         // est distincte du verrouillage, et le dire évite de la choisir par erreur.
-        LienDiscret("Se déconnecter", identifiant = "button.logout") {
+        LienDiscret(stringResource(R.string.coffre_se_deconnecter), identifiant = "button.logout") {
             surFermer()
             modele.fermerLaSession()
         }
         Text(
-            "Le verrouillage garde la session ; la déconnexion l'efface et demandera de " +
-                "tout ressaisir.",
+            stringResource(R.string.coffre_verrou_ou_deconnexion),
             color = couleurs.attenue,
             fontSize = 11.sp,
         )
@@ -443,7 +463,7 @@ private fun ChoixDuCoffre(modele: ModeleDuCoffre) {
                 // deux plateformes, et le renommer d'un seul côté les ferait diverger en
                 // silence. Le libellé se lit, l'identifiant se cherche ; ce sont deux
                 // publics différents.
-                texte = "Tous les éléments",
+                texte = stringResource(R.string.coffre_tous_les_elements),
                 choisie = modele.collectionOuverte == null,
                 identifiant = "chip.personal",
             ) { modele.revenirAuCoffrePersonnel() }
@@ -467,25 +487,33 @@ private fun ChoixDuCoffre(modele: ModeleDuCoffre) {
             val echec = modele.echecsDOrganisation[organisation.id]
             if (organisation.etat == EtatDAppartenance.Invite) {
                 Text(
-                    "« ${organisation.nom} » vous a invité·e. Touchez son nom pour accepter ; " +
-                        "son contenu ne sera lisible qu'ensuite.",
+                    stringResource(R.string.coffre_organisation_invitation, organisation.nom),
                     color = couleurs.attenue,
                     fontSize = 12.sp,
                 )
             } else if (echec != null) {
-                Text(
-                    "« ${organisation.nom} » : " + when (echec) {
+                // Le nom et le motif ne se recollent plus par `+` : la phrase entière est une
+                // chaîne à deux trous. Une langue qui place le motif avant le nom ne pourrait
+                // rien faire d'une concaténation, et le « : » du milieu y est ponctuation
+                // française — l'espace qui le précède n'existe pas partout.
+                val motif = stringResource(
+                    when (echec) {
                         EchecDOrganisation.InvitationEnAttente ->
-                            "invitation pas encore acceptée."
+                            R.string.coffre_echec_invitation_en_attente
                         EchecDOrganisation.AucuneCleRemise ->
-                            "aucune clé ne vous a encore été remise. Un administrateur doit " +
-                                "vous l'attribuer."
+                            R.string.coffre_echec_aucune_cle
                         is EchecDOrganisation.CleRefusee ->
-                            "la clé de ce coffre n'a pas pu être ouverte. Elle a peut-être " +
-                                "été remplacée depuis qu'elle vous a été remise."
+                            R.string.coffre_echec_cle_refusee
                         is EchecDOrganisation.Reseau ->
-                            "coffre injoignable pour l'instant."
+                            R.string.coffre_echec_reseau
                     },
+                )
+                Text(
+                    stringResource(
+                        R.string.coffre_organisation_echec,
+                        organisation.nom,
+                        motif,
+                    ),
                     color = couleurs.danger,
                     fontSize = 12.sp,
                 )
@@ -503,8 +531,11 @@ private fun ChoixDuCoffre(modele: ModeleDuCoffre) {
                     Pastilledechoix(
                         // La permission se lit **avant** d'ouvrir : découvrir qu'on ne peut
                         // pas écrire après avoir tout saisi est le pire moment.
-                        texte = collection.nom +
-                            if (collection.permission.peutEcrire) "" else " (lecture)",
+                        texte = if (collection.permission.peutEcrire) {
+                            collection.nom
+                        } else {
+                            stringResource(R.string.coffre_collection_lecture, collection.nom)
+                        },
                         choisie = modele.collectionOuverte?.id == collection.id,
                         identifiant = "chip.collection." + collection.id,
                     ) { modele.ouvrirUneCollection(collection) }
@@ -542,20 +573,30 @@ private fun Pastilledechoix(
     }
 }
 
-/** Ce qu'on dit quand la liste est vide — et « vide » a quatre causes différentes. */
-private fun messageDeListeVide(modele: ModeleDuCoffre, recherche: String): String = when {
-    recherche.isNotEmpty() -> "Aucun élément ne correspond à « $recherche »."
+/**
+ * Ce qu'on dit quand la liste est vide — et « vide » a quatre causes différentes.
+ *
+ * Elle n'est pas `@Composable` : `stringResource` lui est donc interdit, et c'est un
+ * `Context` qu'elle reçoit. Le passer coûte un paramètre ; laisser les cinq phrases en dur
+ * aurait coûté l'écran entier dans une seule langue.
+ */
+private fun messageDeListeVide(
+    contexte: Context,
+    modele: ModeleDuCoffre,
+    recherche: String,
+): String = when {
+    recherche.isNotEmpty() -> contexte.getString(R.string.coffre_aucun_resultat, recherche)
     // « On n'a pas pu regarder » n'est pas « il n'y a rien », et les confondre fait
     // recréer un identifiant qui existe déjà.
-    modele.horsLigne -> "Coffre indisponible hors ligne — rien n'a encore été mis en cache."
-    modele.collectionOuverte != null -> "Cette collection d'équipe est vide."
+    modele.horsLigne -> contexte.getString(R.string.coffre_vide_hors_ligne)
+    modele.collectionOuverte != null -> contexte.getString(R.string.coffre_collection_vide)
     // Cette phrase-là était le symptôme du défaut, pas son remède : elle envoyait chercher
     // ailleurs ce que l'accueil aurait dû montrer. Depuis la fusion, un accueil vide alors
     // qu'on appartient à des équipes ne veut plus dire « c'est rangé ailleurs » — il veut
     // dire que les équipes n'ont pas pu être lues, et c'est ce qu'il faut dire.
     modele.echecsDOrganisation.isNotEmpty() ->
-        "Vos coffres d'équipe n'ont pas pu être ouverts — voyez le motif ci-dessus."
-    else -> "Ce coffre est vide."
+        contexte.getString(R.string.coffre_equipes_illisibles)
+    else -> contexte.getString(R.string.coffre_vide)
 }
 
 /**
@@ -606,9 +647,12 @@ private fun LigneLisible(
         Column(Modifier.weight(1f)) {
             Text(element.name, color = couleurs.encre, fontSize = 15.sp)
             val detail = when (val d = element.data) {
-                is ContenuDElement.Connexion -> d.valeur.username.ifEmpty { "Identifiant" }
-                is ContenuDElement.NoteSecrete -> "Note sécurisée"
-                is ContenuDElement.Carte -> "Carte"
+                is ContenuDElement.Connexion -> {
+                    val sansNom = stringResource(R.string.coffre_detail_identifiant)
+                    d.valeur.username.ifEmpty { sansNom }
+                }
+                is ContenuDElement.NoteSecrete -> stringResource(R.string.coffre_detail_note)
+                is ContenuDElement.Carte -> stringResource(R.string.coffre_detail_carte)
             }
             Text(detail, color = couleurs.attenue, fontSize = 13.sp)
             MarqueDOrigine(entree.origine)
@@ -635,7 +679,13 @@ private fun LigneLisible(
                     .reperes(
                         identifiant = "button.favorite." + entree.id +
                             if (favori) ".on" else ".off",
-                        description = if (favori) "Retirer des favoris" else "Ajouter aux favoris",
+                        description = stringResource(
+                            if (favori) {
+                                R.string.coffre_retirer_des_favoris
+                            } else {
+                                R.string.coffre_ajouter_aux_favoris
+                            },
+                        ),
                     )
                     .padding(6.dp),
             )
@@ -675,16 +725,22 @@ private fun LigneIllisible(entree: EntreeDuCoffre.Illisible) {
             Text("🔒", fontSize = 15.sp)
         }
         Column(Modifier.fillMaxWidth()) {
-            Text("Élément illisible", color = couleurs.attenue, fontSize = 15.sp)
             Text(
-                when (entree.raison) {
-                    RaisonDIllisibilite.CleManquante ->
-                        "Chiffré sous une clé dont cet appareil ne dispose pas."
-                    is RaisonDIllisibilite.SceauRefuse ->
-                        "Scellé pour un autre compte, ou sous une clé qui a tourné."
-                    is RaisonDIllisibilite.ContenuInconnu ->
-                        "Écrit par une version plus récente de GhostPass."
-                },
+                stringResource(R.string.coffre_element_illisible),
+                color = couleurs.attenue,
+                fontSize = 15.sp,
+            )
+            Text(
+                stringResource(
+                    when (entree.raison) {
+                        RaisonDIllisibilite.CleManquante ->
+                            R.string.coffre_illisible_cle_manquante
+                        is RaisonDIllisibilite.SceauRefuse ->
+                            R.string.coffre_illisible_sceau_refuse
+                        is RaisonDIllisibilite.ContenuInconnu ->
+                            R.string.coffre_illisible_contenu_inconnu
+                    },
+                ),
                 color = couleurs.attenue,
                 fontSize = 12.sp,
             )
@@ -751,7 +807,13 @@ private fun BandeDeDossiers(modele: ModeleDuCoffre) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         LienDiscret(
-            texte = if (ouvert) "Masquer les dossiers" else "Dossiers (${dossiers.size})",
+            // « Dossiers (1) » : le libellé porte un décompte, donc il s'accorde. La
+            // parenthèse ne dispense pas du pluriel — elle ne fait que le cacher.
+            texte = if (ouvert) {
+                stringResource(R.string.coffre_masquer_les_dossiers)
+            } else {
+                pluralStringResource(R.plurals.coffre_dossiers, dossiers.size, dossiers.size)
+            },
             identifiant = "button.folders",
         ) { ouvert = !ouvert }
 
@@ -766,21 +828,24 @@ private fun BandeDeDossiers(modele: ModeleDuCoffre) {
                     // Seuls les dossiers vides se retirent : les autres tiennent à leurs
                     // éléments, et « retirer » n'y voudrait rien dire.
                     if (dossier in modele.lecture.dossiersVides) {
-                        LienDiscret("Retirer", identifiant = "button.removeFolder") {
+                        LienDiscret(
+                            stringResource(R.string.coffre_retirer),
+                            identifiant = "button.removeFolder",
+                        ) {
                             modele.retirerUnDossierVide(dossier)
                         }
                     }
                 }
             }
             ChampGhost(
-                intitule = "Nouveau dossier",
+                intitule = stringResource(R.string.coffre_nouveau_dossier),
                 valeur = nouveau,
-                invite = "Travail/Serveurs",
+                invite = stringResource(R.string.coffre_invite_nouveau_dossier),
                 identifiant = "field.newFolder",
                 onChange = { nouveau = it },
             )
             LienDiscret(
-                texte = "Ajouter",
+                texte = stringResource(R.string.coffre_ajouter),
                 actif = nouveau.isNotBlank() && !modele.occupe,
                 identifiant = "button.addFolder",
             ) {

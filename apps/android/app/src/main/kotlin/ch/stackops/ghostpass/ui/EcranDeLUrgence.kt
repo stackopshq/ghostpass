@@ -21,12 +21,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.stackops.ghostpass.LienDUrgenceDto
 import ch.stackops.ghostpass.ModeleDuCoffre
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.UrgenceDuCompte
 import ch.stackops.ghostpass.theme.BarreDeFeuille
 import ch.stackops.ghostpass.theme.BoutonPrincipal
@@ -81,8 +85,8 @@ fun EcranDeLUrgence(
 
     EcranGhost(identifiant = "screen.emergency") {
         BarreDeFeuille(
-            titre = "Accès d'urgence",
-            gauche = "Terminé",
+            titre = stringResource(R.string.urgence_titre),
+            gauche = stringResource(R.string.urgence_termine),
             identifiantGauche = "button.closeEmergency",
             surGauche = surFermer,
         )
@@ -92,12 +96,11 @@ fun EcranDeLUrgence(
             is ModeleDuCoffre.EtatDesUrgences.Indisponible -> Indisponible(etat.cause)
             is ModeleDuCoffre.EtatDesUrgences.Lu -> {
                 SectionGhost(
-                    titre = "Ce que j'ai confié",
-                    note = "Ces personnes pourront accéder à votre coffre après le délai " +
-                        "indiqué, si vous ne refusez pas leur demande entre-temps.",
+                    titre = stringResource(R.string.urgence_confies_titre),
+                    note = stringResource(R.string.urgence_confies_note),
                 ) {
                     if (etat.confies.isEmpty()) {
-                        Vide("Personne pour l'instant.", "text.noGrantors")
+                        Vide(stringResource(R.string.urgence_aucun_confie), "text.noGrantors")
                     } else {
                         Column {
                             etat.confies.forEachIndexed { rang, lien ->
@@ -109,18 +112,17 @@ fun EcranDeLUrgence(
                 }
 
                 BoutonPrincipal(
-                    "Confier un accès d'urgence",
+                    stringResource(R.string.urgence_confier_bouton),
                     actif = !modele.occupe,
                     identifiant = "button.inviteEmergency",
                 ) { invitationOuverte = true }
 
                 SectionGhost(
-                    titre = "Ce qu'on m'a confié",
-                    note = "Vous pourrez demander l'accès ; il s'ouvrira au bout du délai, " +
-                        "sauf refus de la personne concernée.",
+                    titre = stringResource(R.string.urgence_recus_titre),
+                    note = stringResource(R.string.urgence_recus_note),
                 ) {
                     if (etat.recus.isEmpty()) {
-                        Vide("Personne ne vous a confié d'accès.", "text.noGrantees")
+                        Vide(stringResource(R.string.urgence_aucun_recu), "text.noGrantees")
                     } else {
                         Column {
                             etat.recus.forEachIndexed { rang, lien ->
@@ -141,6 +143,7 @@ fun EcranDeLUrgence(
 @Composable
 private fun LigneConfiee(lien: LienDUrgenceDto, modele: ModeleDuCoffre) {
     val couleurs = LocalCouleurs.current
+    val contexte = LocalContext.current
     val role = UrgenceDuCompte.Role.parCle(lien.role)
     val etat = UrgenceDuCompte.Etat.parCle(lien.status)
 
@@ -152,9 +155,12 @@ private fun LigneConfiee(lien: LienDUrgenceDto, modele: ModeleDuCoffre) {
         Text(
             // **Un rôle inconnu se dit inconnu.** Le faire passer pour « lecture seule »
             // présenterait comme inoffensif un lien qui permet peut-être la reprise.
-            (role?.intitule ?: "Rôle inconnu (${lien.role})") +
-                " · " + (etat?.intitule ?: lien.status) +
-                " · délai de ${lien.waitDays} j",
+            (role?.let { stringResource(it.libelle) }
+                ?: stringResource(R.string.urgence_role_inconnu, lien.role)) +
+                " · " + (etat?.let { stringResource(it.libelle) } ?: lien.status) +
+                " · " + pluralStringResource(
+                    R.plurals.urgence_delai_jours, lien.waitDays, lien.waitDays,
+                ),
             color = if (role == null) couleurs.danger else couleurs.attenue,
             fontSize = 12.sp,
         )
@@ -164,7 +170,16 @@ private fun LigneConfiee(lien: LienDUrgenceDto, modele: ModeleDuCoffre) {
         if (etat == UrgenceDuCompte.Etat.DEMANDE) {
             val quand = UrgenceDuCompte.ouverturePrevue(lien.status, lien.requestedAt, lien.waitDays)
             Text(
-                "⚠ Accès demandé" + (quand?.let { " — s'ouvrira le ${UrgenceDuCompte.dateLisible(it)}" } ?: ""),
+                // Deux chaînes entières plutôt qu'un morceau recollé : la date ne se pose
+                // pas à la même place dans toutes les langues, et une phrase coupée en deux
+                // ne laisse pas la déplacer.
+                if (quand == null) {
+                    stringResource(R.string.urgence_acces_demande)
+                } else {
+                    stringResource(
+                        R.string.urgence_acces_demande_le, DateLisible.jourEtHeure(contexte, quand),
+                    )
+                },
                 color = couleurs.danger,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
@@ -172,14 +187,14 @@ private fun LigneConfiee(lien: LienDUrgenceDto, modele: ModeleDuCoffre) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) {
                     BoutonSecondaire(
-                        texte = "Refuser",
+                        texte = stringResource(R.string.urgence_refuser),
                         destructif = true,
                         identifiant = "button.rejectEmergency." + lien.id,
                     ) { modele.agirSurUnLienDUrgence(lien.id, "reject") }
                 }
                 Box(Modifier.weight(1f)) {
                     BoutonSecondaire(
-                        texte = "Accorder maintenant",
+                        texte = stringResource(R.string.urgence_accorder),
                         identifiant = "button.approveEmergency." + lien.id,
                     ) { modele.agirSurUnLienDUrgence(lien.id, "approve") }
                 }
@@ -187,7 +202,7 @@ private fun LigneConfiee(lien: LienDUrgenceDto, modele: ModeleDuCoffre) {
         }
 
         LienDiscret(
-            texte = "Retirer cet accès",
+            texte = stringResource(R.string.urgence_retirer_cet_acces),
             identifiant = "button.revokeEmergency." + lien.id,
         ) { modele.revoquerUnLienDUrgence(lien.id) }
     }
@@ -197,6 +212,7 @@ private fun LigneConfiee(lien: LienDUrgenceDto, modele: ModeleDuCoffre) {
 @Composable
 private fun LigneRecue(lien: LienDUrgenceDto, modele: ModeleDuCoffre) {
     val couleurs = LocalCouleurs.current
+    val contexte = LocalContext.current
     val role = UrgenceDuCompte.Role.parCle(lien.role)
     val etat = UrgenceDuCompte.Etat.parCle(lien.status)
 
@@ -206,29 +222,38 @@ private fun LigneRecue(lien: LienDUrgenceDto, modele: ModeleDuCoffre) {
     ) {
         Text(lien.contactEmail, color = couleurs.encre, fontSize = 15.sp)
         Text(
-            (role?.intitule ?: "Rôle inconnu (${lien.role})") +
-                " · " + (etat?.intitule ?: lien.status) +
-                " · délai de ${lien.waitDays} j",
+            (role?.let { stringResource(it.libelle) }
+                ?: stringResource(R.string.urgence_role_inconnu, lien.role)) +
+                " · " + (etat?.let { stringResource(it.libelle) } ?: lien.status) +
+                " · " + pluralStringResource(
+                    R.plurals.urgence_delai_jours, lien.waitDays, lien.waitDays,
+                ),
             color = if (role == null) couleurs.danger else couleurs.attenue,
             fontSize = 12.sp,
         )
 
         when {
             etat == UrgenceDuCompte.Etat.INVITE -> BoutonSecondaire(
-                texte = "Accepter",
+                texte = stringResource(R.string.urgence_accepter),
                 identifiant = "button.acceptEmergency." + lien.id,
             ) { modele.agirSurUnLienDUrgence(lien.id, "accept") }
 
             etat == UrgenceDuCompte.Etat.ACCEPTE -> BoutonSecondaire(
-                texte = "Demander l'accès",
+                texte = stringResource(R.string.urgence_demander_acces),
                 identifiant = "button.requestEmergency." + lien.id,
             ) { modele.agirSurUnLienDUrgence(lien.id, "request") }
 
             etat == UrgenceDuCompte.Etat.DEMANDE -> {
                 val quand = UrgenceDuCompte.ouverturePrevue(lien.status, lien.requestedAt, lien.waitDays)
                 Text(
-                    "Demande en cours" +
-                        (quand?.let { " — accessible le ${UrgenceDuCompte.dateLisible(it)}" } ?: ""),
+                    if (quand == null) {
+                        stringResource(R.string.urgence_demande_en_cours)
+                    } else {
+                        stringResource(
+                            R.string.urgence_demande_en_cours_le,
+                            DateLisible.jourEtHeure(contexte, quand),
+                        )
+                    },
                     color = couleurs.attenue,
                     fontSize = 12.sp,
                 )
@@ -238,20 +263,20 @@ private fun LigneRecue(lien: LienDUrgenceDto, modele: ModeleDuCoffre) {
                 // bouton ferait croire à une panne plutôt qu'à un délai.
                 if (lien.available == true) {
                     BoutonSecondaire(
-                        texte = "Ouvrir le coffre",
+                        texte = stringResource(R.string.urgence_ouvrir_le_coffre),
                         identifiant = "button.openEmergencyVault." + lien.id,
                     ) { modele.ouvrirUnCoffreDUrgence(lien.id) }
                 }
             }
 
             etat == UrgenceDuCompte.Etat.OUVERT -> BoutonSecondaire(
-                texte = "Ouvrir le coffre",
+                texte = stringResource(R.string.urgence_ouvrir_le_coffre),
                 identifiant = "button.openEmergencyVault." + lien.id,
             ) { modele.ouvrirUnCoffreDUrgence(lien.id) }
         }
 
         LienDiscret(
-            texte = "Retirer",
+            texte = stringResource(R.string.urgence_retirer),
             identifiant = "button.dropEmergency." + lien.id,
         ) { modele.revoquerUnLienDUrgence(lien.id) }
     }
@@ -276,8 +301,8 @@ private fun EcranDInvitationDUrgence(modele: ModeleDuCoffre, surFermer: () -> Un
 
     EcranGhost(identifiant = "screen.emergencyInvite") {
         BarreDeFeuille(
-            titre = "Confier un accès",
-            gauche = "Annuler",
+            titre = stringResource(R.string.urgence_invitation_titre),
+            gauche = stringResource(R.string.urgence_annuler),
             identifiantGauche = "button.cancelInvite",
             surGauche = {
                 modele.message = null
@@ -286,15 +311,13 @@ private fun EcranDInvitationDUrgence(modele: ModeleDuCoffre, surFermer: () -> Un
         )
 
         SectionGhost(
-            note = "Le contact doit déjà avoir un compte sur ce serveur : la clé de votre " +
-                "coffre est scellée vers sa clé publique, et il n'y a personne d'autre à qui " +
-                "la sceller.",
+            note = stringResource(R.string.urgence_contact_note),
         ) {
             Box(Modifier.padding(14.dp)) {
                 ChampGhost(
-                    intitule = "Adresse e-mail du contact",
+                    intitule = stringResource(R.string.urgence_email_intitule),
                     valeur = email,
-                    invite = "kevin@exemple.ch",
+                    invite = stringResource(R.string.urgence_email_invite),
                     identifiant = "field.emergencyEmail",
                     typeDeClavier = KeyboardType.Email,
                     onChange = { email = it; confirme = false },
@@ -303,20 +326,18 @@ private fun EcranDInvitationDUrgence(modele: ModeleDuCoffre, surFermer: () -> Un
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            IntituleDeSection("Rôle")
+            IntituleDeSection(stringResource(R.string.urgence_role))
             for (cas in UrgenceDuCompte.Role.entries) {
                 CarteDeRole(cas, choisie = role == cas) { role = cas; confirme = false }
             }
         }
 
         SectionGhost(
-            note = "Entre 1 et 90 jours. Pendant ce délai, vous recevez la demande et pouvez " +
-                "la refuser — c'est la seule protection contre une demande que vous n'auriez " +
-                "pas voulue.",
+            note = stringResource(R.string.urgence_delai_note),
         ) {
             Box(Modifier.padding(14.dp)) {
                 ChampGhost(
-                    intitule = "Délai d'attente (jours)",
+                    intitule = stringResource(R.string.urgence_delai_intitule),
                     valeur = delai,
                     invite = "7",
                     identifiant = "field.emergencyWait",
@@ -333,7 +354,7 @@ private fun EcranDInvitationDUrgence(modele: ModeleDuCoffre, surFermer: () -> Un
         // parce que c'est l'information qui manque au moment de décider.
         if (!confirme) {
             BoutonPrincipal(
-                "Continuer",
+                stringResource(R.string.urgence_continuer),
                 actif = pret,
                 identifiant = "button.reviewInvite",
             ) { confirme = true }
@@ -343,21 +364,28 @@ private fun EcranDInvitationDUrgence(modele: ModeleDuCoffre, surFermer: () -> Un
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    "Vous confiez à $email :",
+                    stringResource(R.string.urgence_vous_confiez, email),
                     color = couleurs.encre,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                 )
-                Text(role.explication, color = couleurs.attenue, fontSize = 13.sp)
                 Text(
-                    "Après une demande de sa part, l'accès s'ouvrira au bout de $jours jours " +
-                        "si vous ne l'avez pas refusée.",
+                    stringResource(role.explication),
+                    color = couleurs.attenue,
+                    fontSize = 13.sp,
+                )
+                Text(
+                    // Le même repli que l'appel ci-dessous : la phrase annonce le délai qui
+                    // sera réellement envoyé, et non un autre.
+                    pluralStringResource(
+                        R.plurals.urgence_ouverture_apres, jours ?: 7, jours ?: 7,
+                    ),
                     color = couleurs.attenue,
                     fontSize = 13.sp,
                 )
             }
             BoutonPrincipal(
-                "Confier l'accès",
+                stringResource(R.string.urgence_confier_acces),
                 actif = pret,
                 identifiant = "button.confirmInvite",
             ) {
@@ -392,13 +420,17 @@ private fun CarteDeRole(
             .clickable(onClick = surClic)
             .reperes(
                 identifiant = "role." + role.cle + if (choisie) ".on" else ".off",
-                description = if (choisie) "${role.intitule}, choisi" else role.intitule,
+                description = if (choisie) {
+                    stringResource(R.string.urgence_role_choisi, stringResource(role.libelle))
+                } else {
+                    stringResource(role.libelle)
+                },
             )
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            role.intitule,
+            stringResource(role.libelle),
             color = if (choisie) couleurs.accentTexte else couleurs.encre,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
@@ -406,7 +438,7 @@ private fun CarteDeRole(
         // L'explication est **toujours** visible, pas seulement sur le rôle choisi : c'est
         // en comparant les deux qu'on choisit, et un texte qui n'apparaît qu'après le clic
         // arrive trop tard.
-        Text(role.explication, color = couleurs.attenue, fontSize = 12.sp)
+        Text(stringResource(role.explication), color = couleurs.attenue, fontSize = 12.sp)
     }
 }
 
@@ -430,8 +462,8 @@ private fun EcranDuCoffreDUrgence(
 
     EcranGhost(identifiant = "screen.emergencyVault") {
         BarreDeFeuille(
-            titre = "Coffre d'urgence",
-            gauche = "Fermer",
+            titre = stringResource(R.string.urgence_coffre_titre),
+            gauche = stringResource(R.string.urgence_fermer),
             identifiantGauche = "button.closeEmergencyVault",
             surGauche = surFermer,
         )
@@ -440,18 +472,21 @@ private fun EcranDuCoffreDUrgence(
             Modifier.fillMaxWidth().carteDeVerre(marge = 14.dp).reperes("card.emergencyOwner"),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text("Coffre de ${ouvert.donneur}", color = couleurs.encre, fontSize = 15.sp)
             Text(
-                "Ces identifiants ne sont pas les vôtres. Rien de ce que vous faites ici ne " +
-                    "modifie son coffre.",
+                stringResource(R.string.urgence_coffre_de, ouvert.donneur),
+                color = couleurs.encre,
+                fontSize = 15.sp,
+            )
+            Text(
+                stringResource(R.string.urgence_pas_les_votres),
                 color = couleurs.attenue,
                 fontSize = 12.sp,
             )
         }
 
-        SectionGhost(titre = "Identifiants") {
+        SectionGhost(titre = stringResource(R.string.urgence_identifiants)) {
             if (ouvert.entrees.isEmpty()) {
-                Vide("Ce coffre est vide.", "text.emptyEmergencyVault")
+                Vide(stringResource(R.string.urgence_coffre_vide), "text.emptyEmergencyVault")
             } else {
                 Column {
                     ouvert.entrees.forEachIndexed { rang, entree ->
@@ -468,7 +503,7 @@ private fun EcranDuCoffreDUrgence(
                             ) {
                                 Text("🔒", fontSize = 14.sp)
                                 Text(
-                                    "Élément illisible — scellé sous une clé que vous n'avez pas.",
+                                    stringResource(R.string.urgence_element_illisible),
                                     color = couleurs.attenue,
                                     fontSize = 12.sp,
                                 )
@@ -481,17 +516,15 @@ private fun EcranDuCoffreDUrgence(
 
         if (UrgenceDuCompte.Role.parCle(ouvert.role) == UrgenceDuCompte.Role.REPRISE) {
             SectionGhost(
-                titre = "Reprendre le compte",
-                note = "Le mot de passe maître de ${ouvert.donneur} sera remplacé, et toutes " +
-                    "ses sessions fermées. Il ne pourra plus ouvrir son coffre sans le " +
-                    "nouveau mot de passe.",
+                titre = stringResource(R.string.urgence_reprendre),
+                note = stringResource(R.string.urgence_reprise_note, ouvert.donneur),
             ) {
                 Column {
                     Box(Modifier.padding(14.dp)) {
                         ChampGhost(
-                            intitule = "Nouveau mot de passe maître",
+                            intitule = stringResource(R.string.urgence_nouveau_mot_de_passe),
                             valeur = nouveau,
-                            invite = "Huit caractères au minimum",
+                            invite = stringResource(R.string.urgence_huit_caracteres_invite),
                             identifiant = "field.takeoverPassword",
                             secret = true,
                             typeDeClavier = KeyboardType.Password,
@@ -507,21 +540,20 @@ private fun EcranDuCoffreDUrgence(
             // l'opération la plus lourde du produit : elle exclut quelqu'un de son coffre.
             if (!confirme) {
                 BoutonSecondaire(
-                    texte = "Reprendre le compte",
+                    texte = stringResource(R.string.urgence_reprendre),
                     actif = nouveau.length >= 8 && !modele.occupe,
                     destructif = true,
                     identifiant = "button.reviewTakeover",
                 ) { confirme = true }
             } else {
                 Text(
-                    "⚠ ${ouvert.donneur} perdra l'accès à son propre coffre tant que vous ne " +
-                        "lui aurez pas donné ce mot de passe.",
+                    stringResource(R.string.urgence_reprise_avertissement, ouvert.donneur),
                     color = couleurs.danger,
                     fontSize = 13.sp,
                     modifier = Modifier.reperes("text.takeoverWarning"),
                 )
                 BoutonSecondaire(
-                    texte = "Confirmer la reprise",
+                    texte = stringResource(R.string.urgence_confirmer_reprise),
                     actif = nouveau.length >= 8 && !modele.occupe,
                     destructif = true,
                     identifiant = "button.confirmTakeover",
@@ -565,7 +597,9 @@ private fun LigneLue(entree: ch.stackops.ghostpass.EntreeDuCoffre.Lisible) {
                 )
                 Box(Modifier.widthIn(max = 90.dp)) {
                     BoutonSecondaire(
-                        texte = if (montre) "Masquer" else "Afficher",
+                        texte = stringResource(
+                            if (montre) R.string.urgence_masquer else R.string.urgence_afficher,
+                        ),
                         identifiant = "button.revealEmergency." + entree.id,
                     ) { montre = !montre }
                 }
@@ -590,7 +624,7 @@ private fun Indisponible(cause: String) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            "⚠ Les accès d'urgence n'ont pas pu être lus.",
+            stringResource(R.string.urgence_lecture_impossible),
             color = couleurs.danger,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
@@ -600,7 +634,7 @@ private fun Indisponible(cause: String) {
         // Comme pour le journal : une liste vide et une liste illisible ne veulent pas dire
         // la même chose, et la première est rassurante.
         Text(
-            "Ceci ne veut pas dire qu'il n'y en a aucun : rien n'a pu être lu.",
+            stringResource(R.string.urgence_lecture_impossible_note),
             color = couleurs.attenue,
             fontSize = 12.sp,
         )

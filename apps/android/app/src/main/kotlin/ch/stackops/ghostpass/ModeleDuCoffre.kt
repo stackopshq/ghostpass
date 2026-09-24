@@ -1,6 +1,7 @@
 package ch.stackops.ghostpass
 
 import android.app.Application
+import androidx.annotation.StringRes
 import android.content.Context
 import android.os.Build
 import androidx.fragment.app.FragmentActivity
@@ -62,6 +63,21 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
     /** L'adresse du serveur, pour y accrocher les URL d'icônes. */
     val serveurDesIcones: String get() = coffre.adresseDuServeur ?: serveurEnregistre
 
+    /**
+     * Les chaînes montrées à l'utilisateur, prises dans les ressources.
+     *
+     * Ce modèle écrivait ses messages en dur. Il est le plus gros producteur de texte de
+     * l'application — trente-cinq phrases, dont toutes celles qui expliquent un échec — et
+     * les laisser ici aurait fait une application traduite dont **tous les messages
+     * d'erreur** seraient restés en français. Le défaut ne se voit que le jour où quelque
+     * chose échoue, c'est-à-dire au pire moment.
+     *
+     * `getApplication()` plutôt qu'un contexte d'activité : ce modèle survit aux écrans,
+     * et retenir l'un d'eux le ferait fuir.
+     */
+    private fun texte(@StringRes cle: Int, vararg arguments: Any): String =
+        getApplication<Application>().getString(cle, *arguments)
+
     /** Une session est-elle déjà enregistrée sur cet appareil ? */
     val sessionEnregistree: Coffre.Session? get() = stockage.session()
 
@@ -95,7 +111,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 // Le serveur ne réclame le second facteur qu'après validation du mot de
                 // passe : le champ n'apparaît donc qu'une fois utile.
                 secondFacteurRequis = true
-                message = "Entrez le code à six chiffres de votre application d'authentification."
+                message = texte(R.string.modele_code_six_chiffres)
             } catch (e: Exception) {
                 message = messageLisible(e)
             } finally {
@@ -227,7 +243,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                     ?: throw ErreurApi.AdresseInvalide()
                 val actif = withContext(Dispatchers.IO) { ClientApi(adresse).statutSso() }
                 if (!actif) {
-                    message = "Ce serveur n'a pas d'authentification unique configurée."
+                    message = texte(R.string.modele_sso_absent)
                     return@launch
                 }
                 val pkce = SsoMobile.Pkce.tirer()
@@ -262,8 +278,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             // Un retour sans demande en cours : soit le processus a été tué, soit ce retour
             // ne vient pas de nous. Dans les deux cas, il n'y a pas de vérificateur, donc
             // rien à échanger — et le dire vaut mieux qu'un écran qui ne bouge pas.
-            message = "Cette authentification n'a pas été demandée depuis cet appareil. " +
-                "Recommencez."
+            message = texte(R.string.modele_sso_pas_demande)
             return
         }
         ssoEnCours = null
@@ -279,8 +294,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                     stockage.enregistrer(session, coffre.jetonCourant.orEmpty())
                 }
                 identitesVerifiees += 1
-                message = "Identité vérifiée. Entrez votre mot de passe maître pour ouvrir " +
-                    "le coffre."
+                message = texte(R.string.modele_sso_identite_verifiee)
             } catch (e: Exception) {
                 message = messageLisible(e)
             } finally {
@@ -330,12 +344,9 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 message = null
             }
             LienOtpauth.Lecture.ExportDApplication ->
-                message = "Ce QR code est un export d'application d'authentification, qui " +
-                    "porte plusieurs comptes à la fois. GhostPass ne sait pas le lire : " +
-                    "exportez les comptes un par un."
+                message = texte(R.string.modele_totp_export_multiple)
             LienOtpauth.Lecture.AutreChose ->
-                message = "Ce lien n'est pas un second facteur utilisable — il lui manque " +
-                    "un secret, ou il n'est pas de type « totp »."
+                message = texte(R.string.modele_totp_lien_inutilisable)
         }
     }
 
@@ -386,13 +397,13 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         val chiffreur = try {
             enveloppe.preparerLActivation()
         } catch (e: Exception) {
-            message = "Cet appareil n'a pas pu préparer la clé : ${e.message}"
+            message = texte(R.string.modele_cle_non_preparee, e.message.orEmpty())
             return
         }
         Biometrie.demander(
             activite,
-            titre = "Activer le déverrouillage biométrique",
-            sousTitre = "GhostPass gardera la clé de votre coffre sous votre empreinte.",
+            titre = texte(R.string.modele_bio_titre),
+            sousTitre = texte(R.string.modele_bio_sous_titre),
             chiffreur = chiffreur,
             surSucces = { authentifie ->
                 try {
@@ -402,7 +413,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 } catch (e: Exception) {
                     enveloppe.oublier()
                     biometrieActivee = false
-                    message = "L'activation a échoué : ${e.message}"
+                    message = texte(R.string.modele_bio_echec, e.message.orEmpty())
                 }
             },
             surEchec = { texte -> if (texte != null) message = texte },
@@ -441,7 +452,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         }
         Biometrie.demander(
             activite,
-            titre = "Déverrouiller GhostPass",
+            titre = texte(R.string.remplissage_deverrouiller),
             sousTitre = session.email,
             chiffreur = dechiffreur,
             surSucces = { authentifie ->
@@ -797,7 +808,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             is ContenuDElement.Carte -> null
         }
         if (secret.isNullOrEmpty()) {
-            message = "Cet élément n'a pas de secret unique à partager."
+            message = texte(R.string.modele_pas_de_secret_a_partager)
             return
         }
         viewModelScope.launch {
@@ -811,7 +822,16 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 when (resultat) {
                     is Coffre.Partage.Pret -> terminerLePartage(resultat.lien, resultat.inscription)
                     is Coffre.Partage.ADemander -> destinationAConfirmer = resultat
-                    is Coffre.Partage.Refuse -> message = resultat.raison
+                    // Le refus porte un motif, pas une phrase : la phrase vit ici, où
+                    // elle peut se traduire. Voir `Coffre.Partage.MotifDeRefus`.
+                    is Coffre.Partage.Refuse -> message = texte(
+                        when (resultat.motif) {
+                            Coffre.Partage.MotifDeRefus.RETROGRADATION_DE_SCHEMA ->
+                                R.string.modele_partage_refuse_schema
+                            Coffre.Partage.MotifDeRefus.SANS_JETON_DE_REVOCATION ->
+                                R.string.modele_partage_refuse_sans_jeton
+                        },
+                    )
                 }
             } catch (e: Exception) {
                 message = messageLisible(e)
@@ -852,15 +872,15 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                     withContext(Dispatchers.IO) {
                         coffre.revoquerUnPartage(attente.cree.id, jetonDeSuppression)
                     }
-                    message = "Partage annulé et révoqué."
+                    message = texte(R.string.modele_partage_revoque)
                 } else {
                     // Ne peut pas arriver : `Coffre.partager` refuse d'emblée une
                     // destination étrangère sans jeton, précisément pour ne pas poser une
                     // question dont une des réponses serait impossible à tenir.
-                    message = "Partage annulé, mais ce serveur ne permet pas de le révoquer."
+                    message = texte(R.string.modele_partage_non_revocable)
                 }
             } catch (e: Exception) {
-                message = "Le partage n'a pas pu être révoqué : ${messageLisible(e)}"
+                message = texte(R.string.modele_partage_revocation_echouee, messageLisible(e))
             } finally {
                 occupe = false
             }
@@ -1112,10 +1132,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         val appartenance = (entree?.origine as? OrigineDuCoffre.Equipe)?.appartenance
         if (appartenance != null) {
             val ouvert = coffresOuverts[appartenance.organisation]
-                ?: throw ErreurApi.Reseau(
-                    "Le coffre d'équipe « ${appartenance.nomEquipe} » n'est plus ouvert. " +
-                        "Rafraîchissez la liste avant d'enregistrer.",
-                )
+                ?: throw CoffreDEquipeFerme(appartenance.nomEquipe)
             return Destination.Equipe(ouvert, appartenance.collection)
         }
         if (entree != null) return Destination.Personnelle
@@ -1166,7 +1183,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 val liens = withContext(Dispatchers.IO) { coffre.liensDUrgence() }
                 EtatDesUrgences.Lu(liens.asGrantor, liens.asGrantee)
             } catch (e: Exception) {
-                EtatDesUrgences.Indisponible(e.message ?: "Le serveur n'a pas répondu.")
+                EtatDesUrgences.Indisponible(messageLisible(e))
             }
         }
     }
@@ -1190,7 +1207,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 // Le message du serveur est repris tel quel : « utilisateur introuvable » et
                 // « contact déjà invité » demandent deux gestes différents, et un message
                 // unique les rendrait indiscernables.
-                message = it.message ?: "L'invitation a échoué."
+                message = messageLisible(it)
             }
             if (resultat.isSuccess) lireLesLiensDUrgence()
             surFin(resultat.isSuccess)
@@ -1205,7 +1222,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 withContext(Dispatchers.IO) { coffre.agirSurUnLienDUrgence(id, action) }
             }
             occupe = false
-            resultat.exceptionOrNull()?.let { message = it.message }
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
             // **On relit toujours**, même après un échec : le serveur arbitre les états, et
             // un écran qui garderait le sien après un refus montrerait un bouton qui ne
             // marche plus.
@@ -1221,7 +1238,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 withContext(Dispatchers.IO) { coffre.revoquerUnLienDUrgence(id) }
             }
             occupe = false
-            resultat.exceptionOrNull()?.let { message = it.message }
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
             lireLesLiensDUrgence()
         }
     }
@@ -1238,7 +1255,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 // Le serveur refuse par 403 tant que le délai court : son message dit
                 // « délai en cours ou non demandé », ce qui est exactement l'information
                 // utile. On ne la remplace pas par « erreur ».
-                message = it.message ?: "Le coffre n'a pas pu être ouvert."
+                message = messageLisible(it)
             }
             coffreDUrgenceOuvert = resultat.getOrNull()
         }
@@ -1260,9 +1277,9 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 withContext(Dispatchers.IO) { coffre.reprendreLeCompte(ouvert, nouveauMotDePasse) }
             }
             occupe = false
-            resultat.exceptionOrNull()?.let { message = it.message ?: "La reprise a échoué." }
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
             if (resultat.isSuccess) {
-                message = "Compte repris. Communiquez le nouveau mot de passe à son titulaire."
+                message = texte(R.string.modele_compte_repris)
             }
             surFin(resultat.isSuccess)
         }
@@ -1289,7 +1306,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 // Une clé affichée que le serveur n'a pas reçue est pire qu'aucune clé :
                 // quelqu'un la noterait soigneusement, et elle ne servirait à rien le jour
                 // venu. `Coffre` enregistre donc avant de rendre, et l'échec arrive ici.
-                message = it.message ?: "La clé de récupération n'a pas été enregistrée."
+                message = messageLisible(it)
             }
             surFin(resultat.getOrNull())
         }
@@ -1322,7 +1339,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 // pour une clé fausse et pour un compte sans kit — avec des leurres — afin
                 // de ne pas révéler quels comptes existent. Les distinguer à l'écran
                 // annulerait cette protection.
-                message = "Clé de récupération refusée."
+                message = texte(R.string.modele_cle_refusee)
             }
             surFin(resultat.isSuccess)
         }
@@ -1358,7 +1375,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 }
                 EtatDuJournal.Lu(connexions, actions)
             } catch (e: Exception) {
-                EtatDuJournal.Indisponible(e.message ?: "Le serveur n'a pas répondu.")
+                EtatDuJournal.Indisponible(messageLisible(e))
             }
         }
     }
@@ -1390,14 +1407,12 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                     // 404 : l'instance est plus ancienne que la fonctionnalité. Ce n'est pas
                     // une panne, et le dire ainsi évite d'envoyer chercher un problème de
                     // réseau qui n'existe pas.
-                    EtatDuSecondFacteur.Indisponible(
-                        "Ce serveur ne propose pas encore le second facteur.",
-                    )
+                    EtatDuSecondFacteur.Indisponible(texte(R.string.modele_mfa_absent))
                 } else {
                     EtatDuSecondFacteur.Lu(actif)
                 }
             } catch (e: Exception) {
-                EtatDuSecondFacteur.Indisponible(e.message ?: "Le serveur n'a pas répondu.")
+                EtatDuSecondFacteur.Indisponible(messageLisible(e))
             }
         }
     }
@@ -1413,7 +1428,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 withContext(Dispatchers.IO) { coffre.preparerLeSecondFacteur(motDePasse) }
             }
             occupe = false
-            resultat.exceptionOrNull()?.let { message = it.message }
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
             surFin(resultat.getOrNull())
         }
     }
@@ -1426,7 +1441,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 withContext(Dispatchers.IO) { coffre.confirmerLeSecondFacteur(code) }
             }
             occupe = false
-            resultat.exceptionOrNull()?.let { message = it.message }
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
             if (resultat.isSuccess) secondFacteur = EtatDuSecondFacteur.Lu(true)
             surFin(resultat.isSuccess)
         }
@@ -1440,7 +1455,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 withContext(Dispatchers.IO) { coffre.retirerLeSecondFacteur(motDePasse, code) }
             }
             occupe = false
-            resultat.exceptionOrNull()?.let { message = it.message }
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
             if (resultat.isSuccess) secondFacteur = EtatDuSecondFacteur.Lu(false)
             surFin(resultat.isSuccess)
         }
@@ -1469,8 +1484,20 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 occupe = false
             }
             if (echecs.isNotEmpty()) {
-                message = "Non déposés : " + echecs.take(5).joinToString(", ") +
-                    if (echecs.size > 5) " et ${echecs.size - 5} autres." else "."
+                // Le reste se compte, donc il se décline : « et 1 autre » n'est pas
+                // « et 2 autres », et l'anglais ne coupe pas au même endroit.
+                val reste = echecs.size - 5
+                message = texte(
+                    R.string.modele_non_deposes,
+                    echecs.take(5).joinToString(", "),
+                    if (reste > 0) {
+                        getApplication<Application>().resources.getQuantityString(
+                            R.plurals.modele_et_autres, reste, reste,
+                        )
+                    } else {
+                        ""
+                    },
+                )
             }
             surFin(deposes)
         }
@@ -1609,20 +1636,46 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      * qui a simplement tapé une adresse fausse. On nomme la cause quand on la connaît, et on
      * laisse passer le message du serveur quand il en a un : lui sait pourquoi il a refusé.
      */
-    private fun messageLisible(e: Exception): String = when (e) {
+    private fun messageLisible(e: Throwable): String = when (e) {
         // Le SSO parle par ses propres refus, qui disent des choses différentes : « ce
-        // retour n'est pas le vôtre » n'est pas « ce compte n'existe pas ».
-        is SsoMobile.ErreurDeRetour -> e.message ?: "L'authentification a échoué."
-        is ErreurApi.AdresseInvalide ->
-            "Adresse de serveur invalide. Exemple : ghostpass.example.com"
-        is ErreurApi.Reseau ->
-            "Serveur injoignable. Vérifiez l'adresse et votre connexion."
-        is Coffre.CleDOrganisationPerimee -> e.message!!
-        is ErreurApi.CoffreVerrouille ->
-            "Le coffre est verrouillé. Déverrouillez-le avant d'écrire."
-        is ErreurApi.Http -> e.message ?: "Erreur serveur."
-        is uniffi.ghost_crypto_ffi.GhostCryptoException ->
-            "Mot de passe maître incorrect."
-        else -> e.message ?: "Une erreur est survenue."
+        // retour n'est pas le vôtre » n'est pas « ce compte n'existe pas ». C'est `echec`
+        // qu'on lit, et non le `message` de l'exception : celui-ci est écrit dans `:noyau`,
+        // qui n'a pas de ressources et ne saurait donc pas se traduire.
+        is SsoMobile.ErreurDeRetour -> when (val echec = e.echec) {
+            SsoMobile.EchecDeRetour.EtatInattendu ->
+                texte(R.string.modele_sso_reponse_inattendue)
+            is SsoMobile.EchecDeRetour.SansCode ->
+                // Le serveur ne crée jamais de compte par SSO : un compte provisionné à la
+                // volée n'aurait rien à ouvrir, et l'utilisateur verrait un coffre vide en
+                // croyant avoir perdu ses données. Le motif est un code de serveur, stable.
+                if (echec.motif == "not_provisioned") texte(R.string.modele_sso_sans_compte)
+                else texte(R.string.modele_sso_echec)
+        }
+        is CoffreDEquipeFerme -> texte(R.string.modele_equipe_plus_ouverte, e.nomEquipe)
+        is ErreurApi.AdresseInvalide -> texte(R.string.modele_adresse_invalide)
+        is ErreurApi.Reseau -> texte(R.string.modele_serveur_injoignable)
+        is Coffre.CleDOrganisationPerimee -> texte(R.string.modele_cle_equipe_perimee)
+        is ErreurApi.CoffreVerrouille -> texte(R.string.modele_coffre_verrouille)
+        is ErreurApi.ReponseIllisible -> texte(R.string.modele_reponse_illisible)
+        is ErreurApi.SecondFacteurRequis -> texte(R.string.modele_second_facteur_requis)
+        // **Le seul message qu'on laisse passer est celui du serveur**, et c'est voulu :
+        // « utilisateur introuvable » et « contact déjà invité » demandent deux gestes
+        // différents, qu'un message unique rendrait indiscernables. Lui seul sait pourquoi
+        // il a refusé. Sa langue est celle de l'instance, que ce client ne choisit pas.
+        is ErreurApi.Http -> e.message ?: texte(R.string.modele_erreur_serveur)
+        is uniffi.ghost_crypto_ffi.GhostCryptoException -> texte(R.string.modele_mdp_incorrect)
+        else -> texte(R.string.modele_erreur_inconnue)
     }
+
+    /**
+     * L'élément vient d'une équipe dont la clé n'est plus ouverte.
+     *
+     * Une classe à part, et **ce n'est pas du rangement**. C'était une `ErreurApi.Reseau`
+     * portant sa phrase ; `messageLisible` range `Reseau` sous « Serveur injoignable.
+     * Vérifiez l'adresse et votre connexion. » — de sorte que quelqu'un dont la clé
+     * d'équipe avait expiré lisait un diagnostic réseau, allait vérifier son wifi, et
+     * revenait au même refus. Le motif exact était écrit dans l'exception, et personne ne
+     * le lisait.
+     */
+    private class CoffreDEquipeFerme(val nomEquipe: String) : Exception()
 }

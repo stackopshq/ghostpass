@@ -13,8 +13,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.fragment.app.FragmentActivity
+import androidx.appcompat.app.AppCompatActivity
 import ch.stackops.ghostpass.theme.ThemeGhostPass
 import ch.stackops.ghostpass.ui.EcranDeDeverrouillage
 import ch.stackops.ghostpass.ui.BoitesDePartage
@@ -38,8 +39,13 @@ import ch.stackops.ghostpass.ui.LocalIconesDesSites
  * exige une, parce qu'il s'accroche au gestionnaire de fragments pour survivre à une
  * rotation pendant que le système affiche sa boîte. Ce n'est pas une préférence de style —
  * le constructeur ne prend rien d'autre.
+ *
+ * `AppCompatActivity` depuis que la langue se règle dans l'application : c'est elle qui
+ * réapplique la locale choisie et qui se recrée quand elle change, sur les niveaux d'API
+ * antérieurs à 33 où le système ne sait pas le faire. Elle **est** une `FragmentActivity`,
+ * donc la phrase ci-dessus tient toujours.
  */
-class ActivitePrincipale : FragmentActivity() {
+class ActivitePrincipale : AppCompatActivity() {
 
     /**
      * Le modèle est tenu par l'activité, et non seulement par la composition.
@@ -105,7 +111,16 @@ class ActivitePrincipale : FragmentActivity() {
                 // variable, et une dépendance de navigation pour trois destinations coûte
                 // plus qu'elle ne range.
                 var edition by remember { mutableStateOf<Edition?>(null) }
-                var reglagesOuverts by remember { mutableStateOf(false) }
+                // `rememberSaveable` pour celui-ci seulement, et c'est la langue qui l'exige :
+                // changer de langue **recrée l'activité** — c'est ce qui repeint les écrans —,
+                // et un `remember` ordinaire renverrait l'utilisateur au coffre au moment
+                // précis où il vient de toucher un réglage. Le changement marcherait, et
+                // ressemblerait à un plantage.
+                //
+                // Sans danger pour le verrouillage : les réglages ne portent aucun secret du
+                // coffre, et la ligne qui les referme quand `!modele.deverrouille` reste
+                // en vigueur — après une mort du processus, le coffre est fermé.
+                var reglagesOuverts by rememberSaveable { mutableStateOf(false) }
                 var importOuvert by remember { mutableStateOf(false) }
                 var secondFacteurOuvert by remember { mutableStateOf(false) }
                 var journalOuvert by remember { mutableStateOf(false) }

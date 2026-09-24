@@ -19,6 +19,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -31,6 +32,7 @@ import ch.stackops.ghostpass.Identifiants
 import ch.stackops.ghostpass.LienOtpauth
 import ch.stackops.ghostpass.ModeleDuCoffre
 import ch.stackops.ghostpass.Note
+import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BoutonPrincipal
 import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.ChampGhost
@@ -167,7 +169,10 @@ private fun CorpsDeLElement(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 Text(
-                    if (entree == null) "Nouvel élément" else "Modifier",
+                    stringResource(
+                        if (entree == null) R.string.element_titre_nouveau
+                        else R.string.element_titre_modifier,
+                    ),
                     color = couleurs.encre,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
@@ -179,12 +184,14 @@ private fun CorpsDeLElement(
                 ) {
                     if (entree == null) {
                         Column(verticalArrangement = Arrangement.spacedBy(GP.ecartLibelle)) {
-                            IntituleDeSection("Genre")
+                            IntituleDeSection(stringResource(R.string.element_genre))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // La gauche du couple est la valeur retenue dans l'état, la
+                                // droite ce qui s'affiche : seule la seconde se traduit.
                                 for ((cle, libelle) in listOf(
-                                    "connexion" to "Connexion",
-                                    "note" to "Note",
-                                    "carte" to "Carte",
+                                    "connexion" to stringResource(R.string.element_genre_connexion),
+                                    "note" to stringResource(R.string.element_genre_note),
+                                    "carte" to stringResource(R.string.element_genre_carte),
                                 )) {
                                     Box(Modifier.weight(1f)) {
                                         if (genre == cle) {
@@ -199,8 +206,9 @@ private fun CorpsDeLElement(
                     }
 
                     ChampGhost(
-                        intitule = "Nom",
+                        intitule = stringResource(R.string.element_nom),
                         valeur = nom,
+                        // Un nom de produit, qui s'écrit pareil dans toutes les langues.
                         invite = "Forgejo",
                         identifiant = "field.name",
                         onChange = { nom = it },
@@ -209,14 +217,14 @@ private fun CorpsDeLElement(
                     when (genre) {
                         "connexion" -> {
                             ChampGhost(
-                                intitule = "Identifiant",
+                                intitule = stringResource(R.string.element_identifiant),
                                 valeur = identifiant,
-                                invite = "vous@exemple.ch",
+                                invite = stringResource(R.string.element_invite_identifiant),
                                 identifiant = "field.username",
                                 onChange = { identifiant = it },
                             )
                             ChampGhost(
-                                intitule = "Mot de passe",
+                                intitule = stringResource(R.string.element_mot_de_passe),
                                 valeur = motDePasse,
                                 invite = "•••••••••",
                                 identifiant = "field.password",
@@ -229,11 +237,11 @@ private fun CorpsDeLElement(
                             // d'écran obligerait à savoir qu'il existe avant d'en avoir
                             // besoin. iOS le présente au même endroit.
                             LienDiscret(
-                                texte = "Générer un mot de passe",
+                                texte = stringResource(R.string.element_generer_un_mot_de_passe),
                                 identifiant = "button.openGenerator",
                             ) { genereUnMotDePasse = true }
                             ChampGhost(
-                                intitule = "Adresses (une par ligne)",
+                                intitule = stringResource(R.string.element_adresses),
                                 valeur = adresses,
                                 // Le domaine réservé aux exemples (RFC 2606), et **pas**
                                 // celui de l'éditeur. Le premier jet écrivait ici
@@ -247,30 +255,32 @@ private fun CorpsDeLElement(
                                 onChange = { adresses = it },
                             )
                             ChampGhost(
-                                intitule = "Clé de second facteur",
+                                intitule = stringResource(R.string.element_totp),
                                 valeur = totp,
+                                // Un schéma d'URL : il ne se traduit pas (§7 des conventions).
                                 invite = "otpauth://totp/…",
                                 identifiant = "field.totp",
                                 onChange = { totp = it },
                             )
                         }
                         "note" -> ChampGhost(
-                            intitule = "Contenu",
+                            intitule = stringResource(R.string.element_contenu),
                             valeur = contenu,
-                            invite = "Ce que vous voulez garder",
+                            invite = stringResource(R.string.element_invite_contenu),
                             identifiant = "field.content",
                             onChange = { contenu = it },
                         )
                         "carte" -> {
                             ChampGhost(
-                                intitule = "Titulaire",
+                                intitule = stringResource(R.string.element_titulaire),
                                 valeur = porteur,
+                                // Un nom propre : il s'écrit de la même façon partout.
                                 invite = "Clara Vanacker",
                                 identifiant = "field.cardholder",
                                 onChange = { porteur = it },
                             )
                             ChampGhost(
-                                intitule = "Numéro",
+                                intitule = stringResource(R.string.element_numero),
                                 valeur = numero,
                                 invite = "4111 1111 1111 1111",
                                 identifiant = "field.number",
@@ -280,7 +290,7 @@ private fun CorpsDeLElement(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Box(Modifier.weight(1f)) {
                                     ChampGhost(
-                                        intitule = "Mois",
+                                        intitule = stringResource(R.string.element_mois),
                                         valeur = mois,
                                         invite = "12",
                                         identifiant = "field.expMonth",
@@ -290,7 +300,7 @@ private fun CorpsDeLElement(
                                 }
                                 Box(Modifier.weight(1f)) {
                                     ChampGhost(
-                                        intitule = "Année",
+                                        intitule = stringResource(R.string.element_annee),
                                         valeur = annee,
                                         invite = "2030",
                                         identifiant = "field.expYear",
@@ -300,7 +310,7 @@ private fun CorpsDeLElement(
                                 }
                             }
                             ChampGhost(
-                                intitule = "Code",
+                                intitule = stringResource(R.string.element_code),
                                 valeur = code,
                                 invite = "•••",
                                 identifiant = "field.code",
@@ -312,16 +322,16 @@ private fun CorpsDeLElement(
                     }
 
                     ChampGhost(
-                        intitule = "Dossier",
+                        intitule = stringResource(R.string.element_dossier),
                         valeur = dossier,
-                        invite = "Travail/Serveurs",
+                        invite = stringResource(R.string.element_invite_dossier),
                         identifiant = "field.folder",
                         onChange = { dossier = it },
                     )
                     ChampGhost(
-                        intitule = "Notes",
+                        intitule = stringResource(R.string.element_notes),
                         valeur = notes,
-                        invite = "Facultatif",
+                        invite = stringResource(R.string.element_invite_notes),
                         identifiant = "field.notes",
                         onChange = { notes = it },
                     )
@@ -337,15 +347,13 @@ private fun CorpsDeLElement(
                         // disparaîtrait pour toute l'équipe.
                         if (lectureSeule) {
                             Text(
-                                "Cette collection d'équipe vous est accessible en lecture " +
-                                    "seule. Un administrateur de l'organisation peut vous y " +
-                                    "donner le droit d'écriture.",
+                                stringResource(R.string.element_lecture_seule),
                                 color = couleurs.attenue,
                                 fontSize = 12.sp,
                             )
                         }
                         if (!lectureSeule) BoutonPrincipal(
-                            texte = "Enregistrer",
+                            texte = stringResource(R.string.element_enregistrer),
                             actif = !modele.occupe && nom.isNotBlank(),
                             occupe = modele.occupe,
                             identifiant = "button.save",
@@ -385,13 +393,17 @@ private fun CorpsDeLElement(
                                 // même chose des deux côtés : le coffre personnel range à la
                                 // corbeille, une collection d'équipe efface. Le même mot pour
                                 // les deux ferait croire à un filet qui n'existe pas.
-                                texte = when {
-                                    confirmeLaSuppression && modele.collectionOuverte != null ->
-                                        "Confirmer : suppression définitive"
-                                    confirmeLaSuppression -> "Confirmer la suppression"
-                                    modele.collectionOuverte != null -> "Supprimer définitivement"
-                                    else -> "Mettre à la corbeille"
-                                },
+                                texte = stringResource(
+                                    when {
+                                        confirmeLaSuppression && modele.collectionOuverte != null ->
+                                            R.string.element_confirmer_suppression_definitive
+                                        confirmeLaSuppression ->
+                                            R.string.element_confirmer_suppression
+                                        modele.collectionOuverte != null ->
+                                            R.string.element_supprimer_definitivement
+                                        else -> R.string.element_mettre_a_la_corbeille
+                                    },
+                                ),
                                 actif = !modele.occupe,
                                 destructif = true,
                                 identifiant = "button.delete",
@@ -415,7 +427,10 @@ private fun CorpsDeLElement(
                         // et le proposer laisserait croire que le secret saisi part déjà.
                         if (entree != null) PanneauDePartage(modele, entree)
 
-                        LienDiscret("Annuler", identifiant = "button.cancel") {
+                        LienDiscret(
+                            stringResource(R.string.element_annuler),
+                            identifiant = "button.cancel",
+                        ) {
                             modele.message = null
                             surFin()
                         }
@@ -474,15 +489,17 @@ private fun PanneauDePartage(modele: ModeleDuCoffre, entree: EntreeDuCoffre.Lisi
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         LienDiscret(
-            texte = if (ouvert) "Masquer le partage" else "Partager ce secret par lien",
+            texte = stringResource(
+                if (ouvert) R.string.element_masquer_le_partage
+                else R.string.element_partager_par_lien,
+            ),
             actif = partageable && !modele.occupe,
             identifiant = "button.share",
         ) { ouvert = !ouvert }
 
         if (!partageable) {
             Text(
-                "Une carte porte plusieurs champs : GhostPass ne partage pas un secret " +
-                    "unique pour elle.",
+                stringResource(R.string.element_carte_non_partageable),
                 color = couleurs.attenue,
                 fontSize = 12.sp,
             )
@@ -492,7 +509,7 @@ private fun PanneauDePartage(modele: ModeleDuCoffre, entree: EntreeDuCoffre.Lisi
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) {
                     ChampGhost(
-                        intitule = "Heures",
+                        intitule = stringResource(R.string.element_heures),
                         valeur = heures,
                         invite = "24",
                         identifiant = "field.shareHours",
@@ -502,7 +519,7 @@ private fun PanneauDePartage(modele: ModeleDuCoffre, entree: EntreeDuCoffre.Lisi
                 }
                 Box(Modifier.weight(1f)) {
                     ChampGhost(
-                        intitule = "Consultations",
+                        intitule = stringResource(R.string.element_consultations),
                         valeur = consultations,
                         invite = "1",
                         identifiant = "field.shareViews",
@@ -512,7 +529,7 @@ private fun PanneauDePartage(modele: ModeleDuCoffre, entree: EntreeDuCoffre.Lisi
                 }
             }
             BoutonSecondaire(
-                texte = "Créer le lien",
+                texte = stringResource(R.string.element_creer_le_lien),
                 actif = !modele.occupe,
                 identifiant = "button.createShare",
             ) {

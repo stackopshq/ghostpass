@@ -114,6 +114,25 @@ dependencies {
     // rien d'autre : on ne peut pas éviter la classe, seulement la mettre à jour.
     implementation("androidx.fragment:fragment:1.8.5")
 
+    // ─── AppCompat, pour la langue et pour rien d'autre ───
+    //
+    // Une application entièrement en Compose n'a aucun besoin d'AppCompat, et l'ajouter
+    // pour le décor serait du poids. Ici il porte une fonction précise :
+    // `AppCompatDelegate.setApplicationLocales` est **le** chemin qui pose la langue de
+    // l'application sur tous les niveaux d'API, et le seul qui s'accorde avec le réglage
+    // de langue par application qu'Android 13 a ajouté aux paramètres du système.
+    //
+    // L'alternative — envelopper le contexte dans `attachBaseContext` avec une
+    // `Configuration` localisée — ne demande aucune dépendance et fonctionne, mais elle
+    // ignore le réglage du système : l'écran « Paramètres › Applications › GhostPass ›
+    // Langue » continuerait d'annoncer autre chose que ce que l'application affiche. Deux
+    // réponses à la même question, dont une fausse.
+    //
+    // Conséquence assumée : les activités héritent d'`AppCompatActivity` et le thème de
+    // fenêtre descend d'`Theme.AppCompat`. `AppCompatActivity` **est** une
+    // `FragmentActivity`, donc `BiometricPrompt` continue de l'accepter.
+    implementation("androidx.appcompat:appcompat:1.7.0")
+
     // Les onglets personnalisés, pour le SSO. **Jamais une WebView** : elle donnerait à
     // l'application l'accès au mot de passe saisi chez le fournisseur d'identité, ce qui
     // annule l'intérêt du SSO (§8). Voir OngletSecurise.

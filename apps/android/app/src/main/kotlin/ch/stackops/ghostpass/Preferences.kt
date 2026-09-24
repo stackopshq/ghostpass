@@ -1,6 +1,9 @@
 package ch.stackops.ghostpass
 
 import android.content.Context
+import androidx.annotation.StringRes
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -72,6 +75,34 @@ class Preferences(contexte: Context) {
         prefs.edit().putString(CLE_VERROUILLAGE, valeur.cle).apply()
     }
 
+    /**
+     * La langue de l'application. **Elle ne vit pas dans ce fichier**, et c'est délibéré.
+     *
+     * Les trois autres réglages sont rangés dans nos `SharedPreferences`. Celui-ci est rangé
+     * par AppCompat, parce qu'Android 13 a ajouté un réglage de langue *par application*
+     * dans les paramètres du système, et que `setApplicationLocales` est ce qui l'alimente.
+     * Le garder aussi de notre côté ferait deux sources de vérité pour la même question :
+     * l'écran des réglages dirait « Français » pendant que l'écran du système dirait
+     * « English », et rien ne dirait lequel des deux a raison.
+     *
+     * Relu à chaque construction plutôt que tenu en `mutableStateOf` : changer la langue
+     * **recrée l'activité** — c'est ce qui repeint les écrans dans la nouvelle langue —, et
+     * l'activité construit alors un nouveau [Preferences]. La valeur ne peut donc pas être
+     * périmée.
+     */
+    val langue: Langue get() = Langue.deLocales(AppCompatDelegate.getApplicationLocales())
+
+    fun choisirLaLangue(valeur: Langue) {
+        AppCompatDelegate.setApplicationLocales(
+            // Une liste vide rend la main au système, ce qui est exactement « Système ».
+            if (valeur.etiquette == null) {
+                LocaleListCompat.getEmptyLocaleList()
+            } else {
+                LocaleListCompat.forLanguageTags(valeur.etiquette)
+            },
+        )
+    }
+
     fun afficherLesIcones(valeur: Boolean) {
         afficheLesIcones = valeur
         prefs.edit().putBoolean(CLE_ICONES, valeur).apply()
@@ -86,11 +117,40 @@ class Preferences(contexte: Context) {
     }
 }
 
+/**
+ * Système, français, anglais — les trois entrées, comme sur iOS.
+ *
+ * **Le nom d'une langue s'écrit dans cette langue.** Quelqu'un qui cherche l'anglais cherche
+ * « English », pas « Anglais » : c'est la seule façon pour lui de reconnaître sa ligne dans
+ * une liste écrite dans une langue qu'il ne lit pas. Seul « Système » se traduit — il ne
+ * nomme pas une langue, il dit qu'on n'en choisit aucune.
+ */
+enum class Langue(val etiquette: String?, @StringRes val libelle: Int) {
+    SYSTEME(null, R.string.reglages_langue_systeme),
+    FRANCAIS("fr", R.string.reglages_langue_francais),
+    ANGLAIS("en", R.string.reglages_langue_anglais),
+    ;
+
+    companion object {
+        /**
+         * Ce qu'AppCompat garde, ramené à l'une des trois entrées.
+         *
+         * La liste peut porter une langue que l'application ne propose pas — le système la
+         * laisse choisir, et une mise à jour peut en retirer une. On retombe alors sur
+         * « Système », qui est vrai : aucune des entrées proposées n'est en vigueur.
+         */
+        fun deLocales(locales: LocaleListCompat): Langue {
+            val etiquette = locales.takeIf { !it.isEmpty }?.get(0)?.language ?: return SYSTEME
+            return entries.firstOrNull { it.etiquette == etiquette } ?: SYSTEME
+        }
+    }
+}
+
 /** Système, clair, sombre — les trois états, comme sur iOS et sur le web. */
-enum class Apparence(val cle: String, val libelle: String, val symbole: String) {
-    SYSTEME("systeme", "Système", "◑"),
-    CLAIR("clair", "Clair", "☀"),
-    SOMBRE("sombre", "Sombre", "☾"),
+enum class Apparence(val cle: String, @StringRes val libelle: Int, val symbole: String) {
+    SYSTEME("systeme", R.string.reglages_apparence_systeme, "◑"),
+    CLAIR("clair", R.string.reglages_apparence_clair, "☀"),
+    SOMBRE("sombre", R.string.reglages_apparence_sombre, "☾"),
     ;
 
     companion object {
@@ -118,11 +178,11 @@ enum class Apparence(val cle: String, val libelle: String, val symbole: String) 
  * `FLAG_SECURE` masque l'écran dans le sélecteur d'applications ; mais le coffre est ouvert,
  * et c'est bien ce qui a été demandé. Immédiat reste le défaut.
  */
-enum class Verrouillage(val cle: String, val libelle: String, val delaiMs: Long?) {
-    IMMEDIAT("immediat", "Immédiatement", null),
-    UNE_MINUTE("uneMinute", "Après 1 minute", 60_000),
-    CINQ_MINUTES("cinqMinutes", "Après 5 minutes", 300_000),
-    QUINZE_MINUTES("quinzeMinutes", "Après 15 minutes", 900_000),
+enum class Verrouillage(val cle: String, @StringRes val libelle: Int, val delaiMs: Long?) {
+    IMMEDIAT("immediat", R.string.reglages_verrou_immediat, null),
+    UNE_MINUTE("uneMinute", R.string.reglages_verrou_une_minute, 60_000),
+    CINQ_MINUTES("cinqMinutes", R.string.reglages_verrou_cinq_minutes, 300_000),
+    QUINZE_MINUTES("quinzeMinutes", R.string.reglages_verrou_quinze_minutes, 900_000),
     ;
 
     companion object {

@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,8 +65,8 @@ fun EcranDeLaSante(
 
     EcranGhost(identifiant = "screen.health") {
         BarreDeFeuille(
-            titre = "Santé du coffre",
-            gauche = "Fermer",
+            titre = stringResource(R.string.sante_titre),
+            gauche = stringResource(R.string.sante_fermer),
             identifiantGauche = "button.closeHealth",
             surGauche = surFermer,
         )
@@ -74,8 +75,8 @@ fun EcranDeLaSante(
 
         if (bilan.faibles.isNotEmpty()) {
             Liste(
-                titre = "Mots de passe faibles",
-                note = "Trop courts, ou faits d'une seule sorte de caractères.",
+                titre = stringResource(R.string.sante_faibles),
+                note = stringResource(R.string.sante_faibles_note),
                 entrees = bilan.faibles,
                 marque = "!",
                 surOuvrir = surOuvrir,
@@ -83,8 +84,8 @@ fun EcranDeLaSante(
         }
         if (bilan.reutilises.isNotEmpty()) {
             Liste(
-                titre = "Mots de passe réutilisés",
-                note = "Une seule fuite suffit alors à ouvrir plusieurs comptes.",
+                titre = stringResource(R.string.sante_reutilises),
+                note = stringResource(R.string.sante_reutilises_note),
                 entrees = bilan.reutilises,
                 marque = "↻",
                 surOuvrir = surOuvrir,
@@ -95,8 +96,8 @@ fun EcranDeLaSante(
 
         if (bilan.sansCode.isNotEmpty()) {
             Liste(
-                titre = "Sans code à usage unique",
-                note = "Le second facteur protège même un mot de passe connu.",
+                titre = stringResource(R.string.sante_sans_code),
+                note = stringResource(R.string.sante_sans_code_note),
                 entrees = bilan.sansCode,
                 marque = "#",
                 surOuvrir = surOuvrir,
@@ -149,7 +150,7 @@ private fun Resume(bilan: SanteDuCoffre.Bilan) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
                 if (sain) {
-                    "Rien à signaler"
+                    stringResource(R.string.sante_rien_a_signaler)
                 } else {
                     // **`plurals`.** iOS affichait « 1 mots de passe à revoir » — un coffre
                     // avec un seul défaut est le cas le plus fréquent, et c'est celui sur
@@ -243,6 +244,7 @@ private fun Fuites(
     surEtat: (Verification) -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
+    val contexte = LocalContext.current
     var demande by remember { mutableStateOf(0) }
 
     LaunchedEffect(demande) {
@@ -257,15 +259,18 @@ private fun Fuites(
                 onSuccess = { Verification.Faite(it) },
                 // **On ne retombe pas sur « aucune fuite ».** Un service muet et un coffre
                 // sain donneraient alors le même écran, et le second est rassurant.
-                onFailure = { Verification.Echouee(it.message ?: "le service n'a pas répondu") },
+                onFailure = {
+                    Verification.Echouee(
+                        it.message ?: contexte.getString(R.string.sante_service_muet),
+                    )
+                },
             ),
         )
     }
 
     SectionGhost(
-        titre = "Fuites connues",
-        note = "Seuls les cinq premiers caractères de l'empreinte du mot de passe sont " +
-            "envoyés : ni le mot de passe ni son empreinte complète ne quittent l'appareil.",
+        titre = stringResource(R.string.sante_fuites),
+        note = stringResource(R.string.sante_fuites_note),
     ) {
         when (verification) {
             is Verification.PasEncore, is Verification.Echouee -> Column(
@@ -274,13 +279,16 @@ private fun Fuites(
             ) {
                 if (verification is Verification.Echouee) {
                     Text(
-                        "⚠ Le service de vérification n'a pas répondu (${verification.cause}).",
+                        stringResource(R.string.sante_verification_echouee, verification.cause),
                         color = couleurs.danger,
                         fontSize = 12.sp,
                         modifier = Modifier.reperes("text.breachFailed"),
                     )
                 }
-                BoutonSecondaire("Vérifier les fuites", identifiant = "button.checkBreaches") {
+                BoutonSecondaire(
+                    stringResource(R.string.sante_verifier),
+                    identifiant = "button.checkBreaches",
+                ) {
                     demande++
                 }
             }
@@ -291,12 +299,16 @@ private fun Fuites(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularProgressIndicator(Modifier.size(18.dp), color = couleurs.accentTexte, strokeWidth = 2.dp)
-                Text("Vérification…", color = couleurs.attenue, fontSize = 13.sp)
+                Text(
+                    stringResource(R.string.sante_verification_en_cours),
+                    color = couleurs.attenue,
+                    fontSize = 13.sp,
+                )
             }
 
             is Verification.Faite -> if (verification.compromis.isEmpty()) {
                 Text(
-                    "✓ Aucun mot de passe connu des fuites publiques.",
+                    stringResource(R.string.sante_aucune_fuite),
                     color = couleurs.succes,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(14.dp).reperes("text.noBreach"),

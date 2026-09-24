@@ -43,12 +43,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ch.stackops.ghostpass.ContenuDElement
 import ch.stackops.ghostpass.EntreeDuCoffre
 import ch.stackops.ghostpass.Identifiants
 import ch.stackops.ghostpass.ModeleDuCoffre
+import androidx.compose.ui.res.stringResource
 import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.RapprochementDeSite
 import ch.stackops.ghostpass.theme.BoutonPrincipal
@@ -95,7 +97,7 @@ import ch.stackops.ghostpass.theme.carteDeVerre
  * se lise pas « il n'y a rien ».
  */
 @RequiresApi(Build.VERSION_CODES.O)
-class ActiviteDeRemplissage : FragmentActivity() {
+class ActiviteDeRemplissage : AppCompatActivity() {
 
     companion object {
         const val EXTRA_DOMAINE = "ch.stackops.ghostpass.DOMAINE"
@@ -222,7 +224,13 @@ private fun EcranDeRemplissage(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    "Remplir dans " + (domaine ?: "cette application"),
+                    // Une phrase à un trou plutôt qu'une concaténation : « Remplir dans X »
+                    // ne se construit pas dans le même ordre partout, et le nom du site
+                    // n'est pas forcément en fin de phrase ailleurs.
+                    stringResource(
+                        R.string.remplissage_remplir_dans,
+                        domaine ?: stringResource(R.string.remplissage_cette_application),
+                    ),
                     color = couleurs.encre,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -235,15 +243,15 @@ private fun EcranDeRemplissage(
                     ) {
                         if (modele.sessionEnregistree == null) {
                             Text(
-                                "Ouvrez GhostPass et connectez-vous une première fois.",
+                                stringResource(R.string.remplissage_premiere_connexion),
                                 color = couleurs.attenue,
                                 fontSize = 13.sp,
                             )
                         } else {
                             ChampGhost(
-                                intitule = "Mot de passe maître",
+                                intitule = stringResource(R.string.biometrie_mot_de_passe_maitre),
                                 valeur = motDePasse,
-                                invite = "Votre mot de passe",
+                                invite = stringResource(R.string.remplissage_votre_mot_de_passe),
                                 identifiant = "field.master",
                                 secret = true,
                                 typeDeClavier = KeyboardType.Password,
@@ -253,18 +261,21 @@ private fun EcranDeRemplissage(
                                 Text(it, color = couleurs.danger, fontSize = 13.sp)
                             }
                             BoutonPrincipal(
-                                texte = "Déverrouiller",
+                                texte = stringResource(R.string.remplissage_deverrouiller_bouton),
                                 actif = !modele.occupe && motDePasse.isNotEmpty(),
                                 occupe = modele.occupe,
                                 identifiant = "button.submit",
                             ) { modele.deverrouillerHorsLigne(motDePasse) }
                             if (modele.biometrieActivee) {
-                                LienDiscret("Utiliser l'empreinte") {
+                                LienDiscret(stringResource(R.string.remplissage_utiliser_la_biometrie)) {
                                     modele.deverrouillerParBiometrie(activite)
                                 }
                             }
                         }
-                        LienDiscret("Annuler", identifiant = "button.cancel") { surAbandon() }
+                        LienDiscret(
+                            stringResource(R.string.remplissage_annuler),
+                            identifiant = "button.cancel",
+                        ) { surAbandon() }
                     }
                 } else {
                     Proposition(modele, domaine, surChoix)
@@ -320,18 +331,20 @@ private fun Proposition(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (domaine.isNullOrEmpty()) {
             Text(
-                "Cette application ne déclare pas de site : tous vos identifiants sont proposés.",
+                stringResource(R.string.remplissage_sans_site_declare),
                 color = couleurs.attenue,
                 fontSize = 12.sp,
             )
         }
         if (proposes.isEmpty()) {
             Text(
-                if (avecIdentifiants.isEmpty()) {
-                    "Aucun identifiant dans ce coffre."
-                } else {
-                    "Aucun identifiant enregistré pour ce site."
-                },
+                stringResource(
+                    if (avecIdentifiants.isEmpty()) {
+                        R.string.remplissage_coffre_sans_identifiant
+                    } else {
+                        R.string.remplissage_aucun_pour_ce_site
+                    },
+                ),
                 color = couleurs.attenue,
                 fontSize = 14.sp,
             )
@@ -387,7 +400,7 @@ private fun LigneProposee(entree: EntreeDuCoffre.Lisible, surClic: () -> Unit) {
         Column(Modifier.fillMaxWidth()) {
             Text(entree.element.name, color = couleurs.encre, fontSize = 15.sp)
             Text(
-                identifiants.username.ifEmpty { "Sans identifiant" },
+                identifiants.username.ifEmpty { stringResource(R.string.remplissage_sans_identifiant) },
                 color = couleurs.attenue,
                 fontSize = 13.sp,
             )
