@@ -327,6 +327,41 @@ et la raison de chacune :
 | Est-il propriétaire ? | **Non** — Argon2id, XChaCha20-Poly1305, X25519, algorithmes publics |
 | Exempté au titre de la note 3 du §740.17(b) ? | **[à trancher avec un juriste]** — trois faits vérifiés ci-dessous |
 
+### Le questionnaire d'export d'App Store Connect
+
+Apple le pose parce que `ITSAppUsesNonExemptEncryption` vaut `YES`, et refuse l'envoi tant
+qu'il n'a pas été rempli : `Invalid Export Compliance Code (90592)`, la clé
+`ITSEncryptionExportComplianceCode` restant vide. Le code délivré à la fin est à inscrire
+dans `project.yml`, sous `INFOPLIST_KEY_ITSEncryptionExportComplianceCode`.
+
+Les réponses, tirées du code et non estimées :
+
+| Question | Réponse | Pourquoi |
+|---|---|---|
+| L'app utilise-t-elle du chiffrement ? | **Oui** | C'est sa fonction |
+| Chiffrement **propriétaire** ou non publié ? | **Non** | Sept primitives, toutes normalisées ou publiées (voir plus bas) |
+| Uniquement le chiffrement fourni par le système d'exploitation ? | **Non** | Les bibliothèques sont embarquées dans le binaire, pas empruntées à iOS |
+| Uniquement pour l'authentification ? | **Non** | Le contenu des coffres est chiffré, pas seulement l'accès |
+| Uniquement HTTPS / TLS ? | **Non** | Le chiffrement de bout en bout est indépendant du transport |
+| Disponible en France ? | **Oui** | D'où la déclaration ANSSI |
+
+Les sept primitives, avec leur norme — c'est ce qu'il faut pour répondre « non
+propriétaire » sans hésiter :
+
+| Primitive | Publication |
+|---|---|
+| Argon2id | RFC 9106 |
+| XChaCha20-Poly1305 | RFC 8439, avec l'extension XChaCha |
+| AES-256-GCM | NIST FIPS 197 et SP 800-38D |
+| X25519 | RFC 7748 |
+| crypto_box | X25519 + ChaCha20-Poly1305 |
+| HKDF | RFC 5869 |
+| SHA-256 | NIST FIPS 180-4 |
+
+**Aucun algorithme n'est implémenté par le produit.** `ghost-crypto` appelle des
+bibliothèques publiques et auditables ; ses fichiers assemblent, ils ne chiffrent pas. La
+réponse « non propriétaire » est donc vérifiable, pas déclarative.
+
 Le chiffrement n'est pas accessoire ici, c'est la fonction même du produit : déclarer
 « non » serait faux. Conséquences à traiter **avant** l'envoi, pas après :
 
