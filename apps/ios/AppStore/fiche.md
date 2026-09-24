@@ -6,6 +6,29 @@ que le code ne tiendrait pas** : chaque affirmation renvoie à une fonctionnalit
 > Les mentions entre crochets restent à trancher : elles engagent l'entreprise, pas le
 > dépôt.
 
+## Ce qui manque avant l'envoi
+
+Relevé le 24 septembre 2026. Ce qui n'y figure pas est prêt.
+
+| Ce qu'il reste | Pourquoi ça ne peut pas se faire ici |
+|---|---|
+| Fusionner la page d'assistance, **puis vérifier que l'URL répond** | L'API de la forge exige un jeton ; une clé SSH n'y donne pas accès |
+| Créer le **compte de démonstration** sur une instance joignable depuis l'extérieur | Sans lui, l'examinateur ne voit rien et refuse pour « fonctionnalité incomplète » |
+| Trancher la **note 3 du §740.17(b)** et mener les démarches BIS et ANSSI | Questions de droit ; l'annexe technique qu'elles réclament est écrite |
+| Coller la fiche dans App Store Connect et répondre au questionnaire de confidentialité | Les réponses exactes sont plus bas, mot pour mot |
+| Construire une **archive de diffusion signée** et l'envoyer | Jamais fait : seules des versions de développement ont été posées sur appareil |
+
+Ce qui est prêt : les deux jeux de captures, refaits le 24 septembre ; les textes des deux
+langues ; les mots-clés ; les manifestes de confidentialité ; le remplissage automatique,
+éprouvé sur iPhone ; et l'annexe technique du dossier de cryptologie.
+
+**Une réserve sur le jeu iPad.** Les cinq images du jeu iPhone ont été ouvertes et
+regardées ; du jeu iPad, seules `01-coffre`, `03-sante` et `04-partage` l'ont été.
+`03-sante` montre une feuille **coupée à mi-ligne** — la dernière entrée et la phrase
+explicative sortent du cadre modal, plus court sur iPad que le contenu. Ce n'est pas un
+défaut du produit, où la feuille défile ; c'en est un en vitrine. À trancher : la
+recadrer, choisir un autre écran pour la troisième image iPad, ou l'accepter.
+
 ## Identité
 
 | Champ | Valeur |
@@ -108,7 +131,7 @@ No trackers. No ads. No behavioural analytics.
 mot de passe,coffre,chiffrement,2FA,TOTP,sécurité,vie privée,gestionnaire,import
 ```
 
-81 caractères. Le nom de l'app et les catégories sont déjà indexés : les répéter ici
+80 caractères. Le nom de l'app et les catégories sont déjà indexés : les répéter ici
 gaspillerait la limite. Les marques concurrentes n'y figurent pas — Apple les refuse.
 
 « passkey » a été retiré : le serveur journalise bien `passkey.add`, mais **l'application
@@ -123,9 +146,23 @@ Première version.
 
 ## URL
 
-- Politique de confidentialité : **[à héberger]** — brouillon dans `docs/confidentialite.md`.
-- Assistance : **[à trancher]**.
-- Marketing : **[facultatif]**.
+| Champ | Valeur | État |
+|---|---|---|
+| Politique de confidentialité | `https://ghostsuite.cloud/confidentialite/` | **en ligne** |
+| Assistance | `https://ghostsuite.cloud/ghostpass/` | **404 au 24/09** — attend la fusion |
+| Marketing | `https://ghostsuite.cloud/` | en ligne, facultatif |
+
+Les deux premières sont **obligatoires** chez Apple. La politique couvre GhostPass
+nommément, par produit : il n'y a rien à dupliquer, on la lie telle quelle.
+
+La page d'assistance existe sur la branche `feat/page-ghostpass` du dépôt `ghostsuite`
+et **n'est pas encore en ligne**. La fusion demande d'ouvrir la demande à la main —
+l'API de la forge réclame un jeton, une clé SSH n'y donne pas accès :
+
+    https://git.stackops.ch/stackops/ghostsuite/pulls/new/feat/page-ghostpass
+
+**Vérifier que l'URL répond avant de l'inscrire dans App Store Connect.** Une URL
+d'assistance morte est un motif de refus, et elle ne se voit pas depuis le dépôt.
 
 ## Captures d'écran
 
@@ -155,7 +192,20 @@ barre d'état est figée à 9 h 41, batterie pleine, réseau au maximum.
 **Ce que ces captures ne montrent pas** : le remplissage automatique, qui est pourtant
 l'argument principal. Il ne se photographie pas sous `xcodebuild` — la barre de
 remplissage vit dans le clavier logiciel, absent en test automatisé. Une capture prise à
-la main sur appareil réel serait ici le meilleur ajout.
+la main sur appareil réel serait ici le meilleur ajout, et elle est désormais **possible** :
+la fonctionnalité a été éprouvée sur iPhone le 14 septembre 2026.
+
+**Deux réglages de prise de vue à connaître**, tous deux sous un drapeau compilé hors des
+versions de diffusion (`-captures-de-fiche`) :
+
+- La **protection des captures** est levée. Elle vide aussi `XCUIScreen.main.screenshot()` :
+  cinq images blanches, de la bonne taille et du bon nom, sont parties dans le dépôt avant
+  qu'on ne les ouvre.
+- Le **bandeau « Remplissage automatique désactivé »** est masqué. Il est juste dans le
+  produit et faux en vitrine : le banc ne peut pas cocher la case — ce réglage vit dans un
+  magasin système que `defaults` n'atteint pas —, et la première image de la boutique
+  aurait annoncé que la fonction principale est éteinte. C'est une décision de
+  présentation, pas une correction.
 
 La capture « Partager un secret » montre l'écran, pas un lien réellement produit : la
 prise de vue parle à un serveur local jetable, sans service de partage configuré.
@@ -184,9 +234,14 @@ Texte proposé pour la zone « Notes » :
 > maître. Utilisez le compte fourni ci-dessus. Le coffre contient déjà des entrées de
 > démonstration.
 >
-> Pour éprouver le remplissage automatique : Réglages iOS > Mots de passe > Mots de passe
-> et codes > activer GhostPass, puis ouvrir une page de connexion dans Safari. La
+> Pour éprouver le remplissage automatique : ouvrez GhostPass, déverrouillez le coffre et
+> touchez « Ouvrir les réglages » dans le bandeau en tête de liste — il mène directement à
+> l'écran où autoriser GhostPass. Ouvrez ensuite une page de connexion dans Safari : la
 > proposition apparaît au-dessus du clavier.
+>
+> (Le chemin manuel équivalent dépend de la version d'iOS : Réglages > Général > Saisie
+> automatique et mots de passe sur les versions récentes, Réglages > Mots de passe sur les
+> plus anciennes.)
 >
 > L'application ne collecte aucune donnée d'usage et ne contient aucun traceur.
 
@@ -196,8 +251,18 @@ Texte proposé pour la zone « Notes » :
    Un examinateur ne peut pas atteindre un serveur de développement.
 2. Le remplissage automatique exige le **groupe d'applications** et l'habilitation de
    fournisseur d'identifiants, tous deux hors de portée d'une équipe personnelle. La
-   version envoyée doit être signée par l'équipe de l'entreprise, sans quoi la
-   fonctionnalité mise en avant dans la description sera absente du binaire examiné.
+   version envoyée doit être signée par l'équipe de l'entreprise `9WHCJ5W7S6`, sans quoi
+   la fonctionnalité mise en avant dans la description sera absente du binaire examiné.
+
+   Le groupe est **`group.ch.stackops.ghostpass.coffre`**, et le suffixe n'est pas
+   décoratif : `group.ch.stackops.ghostpass` est immobilisé sous une équipe personnelle
+   d'un essai antérieur, et les identifiants de groupe sont uniques chez Apple toutes
+   équipes confondues. Il n'est pas récupérable.
+
+   Un certificat d'équipe personnelle vit encore dans le trousseau de la machine de
+   construction : `DEVELOPMENT_TEAM` doit être **imposée**, jamais découverte. Signer avec
+   l'autre produit une application qui s'installe, se lance, et dont le remplissage ne voit
+   rien — le symptôme serait « aucun identifiant proposé », à mille lieues de la cause.
 
 ## Confidentialité (questionnaire App Privacy)
 
@@ -226,7 +291,7 @@ et la raison de chacune :
 | L'app contient-elle du chiffrement ? | **Oui** |
 | Est-il limité aux exemptions d'Apple (HTTPS, authentification seule) ? | **Non** |
 | Est-il propriétaire ? | **Non** — Argon2id, XChaCha20-Poly1305, X25519, algorithmes publics |
-| Exempté au titre de la note 3 du §740.17(b) ? | **[à trancher avec un juriste]** |
+| Exempté au titre de la note 3 du §740.17(b) ? | **[à trancher avec un juriste]** — trois faits vérifiés ci-dessous |
 
 Le chiffrement n'est pas accessoire ici, c'est la fonction même du produit : déclarer
 « non » serait faux. Conséquences à traiter **avant** l'envoi, pas après :
@@ -235,7 +300,24 @@ Le chiffrement n'est pas accessoire ici, c'est la fonction même du produit : d�
   passant par l'App Store ;
 - côté français, une **déclaration ANSSI** de fourniture d'un moyen de cryptologie.
 
-Ces deux démarches engagent l'entreprise et ne se règlent pas dans le dépôt.
+Ces deux démarches engagent l'entreprise et ne se règlent pas dans le dépôt. Ce qui, lui,
+se tire du code est rédigé : [`docs/anssi-dossier-technique.md`](../../../docs/anssi-dossier-technique.md)
+donne les primitives, leurs paramètres, la gestion des clés et ce que le serveur détient.
+Les deux dossiers réclament cette annexe.
+
+**Trois faits utiles au juriste, vérifiés et non supposés :**
+
+1. Le code est sous **Elastic License 2.0**, qui n'est pas une licence libre au sens OSI
+   mais laisse copier, modifier et redistribuer. Elle restreint un **usage** — fournir le
+   logiciel en service géré — et non la diffusion.
+2. La note 3 du §740.17(b) suppose un logiciel **publiquement disponible**. Le critère est
+   l'accessibilité réelle du code source, pas le nom de la licence.
+3. Or cette accessibilité **n'est pas établie** : au 24 septembre 2026, le miroir public
+   répond 404. Tant qu'il en est ainsi, l'argument tombe quelle que soit la licence.
+
+Rendre le code publiquement accessible pourrait donc changer la nature de la démarche
+américaine — sans rien changer à la française, où la déclaration tient à la fonction de
+confidentialité, pas au régime de diffusion.
 
 ## Le modèle économique, et ce qu'Apple en pensera
 
