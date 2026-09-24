@@ -303,11 +303,20 @@ Conséquences relevées le 24 septembre 2026 :
 - **La fiche App Store vise la nouvelle adresse.** C'est celle que l'examinateur saisira,
   et la seule qui vivra encore quand l'examen aura lieu.
 - **Le compte de démonstration existe sur les deux**, le temps de la bascule.
-- ~~La politique de confidentialité publiée est à corriger.~~ **Corrigée** dans les deux
-  copies : celle du site (`site/content/confidentialite.md` du dépôt `ghostsuite`, version
-  portée à 0.2) et celle de ce dépôt. La ligne Cloudflare nomme désormais les trois
-  instances de la suite. La première attend la fusion de `feat/page-ghostpass` pour être
-  en ligne.
+- **La politique de confidentialité est servie à deux endroits**, et c'est la chose à ne
+  pas rater : `ghostsuite.cloud/confidentialite/` par le site vitrine, et
+  `pass.ghostsuite.cloud/confidentialite` par l'application web elle-même. Ce ne sont pas
+  deux copies dérivantes — la seconde **lit `docs/legal/` à la construction** — mais ce
+  sont deux déploiements distincts, qui peuvent servir deux versions différentes du même
+  texte.
+
+  Les deux nommaient `ghostpass.stackops.ch`, décommissionnée le 24 septembre. Les deux
+  sont corrigées : version 0.2 côté site, **0.3** côté produit. Le site est déployé et
+  vérifié ; le produit attend une reconstruction de son image pour servir la nouvelle.
+
+  C'est Clara qui a repéré la seconde, alors que j'avais annoncé « corrigé dans les deux
+  copies » en n'en comptant qu'une. Un document juridique servi par deux chemins compte
+  deux fois.
 - **`ghostpass.stackops.ch` est décommissionnée** depuis le 24 septembre 2026 : elle ne
   répond plus du tout. Le compte de démonstration d'Apple vit sur `pass.ghostsuite.cloud`
   et y a été revérifié après l'extinction — neuf éléments, connexion réussie. Sans cette

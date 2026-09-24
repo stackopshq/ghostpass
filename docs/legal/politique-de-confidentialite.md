@@ -4,7 +4,7 @@
 > Rédigé à partir de ce que le produit fait *réellement*, mesuré dans le code.
 > Les faits techniques sont vérifiables ; les qualifications juridiques non.
 
-*Version 0.2 — 2026-08-31. Articles 12 à 14 du règlement (UE) 2016/679 (RGPD).*
+*Version 0.3 — 2026-09-24. Articles 12 à 14 du règlement (UE) 2016/679 (RGPD).*
 
 ---
 
@@ -179,5 +179,6 @@ substantiel, nous vous en informerons avant qu'il prenne effet.
 
 | Version | Date | Modification |
 |---|---|---|
+| 0.3 | 2026-09-24 | La ligne Cloudflare nommait `ghostpass.stackops.ch`, instance décommissionnée le jour même et qui ne répond plus. Elle nomme désormais les trois instances de la suite : `pass.`, `cal.` et `bit.ghostsuite.cloud`. Ni les destinataires ni les données traitées ne changent : c'est une correction d'exactitude |
 | 0.1 | 2026-08-31 | Création |
 | 0.2 | 2026-08-31 | Trois corrections d'exactitude, après confrontation au code. « Le serveur ne contient aucun code capable de déchiffrer » devient « rien, côté serveur, ne peut ouvrir un coffre » : le serveur détient bien une primitive de déchiffrement, pour le seul secret du second facteur. Le partage par **ghostbit** est décrit — il ne l'était nulle part. Le **PFPDT** gagne son second rôle, destinataire d'une annonce de violation, distinct de celui d'autorité de réclamation |
