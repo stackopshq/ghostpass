@@ -420,7 +420,10 @@ class ParcoursDeBoutEnBoutTest {
                 "un coffre d'équipe reste invisible — c'est le défaut du coffre vide",
             30_000,
         )
-        organisation.click()
+        // Même précaution qu'en ouvrant un élément : cet onglet vit au-dessus de la liste
+        // du coffre, qui se recompose toute seule à mesure que les icônes des sites
+        // arrivent. La poignée peut donc expirer entre la recherche et le clic.
+        avecRepriseSurObsolescence { organisation.click() }
         appareil.waitForIdle()
 
         attendre(
@@ -525,10 +528,19 @@ class ParcoursDeBoutEnBoutTest {
      * Un simple toucher ne suffit pas : la liste se recompose après chaque écriture, et le
      * doigt tombe alors à côté. Le symptôme est trompeur — l'étape suivante cherche un champ
      * de l'éditeur, ne le trouve pas, et le message accuse ce champ.
+     *
+     * `avecRepriseSurObsolescence` autour du clic, et ce n'est pas une ceinture de plus.
+     * **Depuis que la liste affiche les icônes des sites, elle se recompose aussi sans
+     * qu'on ait rien fait** : chaque pastille remplace son initiale par un logo quand la
+     * réponse du serveur arrive, c'est-à-dire à un moment que le témoin ne commande pas. Le
+     * nœud trouvé une milliseconde plus tôt est alors périmé, et `click()` lève
+     * `StaleObjectException` — que la boucle `repeat` laissait passer, puisqu'elle n'attrape
+     * rien. L'échec remontait en « [4. Modification de cet élément] null », un message qui
+     * ne dit ni l'écran ni la cause.
      */
     private fun ouvrirLElement(nom: String) {
         repeat(3) {
-            ligneDuCoffre(nom).click()
+            avecRepriseSurObsolescence { ligneDuCoffre(nom).click() }
             appareil.waitForIdle()
             if (appareil.wait(Until.hasObject(By.res("field.name")), 5_000) == true) return
         }
@@ -719,7 +731,7 @@ class ParcoursDeBoutEnBoutTest {
         // fois à l'écran : dans le champ et dans la ligne. `findObject` rendait le premier —
         // le champ — et le toucher n'ouvrait rien. On prend donc le plus bas des deux.
         repeat(3) {
-            ligneDuCoffre(nomDeLElement).click()
+            avecRepriseSurObsolescence { ligneDuCoffre(nomDeLElement).click() }
             appareil.waitForIdle()
             if (appareil.wait(Until.hasObject(By.res("button.delete")), 4_000) == true) return@repeat
         }
