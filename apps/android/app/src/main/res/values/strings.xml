@@ -30,4 +30,15 @@
         <item quantity="one">%d élément du coffre n\'a pas pu être ouvert et n\'est pas proposé ici.</item>
         <item quantity="other">%d éléments du coffre n\'ont pas pu être ouverts et ne sont pas proposés ici.</item>
     </plurals>
+    <!-- « 1 mots de passe à revoir » : c'est exactement ce qu'iOS affichait. Un coffre
+         qui n'a qu'un seul défaut est le cas le plus fréquent, donc celui sur lequel la
+         phrase se trompait le plus souvent. -->
+    <plurals name="sante_a_revoir">
+        <item quantity="one">%d mot de passe à revoir</item>
+        <item quantity="other">%d mots de passe à revoir</item>
+    </plurals>
+    <plurals name="sante_examines">
+        <item quantity="one">%d élément examiné</item>
+        <item quantity="other">%d éléments examinés</item>
+    </plurals>
 </resources>

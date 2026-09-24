@@ -880,6 +880,16 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
     var corbeille by mutableStateOf(LectureDuCoffre())
         private set
 
+    /**
+     * L'écran de santé est ouvert.
+     *
+     * Il vit dans le modèle, comme la corbeille, et non dans la composition : le
+     * verrouillage automatique doit pouvoir le refermer. Un écran de santé resté posé sur un
+     * coffre fermé garderait à l'écran les noms des éléments faibles — c'est-à-dire la liste
+     * exacte de ce qu'il faut attaquer en premier.
+     */
+    var santeOuverte by mutableStateOf(false)
+
     var corbeilleOuverte by mutableStateOf(false)
         private set
 

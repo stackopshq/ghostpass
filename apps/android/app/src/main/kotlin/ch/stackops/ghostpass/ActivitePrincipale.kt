@@ -17,6 +17,7 @@ import ch.stackops.ghostpass.ui.EcranDeDeverrouillage
 import ch.stackops.ghostpass.ui.BoitesDePartage
 import ch.stackops.ghostpass.ui.EcranDeLElement
 import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
+import ch.stackops.ghostpass.ui.EcranDeLaSante
 import ch.stackops.ghostpass.ui.EcranDuCoffre
 
 /**
@@ -69,6 +70,10 @@ class ActivitePrincipale : FragmentActivity() {
                 // valeurs déchiffrées, et « Enregistrer » échouerait sans que rien
                 // n'explique pourquoi.
                 if (!modele.deverrouille && edition != null) edition = null
+                // Et la santé de même : elle porte à l'écran la liste de ce qu'il faut
+                // attaquer en premier, ce qui est exactement ce qu'un coffre verrouillé ne
+                // doit plus montrer.
+                if (!modele.deverrouille && modele.santeOuverte) modele.santeOuverte = false
 
                 // Le lien retenu s'ouvre **dès que le coffre l'est**, et pas avant. C'est
                 // la règle §9 : on retient, on n'écrit rien, et l'utilisateur voit un
@@ -80,8 +85,14 @@ class ActivitePrincipale : FragmentActivity() {
                     }
                 }
 
-                BackHandler(enabled = edition != null || modele.corbeilleOuverte) {
-                    if (edition != null) edition = null else modele.fermerLaCorbeille()
+                BackHandler(
+                    enabled = edition != null || modele.corbeilleOuverte || modele.santeOuverte,
+                ) {
+                    when {
+                        edition != null -> edition = null
+                        modele.santeOuverte -> modele.santeOuverte = false
+                        else -> modele.fermerLaCorbeille()
+                    }
                 }
 
                 when {
@@ -89,6 +100,19 @@ class ActivitePrincipale : FragmentActivity() {
                     modele.corbeilleOuverte -> EcranDeLaCorbeille(modele) {
                         modele.fermerLaCorbeille()
                     }
+                    // La santé passe **avant** l'édition : on y désigne un élément à
+                    // corriger, et l'ouvrir doit refermer la santé plutôt que l'empiler.
+                    // L'inverse laisserait derrière soi un écran qui parle d'un coffre
+                    // qu'on vient de modifier.
+                    modele.santeOuverte && edition == null -> EcranDeLaSante(
+                        modele,
+                        surOuvrir = { entree ->
+                            modele.santeOuverte = false
+                            modele.message = null
+                            edition = Edition(entree)
+                        },
+                        surFermer = { modele.santeOuverte = false },
+                    )
                     edition != null -> EcranDeLElement(
                         modele,
                         edition!!.entree,
@@ -114,6 +138,7 @@ class ActivitePrincipale : FragmentActivity() {
                             edition = Edition(entree)
                         },
                         surCorbeille = { modele.ouvrirLaCorbeille() },
+                        surSante = { modele.santeOuverte = true },
                     )
                 }
 

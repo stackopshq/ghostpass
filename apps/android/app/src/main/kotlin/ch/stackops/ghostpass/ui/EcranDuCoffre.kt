@@ -78,6 +78,7 @@ fun EcranDuCoffre(
     surNouveau: () -> Unit = {},
     surModifier: (EntreeDuCoffre.Lisible) -> Unit = {},
     surCorbeille: () -> Unit = {},
+    surSante: () -> Unit = {},
 ) {
     val couleurs = LocalCouleurs.current
     val lecture = modele.lectureAffichee
@@ -100,7 +101,7 @@ fun EcranDuCoffre(
             )
 
             if (reglagesOuverts) {
-                MenuDeReglages(modele, surCorbeille) { reglagesOuverts = false }
+                MenuDeReglages(modele, surCorbeille, surSante) { reglagesOuverts = false }
             }
 
             ChoixDuCoffre(modele)
@@ -277,15 +278,18 @@ private fun BarreDOutils(
 /**
  * Le menu de réglages — **et rien de grisé**.
  *
- * iOS en a un bien plus long : santé du coffre, clé de récupération, import et export,
- * urgence, MFA, activité. Rien de tout cela n'existe ici, et rien de tout cela n'y figure.
- * Un réglage grisé qui promet une fonction inexistante est pire que son absence : il déplace
- * l'échec du moment où l'on configure au moment où quelqu'un essaie de s'en servir.
+ * La règle tient toujours : **on n'inscrit ici que ce qui existe**. Un réglage grisé qui
+ * promet une fonction inexistante est pire que son absence — il déplace l'échec du moment
+ * où l'on configure au moment où quelqu'un essaie de s'en servir.
+ *
+ * La liste s'allonge donc au rythme des écrans portés, et jamais avant. « Santé du coffre »
+ * y est entrée le jour où `EcranDeLaSante` a existé.
  */
 @Composable
 private fun MenuDeReglages(
     modele: ModeleDuCoffre,
     surCorbeille: () -> Unit,
+    surSante: () -> Unit,
     surFermer: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
@@ -301,6 +305,11 @@ private fun MenuDeReglages(
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        LienDiscret("Santé du coffre", identifiant = "button.health") {
+            surFermer()
+            surSante()
+        }
+
         LienDiscret("Corbeille", identifiant = "button.trash") {
             surFermer()
             surCorbeille()

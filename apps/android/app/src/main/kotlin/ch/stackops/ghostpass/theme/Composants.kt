@@ -8,6 +8,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -312,4 +318,106 @@ fun FiletDeSection() {
             .height(1.dp)
             .background(couleurs.bordure),
     )
+}
+
+/**
+ * Une section entière : son intitulé en petites capitales, sa carte, et sa note en pied.
+ *
+ * C'est le `GhostSection` d'iOS au complet. La **note compte autant que le reste** : c'est
+ * elle qui dit pourquoi une liste est là — « Trop courts, ou faits d'une seule sorte de
+ * caractères », « Seuls les cinq premiers caractères de l'empreinte sont envoyés ». Une
+ * liste de noms sans sa note laisse deviner le critère, et on devine mal.
+ */
+@Composable
+fun SectionGhost(
+    titre: String? = null,
+    note: String? = null,
+    contenu: @Composable () -> Unit,
+) {
+    val couleurs = LocalCouleurs.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (titre != null) IntituleDeSection(titre)
+        CarteDeSection { contenu() }
+        if (note != null) {
+            Text(
+                note,
+                color = couleurs.attenue,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 2.dp),
+            )
+        }
+    }
+}
+
+/**
+ * L'ossature d'un écran de la suite : le fond, le défilement, et les marges.
+ *
+ * Le `GhostScreen` d'iOS. Les trois valeurs — 20 de marge latérale, 22 entre sections, 40
+ * en pied — viennent de là-bas ; la quatrième est propre à Android : **le pied est plus
+ * généreux qu'il n'y paraît** parce que la navigation par gestes se réserve une bande en
+ * bas d'écran et avale les touchers qui y tombent. Un bouton parfaitement visible y est
+ * parfaitement inerte, et cela se lit comme une panne.
+ */
+@Composable
+fun EcranGhost(
+    identifiant: String? = null,
+    contenu: @Composable ColumnScope.() -> Unit,
+) {
+    Box(Modifier.fillMaxSize()) {
+        FondGhost()
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 96.dp)
+                .reperes(identifiant),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
+            content = contenu,
+        )
+    }
+}
+
+/**
+ * La barre d'une feuille modale : une action à gauche, le titre au centre, une à droite.
+ *
+ * Android n'a pas de barre de navigation modale, et `TopAppBar` de Material en donnerait
+ * une qui ne ressemble à rien d'autre dans le produit (§10). Celle-ci est faite des mêmes
+ * boutons que le reste.
+ */
+@Composable
+fun BarreDeFeuille(
+    titre: String,
+    gauche: String,
+    identifiantGauche: String,
+    surGauche: () -> Unit,
+    droite: String? = null,
+    identifiantDroite: String? = null,
+    droiteActive: Boolean = true,
+    surDroite: () -> Unit = {},
+) {
+    val couleurs = LocalCouleurs.current
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.widthIn(max = 100.dp)) {
+            BoutonSecondaire(gauche, identifiant = identifiantGauche) { surGauche() }
+        }
+        Text(
+            titre,
+            color = couleurs.encre,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
+        )
+        if (droite != null) {
+            Box(Modifier.widthIn(max = 100.dp)) {
+                BoutonSecondaire(
+                    texte = droite,
+                    actif = droiteActive,
+                    identifiant = identifiantDroite,
+                ) { surDroite() }
+            }
+        }
+    }
 }
