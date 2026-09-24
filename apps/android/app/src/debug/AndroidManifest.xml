@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ce qui n'existe que dans la variante `debug`. Rien d'ici ne part dans un paquet livré. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- `exported="true"` pour être lançable par `adb shell am start` depuis un script
+             de vérification. C'est sans conséquence : cette activité n'existe pas dans la
+             variante de publication, et elle ne porte aucune donnée. -->
+        <activity
+            android:name=".essai.ActiviteDEssaiDeConnexion"
+            android:exported="true"
+            android:label="Essai de remplissage" />
+    </application>
+</manifest>

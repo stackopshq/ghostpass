@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Le trafic en clair est refusé partout, sauf en boucle locale.
+
+     L'exception n'est pas une commodité de développement : c'est ce qui rend vrai le
+     troisième point du §7 — « un premier lancement qui aboutit à un coffre utilisable
+     contre une instance quelconque ». Une instance auto-hébergée sur le poste ou sur le
+     réseau de la maison parle souvent en clair, et lui imposer TLS produirait une erreur
+     de connexion sécurisée : un message qui décrit la conséquence et cache la cause.
+
+     `AdresseServeur.normaliser` fait le pendant côté Kotlin — `http://` par défaut en
+     boucle locale, `https://` partout ailleurs. Les deux règles doivent s'accorder : si
+     l'une acceptait ce que l'autre refuse, l'utilisateur verrait son adresse acceptée puis
+     sa connexion échouer sans explication.
+
+     `10.0.2.2` est l'adresse par laquelle un émulateur Android joint la machine hôte. Sans
+     elle, aucun test de bout en bout contre un serveur local n'est possible depuis un
+     émulateur — et c'est justement ce test qui prouve le §7. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

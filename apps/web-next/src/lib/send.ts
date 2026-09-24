@@ -1,58 +1,54 @@
-// Partage de lien éphémère : chiffrement AES-256-GCM côté client. La clé est encodée pour le
-// fragment d'URL (#) — elle n'est jamais envoyée au serveur, qui ne stocke que le chiffré.
+// Partage de lien éphémère.
+//
+// Le chiffrement se fait dans le cœur Rust, comme tout le reste du produit. C'était
+// auparavant le seul endroit où de la crypto vivait ailleurs — un AES-256-GCM appelé
+// directement via WebCrypto — et cet écart avait deux coûts : un second algorithme à
+// auditer pour une tâche déjà couverte, et l'impossibilité pour l'application iOS d'ouvrir
+// un partage créé depuis le navigateur.
+//
+// La clé est encodée pour le fragment d'URL (#). Les navigateurs ne l'envoient jamais au
+// serveur, qui n'héberge donc qu'un chiffre qu'il ne peut pas lire.
 
-function toB64(bytes: Uint8Array): string {
-  let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s);
-}
-
-function fromB64(s: string): ArrayBuffer {
-  const bin = atob(s);
-  const buf = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-  return buf.buffer;
-}
-
-function toB64Url(bytes: Uint8Array): string {
-  return toB64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function fromB64Url(s: string): ArrayBuffer {
-  return fromB64(s.replace(/-/g, "+").replace(/_/g, "/"));
-}
+import { open_send, seal_send } from "ghostpass-crypto-wasm";
 
 export interface SealedSend {
   ciphertext: string;
+  /// Le nonce du chiffre. Le serveur le stocke sous le nom `iv`, hérité de l'AES-GCM.
   iv: string;
   keyFragment: string;
 }
 
-/// Chiffre un texte ; renvoie le chiffré + IV (pour le serveur) et la clé (pour le fragment d'URL).
-export async function sealSend(plaintext: string): Promise<SealedSend> {
-  const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, [
-    "encrypt",
-    "decrypt",
-  ]);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    key,
-    new TextEncoder().encode(plaintext),
-  );
-  const raw = new Uint8Array(await crypto.subtle.exportKey("raw", key));
-  return { ciphertext: toB64(new Uint8Array(ct)), iv: toB64(iv), keyFragment: toB64Url(raw) };
+/// Le base64 du cœur est standard ; un fragment d'URL réclame la variante sans caractères
+/// à échapper. La conversion est purement textuelle, elle ne touche pas à la clé.
+function versFragment(b64: string): string {
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/// Déchiffre un Send à partir du chiffré/IV (serveur) et de la clé (fragment d'URL).
+function depuisFragment(fragment: string): string {
+  const s = fragment.replace(/-/g, "+").replace(/_/g, "/");
+  return s + "=".repeat((4 - (s.length % 4)) % 4);
+}
+
+/// Chiffre un texte ; renvoie le chiffré et son nonce (pour le serveur), et la clé (pour le
+/// fragment d'URL).
+export async function sealSend(plaintext: string): Promise<SealedSend> {
+  const scelle = JSON.parse(seal_send(plaintext)) as {
+    ciphertext: string;
+    nonce: string;
+    key: string;
+  };
+  return {
+    ciphertext: scelle.ciphertext,
+    iv: scelle.nonce,
+    keyFragment: versFragment(scelle.key),
+  };
+}
+
+/// Déchiffre un partage à partir du chiffré et du nonce (serveur) et de la clé (fragment).
 export async function openSend(
   ciphertext: string,
   iv: string,
   keyFragment: string,
 ): Promise<string> {
-  const key = await crypto.subtle.importKey("raw", fromB64Url(keyFragment), { name: "AES-GCM" }, false, [
-    "decrypt",
-  ]);
-  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(iv) }, key, fromB64(ciphertext));
-  return new TextDecoder().decode(pt);
+  return open_send(depuisFragment(keyFragment), iv, ciphertext);
 }

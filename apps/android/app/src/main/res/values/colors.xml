@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Le premier arrêt du dégradé de fond de `Theme.kt`. Les deux doivent s'accorder :
+         un écart se verrait comme un saut de couleur au lancement. -->
+    <color name="nuit">#080D18</color>
+</resources>

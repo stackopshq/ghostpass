@@ -1,0 +1,572 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- L'anglais de GhostPass.
+
+     **La langue source est le français** : `values/` porte les originaux, ce fichier les
+     traduit. L'inverse aurait demandé un `values-fr/` complet et un `values/` anglais, pour
+     le même résultat et un dossier de plus.
+
+     La plupart de ces phrases ne sont pas inventées ici : elles viennent de
+     `apps/ios/Ghostpass/Resources/Localizable.xcstrings`, le catalogue de l'application iOS,
+     qui a été relu. Les deux applications doivent dire la même chose — un utilisateur qui
+     passe de l'une à l'autre ne doit pas avoir à réapprendre les mots. Ce qui n'y figurait
+     pas a été écrit dans le même registre : sobre, direct, sans « please ».
+
+     **Une clé absente d'ici ne produit aucune erreur** : Android retombe sur `values/`, et
+     l'écran affiche du français au milieu de l'anglais. Le repli a exactement la forme d'un
+     succès, ce qui le rend invisible à l'exécution. C'est pourquoi la parité des deux
+     catalogues se vérifie sur les fichiers, par `tools/android/temoin-des-traductions.sh`.
+
+     **Les pluriels.** En français, `one` couvre 0 et 1 — « 0 caractère ». En anglais, `one`
+     ne couvre que 1 : « 0 characters » passe par `other`. Les formes ne se recopient donc
+     pas d'un fichier à l'autre ; c'est `PluralRules` qui décide, d'après la langue de la
+     configuration et non d'après le dossier où vit la ressource. -->
+<resources>
+    <!-- ─── Ce qui existait déjà dans values/, et qui n'avait pas encore d'anglais ───
+
+         `app_name` n'est pas ici : il est marqué `translatable="false"` côté français. Un
+         nom de produit ne se traduit pas, et lui donner une jumelle anglaise identique
+         n'aurait fait qu'une ligne de plus à tenir d'accord. -->
+    <string name="remplissage_deverrouiller">Unlock GhostPass</string>
+    <string name="remplissage_ce_site">For this site</string>
+    <string name="remplissage_enregistrement_indisponible">Saving from another app is not available yet.</string>
+    <!-- Aucun tarif, aucun renvoi vers un achat : l'application est gratuite et doit le
+         rester jusque dans ses chaînes (§7). -->
+    <string name="service_de_remplissage">GhostPass fills in your credentials, after you unlock.</string>
+    <plurals name="remplissage_illisibles">
+        <item quantity="one">%d vault item could not be opened and is not offered here.</item>
+        <item quantity="other">%d vault items could not be opened and are not offered here.</item>
+    </plurals>
+
+    <!-- ─── The vault model ─── -->
+    <string name="modele_code_six_chiffres">Enter the six-digit code from your authenticator app.</string>
+    <string name="modele_sso_absent">This server has no single sign-on configured.</string>
+    <string name="modele_sso_pas_demande">This sign-in was not requested from this device. Start again.</string>
+    <string name="modele_sso_identite_verifiee">Identity verified. Enter your master password to open the vault.</string>
+    <string name="modele_totp_export_multiple">This QR code is an authenticator app export, which carries several accounts at once. GhostPass cannot read it: export the accounts one by one.</string>
+    <string name="modele_totp_lien_inutilisable">This link is not a usable second factor — it has no secret, or it is not of type “totp”.</string>
+    <string name="modele_cle_non_preparee">This device could not prepare the key: %1$s</string>
+    <string name="modele_bio_titre">Enable biometric unlock</string>
+    <string name="modele_bio_sous_titre">GhostPass will keep your vault key behind your fingerprint.</string>
+    <string name="modele_bio_echec">Enabling failed: %1$s</string>
+    <string name="modele_pas_de_secret_a_partager">This item has no single secret to share.</string>
+    <string name="modele_partage_revoque">Share cancelled and revoked.</string>
+    <string name="modele_partage_non_revocable">Share cancelled, but this server does not allow revoking it.</string>
+    <string name="modele_partage_revocation_echouee">The share could not be revoked: %1$s</string>
+    <string name="modele_partage_refuse_schema">The server returned a plaintext link although it is reached over HTTPS. The share was cancelled.</string>
+    <string name="modele_partage_refuse_sans_jeton">The server returned a link to another domain with no revocation token: this share could not be taken back. Nothing will be shown.</string>
+    <string name="modele_compte_repris">Account taken over. Pass the new password on to its owner.</string>
+    <string name="modele_cle_refusee">Recovery key refused.</string>
+    <string name="modele_mfa_absent">This server does not offer two-factor authentication yet.</string>
+    <string name="modele_non_deposes">Not uploaded: %1$s%2$s</string>
+    <!-- En anglais, `one` ne couvre que 1 : « and 0 others » est la forme juste pour zéro,
+         même si ce cas n'arrive pas ici. -->
+    <plurals name="modele_et_autres">
+        <item quantity="one"> and %d other.</item>
+        <item quantity="other"> and %d others.</item>
+    </plurals>
+
+    <!-- ─── What we show when something fails ─── -->
+    <string name="modele_sso_reponse_inattendue">The response does not match the request. Try again.</string>
+    <string name="modele_sso_sans_compte">This address has no GhostPass account on this server.</string>
+    <string name="modele_sso_echec">Authentication failed.</string>
+    <string name="modele_adresse_invalide">Invalid server address. Example: ghostpass.example.com</string>
+    <string name="modele_serveur_injoignable">Server unreachable. Check the address and your connection.</string>
+    <string name="modele_equipe_plus_ouverte">The team vault “%1$s” is no longer open. Refresh the list before saving.</string>
+    <string name="modele_cle_equipe_perimee">This team vault\'s key has changed since it was opened. Open it again before saving: your change would be unreadable to the other members.</string>
+    <string name="modele_coffre_verrouille">The vault is locked. Unlock it before writing.</string>
+    <string name="modele_reponse_illisible">Unreadable server response.</string>
+    <string name="modele_second_facteur_requis">Second factor required.</string>
+    <string name="modele_erreur_serveur">Server error.</string>
+    <string name="modele_mdp_incorrect">Incorrect master password.</string>
+    <string name="modele_erreur_inconnue">Something went wrong.</string>
+
+    <!-- ─── Biometric gestures, named without lying ─── -->
+    <string name="biometrie_empreinte">fingerprint</string>
+    <string name="biometrie_visage">face recognition</string>
+    <string name="biometrie_iris">iris recognition</string>
+    <string name="biometrie_generique">biometrics</string>
+    <string name="biometrie_mot_de_passe_maitre">Master password</string>
+
+    <!-- ─── Labels that live in Preferences ─── -->
+    <string name="reglages_apparence_systeme">System</string>
+    <string name="reglages_apparence_clair">Light</string>
+    <string name="reglages_apparence_sombre">Dark</string>
+    <string name="reglages_verrou_immediat">Immediately</string>
+    <string name="reglages_verrou_une_minute">After 1 minute</string>
+    <string name="reglages_verrou_cinq_minutes">After 5 minutes</string>
+    <string name="reglages_verrou_quinze_minutes">After 15 minutes</string>
+    <!-- « Français » et « English » sont `translatable="false"` : ils n'ont pas de jumelle
+         ici, et c'est voulu. -->
+    <string name="reglages_langue_systeme">System</string>
+    <string name="journal_login_password">Signed in with password</string>
+    <string name="journal_login_passkey">Signed in with a passkey</string>
+    <string name="journal_login_sso">Signed in with SSO</string>
+    <string name="journal_logout">Signed out</string>
+    <string name="journal_mfa_enable">Two-factor enabled</string>
+    <string name="journal_mfa_disable">Two-factor disabled</string>
+    <string name="journal_recovery_reset">Password reset with the recovery key</string>
+    <string name="journal_passkey_add">Passkey added</string>
+    <string name="journal_passkey_remove">Passkey removed</string>
+    <string name="journal_webauthn_add">Security key added</string>
+    <string name="journal_webauthn_remove">Security key removed</string>
+    <string name="journal_emergency_grant">Emergency access granted to a contact</string>
+    <string name="journal_emergency_request">Emergency access requested</string>
+    <string name="journal_emergency_approve">Emergency access approved</string>
+    <string name="journal_org_member_add">Member added to a team</string>
+    <string name="journal_org_member_role">A member\'s role changed</string>
+    <string name="journal_org_key_rotate">Team key rotated</string>
+    <string name="journal_org_group_create">Group created</string>
+    <string name="journal_org_group_delete">Group deleted</string>
+    <string name="journal_org_group_member_add">Member added to a group</string>
+    <string name="journal_org_group_member_remove">Member removed from a group</string>
+    <string name="journal_org_group_access_grant">Access granted to a collection</string>
+    <string name="journal_org_group_access_revoke">Access revoked from a collection</string>
+
+    <!-- ─── The autofill screen ─── -->
+    <string name="remplissage_remplir_dans">Fill in %1$s</string>
+    <string name="remplissage_cette_application">this app</string>
+    <string name="remplissage_premiere_connexion">Open GhostPass and sign in once first.</string>
+    <string name="remplissage_votre_mot_de_passe">Your password</string>
+    <string name="remplissage_deverrouiller_bouton">Unlock</string>
+    <string name="remplissage_utiliser_la_biometrie">Use biometrics</string>
+    <string name="remplissage_annuler">Cancel</string>
+    <string name="remplissage_sans_site_declare">This app declares no site: all your logins are offered.</string>
+    <string name="remplissage_coffre_sans_identifiant">No logins in this vault.</string>
+    <string name="remplissage_aucun_pour_ce_site">No login saved for this site.</string>
+    <string name="remplissage_sans_identifiant">No username</string>
+
+    <!-- ─── Emergency access wording ─── -->
+    <string name="urgence_role_lecture">View only</string>
+    <string name="urgence_role_lecture_explication">The contact can read your credentials, without changing them or locking you out.</string>
+    <string name="urgence_role_reprise">Account takeover</string>
+    <string name="urgence_role_reprise_explication">The contact can also set a new master password — which will lock you out of your own vault.</string>
+    <string name="urgence_etat_invite">Invitation sent</string>
+    <string name="urgence_etat_accepte">Contact accepted</string>
+    <string name="urgence_etat_demande">Access requested</string>
+    <string name="urgence_etat_ouvert">Access open</string>
+    <string name="urgence_etat_refuse">Request denied</string>
+
+    <string name="reglages_langue">Language</string>
+    <string name="reglages_langue_note">The change applies right away, without restarting the app.</string>
+
+    <!-- ═══ LOT1 · EcranDeDeverrouillage.kt ═══ -->
+    <string name="deverrouillage_mot_de_passe_reinitialise">Password reset. Sign in with the new one.</string>
+    <string name="deverrouillage_compte">Account</string>
+    <string name="deverrouillage_mot_de_passe_maitre">Master password</string>
+    <string name="deverrouillage_invite_mot_de_passe">Your password</string>
+    <string name="deverrouillage_serveur">Server</string>
+    <string name="deverrouillage_adresse_email">Email address</string>
+    <string name="deverrouillage_invite_email">you@example.com</string>
+    <string name="deverrouillage_code_six_chiffres">Six-digit code</string>
+    <string name="deverrouillage_deverrouiller">Unlock</string>
+    <string name="deverrouillage_se_connecter">Sign in</string>
+    <!-- Pas « Sign in with SSO », que le catalogue iOS emploie pour « Se connecter avec le
+         SSO » : ici le lien n\'ouvre pas le coffre, et reprendre le verbe du bouton
+         principal effacerait précisément la distinction que le code défend. -->
+    <string name="deverrouillage_sso">Authenticate with single sign-on</string>
+    <string name="deverrouillage_avec_biometrie">Unlock with %1$s</string>
+    <string name="deverrouillage_mot_de_passe_oublie">Forgotten master password</string>
+    <string name="deverrouillage_autre_compte">Use another account</string>
+    <string name="deverrouillage_revenir_au_coffre">Back to saved vault</string>
+    <string name="deverrouillage_coffre_enregistre">Vault saved on this device</string>
+    <string name="deverrouillage_coffre_chiffre">End-to-end encrypted vault</string>
+
+    <!-- ═══ LOT1 · EcranDuCoffre.kt ═══ -->
+    <string name="coffre_hors_ligne">Offline — last known state.</string>
+    <string name="coffre_rechercher">Search</string>
+    <string name="coffre_invite_recherche">Name, login, folder</string>
+    <string name="coffre_titre">Vault</string>
+    <string name="coffre_nouveau">New</string>
+    <string name="coffre_reglages">Settings</string>
+    <string name="coffre_acces_urgence">Emergency access</string>
+    <string name="coffre_cle_de_recuperation">Recovery key</string>
+    <string name="coffre_journal">Account log</string>
+    <string name="coffre_second_facteur">Two-factor</string>
+    <string name="coffre_sante">Vault health</string>
+    <string name="coffre_import_csv">Import a CSV</string>
+    <string name="coffre_biometrie_desactiver">Turn off unlocking with %1$s</string>
+    <string name="coffre_biometrie_activer">Turn on unlocking with %1$s</string>
+    <string name="coffre_verrouiller">Lock</string>
+    <string name="coffre_se_deconnecter">Sign out</string>
+    <string name="coffre_verrou_ou_deconnexion">Locking keeps the session; signing out clears it and will ask you to enter everything again.</string>
+    <string name="coffre_tous_les_elements">All items</string>
+    <string name="coffre_organisation_invitation">“%1$s” has invited you. Tap its name to accept; its contents are readable only after that.</string>
+    <!-- Pas d\'espace devant les deux-points : l\'espace fine du français ne se transporte
+         pas. C\'est tout l\'intérêt d\'avoir fait de cette phrase un gabarit. -->
+    <string name="coffre_organisation_echec">“%1$s”: %2$s</string>
+    <string name="coffre_echec_invitation_en_attente">invitation not accepted yet.</string>
+    <string name="coffre_echec_aucune_cle">no key has been handed to you yet. An administrator has to assign you one.</string>
+    <string name="coffre_echec_cle_refusee">this vault\'s key could not be opened. It may have been replaced since it was handed to you.</string>
+    <string name="coffre_echec_reseau">vault unreachable for now.</string>
+    <string name="coffre_collection_lecture">%1$s (read)</string>
+    <string name="coffre_aucun_resultat">No item matches “%1$s”.</string>
+    <string name="coffre_vide_hors_ligne">Vault unavailable offline — nothing has been cached yet.</string>
+    <string name="coffre_collection_vide">This team collection is empty.</string>
+    <string name="coffre_equipes_illisibles">Your team vaults could not be opened — see the reason above.</string>
+    <string name="coffre_vide">This vault is empty.</string>
+    <string name="coffre_detail_identifiant">Login</string>
+    <string name="coffre_detail_note">Secure note</string>
+    <string name="coffre_detail_carte">Card</string>
+    <!-- « favourites », comme le reste du catalogue iOS : l\'anglais du produit est
+         britannique (« recognised », « favourites »), et mélanger les deux se verrait. -->
+    <string name="coffre_retirer_des_favoris">Remove from favourites</string>
+    <string name="coffre_ajouter_aux_favoris">Add to favourites</string>
+    <string name="coffre_element_illisible">Unreadable item</string>
+    <string name="coffre_illisible_cle_manquante">Encrypted under a key this device does not have.</string>
+    <string name="coffre_illisible_sceau_refuse">Sealed for another account, or under a key that has rotated.</string>
+    <string name="coffre_illisible_contenu_inconnu">Written by a newer version of GhostPass.</string>
+    <string name="coffre_masquer_les_dossiers">Hide folders</string>
+    <string name="coffre_invite_nouveau_dossier">Work/Servers</string>
+    <string name="coffre_retirer">Remove</string>
+    <string name="coffre_nouveau_dossier">New folder</string>
+    <string name="coffre_ajouter">Add</string>
+    <!-- En anglais `one` ne couvre que 1 : « Folders (0) » est donc la forme `other`, et
+         c\'est elle qui est juste pour zéro. -->
+    <plurals name="coffre_dossiers">
+        <item quantity="one">Folder (%d)</item>
+        <item quantity="other">Folders (%d)</item>
+    </plurals>
+    <!-- Ce pluriel existe déjà en français dans values/strings.xml et n\'avait pas encore
+         d\'anglais ; le voici, et lui seul — le français n\'est pas redonné.
+         « cannot be filtered » / « they have no name to match » : la forme `other` couvre
+         zéro en anglais, et le verbe s\'y accorde comme il le fait en français. -->
+    <plurals name="coffre_illisibles_ecartes">
+        <item quantity="one">%d unreadable item cannot be filtered: it has no name to match.</item>
+        <item quantity="other">%d unreadable items cannot be filtered: they have no name to match.</item>
+    </plurals>
+
+    <!-- ═══ LOT1 · EcranDeLaCorbeille.kt ═══ -->
+    <string name="corbeille_titre">Trash</string>
+    <string name="corbeille_retour">Back</string>
+    <string name="corbeille_vide">The trash is empty.</string>
+    <string name="corbeille_restaurer">Restore</string>
+    <string name="corbeille_confirmer">Confirm</string>
+    <!-- « Delete permanently », la formule qu\'iOS emploie déjà pour ce geste
+         (« Supprimer définitivement ? »). « Delete » seul dirait la mise à la corbeille,
+         qui a déjà eu lieu. -->
+    <string name="corbeille_detruire">Delete permanently</string>
+
+<!-- ═══ LOT2 — anglais ═══ Mêmes clés, même ordre que strings-LOT2.xml.
+     L'anglais d'iOS a été repris partout où le catalogue le donnait ; l'orthographe
+     suit la sienne (britannique : « organisation »). -->
+
+<!-- ─── L'écran d'un élément (element_) ─── -->
+<string name="element_titre_nouveau">New item</string>
+<string name="element_titre_modifier">Edit</string>
+
+<string name="element_genre">Kind</string>
+<string name="element_genre_connexion">Login</string>
+<string name="element_genre_note">Note</string>
+<string name="element_genre_carte">Card</string>
+
+<string name="element_nom">Name</string>
+<string name="element_identifiant">Login</string>
+<string name="element_invite_identifiant">you@example.com</string>
+<string name="element_mot_de_passe">Password</string>
+<string name="element_generer_un_mot_de_passe">Generate a password</string>
+<string name="element_adresses">Addresses (one per line)</string>
+<string name="element_totp">Two-factor key</string>
+
+<string name="element_contenu">Content</string>
+<string name="element_invite_contenu">Whatever you want to keep</string>
+
+<string name="element_titulaire">Cardholder</string>
+<string name="element_numero">Number</string>
+<string name="element_mois">Month</string>
+<string name="element_annee">Year</string>
+<!-- Le français dit « Code » ; en anglais, « Code » seul à côté d'un numéro de carte ne
+     dit pas de quel code il s'agit. C'est l'anglais relu d'iOS pour ce même champ
+     (« Cryptogramme » → « Security code ») qui est repris. -->
+<string name="element_code">Security code</string>
+
+<string name="element_dossier">Folder</string>
+<string name="element_invite_dossier">Work/Servers</string>
+<string name="element_notes">Notes</string>
+<string name="element_invite_notes">Optional</string>
+
+<string name="element_lecture_seule">You have view-only access to this team collection. An organisation administrator can grant you write access to it.</string>
+
+<string name="element_enregistrer">Save</string>
+<string name="element_confirmer_suppression_definitive">Confirm: permanent deletion</string>
+<string name="element_confirmer_suppression">Confirm deletion</string>
+<string name="element_supprimer_definitivement">Delete permanently</string>
+<string name="element_mettre_a_la_corbeille">Move to trash</string>
+<string name="element_annuler">Cancel</string>
+
+<string name="element_masquer_le_partage">Hide sharing</string>
+<string name="element_partager_par_lien">Share this secret by link</string>
+<string name="element_carte_non_partageable">A card holds several fields: GhostPass does not share a single secret for it.</string>
+<string name="element_heures">Hours</string>
+<string name="element_consultations">Views</string>
+<string name="element_creer_le_lien">Create the link</string>
+
+<!-- ─── Le générateur (generateur_) ─── -->
+<!-- `generateur_longueur` existe déjà en français dans values/strings.xml ; il n'avait
+     pas d'anglais. En anglais, `one` ne couvre que 1 : « 0 characters » et
+     « 2 characters » tombent tous deux dans `other`, et c'est ce qui rend la forme
+     juste là où « Length — 0 character » serait faux. -->
+<plurals name="generateur_longueur">
+    <item quantity="one">Length — %d character</item>
+    <item quantity="other">Length — %d characters</item>
+</plurals>
+
+<string name="generateur_titre">Generate</string>
+<string name="generateur_annuler">Cancel</string>
+<string name="generateur_utiliser">Use</string>
+<string name="generateur_regenerer">↻ Regenerate</string>
+
+<string name="generateur_caracteres">Characters</string>
+<string name="generateur_minuscules">Lowercase</string>
+<string name="generateur_majuscules">Uppercase</string>
+<string name="generateur_chiffres">Digits</string>
+<string name="generateur_symboles">Symbols</string>
+
+<string name="generateur_force_excellent">Excellent</string>
+<string name="generateur_force_solide">Strong</string>
+<string name="generateur_force_correct">Fair</string>
+<string name="generateur_force_faible">Weak</string>
+
+<!-- ─── Le partage de lien (partage_) ─── -->
+<string name="partage_destination_titre">This link goes elsewhere</string>
+<string name="partage_destination_corps">Your server returned a link to %1$s, which is not the address you entered.</string>
+<string name="partage_destination_cle">The decryption key travels inside this link. The page served by that domain can read it: accepting means letting your server choose who receives the secret in the clear.</string>
+<string name="partage_retenir_hote">%1$s Remember %2$s for this server</string>
+<string name="partage_continuer">Continue</string>
+<string name="partage_annuler_et_revoquer">Cancel and revoke</string>
+
+<string name="partage_lien_titre">Share link</string>
+<string name="partage_lien_avertissement">This link contains the key, after the “#”. Pass it on whole, and through a channel other than the secret itself.</string>
+<string name="partage_copier">Copy</string>
+<string name="partage_fermer">Close</string>
+
+    <!-- ═══ LOT3 · EcranDeLUrgence.kt ═══
+
+         Les intitulés de rôle et d'état viennent de `:noyau/UrgenceDuCompte.kt` : ils ne
+         sont pas traduits ici. -->
+    <string name="urgence_titre">Emergency access</string>
+    <string name="urgence_termine">Done</string>
+    <string name="urgence_confies_titre">What I have entrusted</string>
+    <string name="urgence_confies_note">These people will be able to open your vault once the stated delay has elapsed, unless you deny their request in the meantime.</string>
+    <string name="urgence_aucun_confie">No one yet.</string>
+    <string name="urgence_confier_bouton">Grant emergency access</string>
+    <string name="urgence_recus_titre">What has been entrusted to me</string>
+    <string name="urgence_recus_note">You can request access; it opens once the delay has elapsed, unless the person denies it.</string>
+    <string name="urgence_aucun_recu">No one has entrusted you with access.</string>
+    <string name="urgence_role_inconnu">Unknown role (%1$s)</string>
+    <!-- « 1-day » et « 7-day » ne diffèrent pas en anglais : le composé reste au singulier.
+         Les deux formes sont écrites quand même — c'est `plurals` qui décide, pas nous. -->
+    <plurals name="urgence_delai_jours">
+        <item quantity="one">%d-day wait</item>
+        <item quantity="other">%d-day wait</item>
+    </plurals>
+    <string name="urgence_acces_demande">⚠ Access requested</string>
+    <string name="urgence_acces_demande_le">⚠ Access requested — opens on %1$s</string>
+    <string name="urgence_refuser">Deny</string>
+    <string name="urgence_accorder">Grant now</string>
+    <string name="urgence_retirer_cet_acces">Remove this access</string>
+    <string name="urgence_accepter">Accept</string>
+    <string name="urgence_demander_acces">Request access</string>
+    <string name="urgence_demande_en_cours">Request pending</string>
+    <string name="urgence_demande_en_cours_le">Request pending — available on %1$s</string>
+    <string name="urgence_ouvrir_le_coffre">Open the vault</string>
+    <string name="urgence_retirer">Remove</string>
+    <string name="urgence_invitation_titre">Grant access</string>
+    <string name="urgence_annuler">Cancel</string>
+    <string name="urgence_contact_note">The contact must already have an account on this server: your vault key is sealed to their public key, and there is no one else to seal it to.</string>
+    <string name="urgence_email_intitule">Contact\'s email address</string>
+    <string name="urgence_email_invite">kevin@example.com</string>
+    <string name="urgence_role">Role</string>
+    <string name="urgence_delai_note">Between 1 and 90 days. During that delay you receive the request and can deny it — it is the only protection against a request you did not want.</string>
+    <string name="urgence_delai_intitule">Waiting period (days)</string>
+    <string name="urgence_continuer">Continue</string>
+    <string name="urgence_vous_confiez">You are entrusting %1$s with:</string>
+    <!-- En anglais, `one` ne couvre que 1 : « 0 days », « 1 day », « 2 days ». -->
+    <plurals name="urgence_ouverture_apres">
+        <item quantity="one">Once they request it, access will open after %d day unless you have denied it.</item>
+        <item quantity="other">Once they request it, access will open after %d days unless you have denied it.</item>
+    </plurals>
+    <string name="urgence_confier_acces">Grant access</string>
+    <string name="urgence_role_choisi">%1$s, selected</string>
+    <string name="urgence_coffre_titre">Emergency vault</string>
+    <string name="urgence_fermer">Close</string>
+    <string name="urgence_coffre_de">%1$s\'s vault</string>
+    <string name="urgence_pas_les_votres">These credentials are not yours. Nothing you do here changes their vault.</string>
+    <string name="urgence_identifiants">Credentials</string>
+    <string name="urgence_coffre_vide">This vault is empty.</string>
+    <string name="urgence_element_illisible">Unreadable item — sealed under a key you do not have.</string>
+    <string name="urgence_reprendre">Take over the account</string>
+    <string name="urgence_reprise_note">%1$s\'s master password will be replaced and all their sessions closed. They will no longer be able to open their vault without the new password.</string>
+    <string name="urgence_nouveau_mot_de_passe">New master password</string>
+    <string name="urgence_huit_caracteres_invite">Eight characters minimum</string>
+    <string name="urgence_reprise_avertissement">⚠ %1$s will lose access to their own vault until you give them this password.</string>
+    <string name="urgence_confirmer_reprise">Confirm the takeover</string>
+    <string name="urgence_masquer">Hide</string>
+    <string name="urgence_afficher">Show</string>
+    <string name="urgence_lecture_impossible">⚠ Emergency access could not be read.</string>
+    <string name="urgence_lecture_impossible_note">This does not mean there are none: nothing could be read.</string>
+
+    <!-- ═══ LOT3 · EcranDeRecuperationDuCompte.kt ═══ -->
+    <string name="recuperation_titre">Forgotten password</string>
+    <string name="recuperation_annuler">Cancel</string>
+    <string name="recuperation_note">The new password re-encrypts the vault key. Its contents stay intact: nothing is lost, nothing is decrypted on the server.</string>
+    <string name="recuperation_adresse">Email address</string>
+    <string name="recuperation_cle">Recovery key</string>
+    <string name="recuperation_cle_invite">The words you wrote down when you created it</string>
+    <string name="recuperation_nouveau_mot_de_passe">New master password</string>
+    <string name="recuperation_huit_caracteres_invite">Eight characters minimum</string>
+    <string name="recuperation_huit_caracteres">Eight characters minimum.</string>
+    <string name="recuperation_reinitialiser">Reset</string>
+    <string name="recuperation_sessions_fermees">All open sessions will be closed, including on your other devices. You will have to sign in again there with the new password.</string>
+
+    <!-- ═══ LOT3 · EcranDeLaCleDeRecuperation.kt ═══ -->
+    <string name="cle_titre">Recovery key</string>
+    <string name="cle_annuler">Cancel</string>
+    <string name="cle_termine">Done</string>
+    <string name="cle_pas_de_second_exemplaire">An end-to-end encrypted vault does not reopen without its master password: nobody, not even the server, can retrieve it for you.</string>
+    <string name="cle_seule_issue">The recovery key is the only way out. Write it down and keep it somewhere other than this vault.</string>
+    <string name="cle_creer">Create a recovery key</string>
+    <string name="cle_votre">Your recovery key</string>
+    <string name="cle_plus_jamais_affichee">It will not be shown again. Without it, a forgotten master password makes the vault permanently unreadable.</string>
+    <string name="cle_copiee">Copied</string>
+    <string name="cle_copier">Copy key</string>
+
+    <!-- ══════ LOT4 · EcranDuSecondFacteur.kt ══════ -->
+    <string name="mfa_titre">Two-factor</string>
+    <string name="mfa_termine">Done</string>
+    <string name="mfa_annuler">Cancel</string>
+    <string name="mfa_indisponible">Two-factor unavailable</string>
+    <string name="mfa_presentation">🛡 A six-digit code will be required at each sign-in, in addition to the master password.</string>
+    <string name="mfa_mot_de_passe_maitre">Master password</string>
+    <string name="mfa_mot_de_passe_maitre_note">It is verified on this device and does not leave it: the server only receives a hash.</string>
+    <string name="mfa_invite_mot_de_passe">Your password</string>
+    <string name="mfa_configurer">Set up</string>
+    <string name="mfa_secret_titre">To store in your authenticator app</string>
+    <string name="mfa_secret_note">This secret will not be shown again. Without it and without your app, signing in becomes impossible — keep a backup.</string>
+    <string name="mfa_secret_copie">Secret copied</string>
+    <string name="mfa_copier_le_secret">Copy the secret</string>
+    <string name="mfa_confirmer">Confirm</string>
+    <string name="mfa_confirmer_note">Until this code is validated, the account stays reachable without a second factor. That is what keeps you from locking yourself out with a misconfigured app.</string>
+    <string name="mfa_activer">Turn on</string>
+    <string name="mfa_actif">Two-factor is on.</string>
+    <string name="mfa_actif_note">A code will be asked at each sign-in. Devices already signed in stay signed in.</string>
+    <string name="mfa_actif_sur_ce_compte">Two-factor is on for this account.</string>
+    <string name="mfa_le_retirer">Turn it off</string>
+    <string name="mfa_le_retirer_note">Both are required: the master password and a valid code. An unlocked phone left on a table must not be enough to remove the protection.</string>
+    <string name="mfa_code">Six-digit code</string>
+    <string name="mfa_desactiver">Turn off two-factor</string>
+    <string name="mfa_erreur">⚠ %1$s</string>
+
+    <!-- ══════ LOT4 · EcranDeLaSante.kt ══════ -->
+    <string name="sante_titre">Vault health</string>
+    <string name="sante_fermer">Close</string>
+    <string name="sante_rien_a_signaler">Nothing to report</string>
+    <string name="sante_faibles">Weak passwords</string>
+    <string name="sante_faibles_note">Too short, or made of a single kind of character.</string>
+    <string name="sante_reutilises">Reused passwords</string>
+    <string name="sante_reutilises_note">A single breach then opens several accounts.</string>
+    <string name="sante_sans_code">Without a one-time code</string>
+    <string name="sante_sans_code_note">A second factor protects even a known password.</string>
+    <string name="sante_fuites">Known breaches</string>
+    <string name="sante_fuites_note">Only the first five characters of the password’s hash are sent: neither the password nor its full hash leaves the device.</string>
+    <string name="sante_verifier">Check for breaches</string>
+    <string name="sante_verification_en_cours">Checking…</string>
+    <string name="sante_aucune_fuite">✓ No password known to public breaches.</string>
+    <string name="sante_verification_echouee">⚠ The checking service did not respond (%1$s).</string>
+    <string name="sante_service_muet">the service did not respond</string>
+
+    <!-- Déjà défini en français dans `values/strings.xml` : seule la traduction manquait.
+         En anglais `one` ne couvre **que** 1 — « 0 passwords to review », « 0 items
+         examined » relèvent de `other`, et c\'est l\'inverse du français. -->
+    <plurals name="sante_a_revoir">
+        <item quantity="one">%d password to review</item>
+        <item quantity="other">%d passwords to review</item>
+    </plurals>
+    <plurals name="sante_examines">
+        <item quantity="one">%d item examined</item>
+        <item quantity="other">%d items examined</item>
+    </plurals>
+
+    <!-- ══════ LOT4 · EcranDImport.kt ══════ -->
+    <string name="import_titre">Import</string>
+    <string name="import_annuler">Cancel</string>
+    <string name="import_termine">Done</string>
+    <string name="import_presentation">Choose the CSV file exported by your current manager. Columns from Bitwarden, Dashlane, 1Password, LastPass and Chrome are recognised.</string>
+    <string name="import_avertissement">The file is read on the device and nothing else leaves it: each entry is encrypted before being uploaded. Remember to delete it afterwards — a CSV export holds your passwords in the clear.</string>
+    <string name="import_choisir">Choose a file</string>
+    <string name="import_echec_lecture">The file could not be read.</string>
+    <string name="import_aucune_entree">No entry found: the file is empty, or its columns are not recognised.</string>
+    <string name="import_erreur">⚠ %1$s</string>
+    <string name="import_a_importer">To import</string>
+    <string name="import_a_importer_note">Nothing has been uploaded yet. The entries will join the vault as they are; none overwrites what is already there.</string>
+    <string name="import_fichier">File</string>
+    <string name="import_entrees_trouvees">Entries found</string>
+    <string name="import_apercu">Preview</string>
+    <string name="import_resultat">✓ %1$s</string>
+    <string name="import_penser_a_effacer">Do not forget to delete the CSV file: it holds your passwords in the clear.</string>
+    <string name="import_nom_par_defaut">file</string>
+
+    <!-- Déjà définis en français. « 0 entries », jamais « 0 entry ». -->
+    <plurals name="import_entrees">
+        <item quantity="one">%d entry</item>
+        <item quantity="other">%d entries</item>
+    </plurals>
+    <plurals name="import_bouton">
+        <item quantity="one">Import %d entry</item>
+        <item quantity="other">Import %d entries</item>
+    </plurals>
+    <plurals name="import_importees">
+        <item quantity="one">%d entry imported.</item>
+        <item quantity="other">%d entries imported.</item>
+    </plurals>
+    <plurals name="import_et_autres">
+        <item quantity="one">and %d other</item>
+        <item quantity="other">and %d others</item>
+    </plurals>
+
+    <!-- ══════ LOT4 · EcranDuJournal.kt ══════ -->
+    <string name="journal_titre">Account log</string>
+    <string name="journal_termine">Done</string>
+    <string name="journal_actions">Sensitive actions</string>
+    <string name="journal_actions_note">Anything that removes a protection or opens the vault to someone else. A line you do not recognise is worth changing your master password over.</string>
+    <string name="journal_aucune_action">No action recorded.</string>
+    <string name="journal_connexions">Sign-ins</string>
+    <string name="journal_connexions_note">An unknown device flagged here that you do not recognise means someone knows your master password.</string>
+    <string name="journal_aucune_connexion">No sign-in recorded.</string>
+    <string name="journal_illisible">⚠ The log could not be read.</string>
+    <string name="journal_illisible_note">This does not mean nothing happened: nothing could be read.</string>
+    <string name="journal_nouvel_appareil">New device</string>
+    <string name="journal_date_inconnue">unknown date</string>
+
+    <!-- ══════ LOT4 · EcranDesReglages.kt ══════ -->
+    <string name="reglages_titre">Settings</string>
+    <string name="reglages_termine">Done</string>
+    <string name="reglages_apparence">Appearance</string>
+    <string name="reglages_apparence_note">“System” follows the device setting, including its automatic switch to night.</string>
+    <string name="reglages_verrouillage">Locking</string>
+    <string name="reglages_verrouillage_note">During this delay the vault stays open in memory — never on disk — and its contents are hidden in the app switcher.</string>
+    <string name="reglages_icones">Site icons</string>
+    <string name="reglages_icones_note">The vault is end-to-end encrypted: the server does not know its contents. Asking for an icon, however, names a domain to it. No third party is involved.</string>
+    <string name="reglages_afficher_les_logos">Show logos</string>
+    <string name="reglages_remplissage">AutoFill</string>
+    <string name="reglages_remplissage_note">The service cannot see the server: it reads the vault already opened by the app. A locked vault offers nothing, whatever the site.</string>
+    <string name="reglages_service">Service</string>
+    <string name="reglages_autorise">allowed</string>
+    <string name="reglages_non_autorise">not allowed</string>
+    <string name="reglages_indisponible">unavailable on this Android</string>
+    <string name="reglages_coffre_personnel">Personal vault</string>
+    <string name="reglages_coffres_equipe">Team vaults</string>
+    <string name="reglages_aucun">none</string>
+    <string name="reglages_deux_comptes">%1$s · %2$s</string>
+    <string name="reglages_non_dechiffres">Not decrypted</string>
+    <string name="reglages_choisi">%1$s, selected</string>
+
+    <!-- Déjà définis en français. -->
+    <plurals name="reglages_elements">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <plurals name="reglages_coffres">
+        <item quantity="one">%d vault</item>
+        <item quantity="other">%d vaults</item>
+    </plurals>
+</resources>

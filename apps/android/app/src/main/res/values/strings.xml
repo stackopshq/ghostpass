@@ -1,0 +1,665 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Un nom de produit ne se traduit pas : `translatable="false"` le dit, et dispense
+         `values-en/` d'en tenir une copie identique. C'est aussi ce que vérifie
+         `tools/android/temoin-des-traductions.sh`. -->
+    <string name="app_name" translatable="false">GhostPass</string>
+    <string name="remplissage_deverrouiller">Déverrouiller GhostPass</string>
+    <string name="remplissage_ce_site">Pour ce site</string>
+    <string name="remplissage_enregistrement_indisponible">L\'enregistrement depuis une autre application n\'est pas encore disponible.</string>
+    <!-- Décrit le service dans les réglages du système. Aucun tarif, aucun renvoi vers un
+         achat : l\'application est gratuite et doit le rester jusque dans ses chaînes (§7). -->
+    <string name="service_de_remplissage">GhostPass remplit vos identifiants, après déverrouillage.</string>
+    <!-- ─── Les pluriels ───
+
+         **Jamais « caractère(s) ».** iOS a affiché « 1 mots de passe à revoir » et
+         « 1 consultation(s) » ; la parenthèse est la forme qui ne se trompe jamais et ne se
+         lit bien jamais non plus. Android sait faire, et c'est `plurals` qu'il faut.
+
+         `one` et `other` : en français, `one` couvre 0 et 1 — « 0 caractère », « 1
+         caractère ». C'est `PluralRules` qui le décide, d'après la langue de la
+         configuration, pas d'après le dossier où vit la ressource. Tant que l'application
+         n'est qu'en français ces chaînes vivent dans `values/` ; le jour où elle se traduit,
+         elles descendront dans `values-fr/` et les deux formes seront déjà en place. -->
+    <plurals name="generateur_longueur">
+        <item quantity="one">Longueur — %d caractère</item>
+        <item quantity="other">Longueur — %d caractères</item>
+    </plurals>
+    <plurals name="coffre_illisibles_ecartes">
+        <item quantity="one">%d élément illisible ne peut pas être filtré : il n\'a pas de nom à comparer.</item>
+        <item quantity="other">%d éléments illisibles ne peuvent pas être filtrés : ils n\'ont pas de nom à comparer.</item>
+    </plurals>
+    <plurals name="remplissage_illisibles">
+        <item quantity="one">%d élément du coffre n\'a pas pu être ouvert et n\'est pas proposé ici.</item>
+        <item quantity="other">%d éléments du coffre n\'ont pas pu être ouverts et ne sont pas proposés ici.</item>
+    </plurals>
+    <!-- « 1 mots de passe à revoir » : c'est exactement ce qu'iOS affichait. Un coffre
+         qui n'a qu'un seul défaut est le cas le plus fréquent, donc celui sur lequel la
+         phrase se trompait le plus souvent. -->
+    <plurals name="sante_a_revoir">
+        <item quantity="one">%d mot de passe à revoir</item>
+        <item quantity="other">%d mots de passe à revoir</item>
+    </plurals>
+    <plurals name="sante_examines">
+        <item quantity="one">%d élément examiné</item>
+        <item quantity="other">%d éléments examinés</item>
+    </plurals>
+    <plurals name="reglages_elements">
+        <item quantity="one">%d élément</item>
+        <item quantity="other">%d éléments</item>
+    </plurals>
+    <plurals name="reglages_coffres">
+        <item quantity="one">%d coffre</item>
+        <item quantity="other">%d coffres</item>
+    </plurals>
+    <!-- iOS écrit « \u0025d entrées importées. » sans accord : à une entrée près, la phrase
+         est fausse. Les quatre formes ci-dessous couvrent les quatre endroits où l'écran
+         d'import compte quelque chose. -->
+    <plurals name="import_entrees">
+        <item quantity="one">%d entrée</item>
+        <item quantity="other">%d entrées</item>
+    </plurals>
+    <plurals name="import_bouton">
+        <item quantity="one">Importer %d entrée</item>
+        <item quantity="other">Importer %d entrées</item>
+    </plurals>
+    <plurals name="import_importees">
+        <item quantity="one">%d entrée importée.</item>
+        <item quantity="other">%d entrées importées.</item>
+    </plurals>
+    <plurals name="import_et_autres">
+        <item quantity="one">et %d autre</item>
+        <item quantity="other">et %d autres</item>
+    </plurals>
+
+    <!-- ─── Le modèle du coffre ───
+
+         Ce modèle est le plus gros producteur de texte de l'application : c'est lui qui
+         explique **tous** les échecs. Les laisser en dur aurait fait une application
+         traduite dont chaque message d'erreur serait resté en français — un défaut qui ne
+         se voit que le jour où quelque chose échoue, c'est-à-dire au pire moment. -->
+    <string name="modele_code_six_chiffres">Entrez le code à six chiffres de votre application d\'authentification.</string>
+    <string name="modele_sso_absent">Ce serveur n\'a pas d\'authentification unique configurée.</string>
+    <string name="modele_sso_pas_demande">Cette authentification n\'a pas été demandée depuis cet appareil. Recommencez.</string>
+    <string name="modele_sso_identite_verifiee">Identité vérifiée. Entrez votre mot de passe maître pour ouvrir le coffre.</string>
+    <string name="modele_totp_export_multiple">Ce QR code est un export d\'application d\'authentification, qui porte plusieurs comptes à la fois. GhostPass ne sait pas le lire : exportez les comptes un par un.</string>
+    <string name="modele_totp_lien_inutilisable">Ce lien n\'est pas un second facteur utilisable — il lui manque un secret, ou il n\'est pas de type « totp ».</string>
+    <string name="modele_cle_non_preparee">Cet appareil n\'a pas pu préparer la clé : %1$s</string>
+    <string name="modele_bio_titre">Activer le déverrouillage biométrique</string>
+    <string name="modele_bio_sous_titre">GhostPass gardera la clé de votre coffre sous votre empreinte.</string>
+    <string name="modele_bio_echec">L\'activation a échoué : %1$s</string>
+    <string name="modele_pas_de_secret_a_partager">Cet élément n\'a pas de secret unique à partager.</string>
+    <string name="modele_partage_revoque">Partage annulé et révoqué.</string>
+    <string name="modele_partage_non_revocable">Partage annulé, mais ce serveur ne permet pas de le révoquer.</string>
+    <string name="modele_partage_revocation_echouee">Le partage n\'a pas pu être révoqué : %1$s</string>
+    <string name="modele_partage_refuse_schema">Le serveur a rendu un lien en clair alors qu\'il est joint en HTTPS. Le partage a été annulé.</string>
+    <string name="modele_partage_refuse_sans_jeton">Le serveur a rendu un lien vers un autre domaine sans jeton de révocation : impossible de reprendre ce partage. Rien ne sera affiché.</string>
+    <string name="modele_compte_repris">Compte repris. Communiquez le nouveau mot de passe à son titulaire.</string>
+    <string name="modele_cle_refusee">Clé de récupération refusée.</string>
+    <string name="modele_mfa_absent">Ce serveur ne propose pas encore le second facteur.</string>
+    <!-- Les entrées d'un import que le serveur a refusées. Le reste se **compte**, donc il
+         se décline : « et 1 autre » n'est pas « et 2 autres ». Le second trou est vide
+         quand il n'y a pas de reste — c'est pourquoi la ponctuation finale est dans le
+         pluriel et non dans la phrase. -->
+    <string name="modele_non_deposes">Non déposés : %1$s%2$s</string>
+    <plurals name="modele_et_autres">
+        <item quantity="one"> et %d autre.</item>
+        <item quantity="other"> et %d autres.</item>
+    </plurals>
+
+    <!-- ─── Ce qu'on montre quand quelque chose échoue ─── -->
+    <string name="modele_sso_reponse_inattendue">La réponse ne correspond pas à la demande. Réessayez.</string>
+    <string name="modele_sso_sans_compte">Cette adresse n\'a pas de compte GhostPass sur ce serveur.</string>
+    <string name="modele_sso_echec">L\'authentification a échoué.</string>
+    <string name="modele_adresse_invalide">Adresse de serveur invalide. Exemple : ghostpass.example.com</string>
+    <string name="modele_serveur_injoignable">Serveur injoignable. Vérifiez l\'adresse et votre connexion.</string>
+    <!-- Distincte de « serveur injoignable », et c'est tout l'intérêt de sa classe à part :
+         quelqu'un dont la clé d'équipe avait expiré lisait un diagnostic réseau et allait
+         vérifier son wifi. -->
+    <string name="modele_equipe_plus_ouverte">Le coffre d\'équipe « %1$s » n\'est plus ouvert. Rafraîchissez la liste avant d\'enregistrer.</string>
+    <string name="modele_cle_equipe_perimee">La clé de ce coffre d\'équipe a changé depuis son ouverture. Rouvrez-le avant d\'enregistrer : votre modification serait illisible pour les autres membres.</string>
+    <string name="modele_coffre_verrouille">Le coffre est verrouillé. Déverrouillez-le avant d\'écrire.</string>
+    <string name="modele_reponse_illisible">Réponse du serveur illisible.</string>
+    <string name="modele_second_facteur_requis">Second facteur requis.</string>
+    <string name="modele_erreur_serveur">Erreur serveur.</string>
+    <string name="modele_mdp_incorrect">Mot de passe maître incorrect.</string>
+    <string name="modele_erreur_inconnue">Une erreur est survenue.</string>
+
+    <!-- ─── Les gestes biométriques, nommés sans mentir ───
+
+         « Déverrouiller par empreinte » sur un téléphone à reconnaissance faciale est un
+         faux qui ne casse rien : l'utilisateur appuie, son visage est reconnu, le coffre
+         s'ouvre. Personne ne le signale — on le lit comme une maladresse du produit. -->
+    <string name="biometrie_empreinte">empreinte</string>
+    <string name="biometrie_visage">reconnaissance faciale</string>
+    <string name="biometrie_iris">reconnaissance de l\'iris</string>
+    <string name="biometrie_generique">biométrie</string>
+    <!-- Le bouton de refus du système. Il dit « Mot de passe maître » plutôt que
+         « Annuler » : refuser la biométrie n'abandonne pas, cela revient au chemin long. -->
+    <string name="biometrie_mot_de_passe_maitre">Mot de passe maître</string>
+
+    <!-- ─── Les libellés des réglages qui vivent dans Preferences ─── -->
+    <string name="reglages_apparence_systeme">Système</string>
+    <string name="reglages_apparence_clair">Clair</string>
+    <string name="reglages_apparence_sombre">Sombre</string>
+    <string name="reglages_verrou_immediat">Immédiatement</string>
+    <string name="reglages_verrou_une_minute">Après 1 minute</string>
+    <string name="reglages_verrou_cinq_minutes">Après 5 minutes</string>
+    <string name="reglages_verrou_quinze_minutes">Après 15 minutes</string>
+    <!-- **« Français » et « English » ne se traduisent pas.** Le nom d'une langue s'écrit
+         dans cette langue : quelqu'un qui cherche l'anglais cherche « English », pas
+         « Anglais ». C'est sa seule façon de reconnaître sa ligne dans une liste écrite
+         dans une langue qu'il ne lit pas. Seul « Système » se traduit — il ne nomme aucune
+         langue, il dit qu'on n'en choisit pas. -->
+    <string name="reglages_langue_systeme">Système</string>
+    <string name="reglages_langue_francais" translatable="false">Français</string>
+    <string name="reglages_langue_anglais" translatable="false">English</string>
+    <string name="journal_login_password">Connexion par mot de passe</string>
+    <string name="journal_login_passkey">Connexion par passkey</string>
+    <string name="journal_login_sso">Connexion par SSO</string>
+    <string name="journal_logout">Déconnexion</string>
+    <string name="journal_mfa_enable">Second facteur activé</string>
+    <string name="journal_mfa_disable">Second facteur désactivé</string>
+    <string name="journal_recovery_reset">Mot de passe réinitialisé par clé de récupération</string>
+    <string name="journal_passkey_add">Passkey ajoutée</string>
+    <string name="journal_passkey_remove">Passkey retirée</string>
+    <string name="journal_webauthn_add">Clé de sécurité ajoutée</string>
+    <string name="journal_webauthn_remove">Clé de sécurité retirée</string>
+    <string name="journal_emergency_grant">Accès d\'urgence confié</string>
+    <string name="journal_emergency_request">Accès d\'urgence demandé</string>
+    <string name="journal_emergency_approve">Accès d\'urgence accordé</string>
+    <string name="journal_org_member_add">Membre ajouté à une équipe</string>
+    <string name="journal_org_member_role">Rôle d\'un membre modifié</string>
+    <string name="journal_org_key_rotate">Clé d\'équipe renouvelée</string>
+    <string name="journal_org_group_create">Groupe créé</string>
+    <string name="journal_org_group_delete">Groupe supprimé</string>
+    <string name="journal_org_group_member_add">Membre ajouté à un groupe</string>
+    <string name="journal_org_group_member_remove">Membre retiré d\'un groupe</string>
+    <string name="journal_org_group_access_grant">Accès accordé à une collection</string>
+    <string name="journal_org_group_access_revoke">Accès retiré à une collection</string>
+
+    <!-- ─── L'écran du remplissage automatique ───
+
+         `remplissage_deverrouiller` et `remplissage_ce_site` existent déjà plus haut : ils
+         servent aux vignettes que le système affiche au-dessus du clavier, pas à cet
+         écran-ci. D'où `remplissage_deverrouiller_bouton`, qui est le bouton. -->
+    <string name="remplissage_remplir_dans">Remplir dans %1$s</string>
+    <string name="remplissage_cette_application">cette application</string>
+    <string name="remplissage_premiere_connexion">Ouvrez GhostPass et connectez-vous une première fois.</string>
+    <string name="remplissage_votre_mot_de_passe">Votre mot de passe</string>
+    <string name="remplissage_deverrouiller_bouton">Déverrouiller</string>
+    <string name="remplissage_utiliser_la_biometrie">Utiliser l\'empreinte</string>
+    <string name="remplissage_annuler">Annuler</string>
+    <string name="remplissage_sans_site_declare">Cette application ne déclare pas de site : tous vos identifiants sont proposés.</string>
+    <string name="remplissage_coffre_sans_identifiant">Aucun identifiant dans ce coffre.</string>
+    <string name="remplissage_aucun_pour_ce_site">Aucun identifiant enregistré pour ce site.</string>
+    <string name="remplissage_sans_identifiant">Sans identifiant</string>
+
+    <!-- ─── Les mots de l'accès d'urgence ───
+
+         Ils vivaient dans `:noyau`, à côté des règles qui les décident. C'est l'écran où
+         une traduction manquante coûterait le plus cher : l'écart entre « lecture seule »
+         et « reprise du compte » ne se lit pas dans les deux mots, il se lit dans les deux
+         explications — et c'est le pouvoir de vous exclure de votre propre coffre qui se
+         confie ici. -->
+    <string name="urgence_role_lecture">Lecture seule</string>
+    <string name="urgence_role_lecture_explication">Le contact pourra lire vos identifiants, sans rien y changer ni vous en priver.</string>
+    <string name="urgence_role_reprise">Reprise du compte</string>
+    <string name="urgence_role_reprise_explication">Le contact pourra en plus choisir un nouveau mot de passe maître — ce qui vous exclura de votre propre coffre.</string>
+    <string name="urgence_etat_invite">Invitation envoyée</string>
+    <string name="urgence_etat_accepte">Contact accepté</string>
+    <string name="urgence_etat_demande">Accès demandé</string>
+    <string name="urgence_etat_ouvert">Accès ouvert</string>
+    <string name="urgence_etat_refuse">Demande refusée</string>
+
+    <!-- La langue. La note est celle d'iOS, et elle est vraie sur Android aussi :
+         `AppCompatDelegate` recrée l'activité, l'écran se repeint, et personne ne relance
+         l'application. -->
+    <string name="reglages_langue">Langue</string>
+    <string name="reglages_langue_note">Le changement s\'applique aussitôt, sans redémarrer l\'application.</string>
+
+    <!-- ═══ LOT1 · EcranDeDeverrouillage.kt ═══ -->
+    <string name="deverrouillage_mot_de_passe_reinitialise">Mot de passe réinitialisé. Connectez-vous avec le nouveau.</string>
+    <string name="deverrouillage_compte">Compte</string>
+    <string name="deverrouillage_mot_de_passe_maitre">Mot de passe maître</string>
+    <string name="deverrouillage_invite_mot_de_passe">Votre mot de passe</string>
+    <string name="deverrouillage_serveur">Serveur</string>
+    <string name="deverrouillage_adresse_email">Adresse e-mail</string>
+    <!-- L\'invite du champ d\'adresse, et non un jeton de machine : iOS la traduit déjà
+         (« vous@exemple.ch » → « you@example.com »). L\'invite du champ *serveur*, elle,
+         reste en dur : c\'est une URL du domaine que la RFC 2606 réserve aux exemples, et
+         il n\'y a rien à y traduire. -->
+    <string name="deverrouillage_invite_email">vous@exemple.ch</string>
+    <string name="deverrouillage_code_six_chiffres">Code à six chiffres</string>
+    <string name="deverrouillage_deverrouiller">Déverrouiller</string>
+    <string name="deverrouillage_se_connecter">Se connecter</string>
+    <!-- « S\'identifier », et non « se connecter » : le SSO n\'ouvre pas le coffre, il
+         vérifie l\'identité. Le commentaire du fichier tient à cette distinction ; l\'anglais
+         la garde avec « Authenticate » plutôt qu\'avec le « Sign in » du bouton principal. -->
+    <string name="deverrouillage_sso">S\'identifier par authentification unique</string>
+    <!-- %1$s : le nom du geste, donné par BiometrieDeLAppareil.nom() — « empreinte »,
+         « reconnaissance faciale »… Ces mots-là sont encore en dur dans
+         `BiometrieDeLAppareil.kt`, qui n\'est pas de ce lot : la phrase se traduira, pas
+         encore son trou. -->
+    <string name="deverrouillage_avec_biometrie">Déverrouiller avec %1$s</string>
+    <string name="deverrouillage_mot_de_passe_oublie">Mot de passe maître oublié</string>
+    <string name="deverrouillage_autre_compte">Utiliser un autre compte</string>
+    <string name="deverrouillage_revenir_au_coffre">Revenir au coffre enregistré</string>
+    <string name="deverrouillage_coffre_enregistre">Coffre enregistré sur cet appareil</string>
+    <string name="deverrouillage_coffre_chiffre">Coffre chiffré de bout en bout</string>
+
+    <!-- ═══ LOT1 · EcranDuCoffre.kt ═══ -->
+    <string name="coffre_hors_ligne">Hors ligne — dernier état connu.</string>
+    <string name="coffre_rechercher">Rechercher</string>
+    <string name="coffre_invite_recherche">Nom, identifiant, dossier</string>
+    <string name="coffre_titre">Coffre</string>
+    <string name="coffre_nouveau">Nouveau</string>
+    <string name="coffre_reglages">Réglages</string>
+    <string name="coffre_acces_urgence">Accès d\'urgence</string>
+    <string name="coffre_cle_de_recuperation">Clé de récupération</string>
+    <string name="coffre_journal">Journal du compte</string>
+    <string name="coffre_second_facteur">Second facteur</string>
+    <string name="coffre_sante">Santé du coffre</string>
+    <string name="coffre_import_csv">Importer un CSV</string>
+    <!-- Même trou que `deverrouillage_avec_biometrie`, et pour la même raison : le réglage
+         doit nommer le geste exactement comme le bouton d\'entrée. -->
+    <string name="coffre_biometrie_desactiver">Désactiver le déverrouillage par %1$s</string>
+    <string name="coffre_biometrie_activer">Activer le déverrouillage par %1$s</string>
+    <string name="coffre_verrouiller">Verrouiller</string>
+    <string name="coffre_se_deconnecter">Se déconnecter</string>
+    <string name="coffre_verrou_ou_deconnexion">Le verrouillage garde la session ; la déconnexion l\'efface et demandera de tout ressaisir.</string>
+    <string name="coffre_tous_les_elements">Tous les éléments</string>
+    <!-- %1$s : le nom de l\'organisation. -->
+    <string name="coffre_organisation_invitation">« %1$s » vous a invité·e. Touchez son nom pour accepter ; son contenu ne sera lisible qu\'ensuite.</string>
+    <!-- La phrase d\'échec était recollée par `+` : « « X » : » d\'un côté, le motif de
+         l\'autre. Deux trous numérotés à la place, parce qu\'une langue peut vouloir le
+         motif avant le nom — et parce que l\'espace devant les deux-points est une
+         ponctuation française qui n\'a pas à voyager. -->
+    <string name="coffre_organisation_echec">« %1$s » : %2$s</string>
+    <string name="coffre_echec_invitation_en_attente">invitation pas encore acceptée.</string>
+    <string name="coffre_echec_aucune_cle">aucune clé ne vous a encore été remise. Un administrateur doit vous l\'attribuer.</string>
+    <string name="coffre_echec_cle_refusee">la clé de ce coffre n\'a pas pu être ouverte. Elle a peut-être été remplacée depuis qu\'elle vous a été remise.</string>
+    <string name="coffre_echec_reseau">coffre injoignable pour l\'instant.</string>
+    <!-- %1$s : le nom de la collection. Le suffixe était concaténé au nom ; il est devenu un
+         gabarit, faute de quoi aucune langue ne pourrait le placer ailleurs qu\'à la fin. -->
+    <string name="coffre_collection_lecture">%1$s (lecture)</string>
+    <!-- %1$s : ce qui a été tapé dans la recherche. -->
+    <string name="coffre_aucun_resultat">Aucun élément ne correspond à « %1$s ».</string>
+    <string name="coffre_vide_hors_ligne">Coffre indisponible hors ligne — rien n\'a encore été mis en cache.</string>
+    <string name="coffre_collection_vide">Cette collection d\'équipe est vide.</string>
+    <string name="coffre_equipes_illisibles">Vos coffres d\'équipe n\'ont pas pu être ouverts — voyez le motif ci-dessus.</string>
+    <string name="coffre_vide">Ce coffre est vide.</string>
+    <string name="coffre_detail_identifiant">Identifiant</string>
+    <string name="coffre_detail_note">Note sécurisée</string>
+    <string name="coffre_detail_carte">Carte</string>
+    <!-- Les deux étiquettes de l\'étoile. Elles ne s\'affichent pas : elles se prononcent,
+         parce que « ★ » se lirait « étoile blanche ». -->
+    <string name="coffre_retirer_des_favoris">Retirer des favoris</string>
+    <string name="coffre_ajouter_aux_favoris">Ajouter aux favoris</string>
+    <!-- Partagée avec l\'écran de la corbeille, qui montre la même ligne : une seule clé,
+         sinon les deux se traduiraient un jour différemment. -->
+    <string name="coffre_element_illisible">Élément illisible</string>
+    <string name="coffre_illisible_cle_manquante">Chiffré sous une clé dont cet appareil ne dispose pas.</string>
+    <string name="coffre_illisible_sceau_refuse">Scellé pour un autre compte, ou sous une clé qui a tourné.</string>
+    <string name="coffre_illisible_contenu_inconnu">Écrit par une version plus récente de GhostPass.</string>
+    <string name="coffre_masquer_les_dossiers">Masquer les dossiers</string>
+    <!-- L\'invite du champ « nouveau dossier ». Deux mots français, traduits par iOS. -->
+    <string name="coffre_invite_nouveau_dossier">Travail/Serveurs</string>
+    <string name="coffre_retirer">Retirer</string>
+    <string name="coffre_nouveau_dossier">Nouveau dossier</string>
+    <string name="coffre_ajouter">Ajouter</string>
+    <!-- « Dossiers (1) » : la parenthèse cachait un décompte, pas un invariant. En français
+         `one` couvre 0 et 1 — « Dossier (0) », « Dossier (1) » ; en anglais `one` ne couvre
+         que 1, et « Folders (0) » y est la forme juste. -->
+    <plurals name="coffre_dossiers">
+        <item quantity="one">Dossier (%d)</item>
+        <item quantity="other">Dossiers (%d)</item>
+    </plurals>
+    <!-- `coffre_illisibles_ecartes` existe déjà dans values/strings.xml : je ne le
+         redéfinis pas ici. Seule sa traduction anglaise manquait — elle est dans
+         strings-en-LOT1.xml. -->
+
+    <!-- ═══ LOT1 · EcranDeLaCorbeille.kt ═══ -->
+    <!-- Sert aussi d\'entrée de menu dans EcranDuCoffre.kt : c\'est le nom de l\'écran qu\'on
+         ouvre, pas deux mots qui se ressemblent. -->
+    <string name="corbeille_titre">Corbeille</string>
+    <string name="corbeille_retour">Retour</string>
+    <string name="corbeille_vide">La corbeille est vide.</string>
+    <string name="corbeille_restaurer">Restaurer</string>
+    <string name="corbeille_confirmer">Confirmer</string>
+    <!-- « Détruire », et non « Supprimer » : la mise à la corbeille est déjà une suppression,
+         et c\'est la seule action irréversible du produit. L\'anglais garde l\'écart avec
+         « Delete permanently », la formule qu\'iOS emploie pour le même geste. -->
+    <string name="corbeille_detruire">Détruire</string>
+
+    <!-- IconesDesSites.kt n\'ajoute rien : son seul littéral est « GET », la méthode HTTP
+         de la requête d\'icône. La pastille n\'affiche qu\'une initiale calculée, et son
+         image est décorative (`contentDescription = null`, voulu). -->
+
+<!-- ═══ LOT2 ═══ EcranDeLElement.kt, EcranDuGenerateur.kt, PartageDeLien.kt -->
+
+<!-- ─── L'écran d'un élément (element_) ─── -->
+<string name="element_titre_nouveau">Nouvel élément</string>
+<string name="element_titre_modifier">Modifier</string>
+
+<!-- Le genre se choisit à la création et ne se change plus. « connexion », « note » et
+     « carte » restent des jetons d'état côté Kotlin ; seuls les libellés ci-dessous
+     s'affichent. -->
+<string name="element_genre">Genre</string>
+<string name="element_genre_connexion">Connexion</string>
+<string name="element_genre_note">Note</string>
+<string name="element_genre_carte">Carte</string>
+
+<string name="element_nom">Nom</string>
+<string name="element_identifiant">Identifiant</string>
+<!-- Les invites d'exemple se traduisent : une adresse en « .ch » et en « vous » ne dit
+     rien à qui lit l'application en anglais. Le catalogue iOS les traduit déjà. -->
+<string name="element_invite_identifiant">vous@exemple.ch</string>
+<string name="element_mot_de_passe">Mot de passe</string>
+<string name="element_generer_un_mot_de_passe">Générer un mot de passe</string>
+<string name="element_adresses">Adresses (une par ligne)</string>
+<string name="element_totp">Clé de second facteur</string>
+
+<string name="element_contenu">Contenu</string>
+<string name="element_invite_contenu">Ce que vous voulez garder</string>
+
+<string name="element_titulaire">Titulaire</string>
+<string name="element_numero">Numéro</string>
+<string name="element_mois">Mois</string>
+<string name="element_annee">Année</string>
+<!-- Le code de la carte. iOS l'appelle « Cryptogramme » ; côté Android le champ est
+     nommé « Code », et c'est ce mot-là qui est extrait. Voir la version anglaise. -->
+<string name="element_code">Code</string>
+
+<string name="element_dossier">Dossier</string>
+<string name="element_invite_dossier">Travail/Serveurs</string>
+<string name="element_notes">Notes</string>
+<string name="element_invite_notes">Facultatif</string>
+
+<string name="element_lecture_seule">Cette collection d\'équipe vous est accessible en lecture seule. Un administrateur de l\'organisation peut vous y donner le droit d\'écriture.</string>
+
+<string name="element_enregistrer">Enregistrer</string>
+<!-- Les quatre libellés du bouton de suppression : le mot dit ce qui va se passer, et
+     ce n'est pas la même chose dans un coffre personnel et dans une collection d'équipe. -->
+<string name="element_confirmer_suppression_definitive">Confirmer : suppression définitive</string>
+<string name="element_confirmer_suppression">Confirmer la suppression</string>
+<string name="element_supprimer_definitivement">Supprimer définitivement</string>
+<string name="element_mettre_a_la_corbeille">Mettre à la corbeille</string>
+<string name="element_annuler">Annuler</string>
+
+<string name="element_masquer_le_partage">Masquer le partage</string>
+<string name="element_partager_par_lien">Partager ce secret par lien</string>
+<string name="element_carte_non_partageable">Une carte porte plusieurs champs : GhostPass ne partage pas un secret unique pour elle.</string>
+<string name="element_heures">Heures</string>
+<string name="element_consultations">Consultations</string>
+<string name="element_creer_le_lien">Créer le lien</string>
+
+<!-- ─── Le générateur (generateur_) ─── -->
+<!-- `generateur_longueur` existe déjà dans values/strings.xml : rien n'est ajouté ici,
+     seule sa traduction anglaise manque (voir strings-en-LOT2.xml). -->
+<string name="generateur_titre">Générer</string>
+<string name="generateur_annuler">Annuler</string>
+<string name="generateur_utiliser">Utiliser</string>
+<!-- Le ↻ fait partie du libellé, comme sur la capture d'iOS. -->
+<string name="generateur_regenerer">↻ Régénérer</string>
+
+<string name="generateur_caracteres">Caractères</string>
+<string name="generateur_minuscules">Minuscules</string>
+<string name="generateur_majuscules">Majuscules</string>
+<string name="generateur_chiffres">Chiffres</string>
+<string name="generateur_symboles">Symboles</string>
+<!-- Les exemples « a-z », « A-Z », « 0-9 », « !@#$… » restent en dur dans le Kotlin :
+     ils montrent des caractères, ils ne les nomment pas. « ≈ N bits » aussi. -->
+
+<string name="generateur_force_excellent">Excellent</string>
+<string name="generateur_force_solide">Solide</string>
+<string name="generateur_force_correct">Correct</string>
+<string name="generateur_force_faible">Faible</string>
+
+<!-- ─── Le partage de lien (partage_) ─── -->
+<string name="partage_destination_titre">Ce lien part ailleurs</string>
+<string name="partage_destination_corps">Votre serveur a rendu un lien vers %1$s, qui n\'est pas l\'adresse que vous avez saisie.</string>
+<string name="partage_destination_cle">La clé de déchiffrement voyage dans ce lien. La page servie par ce domaine peut la lire : l\'accepter revient à laisser votre serveur choisir qui recevra le secret en clair.</string>
+<!-- %1$s est la case (☑ ou ☐), posée par le Kotlin : un signe, pas un mot. Elle passe
+     par la ressource pour qu'une langue puisse la déplacer dans la phrase. %2$s est
+     l'hôte. -->
+<string name="partage_retenir_hote">%1$s Retenir %2$s pour ce serveur</string>
+<string name="partage_continuer">Continuer</string>
+<string name="partage_annuler_et_revoquer">Annuler et révoquer</string>
+
+<string name="partage_lien_titre">Lien de partage</string>
+<string name="partage_lien_avertissement">Ce lien contient la clé, après le « # ». Transmettez-le entier, et par un autre canal que le secret lui-même.</string>
+<string name="partage_copier">Copier</string>
+<string name="partage_fermer">Fermer</string>
+
+    <!-- ═══ LOT3 · EcranDeLUrgence.kt ═══
+
+         Les intitulés de rôle (« Lecture seule », « Reprise du compte »), leurs
+         explications, les intitulés d'état (« Invitation envoyée », « Accès demandé »…) et
+         la date lisible viennent de `:noyau/UrgenceDuCompte.kt` : ils ne sont pas ici, et
+         cet écran ne fait que les recopier. -->
+    <string name="urgence_titre">Accès d\'urgence</string>
+    <string name="urgence_termine">Terminé</string>
+    <string name="urgence_confies_titre">Ce que j\'ai confié</string>
+    <string name="urgence_confies_note">Ces personnes pourront accéder à votre coffre après le délai indiqué, si vous ne refusez pas leur demande entre-temps.</string>
+    <string name="urgence_aucun_confie">Personne pour l\'instant.</string>
+    <string name="urgence_confier_bouton">Confier un accès d\'urgence</string>
+    <string name="urgence_recus_titre">Ce qu\'on m\'a confié</string>
+    <string name="urgence_recus_note">Vous pourrez demander l\'accès ; il s\'ouvrira au bout du délai, sauf refus de la personne concernée.</string>
+    <string name="urgence_aucun_recu">Personne ne vous a confié d\'accès.</string>
+    <!-- La clé du rôle telle que le serveur l'a envoyée : on la montre plutôt que de la
+         taire, parce qu'elle est la seule chose qu'on sache du lien. -->
+    <string name="urgence_role_inconnu">Rôle inconnu (%1$s)</string>
+    <!-- Un compte de jours : `plurals`, même si le français abrège en « j » et que les deux
+         formes se ressemblent ici. Le jour où cette ligne cesse d'abréger, ou se traduit
+         dans une langue qui accorde l'abréviation, les deux formes sont déjà là. -->
+    <plurals name="urgence_delai_jours">
+        <item quantity="one">délai de %d j</item>
+        <item quantity="other">délai de %d j</item>
+    </plurals>
+    <!-- Deux phrases entières, et non « ⚠ Accès demandé » recollé à un morceau qui
+         commence par un tiret : la date ne se pose pas à la même place dans toutes les
+         langues, et une phrase coupée en deux ne laisse pas la déplacer. -->
+    <string name="urgence_acces_demande">⚠ Accès demandé</string>
+    <string name="urgence_acces_demande_le">⚠ Accès demandé — s\'ouvrira le %1$s</string>
+    <string name="urgence_refuser">Refuser</string>
+    <string name="urgence_accorder">Accorder maintenant</string>
+    <string name="urgence_retirer_cet_acces">Retirer cet accès</string>
+    <string name="urgence_accepter">Accepter</string>
+    <string name="urgence_demander_acces">Demander l\'accès</string>
+    <string name="urgence_demande_en_cours">Demande en cours</string>
+    <string name="urgence_demande_en_cours_le">Demande en cours — accessible le %1$s</string>
+    <string name="urgence_ouvrir_le_coffre">Ouvrir le coffre</string>
+    <string name="urgence_retirer">Retirer</string>
+    <string name="urgence_invitation_titre">Confier un accès</string>
+    <string name="urgence_annuler">Annuler</string>
+    <string name="urgence_contact_note">Le contact doit déjà avoir un compte sur ce serveur : la clé de votre coffre est scellée vers sa clé publique, et il n\'y a personne d\'autre à qui la sceller.</string>
+    <string name="urgence_email_intitule">Adresse e-mail du contact</string>
+    <!-- Une invite s'affiche : elle se traduit, même si elle ressemble à un jeton. iOS
+         écrit `vous@exemple.ch` en français et `you@example.com` en anglais ; ici l'adresse
+         est celle d'un tiers, d'où le prénom. Seul le domaine suit la convention du
+         catalogue. -->
+    <string name="urgence_email_invite">kevin@exemple.ch</string>
+    <string name="urgence_role">Rôle</string>
+    <!-- « Entre 1 et 90 jours » ne compte rien : les bornes sont fixes, ce n'est pas un
+         pluriel mais une phrase. -->
+    <string name="urgence_delai_note">Entre 1 et 90 jours. Pendant ce délai, vous recevez la demande et pouvez la refuser — c\'est la seule protection contre une demande que vous n\'auriez pas voulue.</string>
+    <string name="urgence_delai_intitule">Délai d\'attente (jours)</string>
+    <string name="urgence_continuer">Continuer</string>
+    <string name="urgence_vous_confiez">Vous confiez à %1$s :</string>
+    <!-- Celui-ci compte pour de bon : le délai saisi vaut 1 aussi souvent qu'il vaut 30. -->
+    <plurals name="urgence_ouverture_apres">
+        <item quantity="one">Après une demande de sa part, l\'accès s\'ouvrira au bout de %d jour si vous ne l\'avez pas refusée.</item>
+        <item quantity="other">Après une demande de sa part, l\'accès s\'ouvrira au bout de %d jours si vous ne l\'avez pas refusée.</item>
+    </plurals>
+    <string name="urgence_confier_acces">Confier l\'accès</string>
+    <!-- Prononcé par le lecteur d'écran sur la carte du rôle choisi. %1$s est l'intitulé du
+         rôle, qui vient de `:noyau`. -->
+    <string name="urgence_role_choisi">%1$s, choisi</string>
+    <string name="urgence_coffre_titre">Coffre d\'urgence</string>
+    <string name="urgence_fermer">Fermer</string>
+    <string name="urgence_coffre_de">Coffre de %1$s</string>
+    <string name="urgence_pas_les_votres">Ces identifiants ne sont pas les vôtres. Rien de ce que vous faites ici ne modifie son coffre.</string>
+    <string name="urgence_identifiants">Identifiants</string>
+    <string name="urgence_coffre_vide">Ce coffre est vide.</string>
+    <string name="urgence_element_illisible">Élément illisible — scellé sous une clé que vous n\'avez pas.</string>
+    <!-- Servi deux fois : l'intitulé de la section, puis le premier des deux boutons. -->
+    <string name="urgence_reprendre">Reprendre le compte</string>
+    <string name="urgence_reprise_note">Le mot de passe maître de %1$s sera remplacé, et toutes ses sessions fermées. Il ne pourra plus ouvrir son coffre sans le nouveau mot de passe.</string>
+    <string name="urgence_nouveau_mot_de_passe">Nouveau mot de passe maître</string>
+    <string name="urgence_huit_caracteres_invite">Huit caractères au minimum</string>
+    <string name="urgence_reprise_avertissement">⚠ %1$s perdra l\'accès à son propre coffre tant que vous ne lui aurez pas donné ce mot de passe.</string>
+    <string name="urgence_confirmer_reprise">Confirmer la reprise</string>
+    <string name="urgence_masquer">Masquer</string>
+    <string name="urgence_afficher">Afficher</string>
+    <string name="urgence_lecture_impossible">⚠ Les accès d\'urgence n\'ont pas pu être lus.</string>
+    <string name="urgence_lecture_impossible_note">Ceci ne veut pas dire qu\'il n\'y en a aucun : rien n\'a pu être lu.</string>
+
+    <!-- ═══ LOT3 · EcranDeRecuperationDuCompte.kt ═══ -->
+    <string name="recuperation_titre">Mot de passe oublié</string>
+    <string name="recuperation_annuler">Annuler</string>
+    <string name="recuperation_note">Le nouveau mot de passe rechiffre la clé du coffre. Son contenu reste intact : rien n\'est perdu, rien n\'est déchiffré côté serveur.</string>
+    <string name="recuperation_adresse">Adresse e-mail</string>
+    <string name="recuperation_cle">Clé de récupération</string>
+    <string name="recuperation_cle_invite">Les mots notés à la création</string>
+    <string name="recuperation_nouveau_mot_de_passe">Nouveau mot de passe maître</string>
+    <!-- L'invite du champ et le message sous le champ disent la même chose mais ne sont pas
+         la même chaîne : l'une est une invite, l'autre une phrase, et seule la seconde a un
+         point. -->
+    <string name="recuperation_huit_caracteres_invite">Huit caractères au minimum</string>
+    <string name="recuperation_huit_caracteres">Huit caractères au minimum.</string>
+    <string name="recuperation_reinitialiser">Réinitialiser</string>
+    <string name="recuperation_sessions_fermees">Toutes les sessions ouvertes seront fermées, y compris sur vos autres appareils. Il faudra s\'y reconnecter avec le nouveau mot de passe.</string>
+
+    <!-- ═══ LOT3 · EcranDeLaCleDeRecuperation.kt ═══ -->
+    <string name="cle_titre">Clé de récupération</string>
+    <string name="cle_annuler">Annuler</string>
+    <string name="cle_termine">Terminé</string>
+    <string name="cle_pas_de_second_exemplaire">Un coffre chiffré de bout en bout ne se rouvre pas sans son mot de passe maître : personne, pas même le serveur, ne peut le retrouver à votre place.</string>
+    <string name="cle_seule_issue">La clé de récupération est la seule issue. Notez-la et rangez-la ailleurs que dans ce coffre.</string>
+    <string name="cle_creer">Créer une clé de récupération</string>
+    <string name="cle_votre">Votre clé de récupération</string>
+    <string name="cle_plus_jamais_affichee">Elle ne sera plus affichée. Sans elle, un mot de passe maître oublié rend le coffre définitivement illisible.</string>
+    <string name="cle_copiee">Copiée</string>
+    <string name="cle_copier">Copier la clé</string>
+
+    <!-- ══════ LOT4 · EcranDuSecondFacteur.kt ══════ -->
+    <string name="mfa_titre">Second facteur</string>
+    <string name="mfa_termine">Terminé</string>
+    <string name="mfa_annuler">Annuler</string>
+    <string name="mfa_indisponible">Second facteur indisponible</string>
+    <!-- Le 🛡 vit dans la ressource et non devant elle : le glyphe ouvre la phrase, et une
+         langue qui écrit de droite à gauche doit pouvoir le poser de l\'autre côté. Même
+         raison pour les « ⚠ » et les « ✓ » ci-dessous. -->
+    <string name="mfa_presentation">🛡 Un code à six chiffres sera demandé à chaque connexion, en plus du mot de passe maître.</string>
+    <string name="mfa_mot_de_passe_maitre">Mot de passe maître</string>
+    <string name="mfa_mot_de_passe_maitre_note">Il est vérifié sur cet appareil et n\'en sort pas : le serveur n\'en reçoit qu\'une empreinte.</string>
+    <string name="mfa_invite_mot_de_passe">Votre mot de passe</string>
+    <string name="mfa_configurer">Configurer</string>
+    <string name="mfa_secret_titre">À enregistrer dans votre application d\'authentification</string>
+    <string name="mfa_secret_note">Ce secret ne sera plus affiché. Sans lui et sans votre application, la connexion deviendra impossible — gardez un moyen de secours.</string>
+    <string name="mfa_secret_copie">Secret copié</string>
+    <string name="mfa_copier_le_secret">Copier le secret</string>
+    <string name="mfa_confirmer">Confirmer</string>
+    <string name="mfa_confirmer_note">Tant que ce code n\'est pas validé, le compte reste accessible sans second facteur. C\'est ce qui évite de s\'enfermer dehors avec une application mal configurée.</string>
+    <string name="mfa_activer">Activer</string>
+    <string name="mfa_actif">Le second facteur est actif.</string>
+    <string name="mfa_actif_note">Un code vous sera demandé à chaque connexion. Vos appareils déjà connectés le restent.</string>
+    <string name="mfa_actif_sur_ce_compte">Le second facteur est actif sur ce compte.</string>
+    <string name="mfa_le_retirer">Le retirer</string>
+    <string name="mfa_le_retirer_note">Les deux sont exigés : le mot de passe maître et un code valide. Un téléphone déverrouillé trouvé sur une table ne doit pas suffire à retirer la protection.</string>
+    <string name="mfa_code">Code à six chiffres</string>
+    <string name="mfa_desactiver">Désactiver le second facteur</string>
+    <!-- %1$s : la cause rendue par le serveur, qui n\'est pas traduite ici. -->
+    <string name="mfa_erreur">⚠ %1$s</string>
+
+    <!-- ══════ LOT4 · EcranDeLaSante.kt ══════ -->
+    <string name="sante_titre">Santé du coffre</string>
+    <string name="sante_fermer">Fermer</string>
+    <string name="sante_rien_a_signaler">Rien à signaler</string>
+    <string name="sante_faibles">Mots de passe faibles</string>
+    <string name="sante_faibles_note">Trop courts, ou faits d\'une seule sorte de caractères.</string>
+    <string name="sante_reutilises">Mots de passe réutilisés</string>
+    <string name="sante_reutilises_note">Une seule fuite suffit alors à ouvrir plusieurs comptes.</string>
+    <string name="sante_sans_code">Sans code à usage unique</string>
+    <string name="sante_sans_code_note">Le second facteur protège même un mot de passe connu.</string>
+    <string name="sante_fuites">Fuites connues</string>
+    <string name="sante_fuites_note">Seuls les cinq premiers caractères de l\'empreinte du mot de passe sont envoyés : ni le mot de passe ni son empreinte complète ne quittent l\'appareil.</string>
+    <string name="sante_verifier">Vérifier les fuites</string>
+    <string name="sante_verification_en_cours">Vérification…</string>
+    <string name="sante_aucune_fuite">✓ Aucun mot de passe connu des fuites publiques.</string>
+    <!-- %1$s : la cause de l\'échec. La phrase reste distincte de « aucune fuite » — un
+         service muet et un coffre sain ne doivent jamais donner le même écran. -->
+    <string name="sante_verification_echouee">⚠ Le service de vérification n\'a pas répondu (%1$s).</string>
+    <!-- Le repli quand l\'exception n\'a pas de message : il devient le %1$s ci-dessus, d\'où
+         la minuscule et l\'absence de point. -->
+    <string name="sante_service_muet">le service n\'a pas répondu</string>
+
+    <!-- ══════ LOT4 · EcranDImport.kt ══════ -->
+    <string name="import_titre">Importer</string>
+    <string name="import_annuler">Annuler</string>
+    <string name="import_termine">Terminé</string>
+    <string name="import_presentation">Choisissez le fichier CSV exporté par votre gestionnaire actuel. Les colonnes de Bitwarden, Dashlane, 1Password, LastPass et Chrome sont reconnues.</string>
+    <string name="import_avertissement">Le fichier est lu sur l\'appareil et rien d\'autre n\'en sort : chaque entrée est chiffrée avant d\'être déposée. Pensez à l\'effacer ensuite — un export CSV contient vos mots de passe en clair.</string>
+    <string name="import_choisir">Choisir un fichier</string>
+    <string name="import_echec_lecture">Le fichier n\'a pas pu être lu.</string>
+    <string name="import_aucune_entree">Aucune entrée trouvée : le fichier est vide, ou ses colonnes ne sont pas reconnues.</string>
+    <!-- %1$s : l\'une des deux phrases d\'échec ci-dessus. -->
+    <string name="import_erreur">⚠ %1$s</string>
+    <string name="import_a_importer">À importer</string>
+    <string name="import_a_importer_note">Rien n\'est encore déposé. Les entrées rejoindront le coffre telles quelles ; aucune n\'écrase ce qui s\'y trouve déjà.</string>
+    <string name="import_fichier">Fichier</string>
+    <!-- L\'intitulé de la ligne, à ne pas confondre avec le pluriel `import_entrees` qui en
+         remplit la valeur. -->
+    <string name="import_entrees_trouvees">Entrées trouvées</string>
+    <string name="import_apercu">Aperçu</string>
+    <!-- %1$s : le pluriel `import_importees`. -->
+    <string name="import_resultat">✓ %1$s</string>
+    <string name="import_penser_a_effacer">N\'oubliez pas d\'effacer le fichier CSV : il contient vos mots de passe en clair.</string>
+    <!-- Le nom affiché quand le fournisseur de documents n\'en donne aucun. -->
+    <string name="import_nom_par_defaut">fichier</string>
+
+    <!-- ══════ LOT4 · EcranDuJournal.kt ══════ -->
+    <string name="journal_titre">Journal du compte</string>
+    <string name="journal_termine">Terminé</string>
+    <string name="journal_actions">Actions sensibles</string>
+    <string name="journal_actions_note">Ce qui retire une protection ou ouvre le coffre à quelqu\'un d\'autre. Une ligne que vous ne reconnaissez pas mérite de changer votre mot de passe maître.</string>
+    <string name="journal_aucune_action">Aucune action enregistrée.</string>
+    <string name="journal_connexions">Connexions</string>
+    <string name="journal_connexions_note">Un appareil inconnu signalé ici, que vous ne reconnaissez pas, veut dire que quelqu\'un connaît votre mot de passe maître.</string>
+    <string name="journal_aucune_connexion">Aucune connexion enregistrée.</string>
+    <string name="journal_illisible">⚠ Le journal n\'a pas pu être lu.</string>
+    <string name="journal_illisible_note">Ceci ne veut pas dire qu\'il ne s\'est rien passé : rien n\'a pu être lu.</string>
+    <string name="journal_nouvel_appareil">Nouvel appareil</string>
+    <!-- Se lit à la place d\'un horodatage nul ou absent, au milieu d\'une ligne de détail —
+         d\'où la minuscule. -->
+    <string name="journal_date_inconnue">date inconnue</string>
+
+    <!-- ══════ LOT4 · EcranDesReglages.kt ══════ -->
+    <string name="reglages_titre">Réglages</string>
+    <string name="reglages_termine">Terminé</string>
+    <string name="reglages_apparence">Apparence</string>
+    <string name="reglages_apparence_note">« Système » suit le réglage de l\'appareil, y compris son passage automatique à la nuit.</string>
+    <string name="reglages_verrouillage">Verrouillage</string>
+    <string name="reglages_verrouillage_note">Pendant ce délai, le coffre reste ouvert en mémoire — jamais sur le disque — et son contenu est masqué dans le sélecteur d\'applications.</string>
+    <string name="reglages_icones">Icônes des sites</string>
+    <string name="reglages_icones_note">Le coffre est chiffré de bout en bout : le serveur n\'en connaît pas le contenu. Réclamer une icône, en revanche, lui nomme un domaine. Aucun tiers n\'est sollicité.</string>
+    <string name="reglages_afficher_les_logos">Afficher les logos</string>
+    <string name="reglages_remplissage">Remplissage automatique</string>
+    <string name="reglages_remplissage_note">Le service ne voit pas le serveur : il lit le coffre déjà ouvert par l\'application. Un coffre verrouillé ne propose rien, quel que soit le site.</string>
+    <string name="reglages_service">Service</string>
+    <string name="reglages_autorise">autorisé</string>
+    <string name="reglages_non_autorise">non autorisé</string>
+    <string name="reglages_indisponible">indisponible sur cet Android</string>
+    <string name="reglages_coffre_personnel">Coffre personnel</string>
+    <string name="reglages_coffres_equipe">Coffres d\'équipe</string>
+    <string name="reglages_aucun">aucun</string>
+    <!-- Deux comptes sur une même ligne : %1$s éléments, %2$s coffres. Le séparateur vit ici
+         plutôt qu\'entre deux appels concaténés — l\'ordre et la ponctuation appartiennent à
+         la langue, et une phrase recollée dans le code ne se traduit pas. -->
+    <string name="reglages_deux_comptes">%1$s · %2$s</string>
+    <string name="reglages_non_dechiffres">Non déchiffrés</string>
+    <!-- Prononcé par le lecteur d\'écran sur la ligne ou la vignette choisie. %1$s est le
+         libellé du choix (« Sombre », « Après 5 minutes »), qui vient de `Preferences.kt`. -->
+    <string name="reglages_choisi">%1$s, choisi</string>
+</resources>

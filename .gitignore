@@ -20,4 +20,36 @@ dist/
 CLAUDE.md
 .claude/
 
+
+# iOS : tout ceci est produit par tools/ios/build-xcframework.sh ou par XcodeGen.
+apps/ios/Ghostpass.xcodeproj/
+apps/ios/Generated/
+apps/ios/Headers/
+apps/ios/GhostpassCrypto.xcframework/
+
+# Rapports de tests iOS (conservés en cas d'échec, régénérables)
+apps/ios/TestResults/
+apps/ios/.build/
 __pycache__/
+
+# Métadonnées du Finder, jamais utiles à personne.
+.DS_Store
+
+# Traces de la dernière prise de vue App Store, conservées pour diagnostic seulement.
+apps/ios/AppStore/derniere-prise-de-vue.log
+apps/ios/AppStore/derniere-prise-de-vue.xcresult/
+
+# Android : tout ceci est produit par tools/android/build-jni.sh — les trois `.so`, les
+# liaisons Kotlin, et la bibliothèque hôte qui rend le test de contrat exécutable sans
+# appareil. Même raison que apps/ios/Generated : régénérable, donc pas versionné.
+apps/android/generated/
+
+# Android : sorties et état de Gradle.
+apps/android/.gradle/
+apps/android/build/
+apps/android/*/build/
+# Le chemin du SDK est propre à chaque poste.
+apps/android/local.properties
+
+# Produits de compilation de tools/ios/appareil.sh — jamais versionnés.
+apps/ios/.build-appareil/

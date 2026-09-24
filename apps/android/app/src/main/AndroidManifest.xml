@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Le coffre parle à un serveur que l'utilisateur choisit. Aucune autre permission :
+         ni contacts, ni stockage, ni localisation — un gestionnaire de mots de passe qui
+         en demanderait devrait s'en expliquer. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.GhostPass"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/regles_de_sauvegarde"
+        android:dataExtractionRules="@xml/regles_de_sauvegarde"
+        android:usesCleartextTraffic="false"
+        android:localeConfig="@xml/locales_config"
+        android:networkSecurityConfig="@xml/securite_reseau">
+
+        <!-- La langue choisie, rangée par AppCompat et **par lui seul**.
+
+             `autoStoreLocales` lui fait persister le choix et le réappliquer au
+             démarrage. On pourrait le garder dans `Preferences` comme l'apparence et le
+             délai de verrouillage ; ce serait une seconde source de vérité, et elle
+             divergerait de la première : sur Android 13 et au-delà, le système possède son
+             propre réglage de langue par application, que `setApplicationLocales` alimente.
+             Deux stockages donneraient un écran des réglages et un écran du système qui ne
+             disent pas la même chose — exactement le genre de désaccord qu'on ne remarque
+             que lorsqu'un utilisateur s'en plaint.
+
+             Le coût est un accès disque au lancement, documenté par AppCompat. Pour une
+             application qui dérive déjà une clé Argon2id avant d'afficher quoi que ce soit,
+             il ne se mesure pas. -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
+        <activity
+            android:name=".ActivitePrincipale"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Les liens de second facteur (§9).
+
+                 Ce réglage désigne l'application qui **ouvre les liens**, pas celle qui
+                 remplit les champs. Mesuré sur iOS : GhostPass n'apparaissait pas sous
+                 « Configurer les codes dans » alors que son extension déclarait bien fournir
+                 des codes — la cause était l'absence de cette déclaration-là.
+
+                 Déclarer sans traiter serait pire que se taire : le système proposerait
+                 GhostPass pour ouvrir un QR code, et il ne se passerait rien. C'est
+                 pourquoi cet `intent-filter` n'a été posé qu'une fois l'écran d'édition
+                 écrit, et que le lien est retenu quand le coffre est fermé.
+
+                 Pas de `android:host` : la règle d'acceptation est dans
+                 `LienOtpauth.estUnLienDeTotp`, partagée avec iOS et éprouvée sur ses
+                 vecteurs. Un hôte imposé ici la dédoublerait dans un fichier XML que
+                 personne n'exécute. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="otpauth" />
+            </intent-filter>
+
+            <!-- Le retour du SSO (§8, docs/sso-mobile.md).
+
+                 Le serveur redirige vers `ch.stackops.ghostpass://sso?code=…&state=…` à la
+                 fin du flux, et c'est ce schéma que la liste blanche du serveur autorise.
+
+                 **Ce schéma n'est pas exclusif** : sur Android comme sur iOS, une autre
+                 application peut le revendiquer et recevoir ce retour à notre place. C'est
+                 exactement pourquoi le PKCE est mené par l'application — le code qui
+                 transite ici ne vaut rien sans le vérificateur, qui ne quitte jamais ce
+                 processus. Un App Link vérifié (`https://`) serait exclusif, lui, mais
+                 exigerait un `assetlinks.json` publié sur chaque instance auto-hébergée :
+                 c'est une exigence qu'un produit auto-hébergeable ne peut pas poser. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- `${applicationId}`, jamais la chaîne écrite en clair. Une variante suffixée
+                     — d'essai, de préproduction — porterait un autre identifiant et ne
+                     recevrait donc pas le retour ; le navigateur se refermerait sur une page
+                     morte, sans que rien n'indique la cause. C'est arrivé sur iOS. -->
+                <data android:scheme="${applicationId}" android:host="sso" />
+            </intent-filter>
+        </activity>
+
+        <!-- L'écran du remplissage : biométrie, choix, et rien d'autre.
+
+             `exported="false"` : le système la lance par une `PendingIntent` que ce paquet
+             a fabriquée, donc sous notre identité. L'exporter la rendrait lançable par
+             n'importe quelle application, qui obtiendrait un écran demandant l'empreinte de
+             l'utilisateur au nom de GhostPass.
+
+             `excludeFromRecents` et `noHistory` : elle est lancée dans la tâche de
+             l'application qu'on remplit. La laisser dans le sélecteur de tâches y poserait
+             une vignette de GhostPass qui n'appartient pas à son propriétaire, et un retour
+             dessus rouvrirait un écran de coffre hors de son contexte. -->
+        <activity
+            android:name=".autofill.ActiviteDeRemplissage"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.GhostPass"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Le service de remplissage automatique (§6).
+
+             `BIND_AUTOFILL_SERVICE` est une permission que **le système** exige de nous :
+             elle garantit que seul le système peut se lier à ce service. Sans elle, une
+             autre application pourrait s'y lier et lui demander des identifiants. -->
+        <service
+            android:name=".autofill.ServiceDeRemplissage"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.autofill"
+                android:resource="@xml/service_de_remplissage" />
+        </service>
+    </application>
+</manifest>

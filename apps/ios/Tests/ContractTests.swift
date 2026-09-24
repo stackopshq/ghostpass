@@ -1,0 +1,2564 @@
+import SwiftUI
+import XCTest
+
+@testable import Ghostpass
+
+/// Tests de contrat : la couture entre le JSON du serveur, le JSON du cœur Rust et les
+/// types Swift. C'est là que se sont logées les deux régressions qui rendaient l'app
+/// inutilisable — une connexion impossible, puis un coffre qui restait vide.
+///
+/// Rien ici n'a besoin du réseau ni de l'interface : les charges utiles sont les octets
+/// exacts que renvoie le backend, recopiés depuis une réponse réelle.
+final class ContractTests: XCTestCase {
+
+    // ─── Réponses d'authentification ───
+
+    /// Le serveur stocke `kdf_params` en colonne TEXT et la renvoie **verbatim** :
+    /// `kdfParams` est une chaîne contenant du JSON, jamais un objet JSON. L'attendre
+    /// comme un objet, puis le ré-encoder, produisait une chaîne doublement échappée que
+    /// serde rejette — et toute connexion échouait dès le hash d'authentification.
+    func testPreloginRenvoieLesParametresKdfSousFormeDeChaine() throws {
+        let json = Data(
+            #"{"kdfParams":"{\"mem_cost_kib\":65536,\"time_cost\":3,\"parallelism\":4}"}"#.utf8)
+        let res = try JSONDecoder().decode(PreloginResponse.self, from: json)
+        XCTAssertEqual(res.kdfParams, #"{"mem_cost_kib":65536,"time_cost":3,"parallelism":4}"#)
+    }
+
+    /// La chaîne doit arriver au cœur Rust telle quelle : c'est elle, et pas une version
+    /// re-sérialisée, qui doit produire un hash d'authentification.
+    func testLesParametresKdfDuServeurSontAcceptesParLeCoeur() throws {
+        let json = Data(
+            #"{"kdfParams":"{\"mem_cost_kib\":65536,\"time_cost\":3,\"parallelism\":4}"}"#.utf8)
+        let kdf = try JSONDecoder().decode(PreloginResponse.self, from: json).kdfParams
+        XCTAssertNoThrow(
+            try masterPasswordHash(
+                password: "correct horse battery staple", email: "clara@ghostpass.test",
+                kdfParamsJson: kdf))
+    }
+
+    func testLoginRenvoieLesBlobsEtLesParametresKdf() throws {
+        let json = Data(
+            #"""
+            {"token":"tok","kdfParams":"{\"mem_cost_kib\":65536,\"time_cost\":3,\"parallelism\":4}",
+             "encryptedUserKey":"2.aaa.bbb","encryptedPrivateKey":"2.ccc.ddd"}
+            """#.utf8)
+        let res = try JSONDecoder().decode(LoginResponse.self, from: json)
+        XCTAssertEqual(res.token, "tok")
+        XCTAssertEqual(res.encryptedUserKey, "2.aaa.bbb")
+        XCTAssertTrue(res.kdfParams.hasPrefix("{"), "kdfParams doit rester du JSON brut")
+    }
+
+    // ─── Items du coffre ───
+
+    /// `created_at` / `updated_at` / `deleted_at` sont des colonnes `INTEGER` et sortent
+    /// en millisecondes depuis l'epoch. Les attendre en `String` faisait échouer le
+    /// décodage de la liste **entière** : le coffre restait vide, sans autre explication
+    /// qu'un « Réponse inattendue du serveur ».
+    func testLesHorodatagesDesItemsSontDesEntiers() throws {
+        let json = Data(
+            #"""
+            {"items":[{"id":"abc","encryptedKey":"2.k.k","encryptedData":"2.d.d",
+             "createdAt":1787669299110,"updatedAt":1787669299110,"deletedAt":null}]}
+            """#.utf8)
+        struct Envelope: Decodable { let items: [EncryptedItemDTO] }
+        let items = try JSONDecoder().decode(Envelope.self, from: json).items
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].updatedAt, 1_787_669_299_110)
+        XCTAssertNil(items[0].deletedAt)
+
+        // La preuve par l'absurde, pour que la raison du type ne se perde pas : attendre
+        // une chaîne fait échouer le décodage, et il échoue pour la liste entière.
+        struct Ancien: Decodable { let updatedAt: String? }
+        struct AncienneEnveloppe: Decodable { let items: [Ancien] }
+        XCTAssertThrowsError(try JSONDecoder().decode(AncienneEnveloppe.self, from: json))
+    }
+
+    // ─── Aller-retour à travers le cœur Rust ───
+
+    private func compteDeTest() throws -> Account {
+        let reg = try register(
+            password: "correct horse battery staple", email: "clara@ghostpass.test")
+        return reg.account()
+    }
+
+    /// Chiffrer puis déchiffrer un item doit le rendre à l'identique. Ce test tient les
+    /// noms de champs serde (`password_history`, `exp_month`, …) : un seul qui diverge et
+    /// le champ se perd en silence, ce qu'aucune erreur ne signalerait.
+    func testUnItemSurvitAuChiffrementEtAuDechiffrement() throws {
+        let account = try compteDeTest()
+        let items: [VaultItem] = [
+            VaultItem(
+                name: "Forgejo", notes: "compte de service", folder: "Travail/Serveurs",
+                data: .login(
+                    Login(
+                        username: "clara", password: "s3cret", uris: ["https://git.stackops.ch"],
+                        totp: "otpauth://totp/x", passwordHistory: ["ancien1", "ancien2"]))),
+            VaultItem(
+                name: "Note", notes: nil, folder: nil,
+                data: .secureNote(SecureNote(content: "à ne pas oublier"))),
+            VaultItem(
+                name: "Carte", notes: nil, folder: nil,
+                data: .card(
+                    Card(
+                        cardholder: "Clara", number: "4111111111111111", expMonth: "04",
+                        expYear: "2030", code: "123"))),
+        ]
+        for item in items {
+            let (key, data) = try VaultStore.encrypt(item, with: account)
+            let dto = EncryptedItemDTO(
+                id: "x", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
+            XCTAssertEqual(
+                try VaultStore.decrypt(dto, with: account), item, "aller-retour de « \(item.name) »"
+            )
+        }
+    }
+
+    /// Une clé d'enveloppe étrangère ne doit rien pouvoir ouvrir.
+    func testUnAutreCompteNeDechiffrePas() throws {
+        let (a, b) = (try compteDeTest(), try compteDeTest())
+        let item = VaultItem(
+            name: "x", notes: nil, folder: nil, data: .secureNote(SecureNote(content: "y")))
+        let (key, data) = try VaultStore.encrypt(item, with: a)
+        let dto = EncryptedItemDTO(
+            id: "x", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
+        XCTAssertThrowsError(try VaultStore.decrypt(dto, with: b))
+    }
+
+    // ─── Registre des dossiers ───
+
+    /// Le nom du registre doit être exactement celui de la web app : un octet NUL suivi
+    /// de `gp:folders`. À un octet près, l'item cesse d'être filtré et apparaît dans la
+    /// liste comme une ligne fantôme.
+    func testLeNomDuRegistreCommenceParUnOctetNul() {
+        XCTAssertEqual(VaultConstants.foldersItemName, "\u{0}gp:folders")
+        XCTAssertEqual(Array(VaultConstants.foldersItemName.utf8).first, 0)
+    }
+
+    /// Le registre tel que l'écrit la web app — un `SecureNote` dont le contenu est la
+    /// liste des dossiers — traverse le cœur et doit être reconnu comme à masquer.
+    func testLeRegistreEcritParLaWebAppEstFiltre() throws {
+        let account = try compteDeTest()
+        let registre = VaultItem(
+            name: VaultConstants.foldersItemName, notes: nil, folder: nil,
+            data: .secureNote(SecureNote(content: #"["Travail/Serveurs"]"#)))
+        let (key, data) = try VaultStore.encrypt(registre, with: account)
+        let dto = EncryptedItemDTO(
+            id: "r", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
+
+        let relu = try VaultStore.decrypt(dto, with: account)
+        XCTAssertTrue(VaultStore.isRegistry(relu), "le registre doit être masqué")
+
+        let ordinaire = VaultItem(
+            name: "gp:folders", notes: nil, folder: nil,
+            data: .secureNote(SecureNote(content: "")))
+        XCTAssertFalse(
+            VaultStore.isRegistry(ordinaire),
+            "un item que l'utilisateur pourrait nommer ainsi ne doit pas disparaître")
+    }
+
+    /// Le trousseau du simulateur survit à la désinstallation : un test qui ne le vide pas
+    /// hérite de l'état laissé par le précédent.
+    private func viderLeTrousseau() {
+        for clef in [
+            Keychain.Key.token, Keychain.Key.masterPassword, Keychain.Key.biometricsEnabled,
+        ] {
+            Keychain.remove(clef)
+        }
+        SharedStore.clear()
+    }
+
+    // ─── Déverrouillage biométrique ───
+
+    /// Activer la biométrie dépose le mot de passe maître dans le trousseau. On ne l'y met
+    /// qu'après avoir prouvé qu'il ouvre réellement le coffre : sans cette vérification,
+    /// une faute de frappe enfermerait l'utilisateur derrière un secret qui n'ouvre rien.
+    @MainActor
+    func testActiverLaBiometrieRefuseUnMotDePasseFaux() throws {
+        viderLeTrousseau()
+        defer { viderLeTrousseau() }
+        let mail = "biometrie@ghostpass.test"
+        let motDePasse = "correct horse battery staple"
+        let blob = try JSONSerialization.jsonObject(
+            with: Data(try register(password: motDePasse, email: mail).blob().utf8))
+        let champs = try XCTUnwrap(blob as? [String: Any])
+
+        // Une session telle que l'app en dépose une après une connexion réussie.
+        SharedStore.save(
+            SharedStore.Session(
+                serverURL: "http://127.0.0.1:3111", email: mail,
+                kdfParams: String(
+                    decoding: try JSONSerialization.data(withJSONObject: champs["kdf_params"]!),
+                    as: UTF8.self),
+                encryptedUserKey: try XCTUnwrap(champs["encrypted_user_key"] as? String),
+                encryptedPrivateKey: try XCTUnwrap(champs["encrypted_private_key"] as? String)))
+        let store = VaultStore()
+        XCTAssertFalse(store.enableBiometrics(password: "ce n'est pas le bon"))
+        XCTAssertFalse(store.isBiometricEnabled, "un mot de passe faux ne doit rien activer")
+        XCTAssertNotNil(store.errorMessage)
+    }
+
+    /// Sans session enregistrée, il n'y a rien à confier au trousseau.
+    @MainActor
+    func testActiverLaBiometrieSansSessionEchoue() {
+        viderLeTrousseau()
+        defer { viderLeTrousseau() }
+        let store = VaultStore()
+        XCTAssertFalse(store.enableBiometrics(password: "peu importe"))
+        XCTAssertFalse(store.isBiometricEnabled)
+    }
+}
+
+/// Le conteneur partagé entre l'application et l'extension de remplissage.
+final class SharedStoreTests: XCTestCase {
+    override func setUp() { SharedStore.clear() }
+    override func tearDown() { SharedStore.clear() }
+
+    /// Sans groupe d'applications, l'extension ne voit ni le coffre ni la session : elle
+    /// s'ouvre sur un écran vide, et rien dans l'application ne le laisse deviner. Ce test
+    /// tient la configuration — entitlements des deux cibles comprises.
+    func testLeGroupeDApplicationsEstAccessible() {
+        XCTAssertTrue(
+            SharedStore.isShared,
+            "groupe \(SharedStore.appGroup) inaccessible : vérifiez les fichiers .entitlements")
+    }
+
+    func testLaSessionSeRelitEtSEfface() throws {
+        XCTAssertNil(SharedStore.load())
+        let session = SharedStore.Session(
+            serverURL: "http://127.0.0.1:3111", email: "clara@ghostpass.test",
+            kdfParams: #"{"mem_cost_kib":65536,"time_cost":3,"parallelism":4}"#,
+            encryptedUserKey: "2.uuu.uuu", encryptedPrivateKey: "2.ppp.ppp")
+        SharedStore.save(session)
+        XCTAssertEqual(try XCTUnwrap(SharedStore.load()), session)
+        SharedStore.clear()
+        XCTAssertNil(SharedStore.load())
+    }
+}
+
+/// Copie locale du coffre : ce sont les blobs chiffrés du serveur, reposés tels quels.
+final class VaultCacheTests: XCTestCase {
+    private let items = [
+        EncryptedItemDTO(
+            id: "a", encryptedKey: "2.kkk.kkk", encryptedData: "2.ddd.ddd",
+            updatedAt: 1_787_669_299_110, deletedAt: nil)
+    ]
+
+    override func setUp() { VaultCache.clear() }
+    override func tearDown() { VaultCache.clear() }
+
+    /// Sans copie locale, un coffre sans réseau s'affiche vide — ce qui ressemble à s'y
+    /// méprendre à un coffre qu'on aurait perdu.
+    func testLaCopieLocaleSeRelit() throws {
+        XCTAssertNil(VaultCache.load(), "on part d'un cache vide")
+        VaultCache.save(items)
+        let relu = try XCTUnwrap(VaultCache.load())
+        XCTAssertEqual(relu.map(\.id), ["a"])
+        XCTAssertEqual(relu.first?.encryptedData, "2.ddd.ddd")
+        XCTAssertEqual(relu.first?.updatedAt, 1_787_669_299_110)
+    }
+
+    /// Se déconnecter doit effacer la copie : laisser le coffre d'un compte sur
+    /// l'appareil après son départ serait une fuite, même chiffré.
+    func testLaCopieLocaleSEfface() {
+        VaultCache.save(items)
+        XCTAssertNotNil(VaultCache.load())
+        VaultCache.clear()
+        XCTAssertNil(VaultCache.load())
+    }
+}
+
+/// Générateur et TOTP : ils ne touchent pas au cœur Rust, mais ils doivent se comporter
+/// exactement comme leurs équivalents de la web app — un mot de passe généré ici et un
+/// code lu là doivent être de même nature, sinon les deux clients divergent en silence.
+final class GeneratorAndTotpTests: XCTestCase {
+
+    // ─── Générateur ───
+
+    func testLeMotDePasseRespecteLaLongueurDemandee() {
+        for longueur in [8, 20, 64, 128] {
+            var options = GeneratorOptions()
+            options.length = longueur
+            XCTAssertEqual(PasswordGenerator.generate(options).count, longueur)
+        }
+    }
+
+    /// Cocher « chiffres » et n'en obtenir aucun serait un mot de passe qui ne respecte
+    /// pas la consigne — le générateur garantit au moins un caractère par jeu demandé.
+    func testChaqueJeuDemandeEstRepresente() {
+        var options = GeneratorOptions()
+        options.length = 8
+        for _ in 0..<200 {
+            let mot = PasswordGenerator.generate(options)
+            XCTAssertTrue(mot.contains { $0.isLowercase }, "minuscule absente de « \(mot) »")
+            XCTAssertTrue(mot.contains { $0.isUppercase }, "majuscule absente de « \(mot) »")
+            XCTAssertTrue(mot.contains { $0.isNumber }, "chiffre absent de « \(mot) »")
+            XCTAssertTrue(
+                mot.contains { "!@#$%^&*()-_=+[]{};:,.?/".contains($0) },
+                "symbole absent de « \(mot) »")
+        }
+    }
+
+    func testUnSeulJeuNeProduitQueCeJeu() {
+        var options = GeneratorOptions(
+            length: 40, lowercase: false, uppercase: false, digits: true, symbols: false)
+        options.length = 40
+        let mot = PasswordGenerator.generate(options)
+        XCTAssertTrue(mot.allSatisfy(\.isNumber), "« \(mot) » ne devrait contenir que des chiffres")
+    }
+
+    /// Tout décocher ne doit pas rendre un mot de passe vide.
+    func testAucunJeuRetombeSurLesMinuscules() {
+        let options = GeneratorOptions(
+            length: 16, lowercase: false, uppercase: false, digits: false, symbols: false)
+        let mot = PasswordGenerator.generate(options)
+        XCTAssertEqual(mot.count, 16)
+        XCTAssertTrue(mot.allSatisfy(\.isLowercase))
+    }
+
+    func testDeuxAppelsNeDonnentPasLeMemeMotDePasse() {
+        let options = GeneratorOptions()
+        XCTAssertNotEqual(PasswordGenerator.generate(options), PasswordGenerator.generate(options))
+    }
+
+    // ─── TOTP ───
+
+    /// Vecteurs de la RFC 6238 (secret ASCII « 12345678901234567890 », SHA-1, 8 chiffres).
+    /// S'ils passent, la mécanique est celle que tout le monde attend.
+    func testVecteursDeLaRfc6238() throws {
+        let config = OtpConfig(
+            secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", period: 30, digits: 8, algorithm: .sha1)
+        let attendus: [(TimeInterval, String)] = [
+            (59, "94287082"),
+            (1_111_111_109, "07081804"),
+            (1_111_111_111, "14050471"),
+            (1_234_567_890, "89005924"),
+            (2_000_000_000, "69279037"),
+        ]
+        for (instant, attendu) in attendus {
+            let resultat = try XCTUnwrap(
+                Totp.code(for: config, at: Date(timeIntervalSince1970: instant)))
+            XCTAssertEqual(resultat.code, attendu, "à t=\(Int(instant))")
+        }
+    }
+
+    func testLeTempsRestantDecroitDansLaPeriode() throws {
+        let config = OtpConfig(secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ")
+        let debut = try XCTUnwrap(Totp.code(for: config, at: Date(timeIntervalSince1970: 60)))
+        let fin = try XCTUnwrap(Totp.code(for: config, at: Date(timeIntervalSince1970: 89)))
+        XCTAssertEqual(debut.remaining, 30)
+        XCTAssertEqual(fin.remaining, 1)
+        XCTAssertEqual(debut.code, fin.code, "le code ne change qu'au changement de période")
+    }
+
+    func testUneUriOtpauthEstComprise() throws {
+        let config = try XCTUnwrap(
+            Totp.parse(
+                "otpauth://totp/GhostPass:clara?secret=GEZDGNBVGY3TQOJQ&period=60&digits=8&algorithm=SHA256"
+            ))
+        XCTAssertEqual(config.secret, "GEZDGNBVGY3TQOJQ")
+        XCTAssertEqual(config.period, 60)
+        XCTAssertEqual(config.digits, 8)
+        XCTAssertEqual(config.algorithm, .sha256)
+    }
+
+    // ─── Les couleurs d'équipe ───
+
+    /// La couleur attribuée doit être **stable** : la même à chaque lancement, sur chaque
+    /// appareil, et sur le web. `hashValue` de Swift ne l'est pas — il varie d'un
+    /// processus à l'autre — et l'aurait fait changer à chaque ouverture de l'application.
+    func testLaCouleurAttribueeEstStable() {
+        let premiere = CouleurDEquipe.attribuee("org_stackops")
+        XCTAssertEqual(premiere, CouleurDEquipe.attribuee("org_stackops"))
+        XCTAssertTrue(CouleurDEquipe.palette.contains(premiere))
+    }
+
+    /// Deux équipes doivent avoir des chances raisonnables de se distinguer.
+    func testDesEquipesDifferentesRecoiventDesCouleursDifferentes() {
+        let couleurs = (1...8).map { CouleurDEquipe.attribuee("org_\($0)") }
+        XCTAssertGreaterThan(
+            Set(couleurs).count, 3, "huit équipes ne doivent pas se retrouver toutes pareilles")
+    }
+
+    /// Des vecteurs, pour que le client web puisse vérifier qu'il attribue les mêmes
+    /// couleurs que nous sans avoir à relire ce code. Un utilisateur qui n'a rien réglé
+    /// doit voir la même teinte des deux côtés ; sans vecteurs partagés, l'écart ne se
+    /// découvrirait qu'en regardant les deux écrans côte à côte.
+    func testLesVecteursDAttributionSontCeuxQuePartageLaSuite() {
+        let attendus = [
+            "org_stackops": "#7A8CFF",
+            "org_1": "#4C8DFF",
+            "org_2": "#B57BFF",
+            "ORG-9f3c-4d2e": "#FFC53D",
+        ]
+        for (identifiant, couleur) in attendus {
+            XCTAssertEqual(CouleurDEquipe.attribuee(identifiant), couleur, identifiant)
+        }
+    }
+
+    func testLaCouleurChoisieLEmporteSurCelleAttribuee() {
+        XCTAssertEqual(
+            CouleurDEquipe.hex("org_a", choisies: ["org_a": "#123456"]), "#123456")
+        XCTAssertEqual(
+            CouleurDEquipe.hex("org_a", choisies: [:]), CouleurDEquipe.attribuee("org_a"))
+    }
+
+    /// Le registre est écrit par d'autres clients : une valeur illisible ne doit pas
+    /// donner du noir sans qu'on sache pourquoi.
+    func testUneCouleurIllisibleEstRefusee() {
+        for valeur in ["", "#12345", "bleu", "#GGGGGG", "#1234567"] {
+            XCTAssertNil(CouleurDEquipe.couleur(valeur), "« \(valeur) » n'est pas une couleur")
+        }
+        XCTAssertNotNil(CouleurDEquipe.couleur("#4C8DFF"))
+        XCTAssertNotNil(CouleurDEquipe.couleur("4C8DFF"))
+    }
+
+    /// L'aller-retour couleur → texte → couleur ne doit pas dériver : le registre est relu
+    /// à chaque ouverture, et une dérive d'un point par cycle finirait par se voir.
+    func testLAllerRetourDUneCouleurEstStable() throws {
+        for hex in CouleurDEquipe.palette {
+            let couleur = try XCTUnwrap(CouleurDEquipe.couleur(hex))
+            XCTAssertEqual(CouleurDEquipe.hex(de: couleur), hex)
+        }
+    }
+
+    // ─── La borne sur ce que le serveur renvoie ───
+
+    /// Éprouvé avec un `URLProtocol` plutôt qu'un vrai serveur : fabriquer trente mégaoctets
+    /// en mémoire coûte moins qu'un aller-retour réseau, et surtout permet de mentir sur
+    /// l'en-tête `Content-Length`, ce qu'aucun serveur honnête ne fera pour nous.
+    private func reseauDEssai(limite: Int) -> ReseauBorne {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ProtocoleDEssai.self]
+        return ReseauBorne(limite: limite, configuration: configuration)
+    }
+
+    private var requeteDEssai: URLRequest {
+        URLRequest(url: URL(string: "https://essai.invalid/x")!)
+    }
+
+    func testUneReponseNormalePasse() async throws {
+        ProtocoleDEssai.corps = Data("bonjour".utf8)
+        ProtocoleDEssai.annonceLaTaille = true
+        let (donnees, _) = try await reseauDEssai(limite: 1024).donnees(pour: requeteDEssai)
+        XCTAssertEqual(String(decoding: donnees, as: UTF8.self), "bonjour")
+    }
+
+    /// Le cas le moins coûteux : le serveur annonce sa taille, on refuse avant le corps.
+    func testUneReponseTropGrandeAnnonceeEstRefusee() async {
+        ProtocoleDEssai.corps = Data(repeating: 0x41, count: 4096)
+        ProtocoleDEssai.annonceLaTaille = true
+        do {
+            _ = try await reseauDEssai(limite: 1024).donnees(pour: requeteDEssai)
+            XCTFail("une réponse annoncée au-dessus du seuil doit être refusée")
+        } catch {
+            XCTAssertEqual(error as? APIError, .reponseTropGrande)
+        }
+    }
+
+    /// Le cas qui compte vraiment : un serveur qui n'annonce rien — ou qui ment. La borne
+    /// doit alors mordre **pendant** la réception, sinon elle ne borne rien du tout.
+    func testUneReponseTropGrandeNonAnnonceeEstRefusee() async {
+        ProtocoleDEssai.corps = Data(repeating: 0x41, count: 4096)
+        ProtocoleDEssai.annonceLaTaille = false
+        do {
+            _ = try await reseauDEssai(limite: 1024).donnees(pour: requeteDEssai)
+            XCTFail("une réponse non annoncée au-dessus du seuil doit être refusée")
+        } catch {
+            XCTAssertEqual(error as? APIError, .reponseTropGrande)
+        }
+    }
+
+    /// Une réponse qui vaut exactement le seuil passe : la borne est un maximum, pas un
+    /// interdit. Un décalage d'un octet ici refuserait le coffre le plus gros toléré.
+    func testUneReponseExactementAuSeuilPasse() async throws {
+        ProtocoleDEssai.corps = Data(repeating: 0x41, count: 1024)
+        ProtocoleDEssai.annonceLaTaille = true
+        let (donnees, _) = try await reseauDEssai(limite: 1024).donnees(pour: requeteDEssai)
+        XCTAssertEqual(donnees.count, 1024)
+    }
+
+    // ─── Ce qu'un fichier importé ne doit pas pouvoir faire ───
+
+    /// Un nom d'élément est du texte écrit par quelqu'un d'autre — un CSV qu'on vous fait
+    /// importer, un élément semé dans une collection d'équipe. Il ressort à l'export, dans
+    /// un fichier qu'on ouvre avec un tableur, à côté des mots de passe en clair.
+    func testLExportNeutraliseLesFormulesDeTableur() {
+        for valeur in ["=HYPERLINK(\"http://x\")", "+1+1", "-2", "@SUM(A1)", "\tx", "\rx"] {
+            XCTAssertTrue(
+                CsvExport.neutraliserLaFormule(valeur).hasPrefix("'"),
+                "« \(valeur) » serait évaluée par un tableur")
+        }
+    }
+
+    func testLExportNeTouchePasAuTexteOrdinaire() {
+        for valeur in ["GitHub", "clara@stackops.ch", "mot de passe", ""] {
+            XCTAssertEqual(CsvExport.neutraliserLaFormule(valeur), valeur)
+        }
+    }
+
+    /// La neutralisation doit être **réversible**, sinon chaque aller-retour ajouterait une
+    /// apostrophe. Le cas piégeux est la valeur qui commence déjà par une apostrophe.
+    func testLAllerRetourRendExactementLaValeurDOrigine() {
+        for valeur in ["=SOMME(A1)", "'=SOMME(A1)", "''=x", "'texte", "texte", "-1"] {
+            XCTAssertEqual(
+                CsvImport.rendreSaFormule(CsvExport.neutraliserLaFormule(valeur)), valeur,
+                "« \(valeur) » n'a pas survécu à l'aller-retour")
+        }
+    }
+
+    /// Le préfixe des registres commence par un octet NUL, qu'aucun clavier ne produit —
+    /// mais qu'un fichier contient sans peine. Un élément importé sous ce nom serait pris
+    /// pour un registre : invisible dans la liste, et surtout capable de détourner
+    /// l'identité du vrai registre, si bien que la prochaine écriture de dossiers ou de
+    /// favoris irait dans le mauvais élément.
+    func testUnNomImporteNePeutPasSeFairePasserPourUnRegistre() {
+        let nom = CsvImport.nettoyerLeNom("\u{0}gp:folders")
+        XCTAssertEqual(nom, "gp:folders")
+        XCTAssertFalse(nom.hasPrefix(VaultConstants.registryPrefix))
+    }
+
+    // ─── À qui l'on confie la clé d'un partage ───
+
+    /// La clé de déchiffrement voyage dans le fragment du lien. Un navigateur ne l'envoie
+    /// jamais au serveur — mais la page servie par ce domaine est du code que ce domaine
+    /// contrôle, et rien ne l'empêche de lire `location.hash`. Laisser le serveur désigner
+    /// librement ce domaine revenait donc à le laisser choisir qui lit le secret : il a
+    /// déjà le chiffré. Ces tests portent sur la décision, pas sur l'alerte qui la montre.
+    private func lien(_ url: String) throws -> URLComponents {
+        try XCTUnwrap(URLComponents(string: url))
+    }
+
+    func testLeDomaineDuServeurEstDeConfiance() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        XCTAssertTrue(
+            VaultStore.destinationEstDeConfiance(
+                try lien("https://ghostpass.example.com/s/abc"), serveur: serveur,
+                approuves: []))
+    }
+
+    func testUnAutreDomaineNEstPasDeConfianceParDefaut() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        for adresse in [
+            "https://relais.attaquant.example/p/abc",
+            // Le piège classique : un domaine qui *contient* celui du serveur.
+            "https://ghostpass.example.com.attaquant.example/p/abc",
+            // Et celui qui s'en approche par la gauche.
+            "https://evil-ghostpass.example.com.co/p/abc",
+        ] {
+            XCTAssertFalse(
+                VaultStore.destinationEstDeConfiance(
+                    try lien(adresse), serveur: serveur, approuves: []),
+                "« \(adresse) » ne doit pas recevoir la clé sans approbation")
+        }
+    }
+
+    func testUnDomaineApprouveParLUtilisateurPasse() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        XCTAssertTrue(
+            VaultStore.destinationEstDeConfiance(
+                try lien("https://ghostbit.example.com/p/abc"), serveur: serveur,
+                approuves: ["ghostbit.example.com"]))
+    }
+
+    /// Un serveur en HTTPS ne peut pas rediriger la clé vers du texte clair : elle
+    /// traverserait le réseau lisible par quiconque écoute.
+    func testUnLienEnClairEstRefuseQuandLeServeurEstChiffre() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        XCTAssertFalse(
+            VaultStore.destinationEstDeConfiance(
+                try lien("http://ghostpass.example.com/s/abc"), serveur: serveur,
+                approuves: ["ghostpass.example.com"]))
+    }
+
+    /// Mais un auto-hébergement en boucle locale reste utilisable : l'application accepte
+    /// déjà `http://` pour lui, refuser ici l'aurait privé du partage.
+    func testUnServeurEnClairAccepteUnLienEnClairSurLuiMeme() throws {
+        let serveur = try XCTUnwrap(URL(string: "http://127.0.0.1:3111"))
+        XCTAssertTrue(
+            VaultStore.destinationEstDeConfiance(
+                try lien("http://127.0.0.1:3111/s/abc"), serveur: serveur, approuves: []))
+    }
+
+    func testUnLienSansHoteEstRefuse() throws {
+        let serveur = try XCTUnwrap(URL(string: "https://ghostpass.example.com"))
+        XCTAssertFalse(
+            VaultStore.destinationEstDeConfiance(
+                try lien("https:///s/abc"), serveur: serveur, approuves: []))
+    }
+
+    // ─── Le registre des partages ───
+
+    /// Les noms de champs **sont** le contrat : le registre est écrit par le téléphone et
+    /// relu par le navigateur. Un champ renommé d'un côté ne casse rien à la compilation
+    /// et rend simplement les partages illisibles chez l'autre — sans erreur, sans trace.
+    func testLeRegistreDesPartagesGardeLesNomsDeChampsDuWeb() throws {
+        let partage = PartageEnCours(
+            id: "abc", url: "https://ghostbit.example/p/abc#cle", deleteToken: "jeton",
+            name: "Secret partagé", createdAt: 1_788_000_000, expiresAt: 1_788_086_400)
+        let json = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: JSONEncoder().encode([partage]))
+                as? [[String: Any]])
+        XCTAssertEqual(
+            Set(try XCTUnwrap(json.first).keys),
+            ["id", "url", "deleteToken", "name", "createdAt", "expiresAt"])
+    }
+
+    /// Une échéance absente est légitime : ghostbit accepte « jamais ».
+    func testUnPartageSansEcheanceSeRelit() throws {
+        let brut = Data(
+            """
+            [{"id":"a","url":"https://x/p/a#k","deleteToken":"j","name":"n",
+              "createdAt":1788000000,"expiresAt":null}]
+            """.utf8)
+        let liste = try JSONDecoder().decode([PartageEnCours].self, from: brut)
+        XCTAssertEqual(liste.count, 1)
+        XCTAssertNil(liste[0].expiresAt)
+    }
+
+    /// Les deux horodatages sont dans la même unité. Ils ne l'étaient pas au premier jet,
+    /// et l'écart ne se serait vu qu'à l'affichage, chez le client qui n'a pas écrit la
+    /// ligne.
+    ///
+    /// La première version de ce test mesurait `Date().timeIntervalSince1970` — une
+    /// propriété de Foundation, vraie par définition, qui serait restée verte si le champ
+    /// repassait en millisecondes. Il porte maintenant sur la fonction qui écrit
+    /// réellement la valeur.
+    func testLHorodatageDuRegistreEstEnSecondes() {
+        let repere = Date(timeIntervalSince1970: 1_788_000_000)
+        XCTAssertEqual(VaultStore.horodatage(repere), 1_788_000_000)
+    }
+
+    /// Les deux champs se comparent : une durée de vie se calcule en les soustrayant, et
+    /// deux unités différentes donneraient un résultat mille fois trop grand.
+    func testLesDeuxHorodatagesSeComparentSansConversion() throws {
+        let brut = Data(
+            """
+            [{"id":"a","url":"https://x/p/a#k","deleteToken":"j","name":"n",
+              "createdAt":1788000000,"expiresAt":1788086400}]
+            """.utf8)
+        let partage = try XCTUnwrap(
+            JSONDecoder().decode([PartageEnCours].self, from: brut).first)
+        let duree = try XCTUnwrap(partage.expiresAt) - partage.createdAt
+        XCTAssertEqual(duree, 86_400, "vingt-quatre heures, en secondes de part et d'autre")
+    }
+
+    /// Le nom réservé doit être exactement celui de la web app, octet NUL compris : c'est
+    /// lui qui appareille les deux registres, et il masque la ligne dans l'interface.
+    func testLeNomReserveDuRegistreEstCeluiDuWeb() {
+        XCTAssertEqual(VaultConstants.sharesItemName, "\u{0}gp:shares")
+        XCTAssertTrue(VaultConstants.sharesItemName.hasPrefix(VaultConstants.registryPrefix))
+    }
+
+    // ─── Ce qu'un QR code a le droit de contenir ───
+
+    func testUnQrCodeOtpauthEstRetenu() {
+        let uri = "otpauth://totp/GhostPass:clara?secret=GEZDGNBVGY3TQOJQ&period=60"
+        XCTAssertEqual(Totp.depuisUnQrCode(uri), .totp(uri))
+    }
+
+    /// La lecture par caméra est plus stricte que la saisie, et c'est délibéré.
+    ///
+    /// `parse` accepte un secret nu : celui qui tape dans le champ sait ce qu'il y met.
+    /// Une caméra, elle, voit ce qu'on lui présente — et ces chaînes-là passeraient toutes
+    /// pour un secret base32, faute de rien qui distingue un secret d'un mot quelconque.
+    /// Un second facteur silencieusement faux ne se découvre qu'au moment de s'en servir,
+    /// c'est-à-dire au pire moment.
+    func testUnQrCodeQuiNEstPasUnSecondFacteurEstRefuse() {
+        for charge in [
+            "https://ghostpass.example.com",
+            "WIFI:S:Salon;T:WPA;P:motdepasse;;",
+            "BEGIN:VCARD\nFN:Clara\nEND:VCARD",
+            "GEZDGNBVGY3TQOJQ",
+            "",
+        ] {
+            XCTAssertEqual(
+                Totp.depuisUnQrCode(charge), .autreChose,
+                "« \(charge) » n'est pas un second facteur")
+        }
+    }
+
+    /// L'export d'une application d'authentification emporte plusieurs comptes dans un
+    /// protobuf compressé. Le retenir comme un secret donnerait des codes faux sans que
+    /// rien ne le signale ; on le nomme donc, pour pouvoir l'expliquer à l'écran.
+    func testLExportDUneApplicationEstReconnuCommeTel() {
+        XCTAssertEqual(
+            Totp.depuisUnQrCode("otpauth-migration://offline?data=Ci0KC..."),
+            .exportDApplication)
+    }
+
+    /// Une URI sans secret n'en est pas une : `parse` la rejette, la lecture aussi.
+    func testUneUriOtpauthSansSecretEstRefusee() {
+        XCTAssertEqual(
+            Totp.depuisUnQrCode("otpauth://totp/GhostPass:clara?period=30"), .autreChose)
+    }
+
+    /// Un secret recopié à la main arrive avec des espaces et en minuscules.
+    func testUnSecretBrutEstNormalise() throws {
+        let config = try XCTUnwrap(Totp.parse("  gezd gnbv gy3t qojq  "))
+        XCTAssertEqual(config.secret, "GEZDGNBVGY3TQOJQ")
+        XCTAssertEqual(config.period, 30)
+        XCTAssertEqual(config.digits, 6)
+    }
+
+    func testUnChampVideNEstPasUneErreur() {
+        XCTAssertNil(Totp.parse(""))
+        XCTAssertNil(Totp.parse("   "))
+    }
+
+    /// Des paramètres absurdes sont ramenés à des valeurs utilisables plutôt que
+    /// propagés jusqu'au calcul.
+    func testDesParametresAbsurdesSontCorriges() throws {
+        let config = try XCTUnwrap(
+            Totp.parse("otpauth://totp/x?secret=GEZDGNBVGY3TQOJQ&period=0&digits=42"))
+        XCTAssertEqual(config.period, 30)
+        XCTAssertEqual(config.digits, 6)
+        XCTAssertNotNil(Totp.code(for: config))
+    }
+}
+
+/// Rapprochement entre le site où l'on se trouve et les adresses d'un item. C'est cette
+/// règle qui décide de ce que le remplissage propose : trop stricte, elle ne propose
+/// rien ; trop lâche, elle offre les identifiants d'un site à un autre.
+final class SiteMatchingTests: XCTestCase {
+
+    func testUneUrlEstRamenéeASonHote() {
+        XCTAssertEqual(SiteMatching.host(of: "https://github.com/login?next=/x"), "github.com")
+        XCTAssertEqual(SiteMatching.host(of: "HTTPS://WWW.GitHub.COM/"), "github.com")
+        XCTAssertEqual(SiteMatching.host(of: "git.stackops.ch"), "git.stackops.ch")
+        XCTAssertEqual(SiteMatching.host(of: "http://127.0.0.1:3111/api"), "127.0.0.1")
+        XCTAssertEqual(SiteMatching.host(of: "  https://Example.com  "), "example.com")
+        XCTAssertEqual(SiteMatching.host(of: ""), "")
+    }
+
+    /// Les sites déplacent leur formulaire d'authentification sur un sous-domaine sans
+    /// prévenir : un identifiant enregistré pour `example.com` doit valoir sur
+    /// `login.example.com`.
+    func testUnSousDomaineCorrespondAuDomaine() {
+        XCTAssertTrue(SiteMatching.sameSite("login.example.com", "example.com"))
+        XCTAssertTrue(SiteMatching.sameSite("example.com", "login.example.com"))
+        XCTAssertTrue(SiteMatching.sameSite("example.com", "example.com"))
+    }
+
+    /// Le point de séparation compte : sans lui, `notexample.com` passerait pour un
+    /// sous-domaine d'`example.com` et le coffre livrerait ses identifiants à un voisin.
+    func testUnDomaineVoisinNeCorrespondPas() {
+        XCTAssertFalse(SiteMatching.sameSite("notexample.com", "example.com"))
+        XCTAssertFalse(SiteMatching.sameSite("example.com.attaquant.net", "example.com"))
+        XCTAssertFalse(SiteMatching.sameSite("example.org", "example.com"))
+        XCTAssertFalse(SiteMatching.sameSite("", "example.com"))
+    }
+
+    private func identifiant(_ adresses: [String]) -> VaultItem {
+        VaultItem(
+            name: "x", notes: nil, folder: nil,
+            data: .login(Login(username: "clara", password: "s", uris: adresses)))
+    }
+
+    func testUnItemEstProposeSurSonSite() {
+        let item = identifiant(["https://github.com/login"])
+        XCTAssertTrue(SiteMatching.matches(item, domains: ["github.com"]))
+        XCTAssertTrue(SiteMatching.matches(item, domains: ["https://gist.github.com"]))
+        XCTAssertFalse(SiteMatching.matches(item, domains: ["gitlab.com"]))
+        XCTAssertFalse(SiteMatching.matches(item, domains: []))
+    }
+
+    /// Une note ou une carte n'a rien à remplir dans un champ d'identifiant.
+    func testSeulsLesIdentifiantsSontProposes() {
+        let note = VaultItem(
+            name: "n", notes: nil, folder: nil, data: .secureNote(SecureNote(content: "x")))
+        XCTAssertFalse(SiteMatching.matches(note, domains: ["github.com"]))
+    }
+
+    /// Un identifiant sans adresse ne peut être rattaché à aucun site — il reste
+    /// accessible dans la liste complète, mais n'est pas suggéré.
+    func testUnItemSansAdresseNEstPasSuggere() {
+        XCTAssertFalse(SiteMatching.matches(identifiant([]), domains: ["github.com"]))
+    }
+}
+
+/// Ce que fait l'extension de remplissage quand un site réclame un identifiant : relire
+/// la copie locale, la déchiffrer avec le mot de passe maître, et ne proposer que ce qui
+/// vaut pour ce site. L'extension vit dans un autre processus ; ce test exerce ici le
+/// chemin qu'elle emprunte, avec le même code.
+final class AutoFillLogicTests: XCTestCase {
+    override func setUp() { VaultCache.clear() }
+    override func tearDown() { VaultCache.clear() }
+
+    private func identifiant(_ nom: String, _ adresse: String) -> VaultItem {
+        VaultItem(
+            name: nom, notes: nil, folder: nil,
+            data: .login(Login(username: "clara", password: "s3cret-\(nom)", uris: [adresse])))
+    }
+
+    func testLeRemplissageNeProposeQueLesIdentifiantsDuSite() throws {
+        let account = try register(
+            password: "correct horse battery staple", email: "clara@ghostpass.test"
+        ).account()
+
+        // Un coffre comme l'application en dépose un : deux sites et le registre interne.
+        let coffre = [
+            identifiant("GitHub", "https://github.com/login"),
+            identifiant("Forgejo", "https://git.stackops.ch"),
+            VaultItem(
+                name: VaultConstants.foldersItemName, notes: nil, folder: nil,
+                data: .secureNote(SecureNote(content: "[]"))),
+        ]
+        let dtos = try coffre.enumerated().map { index, item -> EncryptedItemDTO in
+            let (key, data) = try VaultStore.encrypt(item, with: account)
+            return EncryptedItemDTO(
+                id: "item-\(index)", encryptedKey: key, encryptedData: data,
+                updatedAt: nil, deletedAt: nil)
+        }
+        VaultCache.save(dtos)
+
+        // Le chemin de l'extension : cache → déchiffrement → filtrage.
+        let items = try XCTUnwrap(VaultCache.load()).compactMap {
+            try? VaultStore.decrypt($0, with: account)
+        }
+        let visibles = items.filter { !VaultStore.isRegistry($0) }
+        XCTAssertEqual(visibles.count, 2, "le registre interne n'a rien à faire ici non plus")
+
+        let surGitHub = visibles.filter {
+            SiteMatching.matches($0, domains: ["https://gist.github.com/clara"])
+        }
+        XCTAssertEqual(surGitHub.map(\.name), ["GitHub"], "un sous-domaine doit correspondre")
+
+        let surLaForge = visibles.filter { SiteMatching.matches($0, domains: ["git.stackops.ch"]) }
+        XCTAssertEqual(surLaForge.map(\.name), ["Forgejo"])
+
+        // Le mot de passe fourni est bien celui de l'item retenu.
+        guard case .login(let login) = try XCTUnwrap(surGitHub.first).data else {
+            return XCTFail("un identifiant était attendu")
+        }
+        XCTAssertEqual(login.password, "s3cret-GitHub")
+
+        // Sur un site inconnu, rien n'est suggéré — la liste complète reste accessible.
+        XCTAssertTrue(
+            visibles.filter { SiteMatching.matches($0, domains: ["exemple.test"]) }.isEmpty)
+    }
+}
+
+/// Le registre des dossiers, partagé avec la web app.
+///
+/// Seuls les dossiers **vides** y figurent : les autres se déduisent des éléments qui les
+/// habitent. Le format est celui qu'écrit `encryptFolders` côté web — un `SecureNote` dont
+/// le contenu est la liste des chemins en JSON, sous un nom que les deux clients masquent.
+/// Un écart ici et chaque client verrait des dossiers que l'autre ignore.
+final class FolderRegistryTests: XCTestCase {
+
+    private func compte() throws -> Account {
+        try register(password: "correct horse battery staple", email: "clara@ghostpass.test")
+            .account()
+    }
+
+    /// Le registre tel que l'écrirait l'application doit se relire à l'identique, et
+    /// rester invisible dans la liste.
+    func testLeRegistreSeRelitEtResteMasque() throws {
+        let account = try compte()
+        let chemins = ["Perso", "Travail", "Travail/Serveurs"]
+        let contenu = String(decoding: try JSONEncoder().encode(chemins), as: UTF8.self)
+        let registre = VaultItem(
+            name: VaultConstants.foldersItemName, notes: nil, folder: nil,
+            data: .secureNote(SecureNote(content: contenu)))
+
+        let (key, data) = try VaultStore.encrypt(registre, with: account)
+        let dto = EncryptedItemDTO(
+            id: "r", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
+        let relu = try VaultStore.decrypt(dto, with: account)
+
+        XCTAssertTrue(VaultStore.isRegistry(relu), "le registre doit rester masqué")
+        guard case .secureNote(let note) = relu.data else {
+            return XCTFail("un SecureNote était attendu")
+        }
+        XCTAssertEqual(
+            try JSONDecoder().decode([String].self, from: Data(note.content.utf8)), chemins)
+    }
+
+    /// « Travail/ », « /Travail » et « Travail » désignent le même endroit : sans
+    /// normalisation, ils coexisteraient dans le registre comme trois dossiers distincts.
+    func testLesCheminsSontNormalises() {
+        XCTAssertEqual(VaultStore.normaliser("  Travail  "), "Travail")
+        XCTAssertEqual(VaultStore.normaliser("/Travail/"), "Travail")
+        XCTAssertEqual(VaultStore.normaliser("Travail/Serveurs/"), "Travail/Serveurs")
+        XCTAssertEqual(VaultStore.normaliser("   "), "")
+        XCTAssertEqual(VaultStore.normaliser("//"), "")
+    }
+}
+
+// ─── Traduction ───────────────────────────────────────────────────────────────
+
+/// L'application se veut disponible en français et en anglais. Ce qui peut casser sans
+/// bruit, ce n'est pas le sélecteur de langue — c'est le catalogue : une chaîne oubliée,
+/// une région non déclarée, et l'écran reste en français en jurant que la langue a changé.
+/// Ces tests interrogent le paquet réellement construit, pas le fichier source.
+final class TraductionTests: XCTestCase {
+    /// Le paquet anglais existe : sans lui, choisir « English » ne changerait rien.
+    func testLePaquetAnglaisEstEmbarque() throws {
+        let chemin = try XCTUnwrap(
+            Bundle.main.path(forResource: "en", ofType: "lproj"),
+            "aucun en.lproj dans l'application : le catalogue n'a pas été compilé")
+        let paquet = try XCTUnwrap(Bundle(path: chemin))
+        XCTAssertEqual(paquet.localizedString(forKey: "Coffre", value: nil, table: nil), "Vault")
+        XCTAssertEqual(
+            paquet.localizedString(forKey: "Réglages", value: nil, table: nil), "Settings")
+    }
+
+    /// Le français est la langue de développement : ses clefs sont ses propres textes,
+    /// et une clef absente du catalogue s'affiche telle quelle plutôt que de disparaître.
+    func testLeFrancaisResteLaLangueDeDeveloppement() {
+        XCTAssertEqual(Bundle.main.developmentLocalization, "fr")
+        XCTAssertTrue(
+            Bundle.main.localizations.contains("en"),
+            "l'anglais n'est pas déclaré parmi les localisations de l'application")
+    }
+
+    /// Les écrans les plus exposés — déverrouillage, coffre, réglages — sont traduits.
+    /// Une chaîne oubliée laisse ici sa clef française en évidence.
+    func testLesEcransPrincipauxSontTraduits() throws {
+        let chemin = try XCTUnwrap(Bundle.main.path(forResource: "en", ofType: "lproj"))
+        let paquet = try XCTUnwrap(Bundle(path: chemin))
+        let attendus = [
+            "Mot de passe maître": "Master password",
+            "Se connecter": "Sign in",
+            "Verrouiller": "Lock",
+            "Nouvel élément": "New item",
+            "Corbeille": "Trash",
+            "Apparence": "Appearance",
+            "Langue": "Language",
+            "Sombre": "Dark",
+            "Mot de passe maître incorrect.": "Incorrect master password.",
+        ]
+        for (clef, traduction) in attendus {
+            XCTAssertEqual(
+                paquet.localizedString(forKey: clef, value: nil, table: nil), traduction,
+                "« \(clef) » n'est pas traduit")
+        }
+    }
+
+    /// Les deux réglages ne sont que des choix : ce qu'ils désignent doit rester juste.
+    func testLesChoixDeThemeEtDeLangueDesignentBienCeQuIlFaut() {
+        XCTAssertNil(Apparence.systeme.colorScheme, "« Système » ne doit rien imposer")
+        XCTAssertEqual(Apparence.clair.colorScheme, .light)
+        XCTAssertEqual(Apparence.sombre.colorScheme, .dark)
+
+        XCTAssertNil(Langue.systeme.code, "« Système » ne doit forcer aucune langue")
+        XCTAssertEqual(Langue.francais.code, "fr")
+        XCTAssertEqual(Langue.anglais.code, "en")
+        XCTAssertEqual(Langue.anglais.locale?.identifier, "en")
+    }
+}
+
+// ─── Santé du coffre ──────────────────────────────────────────────────────────
+
+/// Le barème est celui de la web app. Ce qui casserait sans bruit, c'est une divergence :
+/// un mot de passe jugé faible dans le navigateur et bon sur le téléphone ferait douter
+/// des deux. Ces vecteurs sont donc ceux du barème web, recopiés.
+final class PasswordHealthTests: XCTestCase {
+    private func niveau(_ mot: String) -> Int { PasswordHealth.force(mot).niveau }
+
+    func testLeBaremeSuitCeluiDeLaWebApp() {
+        // Rien : niveau plancher.
+        XCTAssertEqual(niveau(""), 0)
+        // 7 caractères, deux classes : score 1 → niveau 1.
+        XCTAssertEqual(niveau("abc123"), 1)
+        // 8 caractères, deux classes : score 2 → niveau 2.
+        XCTAssertEqual(niveau("abcd1234"), 2)
+        // 14 caractères, trois classes : score 4 → niveau 3. C'est la longueur de 20
+        // qui manque pour atteindre le dernier cran, et non la variété.
+        XCTAssertEqual(niveau("Abcdefgh123456"), 3)
+        // 20 caractères, quatre classes : score 5 → niveau 4.
+        XCTAssertEqual(niveau("Abcdefgh1234567890!!"), 4)
+    }
+
+    /// Un mot de passe long mais d'une seule sorte de caractères reste faible : c'est
+    /// exactement le cas que la longueur seule laisserait passer.
+    func testUneSeuleSorteDeCaracteresNeSuffitPas() {
+        XCTAssertLessThanOrEqual(niveau("aaaaaaaa"), 1)
+        XCTAssertLessThanOrEqual(niveau("motdepasse"), 1)
+    }
+
+    func testLesMotsDePasseReutilisesSontReperes() {
+        let entries = [
+            entree("A", motDePasse: "correct horse battery staple"),
+            entree("B", motDePasse: "correct horse battery staple"),
+            entree("C", motDePasse: "Zx9!kQ2m#Lp4vT7w"),
+        ]
+        let bilan = PasswordHealth.bilan(entries)
+        XCTAssertEqual(Set(bilan.reutilises.map(\.item.name)), ["A", "B"])
+        XCTAssertTrue(bilan.faibles.isEmpty, "aucun de ces mots de passe n'est faible")
+    }
+
+    /// Une note et une carte n'ont pas de mot de passe : les compter comme faibles
+    /// remplirait l'écran de santé d'alertes sans objet.
+    func testSeulsLesIdentifiantsSontJuges() {
+        let note = VaultEntry(
+            id: "n",
+            item: VaultItem(
+                name: "Note", notes: nil, folder: nil,
+                data: .secureNote(SecureNote(content: "x"))),
+            updatedAt: nil)
+        let bilan = PasswordHealth.bilan([note, entree("Faible", motDePasse: "abc")])
+        XCTAssertEqual(bilan.faibles.map(\.item.name), ["Faible"])
+        XCTAssertEqual(bilan.sansCode.map(\.item.name), ["Faible"])
+    }
+
+    private func entree(_ nom: String, motDePasse: String) -> VaultEntry {
+        VaultEntry(
+            id: nom,
+            item: VaultItem(
+                name: nom, notes: nil, folder: nil,
+                data: .login(Login(username: "clara", password: motDePasse))),
+            updatedAt: nil)
+    }
+}
+
+// ─── Registres ────────────────────────────────────────────────────────────────
+
+/// Le coffre range ses métadonnées dans des items comme les autres, sous un nom masqué.
+/// Le jour où un autre client de la suite en ajoute un, il ne doit pas apparaître dans la
+/// liste : c'est le préfixe, et non le nom exact, qui décide.
+final class RegistryTests: XCTestCase {
+    private func item(_ nom: String) -> VaultItem {
+        VaultItem(name: nom, notes: nil, folder: nil, data: .secureNote(SecureNote(content: "[]")))
+    }
+
+    func testTousLesRegistresSontMasques() {
+        XCTAssertTrue(VaultStore.isRegistry(item(VaultConstants.foldersItemName)))
+        XCTAssertTrue(VaultStore.isRegistry(item(VaultConstants.favoritesItemName)))
+        // Un registre qu'aucune version actuelle ne connaît.
+        XCTAssertTrue(VaultStore.isRegistry(item(VaultConstants.registryPrefix + "avenir")))
+    }
+
+    /// Un nom choisi par l'utilisateur ne peut pas passer pour un registre : le préfixe
+    /// commence par un octet NUL, qu'aucun clavier ne produit.
+    func testUnNomOrdinaireNEstPasUnRegistre() {
+        XCTAssertFalse(VaultStore.isRegistry(item("gp:folders")))
+        XCTAssertFalse(VaultStore.isRegistry(item("Favoris")))
+        XCTAssertFalse(VaultStore.isRegistry(item("")))
+    }
+}
+
+// ─── Historique des mots de passe ─────────────────────────────────────────────
+
+/// Un mot de passe remplacé rejoint l'historique. C'est ce qui sauve un compte dont le
+/// changement a échoué à mi-chemin — le service a gardé l'ancien, l'application le
+/// nouveau. Encore faut-il que l'historique traverse le chiffrement intact, et qu'il
+/// cesse de grossir : un item qui enfle à chaque modification finit par coûter cher.
+final class PasswordHistoryTests: XCTestCase {
+    private func compte() throws -> Account {
+        try register(password: "correct horse battery staple", email: "clara@ghostpass.test")
+            .account()
+    }
+
+    func testLHistoriqueSurvitAuChiffrement() throws {
+        let account = try compte()
+        let anciens = ["premier", "deuxième", "troisième"]
+        let item = VaultItem(
+            name: "Forgejo", notes: nil, folder: nil,
+            data: .login(
+                Login(
+                    username: "clara", password: "actuel", uris: [], totp: nil,
+                    passwordHistory: anciens)))
+
+        let (key, data) = try VaultStore.encrypt(item, with: account)
+        let dto = EncryptedItemDTO(
+            id: "x", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
+        let relu = try VaultStore.decrypt(dto, with: account)
+
+        guard case .login(let login) = relu.data else { return XCTFail("un Login était attendu") }
+        XCTAssertEqual(
+            login.passwordHistory, anciens,
+            "l'historique ne traverse pas le chiffrement — le champ `password_history` a changé de nom"
+        )
+    }
+
+    /// Le plafond est celui de la web app. S'il divergeait, un même coffre montrerait
+    /// plus d'anciens mots de passe d'un côté que de l'autre, et on croirait à une perte.
+    func testLePlafondEstCeluiDeLaWebApp() {
+        XCTAssertEqual(VaultConstants.passwordHistoryLimit, 20)
+    }
+}
+
+// ─── Récupération de compte ───────────────────────────────────────────────────
+
+/// La clé de récupération est la seule issue d'un mot de passe maître oublié : sans elle,
+/// un coffre chiffré de bout en bout est perdu pour de bon. Ce qui casserait sans bruit,
+/// ce sont les noms de champs — le cœur Rust les écrit en `snake_case`, l'API les attend
+/// en camelCase — et le fait que la clé du coffre survive à la réinitialisation. Un coffre
+/// qu'on rouvre mais dont les items ne se déchiffrent plus n'est pas un coffre récupéré.
+final class RecoveryTests: XCTestCase {
+    private let motDePasse = "correct horse battery staple"
+    private let mail = "clara@ghostpass.test"
+
+    /// Le blob d'inscription porte les paramètres KDF comme **objet** JSON, alors que le
+    /// serveur les stocke — et les rend — comme une chaîne contenant du JSON. C'est la
+    /// même couture qu'au prélogin, et c'est là qu'une régression s'était déjà logée : le
+    /// cœur Rust veut la chaîne, pas l'objet.
+    private func parametresKdf(_ blobs: [String: Any]) throws -> String {
+        let objet = try XCTUnwrap(blobs["kdf_params"])
+        return String(
+            decoding: try JSONSerialization.data(withJSONObject: objet), as: UTF8.self)
+    }
+
+    /// Les clefs du JSON de `create_recovery()` sont celles que l'application décode.
+    func testLeKitPorteLesTroisChampsAttendus() throws {
+        let account = try register(password: motDePasse, email: mail).account()
+        let json = try account.createRecovery()
+        let kit = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+
+        for clef in ["recovery_key", "recovery_auth_hash", "encrypted_user_key_recovery"] {
+            XCTAssertNotNil(kit[clef], "le kit de récupération n'a pas de champ « \(clef) »")
+            XCTAssertFalse(
+                (kit[clef] as? String ?? "").isEmpty, "le champ « \(clef) » est vide")
+        }
+    }
+
+    /// Le parcours entier, contre le vrai binding : un coffre, une clé de récupération,
+    /// un nouveau mot de passe — et l'item d'origine qui se relit.
+    func testUnCoffreSeRouvreApresReinitialisation() throws {
+        let inscription = try register(password: motDePasse, email: mail)
+        let account = try inscription.account()
+        let blobs = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(inscription.blob().utf8)) as? [String: Any])
+        let kdf = try parametresKdf(blobs)
+        let clePrivee = try XCTUnwrap(blobs["encrypted_private_key"] as? String)
+
+        // Un item déposé avant l'oubli : c'est lui qui dira si la clé du coffre a survécu.
+        let item = VaultItem(
+            name: "Forgejo", notes: nil, folder: nil,
+            data: .login(Login(username: "clara", password: "s3cret-initial")))
+        let (key, data) = try VaultStore.encrypt(item, with: account)
+
+        let kit = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(try account.createRecovery().utf8))
+                as? [String: Any])
+        let cleDeRecuperation = try XCTUnwrap(kit["recovery_key"] as? String)
+        let uskRecuperation = try XCTUnwrap(kit["encrypted_user_key_recovery"] as? String)
+
+        // Le mot de passe maître est oublié : on repart de la clé de récupération seule.
+        let resultat = try recover(
+            recoveryKey: cleDeRecuperation, email: mail, newPassword: "nouveau mot de passe maître",
+            kdfParamsJson: kdf, encryptedUserKeyRecovery: uskRecuperation,
+            encryptedPrivateKey: clePrivee)
+
+        let reset = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(resultat.reset().utf8)) as? [String: Any])
+        for clef in ["master_password_hash", "recovery_auth_hash", "encrypted_user_key"] {
+            XCTAssertNotNil(reset[clef], "le blob de réinitialisation n'a pas de champ « \(clef) »")
+        }
+
+        let dto = EncryptedItemDTO(
+            id: "x", encryptedKey: key, encryptedData: data, updatedAt: nil, deletedAt: nil)
+        let relu = try VaultStore.decrypt(dto, with: resultat.account())
+        XCTAssertEqual(
+            relu.name, "Forgejo",
+            "le coffre ne se relit plus après récupération : la clé du coffre n'a pas survécu")
+    }
+
+    /// Une clé fausse ne doit pas ouvrir le coffre — et doit échouer ici, dans le cœur,
+    /// pas seulement au refus du serveur.
+    func testUneCleFausseEstRefusee() throws {
+        let inscription = try register(password: motDePasse, email: mail)
+        let blobs = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(inscription.blob().utf8)) as? [String: Any])
+        let kdf = try parametresKdf(blobs)
+        let clePrivee = try XCTUnwrap(blobs["encrypted_private_key"] as? String)
+        let kit = try XCTUnwrap(
+            try JSONSerialization.jsonObject(
+                with: Data(try inscription.account().createRecovery().utf8)) as? [String: Any])
+        let uskRecuperation = try XCTUnwrap(kit["encrypted_user_key_recovery"] as? String)
+
+        XCTAssertThrowsError(
+            try recover(
+                recoveryKey: "AAAA-AAAA-AAAA-AAAA-AAAA-AAAA", email: mail,
+                newPassword: "nouveau mot de passe maître", kdfParamsJson: kdf,
+                encryptedUserKeyRecovery: uskRecuperation, encryptedPrivateKey: clePrivee),
+            "une clé de récupération fausse a été acceptée")
+    }
+}
+
+// ─── Import CSV ───────────────────────────────────────────────────────────────
+
+/// Un import est irréversible à l'échelle d'un coffre : deux cents entrées mal lues se
+/// reprennent une par une. Ce qui casse silencieusement, ce sont les cas de bord du format
+/// — un mot de passe qui contient une virgule, un guillemet, un saut de ligne — et les
+/// noms de colonnes, qui diffèrent d'un gestionnaire à l'autre. Les vecteurs ci-dessous
+/// sont ceux du parseur de la web app, pour que le même fichier donne le même coffre.
+///
+/// Les littéraux emploient les délimiteurs étendus de Swift : un CSV contient des
+/// guillemets, et `"""` au fil d'une ligne refermerait le littéral au mauvais endroit.
+final class CsvImportTests: XCTestCase {
+    private func login(_ item: VaultItem) throws -> Login {
+        guard case .login(let login) = item.data else {
+            throw XCTSkip("un Login était attendu")
+        }
+        return login
+    }
+
+    func testUnFichierSimpleSeLit() throws {
+        let csv = #"""
+            name,username,password,url
+            GitHub,clara,s3cret,https://github.com
+            """#
+        let items = CsvImport.items(csv)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].name, "GitHub")
+        let compte = try login(items[0])
+        XCTAssertEqual(compte.username, "clara")
+        XCTAssertEqual(compte.password, "s3cret")
+        XCTAssertEqual(compte.uris, ["https://github.com"])
+    }
+
+    /// Une virgule dans un mot de passe est le cas qui casse un découpage naïf — et il
+    /// donnerait un mot de passe tronqué, sans que rien ne le signale.
+    func testUnChampEntreGuillemetsGardeSesVirgules() throws {
+        let csv = #"""
+            name,password
+            Forgejo,"a,b,c"
+            """#
+        XCTAssertEqual(try login(CsvImport.items(csv)[0]).password, "a,b,c")
+    }
+
+    /// Deux guillemets consécutifs valent un guillemet littéral.
+    func testUnGuillemetDoubleSeReduit() throws {
+        let csv = #"""
+            name,password
+            Forgejo,"il a dit ""bonjour"""
+            """#
+        XCTAssertEqual(try login(CsvImport.items(csv)[0]).password, #"il a dit "bonjour""#)
+    }
+
+    func testUnSautDeLigneEchappeNeCoupePasLEnregistrement() {
+        let csv = "name,password\n\"Deux\nlignes\",s3cret\n"
+        let items = CsvImport.items(csv)
+        XCTAssertEqual(items.count, 1, "le saut de ligne échappé a coupé l'enregistrement")
+        XCTAssertEqual(items[0].name, "Deux\nlignes")
+    }
+
+    /// Chaque gestionnaire nomme ses colonnes à sa façon. La table d'équivalences est ce
+    /// qui rend l'import utilisable sans retoucher le fichier à la main.
+    func testLesColonnesDesConcurrentsSontReconnues() throws {
+        let bitwarden = #"""
+            folder,favorite,type,name,notes,fields,login_uri,login_username,login_password,login_totp
+            Travail,,login,Forgejo,,,https://git.stackops.ch,clara,s3cret,GEZDGNBVGY3TQOJQ
+            """#
+        let items = CsvImport.items(bitwarden)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].name, "Forgejo")
+        XCTAssertEqual(items[0].folder, "Travail")
+        let compte = try login(items[0])
+        XCTAssertEqual(compte.username, "clara")
+        XCTAssertEqual(compte.password, "s3cret")
+        XCTAssertEqual(compte.uris, ["https://git.stackops.ch"])
+        XCTAssertEqual(compte.totp, "GEZDGNBVGY3TQOJQ")
+
+        let chrome = #"""
+            name,url,username,password
+            GitHub,https://github.com,clara,s3cret
+            """#
+        XCTAssertEqual(CsvImport.items(chrome).first?.name, "GitHub")
+
+        let onepassword = #"""
+            title,website,login,password
+            Amazon,https://amazon.fr,clara,s3cret
+            """#
+        let un = CsvImport.items(onepassword)
+        XCTAssertEqual(un.first?.name, "Amazon")
+        XCTAssertEqual(try login(un[0]).username, "clara")
+    }
+
+    /// Les exports sèment des lignes vides ; les avaler produirait des entrées fantômes.
+    func testLesLignesVidesSontIgnorees() {
+        XCTAssertEqual(CsvImport.items("name,password\n\nGitHub,s3cret\n\n\n").count, 1)
+    }
+
+    func testUnFichierSansEnregistrementNeDonneRien() {
+        XCTAssertTrue(CsvImport.items("").isEmpty)
+        XCTAssertTrue(
+            CsvImport.items("name,password").isEmpty, "l'en-tête seul n'est pas une entrée")
+    }
+
+    /// Une colonne absente ne doit pas décaler les suivantes ni faire échouer la lecture.
+    func testUneLigneTropCourteSeCompleteEnVide() throws {
+        let csv = #"""
+            name,username,password,url
+            GitHub,clara
+            """#
+        let items = CsvImport.items(csv)
+        XCTAssertEqual(items.count, 1)
+        let compte = try login(items[0])
+        XCTAssertEqual(compte.password, "")
+        XCTAssertTrue(compte.uris.isEmpty, "une adresse vide ne doit pas produire d'URI vide")
+    }
+
+    /// Sans nom, l'entrée reste identifiable dans la liste plutôt que d'y figurer en blanc.
+    func testUneEntreeSansNomEnRecoitUn() {
+        let csv = #"""
+            name,username,password
+            ,clara,s3cret
+            """#
+        XCTAssertFalse(CsvImport.items(csv).first?.name.isEmpty ?? true)
+    }
+}
+
+// ─── Export CSV ───────────────────────────────────────────────────────────────
+
+/// Un coffre doit pouvoir sortir aussi librement qu'il est entré. Le test qui compte est
+/// l'aller-retour : ce que l'export écrit, l'import doit le relire à l'identique. Sans
+/// cela, on découvrirait le problème le jour où l'on quitte l'application — c'est-à-dire
+/// trop tard pour s'en plaindre.
+final class CsvExportTests: XCTestCase {
+    private func entree(
+        _ nom: String, _ utilisateur: String, _ motDePasse: String,
+        adresse: String = "", dossier: String? = nil, totp: String? = nil
+    ) -> VaultEntry {
+        VaultEntry(
+            id: nom,
+            item: VaultItem(
+                name: nom, notes: nil, folder: dossier,
+                data: .login(
+                    Login(
+                        username: utilisateur, password: motDePasse,
+                        uris: adresse.isEmpty ? [] : [adresse], totp: totp))),
+            updatedAt: nil)
+    }
+
+    func testLEnteteEstCelleDeLaWebApp() {
+        XCTAssertEqual(CsvExport.entete, "name,folder,url,username,password,totp")
+    }
+
+    /// L'aller-retour complet, avec les caractères qui cassent un format mal échappé.
+    func testCeQuiSortSeRelitALIdentique() throws {
+        let coffre = [
+            entree("GitHub", "clara", "s3cret", adresse: "https://github.com", dossier: "Travail"),
+            entree("Virgule", "clara", "a,b,c"),
+            entree("Guillemet", "clara", #"il a dit "bonjour""#),
+            entree("Décathlon", "clara@exemple.ch", "p@ss", adresse: "https://decathlon.fr"),
+            entree("AvecCode", "clara", "s3cret", totp: "GEZDGNBVGY3TQOJQ"),
+        ]
+
+        let relus = CsvImport.items(CsvExport.texte(coffre))
+        XCTAssertEqual(relus.count, coffre.count, "l'aller-retour a perdu ou inventé des entrées")
+
+        for (origine, relu) in zip(coffre, relus) {
+            XCTAssertEqual(relu.name, origine.item.name)
+            XCTAssertEqual(relu.folder, origine.item.folder)
+            guard case .login(let apres) = relu.data, let avant = origine.login else {
+                return XCTFail("un Login était attendu")
+            }
+            XCTAssertEqual(apres.username, avant.username)
+            XCTAssertEqual(
+                apres.password, avant.password,
+                "« \(origine.item.name) » : le mot de passe n'a pas survécu à l'aller-retour")
+            XCTAssertEqual(apres.uris, avant.uris)
+            XCTAssertEqual(apres.totp, avant.totp)
+        }
+    }
+
+    /// Un saut de ligne dans un champ ne doit pas couper l'enregistrement à la relecture.
+    func testUnSautDeLigneSurvitALAllerRetour() throws {
+        let coffre = [entree("Deux\nlignes", "clara", "s3cret")]
+        let relus = CsvImport.items(CsvExport.texte(coffre))
+        XCTAssertEqual(relus.count, 1)
+        XCTAssertEqual(relus[0].name, "Deux\nlignes")
+    }
+
+    /// Une note et une carte n'ont pas d'identifiants : leurs colonnes restent vides plutôt
+    /// que de décaler la ligne.
+    func testUnElementSansIdentifiantsNeCassePasLaLigne() {
+        let note = VaultEntry(
+            id: "n",
+            item: VaultItem(
+                name: "Note", notes: nil, folder: nil,
+                data: .secureNote(SecureNote(content: "x"))),
+            updatedAt: nil)
+        let lignes = CsvExport.texte([note]).components(separatedBy: "\n")
+        XCTAssertEqual(lignes.count, 2)
+        XCTAssertEqual(lignes[1], #""Note","","","","","""#)
+    }
+
+    func testLeNomDeFichierPorteLaDate() {
+        let date = Date(timeIntervalSince1970: 1_787_000_000)
+        XCTAssertTrue(
+            CsvExport.nomDeFichier(date).hasSuffix(".csv"),
+            "le nom de fichier doit garder son extension")
+        XCTAssertTrue(CsvExport.nomDeFichier(date).contains("2026-"))
+    }
+}
+
+// ─── Icônes des sites ─────────────────────────────────────────────────────────
+
+/// Les icônes viennent du proxy du serveur de l'utilisateur, jamais d'un tiers : c'est ce
+/// qui empêche Google — ou n'importe qui d'autre — d'apprendre quels sites contient le
+/// coffre. Ces tests vérifient que l'adresse construite reste bien celle de ce serveur.
+final class FaviconTests: XCTestCase {
+    private let serveur = "https://ghostpass.stackops.ch"
+
+    func testLAdresseViseLeProxyDuServeur() throws {
+        let url = try XCTUnwrap(
+            Favicon.url(pour: "https://www.decathlon.fr/rayon", serveur: serveur, jeton: "j-1"))
+        XCTAssertEqual(
+            url.host, "ghostpass.stackops.ch", "l'icône ne doit venir que de notre serveur")
+        XCTAssertEqual(url.path, "/api/icons")
+        let composants = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        XCTAssertEqual(
+            composants.queryItems?.first(where: { $0.name == "domain" })?.value, "decathlon.fr",
+            "le sous-domaine « www. » et le chemin doivent être écartés")
+        XCTAssertEqual(
+            composants.queryItems?.first(where: { $0.name == "t" })?.value, "j-1",
+            "sans le jeton, le serveur répond 401 et la liste perd tous ses logos")
+    }
+
+    /// Sans jeton, **aucune requête**.
+    ///
+    /// Ce témoin manquait, et son absence a coûté la disparition silencieuse de tous les
+    /// logos : le serveur a fermé un oracle temporel en exigeant `t`, l'application a
+    /// continué d'appeler la route sans lui, et chaque 401 retombait sur l'initiale — le
+    /// repli prévu pour « pas d'icône » masquait « contrat rompu ». Le symptôme était
+    /// visible, le diagnostic nulle part.
+    func testSansJetonAucuneRequete() {
+        XCTAssertNil(Favicon.url(pour: "https://decathlon.fr", serveur: serveur, jeton: nil))
+        XCTAssertNil(Favicon.url(pour: "https://decathlon.fr", serveur: serveur, jeton: ""))
+    }
+
+    /// Sans domaine exploitable, pas de requête du tout : une pastille d'initiale suffit.
+    func testUneAdresseInexploitableNeDonneAucuneUrl() {
+        XCTAssertNil(Favicon.url(pour: "", serveur: serveur, jeton: "j-1"))
+        XCTAssertNil(Favicon.url(pour: "localhost", serveur: serveur, jeton: "j-1"))
+        XCTAssertNil(
+            Favicon.url(pour: "http://192.168.1.10:8080", serveur: serveur, jeton: "j-1"),
+            "une IP n'est pas un domaine")
+        XCTAssertNil(Favicon.url(pour: "https://decathlon.fr", serveur: "", jeton: "j-1"))
+    }
+
+    /// La couleur de repli est déterministe et partagée avec la web app : le même élément
+    /// doit garder la même pastille d'un écran à l'autre, et d'un lancement au suivant.
+    func testLaCouleurDeReplyEstStable() {
+        XCTAssertEqual(Favicon.couleur(pour: "GitHub"), Favicon.couleur(pour: "GitHub"))
+        XCTAssertEqual(Favicon.initiale("décathlon"), "D")
+        XCTAssertEqual(Favicon.initiale("  forgejo"), "F")
+        XCTAssertEqual(Favicon.initiale(""), "?")
+    }
+}
+
+// ─── Verrouillage différé ─────────────────────────────────────────────────────
+
+/// La décision de refermer le coffre au retour dans l'application. Elle se prend sur des
+/// dates, et une erreur de sens laisserait un coffre ouvert qu'on croit fermé — c'est
+/// exactement le genre de défaut qu'aucun essai à la main ne révèle, puisqu'il faudrait
+/// attendre un quart d'heure pour le voir.
+final class VerrouillageTests: XCTestCase {
+    private let sortie = Date(timeIntervalSince1970: 1_787_000_000)
+
+    /// Sans délai, on referme quoi qu'il arrive : c'est le réglage par défaut.
+    func testSansDelaiOnRefermeToujours() {
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(sortie: sortie, delai: nil, maintenant: sortie))
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: nil, maintenant: sortie.addingTimeInterval(0.1)))
+    }
+
+    func testAvantLeDelaiLeCoffreResteOuvert() {
+        XCTAssertFalse(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: 300, maintenant: sortie.addingTimeInterval(299)))
+    }
+
+    /// Au délai pile, on referme. Un « strictement supérieur » laisserait passer le cas
+    /// limite, et le cas limite est celui qu'on teste.
+    func testAuDelaiPileOnReferme() {
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: 300, maintenant: sortie.addingTimeInterval(300)))
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: 300, maintenant: sortie.addingTimeInterval(301)))
+    }
+
+    /// Une horloge qui recule — fuseau, correction NTP — donnerait un écart négatif. Sans
+    /// ce garde-fou, le coffre resterait ouvert indéfiniment.
+    func testUneHorlogeQuiReculeRefermeLeCoffre() {
+        XCTAssertTrue(
+            VaultStore.doitVerrouiller(
+                sortie: sortie, delai: 900, maintenant: sortie.addingTimeInterval(-3600)))
+    }
+
+    /// Les délais proposés sont ceux qu'annoncent les libellés.
+    func testLesDelaisCorrespondentAuxLibelles() {
+        XCTAssertNil(Verrouillage.immediat.delai)
+        XCTAssertEqual(Verrouillage.uneMinute.delai, 60)
+        XCTAssertEqual(Verrouillage.cinqMinutes.delai, 300)
+        XCTAssertEqual(Verrouillage.quinzeMinutes.delai, 900)
+    }
+}
+
+// ─── Accès d'urgence ──────────────────────────────────────────────────────────
+
+final class AccesDUrgenceTests: XCTestCase {
+    private func dto(
+        role: String = "view", status: String = "invited", waitDays: Int = 7,
+        requestedAt: Int? = nil, available: Bool? = nil
+    ) -> EmergencyContactDTO {
+        EmergencyContactDTO(
+            id: "lien-1", contactEmail: "kevin@stackops.ch", role: role, waitDays: waitDays,
+            status: status, requestedAt: requestedAt, available: available)
+    }
+
+    func testUnLienValideSeTraduitFidelement() throws {
+        let lien = try XCTUnwrap(LienDUrgence(dto(role: "takeover", status: "requested")))
+        XCTAssertEqual(lien.contactEmail, "kevin@stackops.ch")
+        XCTAssertEqual(lien.role, .takeover)
+        XCTAssertEqual(lien.etat, .requested)
+        XCTAssertEqual(lien.waitDays, 7)
+    }
+
+    /// Un rôle ou un état que l'application ne connaît pas ne doit pas produire une ligne
+    /// muette dans l'écran : mieux vaut ne rien afficher que d'afficher n'importe quoi.
+    func testUnRoleInconnuEstEcarte() {
+        XCTAssertNil(LienDUrgence(dto(role: "administrateur")))
+    }
+
+    func testUnEtatInconnuEstEcarte() {
+        XCTAssertNil(LienDUrgence(dto(status: "en_cours_de_reflexion")))
+    }
+
+    /// Le serveur renvoie des millisecondes ; les confondre avec des secondes placerait la
+    /// demande en 1970 et l'ouverture prévue juste après.
+    func testLHorodatageEstLuEnMillisecondes() throws {
+        let quandEnMs = 1_800_000_000_000
+        let lien = try XCTUnwrap(
+            LienDUrgence(dto(status: "requested", requestedAt: quandEnMs)))
+        XCTAssertEqual(
+            try XCTUnwrap(lien.requestedAt).timeIntervalSince1970, 1_800_000_000, accuracy: 1)
+    }
+
+    func testLOuverturePrevueTombeApresLeDelai() throws {
+        let depart = 1_800_000_000_000
+        let lien = try XCTUnwrap(
+            LienDUrgence(dto(status: "requested", waitDays: 3, requestedAt: depart)))
+        let attendue = Date(timeIntervalSince1970: 1_800_000_000 + 3 * 86_400)
+        XCTAssertEqual(
+            try XCTUnwrap(lien.ouverturePrevue()).timeIntervalSince1970,
+            attendue.timeIntervalSince1970, accuracy: 1)
+    }
+
+    /// Sans demande en cours, il n'y a pas de date à annoncer — et en inventer une ferait
+    /// croire à un compte à rebours qui n'a pas commencé.
+    func testAucuneOuverturePrevueSansDemande() throws {
+        let accepte = try XCTUnwrap(LienDUrgence(dto(status: "accepted", requestedAt: nil)))
+        XCTAssertNil(accepte.ouverturePrevue())
+        let invite = try XCTUnwrap(
+            LienDUrgence(dto(status: "invited", requestedAt: 1_800_000_000_000)))
+        XCTAssertNil(invite.ouverturePrevue())
+    }
+
+    /// `available` n'existe que dans le sens « je suis le contact ». Absent, il vaut faux :
+    /// on n'ouvre pas un coffre parce qu'un champ manquait.
+    func testLaDisponibiliteAbsenteVautFaux() throws {
+        XCTAssertFalse(try XCTUnwrap(LienDUrgence(dto(available: nil))).disponible)
+        XCTAssertTrue(
+            try XCTUnwrap(LienDUrgence(dto(status: "granted", available: true))).disponible)
+    }
+
+    @MainActor
+    func testLesLibellesDesRolesSontTraduits() {
+        for role in RoleDUrgence.allCases {
+            XCTAssertFalse(role.intitule.isEmpty, "intitulé vide pour \(role.rawValue)")
+            XCTAssertFalse(role.explication.isEmpty, "explication vide pour \(role.rawValue)")
+        }
+    }
+}
+
+// ─── Organisations ────────────────────────────────────────────────────────────
+
+final class OrganisationsTests: XCTestCase {
+    private func dto(role: String = "member", status: String = "active") -> OrgSummaryDTO {
+        OrgSummaryDTO(orgId: "org-1", name: "Équipe Sécurité", role: role, status: status)
+    }
+
+    func testUneOrganisationValideSeTraduitFidelement() throws {
+        let org = try XCTUnwrap(Organisation(dto(role: "admin", status: "invited")))
+        XCTAssertEqual(org.id, "org-1")
+        XCTAssertEqual(org.nom, "Équipe Sécurité")
+        XCTAssertEqual(org.role, .admin)
+        XCTAssertEqual(org.etat, .invited)
+    }
+
+    /// Un rôle que cette version ne connaît pas ne doit pas produire une ligne muette : on
+    /// préfère ne rien afficher qu'afficher une équipe dont on ignore ce qu'on y peut.
+    func testUnRoleInconnuEstEcarte() {
+        XCTAssertNil(Organisation(dto(role: "owner")))
+    }
+
+    func testUnEtatInconnuEstEcarte() {
+        XCTAssertNil(Organisation(dto(status: "pending")))
+    }
+
+    /// La lecture seule est le seul rôle qui n'écrit pas. Se tromper ici proposerait un
+    /// bouton « ajouter » que le serveur refuserait ensuite — une promesse non tenue.
+    func testSeuleLaLectureSeuleNEcritPas() {
+        XCTAssertFalse(RoleDOrganisation.readonly.peutEcrire)
+        XCTAssertTrue(RoleDOrganisation.member.peutEcrire)
+        XCTAssertTrue(RoleDOrganisation.admin.peutEcrire)
+    }
+
+    @MainActor
+    func testLesLibellesDesRolesEtEtatsSontTraduits() {
+        for role in [RoleDOrganisation.admin, .member, .readonly] {
+            XCTAssertFalse(role.intitule.isEmpty, "intitulé vide pour \(role.rawValue)")
+        }
+        for etat in [EtatDAppartenance.invited, .active, .revoked] {
+            XCTAssertFalse(etat.intitule.isEmpty, "intitulé vide pour \(etat.rawValue)")
+        }
+    }
+
+    /// Le coffre partagé et le coffre personnel ouvrent la même enveloppe : c'est ce que le
+    /// protocole garantit, et c'est ce qui permet de n'écrire ce code qu'une fois.
+    func testLeCoffreDEquipeOuvreLaMemeEnveloppeQueLeCompte() throws {
+        let inscription = try register(
+            password: "correct horse battery staple", email: "clara@test.ch")
+        let compte = inscription.account()
+        let creation = try compte.createOrg()
+        let org = creation.org()
+
+        let item = VaultItem(
+            name: "Serveur de production", notes: nil, folder: nil,
+            data: .login(Login(username: "root", password: "s3cr3t")))
+        let json = String(data: try JSONEncoder().encode(item), encoding: .utf8) ?? "{}"
+        let chiffre = try org.encryptItem(itemJson: json)
+
+        // Le DTO tel que le serveur le rendrait.
+        struct Enveloppe: Decodable {
+            let encryptedKey: String
+            let encryptedData: String
+            enum CodingKeys: String, CodingKey {
+                case encryptedKey = "encrypted_key"
+                case encryptedData = "encrypted_data"
+            }
+        }
+        let e = try JSONDecoder().decode(Enveloppe.self, from: Data(chiffre.utf8))
+        let dto = EncryptedItemDTO(
+            id: "item-1", encryptedKey: e.encryptedKey, encryptedData: e.encryptedData)
+
+        let relu = try org.ouvrir(dto)
+        XCTAssertEqual(relu.name, "Serveur de production")
+
+        // Et le compte, lui, ne peut pas l'ouvrir : ce n'est pas sa clé.
+        XCTAssertThrowsError(try compte.ouvrir(dto))
+    }
+}
+
+// ─── Administration d'équipe ──────────────────────────────────────────────────
+
+final class AdministrationDEquipeTests: XCTestCase {
+    private func membre(id: String, email: String?, role: String = "member") -> MembreDEquipe? {
+        MembreDEquipe(
+            OrgMemberDTO(userId: id, email: email, role: role, status: "active"))
+    }
+
+    func testUnMembreValideSeTraduitFidelement() throws {
+        let m = try XCTUnwrap(membre(id: "u1", email: "kevin@stackops.ch", role: "readonly"))
+        XCTAssertEqual(m.id, "u1")
+        XCTAssertEqual(m.email, "kevin@stackops.ch")
+        XCTAssertEqual(m.role, .readonly)
+        XCTAssertEqual(m.etat, .active)
+    }
+
+    func testUnMembreSansAdresseResteUtilisable() throws {
+        // Le serveur peut rendre `email: null` ; la ligne doit tout de même s'afficher,
+        // sous l'identifiant, plutôt que de disparaître de la liste des membres.
+        let m = try XCTUnwrap(membre(id: "u2", email: nil))
+        XCTAssertNil(m.email)
+        XCTAssertEqual(m.id, "u2")
+    }
+
+    @MainActor
+    func testLesDroitsSurCollectionSontTousTraduits() {
+        for droit in DroitSurCollection.allCases {
+            XCTAssertFalse(droit.intitule.isEmpty, "intitulé vide pour \(droit.rawValue)")
+        }
+        XCTAssertEqual(DroitSurCollection.allCases.map(\.rawValue), ["read", "write", "manage"])
+    }
+
+    /// Le refus de rotation doit nommer la personne concernée : « rotation annulée » sans
+    /// dire de qui il s'agit laisserait l'administrateur sans rien à faire.
+    @MainActor
+    func testLeRefusDeRotationNommeLaPersonne() {
+        let message = RotationImpossible.cleIntrouvable(membre: "kevin@stackops.ch").message
+        XCTAssertTrue(
+            message.contains("kevin@stackops.ch"),
+            "le refus ne nomme pas la personne : « \(message) »")
+    }
+
+    /// Une rotation ré-enveloppe les items **sans** toucher au contenu chiffré. Si le
+    /// contenu changeait, ce ne serait plus une rotation de clé mais un re-chiffrement
+    /// complet — beaucoup plus coûteux, et inutile.
+    func testLaRotationNeReChiffrePasLeContenu() throws {
+        let compte = try register(password: "correct horse battery staple", email: "clara@test.ch")
+            .account()
+        let ancienne = try compte.createOrg().org()
+        let nouvelle = try compte.createOrg().org()
+
+        let item = VaultItem(
+            name: "Base de production", notes: nil, folder: nil,
+            data: .login(Login(username: "admin", password: "tr3s-secret")))
+        let json = String(data: try JSONEncoder().encode(item), encoding: .utf8) ?? "{}"
+        let chiffre = try ancienne.encryptItem(itemJson: json)
+        let refait = try nouvelle.rewrapItem(oldOrg: ancienne, encryptedItemJson: chiffre)
+
+        struct Enveloppe: Decodable {
+            let encryptedKey: String
+            let encryptedData: String
+            enum CodingKeys: String, CodingKey {
+                case encryptedKey = "encrypted_key"
+                case encryptedData = "encrypted_data"
+            }
+        }
+        let avant = try JSONDecoder().decode(Enveloppe.self, from: Data(chiffre.utf8))
+        let apres = try JSONDecoder().decode(Enveloppe.self, from: Data(refait.utf8))
+        XCTAssertEqual(avant.encryptedData, apres.encryptedData, "le contenu a été re-chiffré")
+        XCTAssertNotEqual(avant.encryptedKey, apres.encryptedKey, "l'enveloppe n'a pas changé")
+
+        // Et la conséquence qui compte : l'ancienne clé ne lit plus l'item ré-enveloppé.
+        let dto = EncryptedItemDTO(
+            id: "i1", encryptedKey: apres.encryptedKey, encryptedData: apres.encryptedData)
+        XCTAssertNoThrow(try nouvelle.ouvrir(dto))
+        XCTAssertThrowsError(try ancienne.ouvrir(dto))
+    }
+}
+
+// ─── Import depuis les gestionnaires concurrents ──────────────────────────────
+
+/// Un export par gestionnaire, avec ses en-têtes réels. Migrer est le premier geste d'un
+/// nouvel utilisateur : ce qui se perd ici se perd pour de bon, et en silence.
+final class ImportDepuisConcurrentsTests: XCTestCase {
+    private func seul(_ csv: String) throws -> VaultItem {
+        let items = CsvImport.items(csv)
+        XCTAssertEqual(items.count, 1, "une seule ligne attendue")
+        return try XCTUnwrap(items.first)
+    }
+
+    /// L'identifiant que porte un item. `login` est une commodité de `VaultEntry`, pas de
+    /// `VaultItem` — ici on n'a que ce dernier, avant tout dépôt.
+    private func identifiant(_ item: VaultItem) throws -> Login {
+        guard case .login(let l) = item.data else {
+            throw XCTSkip("l'item importé n'est pas un identifiant")
+        }
+        return l
+    }
+
+    func testBitwarden() throws {
+        let item = try seul(
+            """
+            folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp
+            Travail,0,login,Forgejo,Compte de service — ne pas partager,,0,https://git.example.ch,clara,s3cr3t,JBSWY3DPEHPK3PXP
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail")
+        XCTAssertEqual(item.notes, "Compte de service — ne pas partager")
+        XCTAssertEqual(try identifiant(item).username, "clara")
+        XCTAssertEqual(try identifiant(item).password, "s3cr3t")
+        XCTAssertEqual(try identifiant(item).uris, ["https://git.example.ch"])
+        XCTAssertEqual(try identifiant(item).totp, "JBSWY3DPEHPK3PXP")
+    }
+
+    func test1Password() throws {
+        let item = try seul(
+            """
+            Title,Url,Username,Password,OTPAuth,Favorite,Archived,Tags,Notes
+            Forgejo,https://git.example.ch,clara,s3cr3t,otpauth://totp/x,false,false,Travail,Note de migration
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail", "Tags sert de dossier")
+        XCTAssertEqual(item.notes, "Note de migration")
+        XCTAssertEqual(try identifiant(item).totp, "otpauth://totp/x")
+    }
+
+    /// LastPass nomme la note `extra` et le dossier `grouping` : deux colonnes qu'aucune
+    /// autre n'emploie, et que l'ancienne table ignorait toutes les deux.
+    func testLastPass() throws {
+        let item = try seul(
+            """
+            url,username,password,totp,extra,name,grouping,fav
+            https://git.example.ch,clara,s3cr3t,JBSWY3DPEHPK3PXP,Ma note LastPass,Forgejo,Travail,0
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail")
+        XCTAssertEqual(item.notes, "Ma note LastPass")
+    }
+
+    func testDashlane() throws {
+        let item = try seul(
+            """
+            username,username2,username3,title,password,note,url,category,otpSecret
+            clara,,,Forgejo,s3cr3t,Note Dashlane,https://git.example.ch,Travail,JBSWY3DPEHPK3PXP
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail")
+        XCTAssertEqual(item.notes, "Note Dashlane")
+        XCTAssertEqual(try identifiant(item).totp, "JBSWY3DPEHPK3PXP")
+    }
+
+    func testChrome() throws {
+        let item = try seul(
+            """
+            name,url,username,password,note
+            git.example.ch,https://git.example.ch,clara,s3cr3t,Note Chrome
+            """)
+        XCTAssertEqual(item.name, "git.example.ch")
+        XCTAssertEqual(item.notes, "Note Chrome")
+    }
+
+    func testKeePass() throws {
+        let item = try seul(
+            """
+            "Group","Title","Username","Password","URL","Notes"
+            "Travail","Forgejo","clara","s3cr3t","https://git.example.ch","Note KeePass"
+            """)
+        XCTAssertEqual(item.name, "Forgejo")
+        XCTAssertEqual(item.folder, "Travail")
+        XCTAssertEqual(item.notes, "Note KeePass")
+    }
+
+    /// Une note contenant une virgule, un saut de ligne et des guillemets doit survivre :
+    /// c'est le cas courant d'une note de plusieurs lignes, et celui qui casse les analyses
+    /// naïves.
+    func testUneNoteMultilignePasseEntiere() throws {
+        let csv = #"""
+            name,username,password,notes
+            Forgejo,clara,s3cr3t,"Première ligne, avec virgule
+            Deuxième ligne avec ""guillemets"""
+            """#
+        let item = try seul(csv)
+        XCTAssertEqual(
+            item.notes, "Première ligne, avec virgule\nDeuxième ligne avec \"guillemets\"")
+    }
+}
+
+// ─── Partage ponctuel ─────────────────────────────────────────────────────────
+
+/// Le partage est la seule fonctionnalité où un secret quitte le coffre. Ce qui compte
+/// n'est donc pas qu'il marche, mais qu'il ne livre rien de plus qu'on ne l'a voulu.
+final class PartagePonctuelTests: XCTestCase {
+    func testUnSecretSeRouvreAvecSaCle() throws {
+        let scelle = try sealSend(plaintext: "le code du coffre : 4821")
+        XCTAssertEqual(
+            try openSend(key: scelle.key, nonce: scelle.nonce, ciphertext: scelle.ciphertext),
+            "le code du coffre : 4821")
+    }
+
+    /// Sans la clé, le serveur ne détient qu'un chiffre — c'est tout l'objet du fragment
+    /// d'URL, que les navigateurs n'envoient jamais.
+    func testUneAutreCleNOuvreRien() throws {
+        let scelle = try sealSend(plaintext: "secret")
+        let autre = try sealSend(plaintext: "autre")
+        XCTAssertThrowsError(
+            try openSend(key: autre.key, nonce: scelle.nonce, ciphertext: scelle.ciphertext))
+    }
+
+    /// Deux partages du même texte ne doivent pas se ressembler : sinon un serveur curieux
+    /// saurait que deux personnes se sont transmis la même chose.
+    func testDeuxPartagesDuMemeTexteDifferent() throws {
+        let a = try sealSend(plaintext: "identique")
+        let b = try sealSend(plaintext: "identique")
+        XCTAssertNotEqual(a.ciphertext, b.ciphertext)
+        XCTAssertNotEqual(a.key, b.key)
+    }
+
+    /// Le lien que produit l'application place la clé **après le `#`**. C'est ce qui la
+    /// garde hors du serveur : le chemin et la requête lui sont transmis, pas le fragment.
+    /// S'en remettre à l'habitude serait risqué — d'où ce test.
+    func testLaCleVitDansLeFragmentEtNullePartAilleurs() throws {
+        let scelle = try sealSend(plaintext: "secret")
+        let fragment =
+            scelle.key
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        var composants = try XCTUnwrap(URLComponents(string: "https://ghostpass.example.ch"))
+        composants.path = "/s/abc123"
+        composants.fragment = fragment
+
+        let url = try XCTUnwrap(composants.url)
+        XCTAssertEqual(url.fragment, fragment)
+        XCTAssertFalse(url.path.contains(fragment), "la clé ne doit pas être dans le chemin")
+        XCTAssertNil(url.query, "la clé ne doit pas être dans la requête")
+    }
+
+    /// Le fragment doit survivre à l'aller-retour vers l'encodage d'URL : un `+` ou un `/`
+    /// mal traduit donnerait une clé fausse, et un partage illisible sans qu'on sache
+    /// pourquoi.
+    func testLaConversionDuFragmentEstReversible() throws {
+        for _ in 0..<50 {
+            let scelle = try sealSend(plaintext: "secret")
+            let fragment =
+                scelle.key
+                .replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: "")
+            var rendu =
+                fragment
+                .replacingOccurrences(of: "-", with: "+")
+                .replacingOccurrences(of: "_", with: "/")
+            rendu += String(repeating: "=", count: (4 - rendu.count % 4) % 4)
+            XCTAssertEqual(rendu, scelle.key)
+        }
+    }
+}
+
+// ─── Journal du compte ────────────────────────────────────────────────────────
+
+/// Le journal est le seul endroit où l'on peut s'apercevoir qu'un accès n'était pas le
+/// sien. Une ligne illisible ou un signalement manquant lui font perdre son objet.
+final class JournalDuCompteTests: XCTestCase {
+    private func action(_ nom: String) -> ActionDuJournal {
+        ActionDuJournal(
+            AuditEventDTO(action: nom, target: nil, ip: nil, createdAt: 1_800_000_000_000), rang: 0)
+    }
+
+    @MainActor
+    func testChaqueActionDuServeurEstTraduite() {
+        // La liste vient de `recordAudit` côté serveur. Une action non traduite s'afficherait
+        // sous son identifiant technique, que personne ne sait lire.
+        let connues = [
+            "login.password", "login.passkey", "login.sso", "logout",
+            "mfa.enable", "mfa.disable", "recovery.reset",
+            "passkey.add", "passkey.remove", "webauthn.add", "webauthn.remove",
+            "emergency.grant", "emergency.request", "emergency.approve",
+            "org.member.add", "org.member.role", "org.key.rotate",
+            "org.group.create", "org.group.delete",
+            "org.group.member.add", "org.group.member.remove",
+            "org.group.access.grant", "org.group.access.revoke",
+        ]
+        for nom in connues {
+            XCTAssertNotEqual(
+                action(nom).intitule, nom,
+                "« \(nom) » s'afficherait sous son identifiant technique")
+        }
+    }
+
+    /// Une action inconnue doit s'afficher telle quelle, pas disparaître : un serveur plus
+    /// récent peut en journaliser de nouvelles, et un journal dont l'objet est de révéler
+    /// l'inattendu ne peut pas se permettre de masquer ce qu'il ne connaît pas.
+    @MainActor
+    func testUneActionInconnueResteVisible() {
+        XCTAssertEqual(action("quelque.chose.de.neuf").intitule, "quelque.chose.de.neuf")
+    }
+
+    /// Ce qui retire une protection doit être signalé. Se tromper ici noierait la ligne
+    /// qu'il fallait voir au milieu de connexions ordinaires.
+    func testLesActionsQuiRetirentUneProtectionSontSignalees() {
+        for nom in ["mfa.disable", "recovery.reset", "passkey.remove", "emergency.approve"] {
+            XCTAssertTrue(action(nom).estSensible, "« \(nom) » devrait être signalée")
+        }
+        for nom in ["login.password", "logout", "org.group.create"] {
+            XCTAssertFalse(action(nom).estSensible, "« \(nom) » ne devrait pas l'être")
+        }
+    }
+
+    /// Le serveur horodate en millisecondes. Les lire en secondes placerait toutes les
+    /// connexions en 1970 — et un journal aux dates fausses ne sert à rien.
+    func testLesHorodatagesSontLusEnMillisecondes() {
+        let connexion = Connexion(
+            LoginEventDTO(
+                ip: "10.0.0.1", userAgent: "GhostPass/iOS", newDevice: true,
+                createdAt: 1_800_000_000_000),
+            rang: 0)
+        XCTAssertEqual(connexion.quand.timeIntervalSince1970, 1_800_000_000, accuracy: 1)
+        XCTAssertTrue(connexion.nouvelAppareil)
+    }
+}
+
+// ─── Adresse du serveur ───────────────────────────────────────────────────────
+
+/// Taper le nom de son serveur est le geste naturel. Le refuser au motif qu'il manque
+/// « https:// » fait échouer la toute première tentative de quelqu'un qui a pourtant donné
+/// la bonne adresse — et le message d'erreur accuse alors l'adresse plutôt que le manque.
+final class AdresseDuServeurTests: XCTestCase {
+    private func url(_ saisie: String) -> String? {
+        ServerAddress.normaliser(saisie)?.absoluteString
+    }
+
+    func testUnNomDeServeurSeulSuffit() {
+        XCTAssertEqual(url("ghostpass.stackops.ch"), "https://ghostpass.stackops.ch")
+    }
+
+    func testLesEspacesAutourNeGenentPas() {
+        XCTAssertEqual(url("  ghostpass.stackops.ch \n"), "https://ghostpass.stackops.ch")
+    }
+
+    /// Une barre finale doublerait les séparateurs des chemins construits ensuite.
+    func testLaBarreFinaleEstRetiree() {
+        XCTAssertEqual(url("https://ghostpass.stackops.ch/"), "https://ghostpass.stackops.ch")
+    }
+
+    func testUnSchemaExplicteEstRespecte() {
+        XCTAssertEqual(url("https://ghostpass.stackops.ch"), "https://ghostpass.stackops.ch")
+    }
+
+    /// On ne force pas `http` en `https` : un serveur de développement sur une machine
+    /// locale est un usage légitime, et le refuser n'apporterait aucune sécurité — la
+    /// personne a écrit `http` exprès.
+    func testHttpEstConserveTelQuel() {
+        XCTAssertEqual(url("http://127.0.0.1:3111"), "http://127.0.0.1:3111")
+    }
+
+    /// Un serveur local parle en clair. Lui imposer `https` produisait « une erreur TLS a
+    /// provoqué l'échec de la connexion sécurisée » — un message qui décrit la conséquence
+    /// et cache la cause. Trouvé en essayant le banc de remplissage automatique.
+    func testLaBoucleLocaleResteEnClair() {
+        XCTAssertEqual(url("127.0.0.1:3111"), "http://127.0.0.1:3111")
+        XCTAssertEqual(url("localhost:3111"), "http://localhost:3111")
+        XCTAssertEqual(url("LOCALHOST"), "http://LOCALHOST")
+    }
+
+    /// L'exception s'arrête à la boucle locale : un serveur sur un réseau privé peut
+    /// légitimement porter un certificat, et rétrograder son adresse ne rendrait service
+    /// à personne.
+    func testUnReseauPriveResteEnHttps() {
+        XCTAssertEqual(url("192.168.1.20:3111"), "https://192.168.1.20:3111")
+        XCTAssertEqual(url("coffre.interne"), "https://coffre.interne")
+    }
+
+    func testUnPortEtUnCheminSontConserves() {
+        XCTAssertEqual(url("ghostpass.stackops.ch:8443"), "https://ghostpass.stackops.ch:8443")
+        XCTAssertEqual(url("exemple.ch/ghostpass"), "https://exemple.ch/ghostpass")
+    }
+
+    /// Ce qui doit rester refusé. Sans ces cas, la normalisation accepterait n'importe quoi
+    /// et l'erreur reviendrait plus tard, plus loin, sous une forme moins compréhensible.
+    func testCeQuiNeMeneNullePartEstRefuse() {
+        XCTAssertNil(url(""))
+        XCTAssertNil(url("   "))
+        XCTAssertNil(url("ftp://exemple.ch"), "seuls http et https ont un sens ici")
+        XCTAssertNil(url("https://"), "un schéma sans hôte ne mène nulle part")
+    }
+}
+
+/// L'inactivité, distincte de la sortie d'écran.
+///
+/// Le cas trouvé sur un iPad réel : quitter l'application et y revenir aussitôt ne passe
+/// **jamais** par `.background`. Le coffre restait donc ouvert malgré un réglage
+/// « immédiatement » — le réglage ne verrouillait qu'au bon vouloir du système.
+final class InactiviteTests: XCTestCase {
+
+    @MainActor
+    func testImmediatVerrouilleDesLInactivite() async {
+        let store = VaultStore()
+        store.forcerLEtatOuvertPourTest()
+        XCTAssertTrue(store.isUnlocked)
+
+        store.noterLInactivite(delai: nil)
+        XCTAssertFalse(
+            store.isUnlocked,
+            "« immédiatement » doit verrouiller dès que l'application quitte le premier plan")
+    }
+
+    @MainActor
+    func testUnDelaiNeVerrouillePasSurLInactivite() async {
+        // Avec un délai, l'inactivité ne doit rien déclencher : c'est le retour qui décide,
+        // en comparant l'heure de sortie. Verrouiller ici viderait le délai de son sens.
+        let store = VaultStore()
+        store.forcerLEtatOuvertPourTest()
+        store.noterLInactivite(delai: 60)
+        XCTAssertTrue(store.isUnlocked)
+    }
+
+    @MainActor
+    func testUnSelecteurDeFichiersSuspendLeVerrouillage() async {
+        // Un sélecteur de fichiers rend l'application inactive sans qu'elle quitte
+        // l'écran. Verrouiller là couperait l'import ou l'export que l'utilisateur vient
+        // de lancer, sans qu'il soit allé nulle part.
+        let store = VaultStore()
+        store.forcerLEtatOuvertPourTest()
+        store.unSelecteurDeFichiersEstOuvert = true
+        store.noterLInactivite(delai: nil)
+        XCTAssertTrue(store.isUnlocked, "un sélecteur ouvert ne doit pas déclencher le verrou")
+    }
+}
+
+/// Un serveur en mémoire, qui répond ce qu'on lui dit — y compris en omettant la taille
+/// qu'il annonce, ce qu'un serveur réel ne fera pas sur commande.
+final class ProtocoleDEssai: URLProtocol {
+    nonisolated(unsafe) static var corps = Data()
+    nonisolated(unsafe) static var annonceLaTaille = true
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func stopLoading() {}
+
+    override func startLoading() {
+        let entetes =
+            Self.annonceLaTaille ? ["Content-Length": String(Self.corps.count)] : [:]
+        let reponse = HTTPURLResponse(
+            url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1",
+            headerFields: entetes)!
+        client?.urlProtocol(self, didReceive: reponse, cacheStoragePolicy: .notAllowed)
+        // Par morceaux : c'est ainsi qu'arrive une vraie réponse, et c'est ce qui permet à
+        // la borne de mordre avant la fin.
+        var reste = Self.corps[...]
+        while !reste.isEmpty {
+            let taille = min(512, reste.count)
+            client?.urlProtocol(self, didLoad: Data(reste.prefix(taille)))
+            reste = reste.dropFirst(taille)
+        }
+        client?.urlProtocolDidFinishLoading(self)
+    }
+}
+
+/// L'étiquette d'un lien `otpauth://`, et ce qu'on en fait.
+///
+/// Ces liens viennent du dehors — un QR code photographié, un lien touché dans un
+/// courriel — et « Configurer les codes dans » désigne désormais GhostPass pour les
+/// ouvrir. Ce qui vient du dehors est malformé plus souvent qu'à son tour.
+final class EtiquetteOtpauthTests: XCTestCase {
+    func testServiceEtCompteDepuisLeChemin() {
+        let e = Totp.etiquette("otpauth://totp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        XCTAssertEqual(e.service, "GitHub")
+        XCTAssertEqual(e.compte, "clara")
+    }
+
+    func testLeParametreIssuerLEmporteSurLeChemin() {
+        // Les deux sources se contredisent dans la nature — un service renommé met à jour
+        // le paramètre et laisse le chemin d'origine. Le paramètre fait foi : il n'a pas à
+        // être échappé, donc il ne peut pas être coupé par un deux-points du nom.
+        let e = Totp.etiquette(
+            "otpauth://totp/Ancien:clara?secret=GEZDGNBVGY3TQOJQ&issuer=Nouveau")
+        XCTAssertEqual(e.service, "Nouveau")
+        XCTAssertEqual(e.compte, "clara")
+    }
+
+    func testUnCheminSansDeuxPointsEstUnCompte() {
+        let e = Totp.etiquette("otpauth://totp/clara@example.com?secret=GEZDGNBVGY3TQOJQ")
+        XCTAssertNil(e.service)
+        XCTAssertEqual(e.compte, "clara@example.com")
+    }
+
+    func testLesEspacesEchappesSontRendusLisibles() {
+        // « Site%20local » doit s'afficher « Site local », pas tel quel : c'est le nom que
+        // l'utilisateur verra dans son coffre.
+        let e = Totp.etiquette(
+            "otpauth://totp/Site%20local:clara?secret=GEZDGNBVGY3TQOJQ&issuer=Site%20local")
+        XCTAssertEqual(e.service, "Site local")
+        XCTAssertEqual(e.compte, "clara")
+    }
+
+    func testUneEtiquetteVideNEmpecheRien() {
+        // Le secret est la seule chose qu'un lien garantisse. Une étiquette absente ou
+        // vide ne doit jamais empêcher d'enregistrer un second facteur valide.
+        let e = Totp.etiquette("otpauth://totp/?secret=GEZDGNBVGY3TQOJQ")
+        XCTAssertNil(e.service)
+        XCTAssertNil(e.compte)
+        XCTAssertEqual(
+            Totp.parse("otpauth://totp/?secret=GEZDGNBVGY3TQOJQ")?.secret,
+            "GEZDGNBVGY3TQOJQ")
+    }
+
+    func testCeQuiNEstPasUnLienOtpauthNaPasDEtiquette() {
+        for entree in ["GEZDGNBVGY3TQOJQ", "", "https://example.com/totp/x", "otpauth:/"] {
+            let e = Totp.etiquette(entree)
+            XCTAssertNil(e.service, entree)
+            XCTAssertNil(e.compte, entree)
+        }
+    }
+
+    /// Ce que le système a le droit de nous faire ouvrir.
+    func testSeulUnLienDeTotpEstRetenu() {
+        let accepte = URL(string: "otpauth://totp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")!
+        XCTAssertTrue(VaultStore.estUnLienDeTotp(accepte))
+
+        for refuse in [
+            // L'export d'une application d'authentification : plusieurs comptes dans un
+            // protobuf compressé, que nous ne savons pas lire.
+            "otpauth-migration://offline?data=AAAA",
+            // Un lien sans secret ne configure rien — l'accepter ouvrirait un formulaire
+            // vide en laissant croire qu'un code a été importé.
+            "otpauth://totp/GitHub:clara",
+            "https://example.com/otpauth",
+        ] {
+            XCTAssertFalse(VaultStore.estUnLienDeTotp(URL(string: refuse)!), refuse)
+        }
+    }
+}
+
+/// Ce que l'écran d'édition annonce à l'utilisateur.
+final class CibleDEditionTests: XCTestCase {
+    /// Un élément créé depuis un lien est **neuf**.
+    ///
+    /// Il s'est affiché « Modifier » le jour où le cas a été ajouté : la question posée
+    /// était « est-ce le cas `.new` ? » plutôt que « existe-t-il déjà ? ». Rien ne
+    /// tombait, et l'écran disait simplement le contraire de la vérité.
+    func testUnElementVenuDUnLienEstNeuf() {
+        XCTAssertTrue(EditTarget.new.estNeuf)
+        XCTAssertTrue(
+            EditTarget.nouveauDepuisUnLien("otpauth://totp/A:b?secret=GEZDGNBVGY3TQOJQ")
+                .estNeuf)
+    }
+
+    /// Deux liens différents doivent ouvrir deux feuilles différentes : SwiftUI réutilise
+    /// une feuille dont l'identité n'a pas changé, et le second lien n'arriverait jamais.
+    func testDeuxLiensNOntPasLaMemeIdentite() {
+        let a = EditTarget.nouveauDepuisUnLien("otpauth://totp/A:b?secret=GEZDGNBVGY3TQOJQ")
+        let b = EditTarget.nouveauDepuisUnLien("otpauth://totp/C:d?secret=GEZDGNBVGY3TQOJQ")
+        XCTAssertNotEqual(a.id, b.id)
+        XCTAssertNotEqual(a.id, EditTarget.new.id)
+    }
+}
+
+/// Le SSO mobile : le calcul PKCE et la lecture du retour.
+///
+/// Ces deux-là sont la sécurité du dispositif côté client. Le reste — l'échange, la liste
+/// blanche, l'usage unique du code — est éprouvé côté serveur ; ici on vérifie ce que
+/// l'application fait, et ce qu'elle refuse.
+final class SsoMobileTests: XCTestCase {
+    /// Le vecteur de la RFC 7636, annexe B. Il vient de la norme et non de notre code :
+    /// il vérifie qu'on calcule ce que le monde calcule, pas qu'on est cohérent avec soi.
+    func testLeDefiSuitLeVecteurDeLaNorme() {
+        let pkce = SsoMobile.Pkce(verificateur: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
+        XCTAssertEqual(pkce.defi, "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
+    }
+
+    /// Le serveur exige 43 caractères base64url et refuse au `start`. Un défi avec
+    /// remplissage en ferait 44 — l'erreur serait renvoyée avant même l'ouverture du
+    /// navigateur, ce qui est le bon endroit, mais autant ne pas la provoquer.
+    func testLeDefiFait43CaracteresSansRemplissage() {
+        for _ in 0..<20 {
+            let defi = SsoMobile.Pkce().defi
+            XCTAssertEqual(defi.count, 43, defi)
+            XCTAssertFalse(defi.contains("="), defi)
+            XCTAssertFalse(defi.contains("+"), defi)
+            XCTAssertFalse(defi.contains("/"), defi)
+        }
+    }
+
+    func testDeuxTiragesDifferent() {
+        // Un vérificateur prévisible annulerait tout le dispositif : c'est lui seul qui
+        // rend inutile un code intercepté.
+        XCTAssertNotEqual(SsoMobile.Pkce().verificateur, SsoMobile.Pkce().verificateur)
+    }
+
+    // ─── La lecture du retour ───
+
+    private func retour(_ requete: String) -> URL {
+        URL(string: "ch.stackops.ghostpass://sso?\(requete)")!
+    }
+
+    func testUnRetourCompletDonneLeCode() {
+        let resultat = SsoMobile.codeDuRetour(
+            retour("code=abc123&state=etat-1"), etatAttendu: "etat-1")
+        XCTAssertEqual(try? resultat.get(), "abc123")
+    }
+
+    /// **L'échec est l'absence de code, pas la présence d'`error`.**
+    ///
+    /// Un client qui teste `error` et poursuit sinon appellerait l'échange avec un code
+    /// vide, et lirait le refus du serveur comme une panne réseau plutôt que comme un rejet
+    /// d'authentification. C'est une confusion qui coûte une soirée.
+    func testUnRetourSansCodeNiErreurEstUnEchec() {
+        let resultat = SsoMobile.codeDuRetour(retour("state=etat-1"), etatAttendu: "etat-1")
+        guard case .failure(.sansCode(let motif)) = resultat else {
+            return XCTFail("Un retour sans code doit échouer.")
+        }
+        XCTAssertNil(motif)
+    }
+
+    func testUnCodeVideNestPasUnCode() {
+        // Une valeur présente mais vide passerait un test d'existence naïf.
+        let resultat = SsoMobile.codeDuRetour(
+            retour("code=&state=etat-1"), etatAttendu: "etat-1")
+        guard case .failure(.sansCode) = resultat else {
+            return XCTFail("Un code vide doit échouer.")
+        }
+    }
+
+    func testLeMotifDuRefusEstRendu() {
+        let resultat = SsoMobile.codeDuRetour(
+            retour("error=not_provisioned&state=etat-1"), etatAttendu: "etat-1")
+        guard case .failure(.sansCode(let motif)) = resultat else {
+            return XCTFail("Un retour en erreur doit échouer.")
+        }
+        // Ce motif-là mérite son propre message : « cette adresse n'a pas de compte »
+        // n'envoie pas chercher au même endroit que « l'authentification a échoué ».
+        XCTAssertEqual(motif, "not_provisioned")
+    }
+
+    /// L'état est notre moitié de la protection contre la requête forgée. Le serveur le
+    /// porte de bout en bout, mais c'est au client de le comparer.
+    func testUnEtatQuiNeCorrespondPasEstRefuse() {
+        let resultat = SsoMobile.codeDuRetour(
+            retour("code=abc123&state=celui-d-un-autre"), etatAttendu: "etat-1")
+        XCTAssertEqual(try? resultat.get(), nil)
+        guard case .failure(.etatInattendu) = resultat else {
+            return XCTFail("Un état étranger doit être refusé.")
+        }
+    }
+
+    func testLEtatEstVerifieAvantLeCode() {
+        // Un retour qui n'est pas le nôtre ne mérite pas qu'on lise ce qu'il transporte.
+        //
+        // Le cas qui distingue les deux ordres est celui-ci : **ni code, ni le bon état**.
+        // Avec le code vérifié en premier, on rendrait « authentification échouée » ; avec
+        // l'état en premier, on rend « cette réponse n'est pas la vôtre ». Les deux
+        // n'envoient pas chercher au même endroit.
+        //
+        // La première version de ce test portait un code *et* un état étranger — les deux
+        // ordres y donnent le même refus, et il ne mesurait donc rien. Trouvé en cassant
+        // délibérément l'ordre et en constatant qu'aucun test ne tombait.
+        let resultat = SsoMobile.codeDuRetour(
+            retour("error=sso_failed&state=celui-d-un-autre"), etatAttendu: "etat-1")
+        guard case .failure(.etatInattendu) = resultat else {
+            return XCTFail("L'état doit être vérifié avant le code.")
+        }
+    }
+
+    // ─── L'adresse de départ ───
+
+    func testLAdresseDeDepartPorteCeQueLeServeurExige() {
+        let url = SsoMobile.adresseDeDepart(
+            serveur: URL(string: "https://ghostpass.example.com")!,
+            defi: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", etat: "etat-1")
+        let elements = URLComponents(url: url!, resolvingAgainstBaseURL: false)!.queryItems ?? []
+        func valeur(_ nom: String) -> String? { elements.first { $0.name == nom }?.value }
+
+        XCTAssertEqual(url?.path, "/api/auth/sso/mobile/start")
+        XCTAssertEqual(valeur("code_challenge_method"), "S256")
+        XCTAssertEqual(valeur("state"), "etat-1")
+        XCTAssertEqual(valeur("redirect_uri"), "ch.stackops.ghostpass://sso")
+    }
+}
+
+/// Ce qu'on ne sait pas ouvrir garde sa place.
+///
+/// La règle est écrite dans tous les documents de la suite depuis des mois. Elle n'était
+/// appliquée nulle part sur iOS : `lecture(_:_:)` et `itemsPartages` écartaient en silence,
+/// et le coffre paraissait simplement plus petit. Trouvé le 2026-08-31 par l'agent qui
+/// portait le client Android, en constatant que le brief présentait comme un portage une
+/// règle qui n'existait pas encore.
+final class ElementIllisibleTests: XCTestCase {
+    private func compte() throws -> Account {
+        try register(password: "un mot de passe de banc", email: "clara@example.com").account()
+    }
+
+    /// Un chiffré qui n'est pas destiné à ce compte : le déchiffrement échoue, ce qui est
+    /// exactement le cas qu'on veut voir arriver à l'écran.
+    private func intrus(_ id: String = "intrus") -> EncryptedItemDTO {
+        EncryptedItemDTO(
+            id: id, encryptedKey: "pas un chiffré de ce compte",
+            encryptedData: "pas un chiffré non plus", updatedAt: 1_788_000_000_000)
+    }
+
+    private func lisible(_ id: String, _ compte: Account) throws -> EncryptedItemDTO {
+        let item = VaultItem(
+            name: "Forgejo", notes: nil, folder: nil,
+            data: .login(Login(username: "clara", password: "s3cret", uris: [], totp: nil)))
+        let (cle, donnees) = try VaultStore.encrypt(item, with: compte)
+        return EncryptedItemDTO(
+            id: id, encryptedKey: cle, encryptedData: donnees, updatedAt: 1_788_000_000_000)
+    }
+
+    func testUnElementIllisibleResteDansLaListe() throws {
+        let lecture = VaultStore.lecture([intrus()], try compte())
+        // Le cas qui distingue les deux implémentations est celui-ci : **rien que**
+        // l'illisible. Avec l'ancien `continue`, la liste est vide ; avec l'entrée
+        // illisible, elle porte une ligne. Un coffre mixte passerait des deux façons si
+        // l'on ne comptait que les lisibles.
+        XCTAssertEqual(lecture.entries.count, 1)
+        XCTAssertFalse(try XCTUnwrap(lecture.entries.first).lisible)
+    }
+
+    func testSonIdentiteEstConservee() throws {
+        // Sans l'identifiant serveur on ne pourrait ni le supprimer, ni le retrouver
+        // quand la clé qui l'ouvre redeviendra disponible.
+        XCTAssertEqual(
+            VaultStore.lecture([intrus("abc-123")], try compte()).entries.first?.id, "abc-123")
+    }
+
+    func testIlNestPasModifiable() throws {
+        // Enregistrer par-dessus écraserait un contenu qu'on n'a jamais lu — la seule
+        // façon de perdre pour de bon ce qui n'était que temporairement inaccessible.
+        // `first` et non `[0]` : sous mutation la liste est vide, et indexer ferait
+        // **planter** le test au lieu de l'échouer — un plantage interrompt la suite et
+        // masque les tests suivants.
+        let entree = try XCTUnwrap(VaultStore.lecture([intrus()], try compte()).entries.first)
+        XCTAssertFalse(entree.lisible)
+    }
+
+    func testIlNeSeMelePasAuxLisibles() throws {
+        let compte = try compte()
+        let lecture = VaultStore.lecture(
+            [try lisible("vrai", compte), intrus()], compte)
+        XCTAssertEqual(lecture.entries.count, 2)
+        XCTAssertEqual(lecture.entries.filter { $0.lisible }.count, 1)
+        XCTAssertEqual(lecture.entries.first { $0.lisible }?.item.name, "Forgejo")
+    }
+
+    func testUnElementLisibleResteLisible() throws {
+        // Le contrôle négatif : sans lui, une implémentation qui marquerait **tout** comme
+        // illisible passerait les tests précédents.
+        let compte = try compte()
+        let lecture = VaultStore.lecture([try lisible("vrai", compte)], compte)
+        XCTAssertEqual(lecture.entries.count, 1)
+        let entree = try XCTUnwrap(lecture.entries.first)
+        XCTAssertTrue(entree.lisible)
+        XCTAssertEqual(entree.item.name, "Forgejo")
+    }
+}
+
+/// L'enveloppe d'un partage, vue depuis l'application.
+///
+/// Le cœur porte déjà ses propres témoins croisés. Celui-ci existe pour une autre raison :
+/// **l'application est ce qui casse quand le cœur change**, et elle doit s'en apercevoir
+/// chez elle. Pendant plusieurs jours, `partager` a pris un 502 sans qu'aucun test iOS ne
+/// le voie — le format était éprouvé nulle part de ce côté-ci de la frontière.
+final class EnveloppeDePartageTests: XCTestCase {
+    func testLeNonceFaitDouzeOctets() throws {
+        // Le relais refuse tout le reste, et le serveur traduit son refus en 502. Douze
+        // octets, parce que c'est ce que WebCrypto attend dans le navigateur qui ouvrira
+        // le lien — et non un choix qu'on pourrait revisiter côté produit.
+        let scelle = try sealSend(plaintext: "un secret")
+        let nonce = try XCTUnwrap(Data(base64Encoded: scelle.nonce))
+        XCTAssertEqual(nonce.count, 12)
+    }
+
+    func testLaCleFaitTrenteDeuxOctets() throws {
+        let scelle = try sealSend(plaintext: "un secret")
+        XCTAssertEqual(try XCTUnwrap(Data(base64Encoded: scelle.key)).count, 32)
+    }
+
+    func testDeuxPartagesNePartagentNiCleNiNonce() throws {
+        // L'invariant qui rend un nonce de 96 bits acceptable : une clé neuve par partage,
+        // utilisée une fois. Sous GCM, une réutilisation de nonce livre la clé
+        // d'authentification — ce n'est pas une dégradation, c'est une perte.
+        let a = try sealSend(plaintext: "x")
+        let b = try sealSend(plaintext: "x")
+        XCTAssertNotEqual(a.key, b.key)
+        XCTAssertNotEqual(a.nonce, b.nonce)
+    }
+
+    func testUnAllerRetourDepuisLApplication() throws {
+        let scelle = try sealSend(plaintext: "un mot de passe partagé")
+        let clair = try openSend(
+            key: scelle.key, nonce: scelle.nonce, ciphertext: scelle.ciphertext)
+        XCTAssertEqual(clair, "un mot de passe partagé")
+    }
+
+    func testUneCleDuFragmentSOuvreAussi() throws {
+        // La clé arrive du fragment d'une URL, en base64url sans remplissage. Ne pas
+        // l'accepter échouait sur « Invalid padding » — un message qui accuse le format et
+        // laisse croire à une clé corrompue.
+        let scelle = try sealSend(plaintext: "secret")
+        let versFragment = { (s: String) in
+            s.replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: "")
+        }
+        let clair = try openSend(
+            key: versFragment(scelle.key), nonce: versFragment(scelle.nonce),
+            ciphertext: scelle.ciphertext)
+        XCTAssertEqual(clair, "secret")
+    }
+}
+
+/// Le **type** d'une URI `otpauth`, et non seulement son schéma.
+///
+/// `otpauth://hotp/…` est une URI valide dont le secret compte des événements. L'accepter
+/// ferait calculer des codes sur l'horloge — faux, et sans aucune erreur : le site dirait
+/// « code incorrect », et rien ne désignerait l'application.
+final class TypeDeLienOtpauthTests: XCTestCase {
+    func testUnLienDeTotpEstRetenu() {
+        guard
+            case .totp = Totp.depuisUnQrCode(
+                "otpauth://totp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        else { return XCTFail("un lien de TOTP doit être retenu") }
+    }
+
+    func testLeTypeSeLitSansEgardALaCasse() {
+        // Les générateurs de QR code ne s'accordent pas sur la casse.
+        guard
+            case .totp = Totp.depuisUnQrCode(
+                "OTPAUTH://TOTP/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        else { return XCTFail("la casse ne doit pas décider") }
+    }
+
+    func testUnLienDeHotpEstRefuse() {
+        // Le cas qui distingue les deux implémentations : avec le seul contrôle du
+        // schéma, celui-ci passait et produisait des codes faux en silence.
+        guard
+            case .autreChose = Totp.depuisUnQrCode(
+                "otpauth://hotp/GitHub:clara?secret=GEZDGNBVGY3TQOJQ&counter=1")
+        else { return XCTFail("un lien de HOTP doit être refusé") }
+    }
+
+    func testUnTypeInconnuEstRefuse() {
+        // Un type qu'on ne connaît pas n'est pas un TOTP. Le retenir par défaut serait le
+        // même défaut, déplacé d'un cran.
+        guard
+            case .autreChose = Totp.depuisUnQrCode(
+                "otpauth://steam/GitHub:clara?secret=GEZDGNBVGY3TQOJQ")
+        else { return XCTFail("un type inconnu doit être refusé") }
+    }
+
+    func testLExportDApplicationGardeSonMessage() {
+        // Il ne doit pas se confondre avec « autre chose » : son message dit quoi faire,
+        // là où l'autre dit seulement que ça ne va pas.
+        guard
+            case .exportDApplication = Totp.depuisUnQrCode(
+                "otpauth-migration://offline?data=AAAA")
+        else { return XCTFail("un export doit rester distinct") }
+    }
+}
+
+/// La protection des captures existe-t-elle encore ?
+///
+/// Elle s'appuie sur la structure interne d'un `UITextField` en saisie sécurisée, qu'Apple
+/// ne documente ni ne garantit. Le jour où cette structure change, **la protection échoue
+/// en s'ouvrant** : les captures redeviennent lisibles, sans erreur, sans plantage, sans le
+/// moindre signe. On continuerait de compter dessus.
+///
+/// Ce test est donc le seul avertissement qui existera. Il ne prouve pas que l'image est
+/// noire — cela ne se mesure que sur un appareil — mais que le détournement a une prise.
+final class ProtectionDesCapturesTests: XCTestCase {
+    func testLaCoucheSecuriseeEstToujoursTrouvable() throws {
+        let couche = ControleurProtege.couchePrivee()
+        XCTAssertNotNil(
+            couche,
+            """
+            La couche de rendu du champ sécurisé est introuvable : iOS a changé sa \
+            hiérarchie de vues. Les captures d'écran sont probablement redevenues \
+            lisibles. Voir ProtectionDesCaptures et refaire la mesure sur appareil.
+            """)
+    }
+}
+
+/// Le schéma de retour du SSO suit l'identifiant du paquet.
+///
+/// Écrit à côté, il se désynchronise sans bruit : le navigateur renvoie vers un schéma que
+/// plus personne ne réclame, la session reste ouverte sur une page morte, et rien ne dit
+/// pourquoi. C'est arrivé sur la variante d'essai, dont l'identifiant se termine par
+/// `.essai` — le SSO n'y était pas éprouvable.
+final class SchemaDeRetourTests: XCTestCase {
+    func testLeSchemaSuitLIdentifiantDuPaquet() {
+        XCTAssertEqual(SsoMobile.schema, Bundle.main.bundleIdentifier)
+    }
+
+    func testLAdresseDeRetourEnDecoule() throws {
+        let url = try XCTUnwrap(URL(string: SsoMobile.adresseDeRetour))
+        XCTAssertEqual(url.scheme, Bundle.main.bundleIdentifier)
+        XCTAssertEqual(url.host, "sso")
+    }
+
+    func testLAdresseDeDepartAnnonceLeMemeSchema() throws {
+        // Le serveur valide cette adresse contre sa liste blanche, et
+        // `ASWebAuthenticationSession` attend le même schéma en retour. Les deux viennent
+        // de la même source : ils ne peuvent pas diverger.
+        let url = try XCTUnwrap(
+            SsoMobile.adresseDeDepart(
+                serveur: URL(string: "https://ghostpass.example.com")!,
+                defi: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", etat: "etat-1"))
+        let elements = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let retour = elements.first { $0.name == "redirect_uri" }?.value
+        XCTAssertEqual(retour, "\(Bundle.main.bundleIdentifier ?? "")://sso")
+    }
+}
