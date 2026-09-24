@@ -90,6 +90,10 @@ TAILLE_INITIALE="$("$ADB" shell wm size | sed -n 's/^Override size: //p' | tr -d
 ranger() {
   local code=$?
   [[ -n "${SERVEUR_PID:-}" ]] && kill "$SERVEUR_PID" 2>/dev/null || true
+  # La langue imposée à l'application est rendue au système : la laisser en français
+  # ferait passer un réglage de test pour le choix de l'utilisateur, exactement comme le
+  # service de remplissage ci-dessous.
+  "$ADB" shell cmd locale set-app-locales "$PAQUET" --locales "" >/dev/null 2>&1 || true
   if [[ -n "$TAILLE_INITIALE" ]]; then
     "$ADB" shell wm size "$TAILLE_INITIALE" >/dev/null 2>&1 || true
   else
@@ -114,6 +118,26 @@ ranger() {
   exit $code
 }
 trap ranger EXIT
+
+# ─── Ce que ce démarrage ne fournit pas, et ce que l'étape 6 y perd ───
+#
+# **Constaté le 2026-09-24, et non réparé ici.** Le serveur démarre sans `GHOSTBIT_URL`.
+# Depuis que le partage délègue au relais (`feat(send): sharing a secret now delegates to
+# ghostbit`, 2026-08-29), `POST /api/send` répond alors **503 « partage indisponible :
+# GHOSTBIT_URL non configurée »**, et l'étape 6 tombe sur « aucun lien de partage n'est
+# apparu ».
+#
+# Ce n'est pas un défaut du client, et le message le dit — mais il le dit **dans le
+# formulaire**, au-dessus de la zone visible, si bien que le parcours ne le rapporte pas et
+# accuse le partage. Le commentaire de `ParcoursDeBoutEnBoutTest.partager` décrit d'ailleurs
+# encore le serveur d'avant ce changement : « le serveur de cette branche ne rend qu'un
+# identifiant ». Le parcours n'a plus traversé cette étape depuis.
+#
+# Le réparer demande un relais, et donc une décision qui n'est pas de l'outillage : quel
+# hôte doit-il annoncer ? Le même que le serveur, et la confirmation de destination du §4 ne
+# se déclenche jamais ; un autre, et l'étape 6 doit la traverser — ce que
+# `tools/android/temoin-de-la-destination.sh` fait déjà, avec
+# `tools/android/partage-banc-ghostbit.ts`. C'est au propriétaire du §4 de trancher.
 
 echo "== 1. Une instance locale, à nous =="
 [[ -d "$SERVEUR/node_modules" ]] || { echo "  ✗ apps/server : npm install d'abord." >&2; exit 1; }
@@ -162,7 +186,39 @@ else
   "$ADB" shell settings put secure autofill_service "$PAQUET/.autofill.ServiceDeRemplissage"
 fi
 "$ADB" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
-echo "  · application réinitialisée, remplissage réglé sur GhostPass, écran à 540x1200"
+
+# ─── La langue de l'application, imposée — et pourquoi il a fallu la nommer ───
+#
+# Les assertions de `ParcoursDeBoutEnBoutTest` cherchent du **texte à l'écran** :
+# « Élément illisible », « Enregistrer », « Verrouiller ». Tant que l'application n'existait
+# qu'en français, la langue de l'appareil n'avait aucune importance et personne n'y pensait.
+# Depuis qu'elle a un `values-en/`, elle suit l'appareil — et un émulateur par défaut est en
+# anglais. Le parcours est alors tombé à l'étape 2 sur « l'élément scellé par un autre compte
+# a disparu de la liste », c'est-à-dire en accusant la règle §5 là où c'était la langue.
+#
+# `cmd locale set-app-locales` est l'interface système du réglage *par application*
+# qu'Android 13 a ajouté — celui-là même qu'alimente `AppCompatDelegate.setApplicationLocales`
+# et que déclare `android:localeConfig`. L'imposer ici ne touche pas la langue de l'appareil,
+# et `ranger` la rend en partant.
+"$ADB" shell cmd locale set-app-locales "$PAQUET" --locales fr-FR >/dev/null 2>&1 || true
+LANGUE_APP="$("$ADB" shell cmd locale get-app-locales "$PAQUET" 2>/dev/null | tr -d '\r')"
+if [[ "$LANGUE_APP" != *"fr"* ]]; then
+  # **Trois états, jamais deux.** Sur un appareil trop ancien pour le réglage par
+  # application, on ne peut pas imposer la langue ; le parcours n'échouerait alors que si
+  # l'appareil n'est pas en français, avec un message qui accuserait le produit. On s'arrête
+  # en nommant la cause plutôt que de laisser courir un rouge trompeur.
+  LANGUE_APPAREIL="$("$ADB" shell getprop persist.sys.locale 2>/dev/null | tr -d '\r')"
+  if [[ "$LANGUE_APPAREIL" != fr* ]]; then
+    echo "  ✗ impossible d'imposer le français à l'application (réglage par application" >&2
+    echo "    indisponible : Android 13 requis), et l'appareil est en « ${LANGUE_APPAREIL:-inconnu} »." >&2
+    echo "    Les assertions du parcours cherchent du texte français : elles seraient rouges" >&2
+    echo "    pour une raison qui n'est pas le produit. Mettez l'émulateur en français." >&2
+    exit 1
+  fi
+  echo "  · réglage par application indisponible — l'appareil est déjà en français"
+fi
+
+echo "  · application réinitialisée, remplissage réglé sur GhostPass, écran à 540x1200, langue fr"
 
 echo
 echo "== 4. Couper la résolution de noms =="
