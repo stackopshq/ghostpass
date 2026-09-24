@@ -80,6 +80,7 @@ fun EcranDuCoffre(
     surCorbeille: () -> Unit = {},
     surSante: () -> Unit = {},
     surReglages: () -> Unit = {},
+    surImport: () -> Unit = {},
 ) {
     val couleurs = LocalCouleurs.current
     val lecture = modele.lectureAffichee
@@ -102,7 +103,7 @@ fun EcranDuCoffre(
             )
 
             if (reglagesOuverts) {
-                MenuDeReglages(modele, surCorbeille, surSante, surReglages) {
+                MenuDeReglages(modele, surCorbeille, surSante, surReglages, surImport) {
                     reglagesOuverts = false
                 }
             }
@@ -294,6 +295,7 @@ private fun MenuDeReglages(
     surCorbeille: () -> Unit,
     surSante: () -> Unit,
     surReglages: () -> Unit,
+    surImport: () -> Unit,
     surFermer: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
@@ -320,6 +322,15 @@ private fun MenuDeReglages(
         LienDiscret("Santé du coffre", identifiant = "button.health") {
             surFermer()
             surSante()
+        }
+
+        // L'import écrit dans le coffre **personnel** : le proposer depuis une collection
+        // d'équipe laisserait croire qu'il y déposera. On ne l'offre donc qu'à l'accueil.
+        if (modele.collectionOuverte == null) {
+            LienDiscret("Importer un CSV", identifiant = "button.import") {
+                surFermer()
+                surImport()
+            }
         }
 
         LienDiscret("Corbeille", identifiant = "button.trash") {

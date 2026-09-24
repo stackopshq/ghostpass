@@ -93,6 +93,27 @@ dependencies {
     // empreinte — l'équivalent de `.biometryCurrentSet` d'iOS (§11).
     implementation("androidx.biometric:biometric:1.1.0")
 
+    // ─── Et le `fragment` qu'elle entraîne, remonté de force ───
+    //
+    // **Sans cette ligne, toute ouverture d'un sélecteur de fichiers fait planter
+    // l'application.** `biometric:1.1.0` tire `fragment:1.2.5`, dont la `FragmentActivity`
+    // vérifie que tout code de requête tient sur seize bits :
+    //
+    //     java.lang.IllegalArgumentException: Can only use lower 16 bits for requestCode
+    //         at androidx.fragment.app.FragmentActivity.checkForValidRequestCode
+    //         at androidx.activity.ComponentActivity$activityResultRegistry$1.onLaunch
+    //
+    // Or `ActivityResultRegistry` — ce qui est derrière `rememberLauncherForActivityResult`
+    // — tire ses codes sur tout l'espace des entiers. Les deux sont incompatibles, et
+    // `fragment:1.3.0` a levé la contrainte.
+    //
+    // Le défaut était **latent** : l'application n'ouvrait aucune activité pour résultat
+    // avant l'écran d'import. Il n'a donc rien cassé jusqu'ici, et il aurait frappé le
+    // premier écran à en ouvrir une — c'est-à-dire celui-ci, en production comme ici.
+    // `ActivitePrincipale` est une `FragmentActivity` parce que `BiometricPrompt` n'accepte
+    // rien d'autre : on ne peut pas éviter la classe, seulement la mettre à jour.
+    implementation("androidx.fragment:fragment:1.8.5")
+
     // Les onglets personnalisés, pour le SSO. **Jamais une WebView** : elle donnerait à
     // l'application l'accès au mot de passe saisi chez le fournisseur d'identité, ce qui
     // annule l'intérêt du SSO (§8). Voir OngletSecurise.

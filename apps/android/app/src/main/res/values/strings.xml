@@ -49,4 +49,23 @@
         <item quantity="one">%d coffre</item>
         <item quantity="other">%d coffres</item>
     </plurals>
+    <!-- iOS écrit « \u0025d entrées importées. » sans accord : à une entrée près, la phrase
+         est fausse. Les quatre formes ci-dessous couvrent les quatre endroits où l'écran
+         d'import compte quelque chose. -->
+    <plurals name="import_entrees">
+        <item quantity="one">%d entrée</item>
+        <item quantity="other">%d entrées</item>
+    </plurals>
+    <plurals name="import_bouton">
+        <item quantity="one">Importer %d entrée</item>
+        <item quantity="other">Importer %d entrées</item>
+    </plurals>
+    <plurals name="import_importees">
+        <item quantity="one">%d entrée importée.</item>
+        <item quantity="other">%d entrées importées.</item>
+    </plurals>
+    <plurals name="import_et_autres">
+        <item quantity="one">et %d autre</item>
+        <item quantity="other">et %d autres</item>
+    </plurals>
 </resources>

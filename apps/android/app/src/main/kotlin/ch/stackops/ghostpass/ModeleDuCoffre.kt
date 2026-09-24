@@ -881,6 +881,26 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         private set
 
     /**
+     * **Un sélecteur du système est ouvert, et le verrouillage automatique doit attendre.**
+     *
+     * Un sélecteur de fichiers est une activité d'une *autre* application : la nôtre passe
+     * par `onStop` au moment même où l'utilisateur va choisir son fichier. Avec le réglage
+     * par défaut — « Immédiatement » — le coffre se referme pendant qu'il cherche, et au
+     * retour l'écran d'import a disparu au profit du mot de passe maître.
+     *
+     * Le défaut est total : **l'import ne peut alors jamais aboutir**, et rien ne dit
+     * pourquoi. On ne voit pas un échec, on voit un coffre qui se reverrouille tout seul.
+     * Mesuré ici, sur l'émulateur, avec un vrai fichier — et c'est exactement ce que le
+     * commentaire d'`ImportView.swift` décrit côté iOS.
+     *
+     * L'exemption est **armée au lancement du sélecteur, pas à l'ouverture de l'écran**.
+     * C'est la précision qu'iOS a dû ajouter après coup : posée sur l'apparition de la vue,
+     * elle désarmait le verrouillage pendant qu'on lisait la page, avant même d'avoir
+     * appuyé. Une exemption doit durer exactement ce qu'elle protège.
+     */
+    var unSelecteurEstOuvert by mutableStateOf(false)
+
+    /**
      * L'écran de santé est ouvert.
      *
      * Il vit dans le modèle, comme la corbeille, et non dans la composition : le
@@ -1071,6 +1091,50 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             Destination.Equipe(ouvert, collection.id)
         } else {
             Destination.Personnelle
+        }
+    }
+
+    /**
+     * Dépose une liste d'éléments importés dans le coffre **personnel**.
+     *
+     * Toujours le coffre personnel, jamais la collection ouverte : un import venu d'un
+     * fichier n'a rien qui désigne une équipe, et le déposer là où l'écran se trouve
+     * publierait chez des collègues deux cents mots de passe privés. Le silence de cette
+     * erreur serait total — l'import réussirait, et l'utilisateur ne verrait que sa propre
+     * liste.
+     *
+     * **Une entrée qui échoue n'arrête pas les autres**, et le compte rendu dit combien
+     * sont passées. Un import de deux cents lignes qui s'interromprait à la troisième
+     * laisserait un coffre à moitié rempli sans dire où il s'est arrêté ; continuer et
+     * compter permet de rejouer le fichier — les doublons se voient, une absence non.
+     */
+    fun importerDesElements(
+        elements: List<ElementDuCoffre>,
+        surFin: (Int) -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            var deposes = 0
+            val echecs = ArrayList<String>()
+            try {
+                for (element in elements) {
+                    try {
+                        withContext(Dispatchers.IO) { coffre.creer(element) }
+                        deposes++
+                    } catch (e: Exception) {
+                        echecs.add(element.name)
+                    }
+                }
+                relireApres()
+            } finally {
+                occupe = false
+            }
+            if (echecs.isNotEmpty()) {
+                message = "Non déposés : " + echecs.take(5).joinToString(", ") +
+                    if (echecs.size > 5) " et ${echecs.size - 5} autres." else "."
+            }
+            surFin(deposes)
         }
     }
 

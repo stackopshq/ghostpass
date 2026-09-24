@@ -19,6 +19,7 @@ import ch.stackops.ghostpass.ui.EcranDeDeverrouillage
 import ch.stackops.ghostpass.ui.BoitesDePartage
 import ch.stackops.ghostpass.ui.EcranDeLElement
 import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
+import ch.stackops.ghostpass.ui.EcranDImport
 import ch.stackops.ghostpass.ui.EcranDeLaSante
 import ch.stackops.ghostpass.ui.EcranDesReglages
 import ch.stackops.ghostpass.ui.EcranDuCoffre
@@ -87,6 +88,7 @@ class ActivitePrincipale : FragmentActivity() {
                 // plus qu'elle ne range.
                 var edition by remember { mutableStateOf<Edition?>(null) }
                 var reglagesOuverts by remember { mutableStateOf(false) }
+                var importOuvert by remember { mutableStateOf(false) }
 
                 // Verrouiller pendant une édition ferme l'édition. Sans cela, l'écran
                 // resterait posé sur un coffre fermé : le formulaire garderait à l'écran des
@@ -110,10 +112,11 @@ class ActivitePrincipale : FragmentActivity() {
 
                 BackHandler(
                     enabled = edition != null || modele.corbeilleOuverte ||
-                        modele.santeOuverte || reglagesOuverts,
+                        modele.santeOuverte || reglagesOuverts || importOuvert,
                 ) {
                     when {
                         edition != null -> edition = null
+                        importOuvert -> importOuvert = false
                         reglagesOuverts -> reglagesOuverts = false
                         modele.santeOuverte -> modele.santeOuverte = false
                         else -> modele.fermerLaCorbeille()
@@ -124,12 +127,16 @@ class ActivitePrincipale : FragmentActivity() {
                 // verrouillage, contrairement à la santé. Mais on n'y entre que le coffre
                 // ouvert, puisqu'on n'y arrive que par son menu.
                 if (!modele.deverrouille && reglagesOuverts) reglagesOuverts = false
+                // L'import, lui, porte à l'écran le contenu d'un fichier de mots de passe
+                // en clair : il ne survit pas au verrouillage.
+                if (!modele.deverrouille && importOuvert) importOuvert = false
 
                 when {
                     !modele.deverrouille -> EcranDeDeverrouillage(modele)
                     reglagesOuverts -> EcranDesReglages(modele, reglages) {
                         reglagesOuverts = false
                     }
+                    importOuvert -> EcranDImport(modele) { importOuvert = false }
                     modele.corbeilleOuverte -> EcranDeLaCorbeille(modele) {
                         modele.fermerLaCorbeille()
                     }
@@ -173,6 +180,7 @@ class ActivitePrincipale : FragmentActivity() {
                         surCorbeille = { modele.ouvrirLaCorbeille() },
                         surSante = { modele.santeOuverte = true },
                         surReglages = { reglagesOuverts = true },
+                        surImport = { modele.message = null; importOuvert = true },
                     )
                 }
 
@@ -252,6 +260,10 @@ class ActivitePrincipale : FragmentActivity() {
         // quelqu'un qui a seulement tourné son téléphone. Le déverrouillage biométrique
         // rendrait la faute presque invisible, et parfaitement agaçante.
         if (isChangingConfigurations) return
+        // Un sélecteur du système est une activité d'une autre application : on passe par
+        // ici au moment même où l'utilisateur va choisir son fichier. Verrouiller alors
+        // rendrait l'import impossible, et sans rien dire (voir `unSelecteurEstOuvert`).
+        if (modele.unSelecteurEstOuvert) return
         val delai = reglages.verrouillage.delaiMs
         if (delai == null) {
             modele.verrouiller()
@@ -281,6 +293,12 @@ class ActivitePrincipale : FragmentActivity() {
      */
     override fun onStart() {
         super.onStart()
+        // **L'exemption se rend au retour, quoi qu'il se soit passé.** Elle est posée ici
+        // et non dans le rappel du sélecteur, parce qu'un sélecteur peut ne jamais
+        // répondre — l'utilisateur le quitte par le bouton retour, ou le système le tue.
+        // Une exemption qui survivrait à cela laisserait un coffre qui ne se verrouille
+        // plus jamais tout seul, et personne ne s'en apercevrait.
+        modele.unSelecteurEstOuvert = false
         val depart = quitteA ?: return
         quitteA = null
         val delai = reglages.verrouillage.delaiMs ?: return modele.verrouiller()
