@@ -79,6 +79,7 @@ fun EcranDuCoffre(
     surModifier: (EntreeDuCoffre.Lisible) -> Unit = {},
     surCorbeille: () -> Unit = {},
     surSante: () -> Unit = {},
+    surReglages: () -> Unit = {},
 ) {
     val couleurs = LocalCouleurs.current
     val lecture = modele.lectureAffichee
@@ -101,7 +102,9 @@ fun EcranDuCoffre(
             )
 
             if (reglagesOuverts) {
-                MenuDeReglages(modele, surCorbeille, surSante) { reglagesOuverts = false }
+                MenuDeReglages(modele, surCorbeille, surSante, surReglages) {
+                    reglagesOuverts = false
+                }
             }
 
             ChoixDuCoffre(modele)
@@ -290,6 +293,7 @@ private fun MenuDeReglages(
     modele: ModeleDuCoffre,
     surCorbeille: () -> Unit,
     surSante: () -> Unit,
+    surReglages: () -> Unit,
     surFermer: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
@@ -305,6 +309,14 @@ private fun MenuDeReglages(
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // **La roue crantée a enfin un écran à ouvrir.** Elle n'en avait aucun tant que
+        // les réglages tenaient dans ces trois entrées ; la poser alors aurait été un
+        // bouton qui n'ouvre rien, ce qui se lit comme une panne.
+        LienDiscret("Réglages", identifiant = "button.settings.open") {
+            surFermer()
+            surReglages()
+        }
+
         LienDiscret("Santé du coffre", identifiant = "button.health") {
             surFermer()
             surSante()

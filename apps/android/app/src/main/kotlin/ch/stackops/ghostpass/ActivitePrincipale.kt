@@ -2,10 +2,12 @@ package ch.stackops.ghostpass
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +20,7 @@ import ch.stackops.ghostpass.ui.BoitesDePartage
 import ch.stackops.ghostpass.ui.EcranDeLElement
 import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
 import ch.stackops.ghostpass.ui.EcranDeLaSante
+import ch.stackops.ghostpass.ui.EcranDesReglages
 import ch.stackops.ghostpass.ui.EcranDuCoffre
 
 /**
@@ -40,6 +43,15 @@ class ActivitePrincipale : FragmentActivity() {
      */
     private val modele: ModeleDuCoffre by viewModels()
 
+    /**
+     * Les réglages sont tenus par l'activité, comme le modèle.
+     *
+     * [onStop] a besoin du délai de verrouillage, et il arrive hors de toute composition :
+     * le lire depuis un `@Composable` demanderait de le recopier quelque part en
+     * attendant.
+     */
+    private val reglages: Preferences by lazy { Preferences(this) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -59,11 +71,22 @@ class ActivitePrincipale : FragmentActivity() {
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
 
         setContent {
-            ThemeGhostPass {
+            // Le thème suit le réglage, et « Système » suit l'appareil. La valeur est un
+            // `mutableStateOf` : choisir « Sombre » repeint l'écran sur-le-champ, sans
+            // redémarrage. Un réglage dont l'effet n'arrive qu'au prochain lancement se lit
+            // comme un réglage cassé.
+            ThemeGhostPass(
+                sombre = when (reglages.apparence) {
+                    Apparence.CLAIR -> false
+                    Apparence.SOMBRE -> true
+                    Apparence.SYSTEME -> isSystemInDarkTheme()
+                },
+            ) {
                 // Trois écrans et pas de bibliothèque de navigation : l'état tient en une
                 // variable, et une dépendance de navigation pour trois destinations coûte
                 // plus qu'elle ne range.
                 var edition by remember { mutableStateOf<Edition?>(null) }
+                var reglagesOuverts by remember { mutableStateOf(false) }
 
                 // Verrouiller pendant une édition ferme l'édition. Sans cela, l'écran
                 // resterait posé sur un coffre fermé : le formulaire garderait à l'écran des
@@ -86,17 +109,27 @@ class ActivitePrincipale : FragmentActivity() {
                 }
 
                 BackHandler(
-                    enabled = edition != null || modele.corbeilleOuverte || modele.santeOuverte,
+                    enabled = edition != null || modele.corbeilleOuverte ||
+                        modele.santeOuverte || reglagesOuverts,
                 ) {
                     when {
                         edition != null -> edition = null
+                        reglagesOuverts -> reglagesOuverts = false
                         modele.santeOuverte -> modele.santeOuverte = false
                         else -> modele.fermerLaCorbeille()
                     }
                 }
 
+                // Les réglages ne portent aucun secret du coffre : ils survivent donc au
+                // verrouillage, contrairement à la santé. Mais on n'y entre que le coffre
+                // ouvert, puisqu'on n'y arrive que par son menu.
+                if (!modele.deverrouille && reglagesOuverts) reglagesOuverts = false
+
                 when {
                     !modele.deverrouille -> EcranDeDeverrouillage(modele)
+                    reglagesOuverts -> EcranDesReglages(modele, reglages) {
+                        reglagesOuverts = false
+                    }
                     modele.corbeilleOuverte -> EcranDeLaCorbeille(modele) {
                         modele.fermerLaCorbeille()
                     }
@@ -139,6 +172,7 @@ class ActivitePrincipale : FragmentActivity() {
                         },
                         surCorbeille = { modele.ouvrirLaCorbeille() },
                         surSante = { modele.santeOuverte = true },
+                        surReglages = { reglagesOuverts = true },
                     )
                 }
 
@@ -187,16 +221,20 @@ class ActivitePrincipale : FragmentActivity() {
     }
 
     /**
-     * L'application passe à l'arrière-plan : on verrouille.
+     * L'application passe à l'arrière-plan : on verrouille, ou on note l'heure.
      *
      * Le verrouillage jette les clés, pas la session — le jeton reste valable et le coffre
      * se rouvre du seul mot de passe maître, sans réseau.
      *
-     * Un délai réglable (immédiat, une minute, cinq, quinze) existe côté iOS et **n'est pas
-     * porté ici** : verrouiller systématiquement est le comportement le plus strict, donc
-     * celui qu'on peut assumer sans réglage. L'assouplir demande de savoir mesurer le temps
-     * écoulé y compris quand l'horloge recule, ce que le test iOS couvre et qui n'a pas
-     * d'équivalent ici pour l'instant.
+     * **Le délai réglable est désormais porté**, et ce commentaire disait avant pourquoi il
+     * ne l'était pas : « l'assouplir demande de savoir mesurer le temps écoulé y compris
+     * quand l'horloge recule ». La réponse tient en un nom — `SystemClock.elapsedRealtime()`
+     * compte depuis le démarrage de l'appareil, veille comprise, et ne peut pas reculer.
+     * `System.currentTimeMillis()` aurait eu exactement le défaut redouté : reculer sa
+     * montre de dix minutes aurait rallongé le délai d'autant.
+     *
+     * Le repli est le comportement strict. Délai nul — le défaut — verrouille ici même, et
+     * le coffre ne survit à rien.
      */
     override fun onStop() {
         super.onStop()
@@ -213,7 +251,40 @@ class ActivitePrincipale : FragmentActivity() {
         // rotation passe par `onStop`, et verrouiller là ferait perdre sa saisie à
         // quelqu'un qui a seulement tourné son téléphone. Le déverrouillage biométrique
         // rendrait la faute presque invisible, et parfaitement agaçante.
-        if (!isChangingConfigurations) modele.verrouiller()
+        if (isChangingConfigurations) return
+        val delai = reglages.verrouillage.delaiMs
+        if (delai == null) {
+            modele.verrouiller()
+            quitteA = null
+        } else {
+            quitteA = SystemClock.elapsedRealtime()
+        }
+    }
+
+    /**
+     * L'instant du départ, sur l'horloge **monotone** de l'appareil.
+     *
+     * `null` veut dire « rien à attendre » : soit on a verrouillé en partant, soit on n'est
+     * jamais parti. Le distinguer de zéro compte — zéro est un instant valable, celui du
+     * démarrage de l'appareil.
+     */
+    private var quitteA: Long? = null
+
+    /**
+     * On revient : le délai est-il écoulé ?
+     *
+     * Le contrôle est ici et pas dans un minuteur, et c'est délibéré. Un minuteur posé au
+     * départ devrait survivre à une application qu'Android peut suspendre ou tuer à tout
+     * moment, et **son silence se lirait comme un coffre encore ouvert**. Regarder l'heure
+     * au retour ne peut pas échouer de cette façon : si le processus a été tué, le coffre
+     * est fermé de toute manière, faute de clés en mémoire.
+     */
+    override fun onStart() {
+        super.onStart()
+        val depart = quitteA ?: return
+        quitteA = null
+        val delai = reglages.verrouillage.delaiMs ?: return modele.verrouiller()
+        if (SystemClock.elapsedRealtime() - depart >= delai) modele.verrouiller()
     }
 }
 

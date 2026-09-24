@@ -41,4 +41,12 @@
         <item quantity="one">%d élément examiné</item>
         <item quantity="other">%d éléments examinés</item>
     </plurals>
+    <plurals name="reglages_elements">
+        <item quantity="one">%d élément</item>
+        <item quantity="other">%d éléments</item>
+    </plurals>
+    <plurals name="reglages_coffres">
+        <item quantity="one">%d coffre</item>
+        <item quantity="other">%d coffres</item>
+    </plurals>
 </resources>
