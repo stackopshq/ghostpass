@@ -227,8 +227,41 @@ la signature automatique a créés en posant l'application sur les iPhone. L'exp
 connectant au compte. Cette connexion échoue : la session a expiré ou l'authentification à
 deux facteurs attend une réponse.
 
-À faire hors du dépôt : **Xcode > Réglages > Comptes**, se reconnecter avec
-`clara@cyberloutre.fr`, puis relancer l'export. L'archive, elle, n'est pas à refaire.
+**Débloqué le 24 septembre après reconnexion dans Xcode.** L'export rend
+`Ghostpass.ipa`, 4,9 Mo, vérifié :
+
+| Vérifié sur l'IPA | Résultat |
+|---|---|
+| Extension de remplissage | `PlugIns/GhostpassAutoFill.appex` |
+| Profil de l'application | `iOS Team **Store** Provisioning Profile` — distribution, non développement |
+| Profil de l'extension | idem |
+| Signature | `codesign --verify --deep --strict` passe |
+
+### L'envoi
+
+    xcodebuild -exportArchive -archivePath …/Ghostpass.xcarchive \
+      -exportOptionsPlist apps/ios/ExportOptions.plist -exportPath …/export
+
+L'envoi lui-même réclame des identifiants qui ne sont pas — et n'ont pas à être — dans le
+dépôt. Deux voies :
+
+- **Clé API App Store Connect** : un fichier `.p8` dans `~/.appstoreconnect/private_keys/`,
+  plus l'identifiant de clé et celui de l'émetteur. C'est la voie à préférer, parce qu'elle
+  ne partage aucun mot de passe de compte et se révoque seule.
+
+      xcrun altool --validate-app -f …/Ghostpass.ipa -t ios \
+        --apiKey <ID> --apiIssuer <ISSUER>
+      xcrun altool --upload-app  -f …/Ghostpass.ipa -t ios \
+        --apiKey <ID> --apiIssuer <ISSUER>
+
+- **Mot de passe d'application** : `--username`, `--app-password` et `--provider-public-id`.
+
+**Valider avant d'envoyer.** `--validate-app` rend les mêmes refus que l'envoi, sans
+consommer un numéro de version : App Store Connect refuse deux fois le même
+`CURRENT_PROJECT_VERSION`, et un envoi rejeté brûle le numéro.
+
+Aucune clé n'est présente sur la machine de construction au 24 septembre, et Transporter
+n'y est pas installé.
 
 ## Ce qui n'est pas prêt et qu'il vaut mieux savoir
 
