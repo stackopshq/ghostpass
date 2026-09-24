@@ -1108,6 +1108,66 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      * laisserait un coffre à moitié rempli sans dire où il s'est arrêté ; continuer et
      * compter permet de rejouer le fichier — les doublons se voient, une absence non.
      */
+    // ─── La clé de récupération ───
+
+    /**
+     * Crée une clé de récupération, et la rend **une seule fois**.
+     *
+     * Elle n'est écrite nulle part : ni dans le modèle, ni dans le stockage, ni dans un
+     * journal. L'écran la montre, et c'est tout — c'est ce qui fait que personne d'autre ne
+     * peut s'en servir, et c'est ce qui rend cet écran irremplaçable.
+     */
+    fun creerUneCleDeRecuperation(surFin: (String?) -> Unit) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) { coffre.creerUneCleDeRecuperation() }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let {
+                // Une clé affichée que le serveur n'a pas reçue est pire qu'aucune clé :
+                // quelqu'un la noterait soigneusement, et elle ne servirait à rien le jour
+                // venu. `Coffre` enregistre donc avant de rendre, et l'échec arrive ici.
+                message = it.message ?: "La clé de récupération n'a pas été enregistrée."
+            }
+            surFin(resultat.getOrNull())
+        }
+    }
+
+    /**
+     * Réinitialise le mot de passe maître avec la clé de récupération.
+     *
+     * **Rien n'est déverrouillé ici.** Le serveur invalide toutes les sessions, et
+     * l'utilisateur se reconnecte ensuite avec le nouveau mot de passe.
+     */
+    fun recupererLeCompte(
+        serveur: String,
+        email: String,
+        cleDeRecuperation: String,
+        nouveauMotDePasse: String,
+        surFin: (Boolean) -> Unit,
+    ) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) {
+                    coffre.recuperer(serveur, email, cleDeRecuperation, nouveauMotDePasse)
+                }
+            }
+            occupe = false
+            if (resultat.isFailure) {
+                // **Un seul message pour les deux cas.** Le serveur répond de la même façon
+                // pour une clé fausse et pour un compte sans kit — avec des leurres — afin
+                // de ne pas révéler quels comptes existent. Les distinguer à l'écran
+                // annulerait cette protection.
+                message = "Clé de récupération refusée."
+            }
+            surFin(resultat.isSuccess)
+        }
+    }
+
     // ─── Le journal du compte ───
 
     /**

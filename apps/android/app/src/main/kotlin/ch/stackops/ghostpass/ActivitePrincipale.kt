@@ -21,6 +21,7 @@ import ch.stackops.ghostpass.ui.EcranDeLElement
 import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
 import ch.stackops.ghostpass.ui.EcranDImport
 import ch.stackops.ghostpass.ui.EcranDeLaSante
+import ch.stackops.ghostpass.ui.EcranDeLaCleDeRecuperation
 import ch.stackops.ghostpass.ui.EcranDuJournal
 import ch.stackops.ghostpass.ui.EcranDuSecondFacteur
 import ch.stackops.ghostpass.ui.EcranDesReglages
@@ -93,6 +94,7 @@ class ActivitePrincipale : FragmentActivity() {
                 var importOuvert by remember { mutableStateOf(false) }
                 var secondFacteurOuvert by remember { mutableStateOf(false) }
                 var journalOuvert by remember { mutableStateOf(false) }
+                var cleDeRecuperationOuverte by remember { mutableStateOf(false) }
 
                 // Verrouiller pendant une édition ferme l'édition. Sans cela, l'écran
                 // resterait posé sur un coffre fermé : le formulaire garderait à l'écran des
@@ -117,10 +119,11 @@ class ActivitePrincipale : FragmentActivity() {
                 BackHandler(
                     enabled = edition != null || modele.corbeilleOuverte ||
                         modele.santeOuverte || reglagesOuverts || importOuvert ||
-                        secondFacteurOuvert || journalOuvert,
+                        secondFacteurOuvert || journalOuvert || cleDeRecuperationOuverte,
                 ) {
                     when {
                         edition != null -> edition = null
+                        cleDeRecuperationOuverte -> cleDeRecuperationOuverte = false
                         journalOuvert -> journalOuvert = false
                         secondFacteurOuvert -> secondFacteurOuvert = false
                         importOuvert -> importOuvert = false
@@ -141,6 +144,12 @@ class ActivitePrincipale : FragmentActivity() {
                 // plus au verrouillage.
                 if (!modele.deverrouille && secondFacteurOuvert) secondFacteurOuvert = false
                 if (!modele.deverrouille && journalOuvert) journalOuvert = false
+                // La clé de récupération est **le** secret de cet écran : elle ne survit
+                // pas au verrouillage. Quelqu'un qui repose son téléphone la clé affichée
+                // devra la recréer, ce qui est le bon inconvénient.
+                if (!modele.deverrouille && cleDeRecuperationOuverte) {
+                    cleDeRecuperationOuverte = false
+                }
 
                 when {
                     !modele.deverrouille -> EcranDeDeverrouillage(modele)
@@ -152,6 +161,9 @@ class ActivitePrincipale : FragmentActivity() {
                         secondFacteurOuvert = false
                     }
                     journalOuvert -> EcranDuJournal(modele) { journalOuvert = false }
+                    cleDeRecuperationOuverte -> EcranDeLaCleDeRecuperation(modele) {
+                        cleDeRecuperationOuverte = false
+                    }
                     modele.corbeilleOuverte -> EcranDeLaCorbeille(modele) {
                         modele.fermerLaCorbeille()
                     }
@@ -201,6 +213,10 @@ class ActivitePrincipale : FragmentActivity() {
                             secondFacteurOuvert = true
                         },
                         surJournal = { modele.message = null; journalOuvert = true },
+                        surCleDeRecuperation = {
+                            modele.message = null
+                            cleDeRecuperationOuverte = true
+                        },
                     )
                 }
 

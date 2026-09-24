@@ -2,10 +2,13 @@ package ch.stackops.ghostpass
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import uniffi.ghost_crypto_ffi.Account
 import uniffi.ghost_crypto_ffi.GhostCryptoException
 import uniffi.ghost_crypto_ffi.masterPasswordHash
+import uniffi.ghost_crypto_ffi.recover
 
 /**
  * Ce qu'une lecture du coffre produit : les lignes, et ce que les registres portaient.
@@ -296,6 +299,58 @@ class Coffre {
         val s = session ?: throw ErreurApi.Reseau("Aucune session ouverte.")
         val empreinte = masterPasswordHash(motDePasse, s.email, s.kdfParams)
         api.retirerLeSecondFacteur(j, empreinte, code)
+    }
+
+    // ─── La clé de récupération ───
+
+    /**
+     * Crée une clé de récupération et l'enregistre auprès du serveur.
+     *
+     * **La clé rendue ici ne s'écrit nulle part.** Le serveur n'en reçoit qu'une preuve
+     * re-hachée et la clé du coffre enveloppée pour elle ; l'application ne la garde pas.
+     * C'est ce qui fait que personne d'autre ne peut s'en servir — et ce qui rend l'écran
+     * qui l'affiche irremplaçable, puisqu'il n'y aura pas de seconde fois.
+     *
+     * Le cœur Rust fabrique le tout : `Account.createRecovery()` rend un JSON dont les noms
+     * de champs sont ceux de serde. **Ils ne se traduisent pas** — `recovery_auth_hash` et
+     * non `recoveryAuthHash` —, et un champ renommé ici ne casserait aucune compilation : il
+     * arriverait vide au serveur, qui enregistrerait un kit inutilisable. On ne s'en
+     * apercevrait que le jour où quelqu'un a oublié son mot de passe.
+     */
+    fun creerUneCleDeRecuperation(): String {
+        val c = compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val kit = KitDeRecuperation.depuisLeCoeur(c.createRecovery())
+        // Enregistré **avant** d'être rendu : une clé affichée que le serveur n'a pas reçue
+        // est pire qu'aucune clé. Quelqu'un la noterait soigneusement, et elle ne servirait
+        // à rien le jour venu.
+        api.enregistrerLaRecuperation(j, kit.preuve, kit.cleUtilisateurEnveloppee)
+        return kit.cle
+    }
+
+    /** La clé de récupération ne s'écrit nulle part ; cet objet ne la garde pas non plus. */
+    fun recuperer(
+        adresseServeur: String,
+        email: String,
+        cleDeRecuperation: String,
+        nouveauMotDePasse: String,
+    ) {
+        val adresse = AdresseServeur.normaliser(adresseServeur)
+            ?: throw ErreurApi.AdresseInvalide()
+        val api = ClientApi(adresse)
+        val enveloppes = api.enveloppesDeRecuperation(email)
+        // `recover` est une **fonction libre** du binding, pas une méthode d'`Account` : il
+        // n'y a aucun compte ouvert au moment où on l'appelle.
+        val resultat = recover(
+            cleDeRecuperation.trim(), email, nouveauMotDePasse,
+            enveloppes.kdfParams, enveloppes.encryptedUserKeyRecovery,
+            enveloppes.encryptedPrivateKey,
+        )
+        val remise = RemiseDeRecuperation.depuisLeCoeur(resultat.reset())
+        api.recuperer(
+            email, remise.preuve, remise.empreinteDuMotDePasse, remise.cleUtilisateur,
+        )
     }
 
     // ─── Le journal du compte ───

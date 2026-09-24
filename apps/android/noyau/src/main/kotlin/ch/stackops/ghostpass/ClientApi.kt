@@ -100,6 +100,14 @@ private data class StatutSso(val enabled: Boolean = false)
 @Serializable
 private data class StatutDuSecondFacteur(val enabled: Boolean = false)
 
+/** Ce que le serveur rend pour tenter une récupération — vrai kit, ou leurres. */
+@Serializable
+data class EnveloppesDeRecuperation(
+    val kdfParams: String = "",
+    val encryptedUserKeyRecovery: String = "",
+    val encryptedPrivateKey: String = "",
+)
+
 /** Une connexion, telle que le serveur l'a enregistrée. */
 @Serializable
 data class ConnexionDto(
@@ -382,6 +390,69 @@ class ClientApi(baseUrl: String) {
             "POST", "/api/mfa/disable", jeton = jeton,
             corps = json.encodeToString(
                 CHAMPS, mapOf("masterPasswordHash" to empreinteDuMotDePasse, "code" to code),
+            ),
+        )
+    }
+
+    // ─── La clé de récupération ───
+
+    /** Enregistre le kit : la preuve re-hachée et la clé du coffre enveloppée pour lui. */
+    fun enregistrerLaRecuperation(
+        jeton: String,
+        preuveDeRecuperation: String,
+        cleUtilisateurPourRecuperation: String,
+    ) {
+        requete(
+            "POST", "/api/account/recovery", jeton = jeton,
+            corps = json.encodeToString(
+                CHAMPS,
+                mapOf(
+                    "recoveryAuthHash" to preuveDeRecuperation,
+                    "encryptedUserKeyRecovery" to cleUtilisateurPourRecuperation,
+                ),
+            ),
+        )
+    }
+
+    /**
+     * Les enveloppes nécessaires à une tentative de récupération.
+     *
+     * **Le serveur répond de la même façon pour un compte sans kit** — avec des leurres
+     * déterministes — pour ne pas révéler quels comptes existent. Le client ne peut donc pas
+     * distinguer « ce compte n'a pas de clé » de « cette clé est fausse », et c'est
+     * délibéré : les distinguer à l'écran rendrait la protection inutile.
+     */
+    fun enveloppesDeRecuperation(email: String): EnveloppesDeRecuperation =
+        json.decodeFromString(
+            EnveloppesDeRecuperation.serializer(),
+            requete(
+                "POST", "/api/auth/recovery-blob",
+                corps = json.encodeToString(CHAMPS, mapOf("email" to email)),
+            ),
+        )
+
+    /**
+     * Réinitialise le mot de passe maître.
+     *
+     * **Le serveur invalide toutes les sessions**, et c'est voulu : si quelqu'un vient de
+     * réinitialiser le mot de passe, celles restées ouvertes ailleurs n'ont plus lieu d'être.
+     */
+    fun recuperer(
+        email: String,
+        preuveDeRecuperation: String,
+        nouvelleEmpreinteDuMotDePasse: String,
+        nouvelleCleUtilisateur: String,
+    ) {
+        requete(
+            "POST", "/api/auth/recover",
+            corps = json.encodeToString(
+                CHAMPS,
+                mapOf(
+                    "email" to email,
+                    "recoveryAuthHash" to preuveDeRecuperation,
+                    "newMasterPasswordHash" to nouvelleEmpreinteDuMotDePasse,
+                    "newEncryptedUserKey" to nouvelleCleUtilisateur,
+                ),
             ),
         )
     }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -93,6 +94,33 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
      * qui veut taper son mot de passe maître ne pourrait jamais atteindre le clavier.
      */
     var biometrieTentee by rememberSaveable { mutableStateOf(false) }
+
+    /**
+     * L'écran de récupération, posé **par-dessus** celui-ci.
+     *
+     * Il ne quitte pas l'entrée pour y revenir : il la recouvre, et le retour arrière le
+     * referme. C'est la feuille modale d'iOS, et elle compte ici — on n'arrive à cet écran
+     * que parce qu'on ne peut pas entrer, et se retrouver ailleurs après un geste ajouterait
+     * de la confusion à un moment déjà inquiet.
+     */
+    var recuperationOuverte by rememberSaveable { mutableStateOf(false) }
+    if (recuperationOuverte) {
+        BackHandler { recuperationOuverte = false }
+        EcranDeRecuperationDuCompte(
+            modele = modele,
+            serveur = serveur,
+            email = email,
+            surFermer = { recuperationOuverte = false },
+            surReussite = {
+                recuperationOuverte = false
+                // Rien ne s'ouvre : le serveur a invalidé toutes les sessions. Le champ est
+                // vidé et l'écran dit quoi faire, plutôt que de laisser croire à un échec.
+                motDePasse = ""
+                modele.message = "Mot de passe réinitialisé. Connectez-vous avec le nouveau."
+            },
+        )
+        return
+    }
 
     // Une identité vérifiée par SSO enregistre une session : l'écran doit alors basculer sur
     // « compte enregistré, entrez votre mot de passe maître ». Sans cela, l'utilisateur
@@ -254,6 +282,22 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                                 description = "Déverrouiller avec ${BiometrieDeLAppareil.nom(contexte)}",
                                 contenu = { IconeBiometrique(genre, couleurs.accentTexte) },
                             ) { modele.deverrouillerParBiometrie(activite) }
+                        }
+
+                        // **« Mot de passe oublié » n'a de sens que sur la connexion
+                        // complète** : la récupération a besoin de l'adresse du serveur et
+                        // du compte, et elle réinitialise — elle n'ouvre pas la session
+                        // enregistrée, elle l'invalide avec toutes les autres.
+                        if (!sessionEnregistree) {
+                            LienDiscret(
+                                texte = "Mot de passe maître oublié",
+                                actif = !modele.occupe && serveur.isNotBlank() &&
+                                    email.isNotBlank(),
+                                identifiant = "button.forgotMaster",
+                            ) {
+                                modele.message = null
+                                recuperationOuverte = true
+                            }
                         }
 
                         if (modele.sessionEnregistree != null) {
