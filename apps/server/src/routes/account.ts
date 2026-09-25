@@ -29,7 +29,7 @@ import {
 } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
-import { verifyAndConsumeTotp } from "../services/mfa.js";
+import { verifierLeSecondFacteur } from "../services/mfa.js";
 import { verifyServerSecret } from "../services/security.js";
 
 const suppressionSchema = z.object({
@@ -128,8 +128,16 @@ export function registerAccountRoutes(app: FastifyInstance, db: DB): void {
       return reply.code(401).send({ error: "mot de passe invalide" });
 
     if (u.mfa_enabled) {
-      if (!parsed.data.totpCode || !(await verifyAndConsumeTotp(db, u, parsed.data.totpCode)))
+      const verdict = await verifierLeSecondFacteur(db, u, parsed.data.totpCode);
+      if (!verdict.ok) {
+        if (verdict.raison === "bloque")
+          return reply.code(429).send({
+            error: "trop d'essais sur le second facteur",
+            mfaRequired: true,
+            lockedUntil: verdict.jusqua,
+          });
         return reply.code(401).send({ error: "code 2FA requis ou invalide", mfaRequired: true });
+      }
     }
 
     // Une organisation dont le dernier administrateur s'efface devient

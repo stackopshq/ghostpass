@@ -8,6 +8,7 @@ import type {
   EmergencyAccessRow,
   GroupCollectionAccessRow,
   LoginEventRow,
+  MfaRecoveryCodeRow,
   OrgGroupMemberRow,
   OrgGroupRow,
   OrgItemRow,
@@ -45,6 +46,7 @@ export interface Database {
   // pour que login/callback fonctionnent sur n'importe quelle instance (déploiement multi-instance).
   auth_ephemeral: { key: string; value: string; expires_at: number };
   audit_log: AuditLogRow;
+  mfa_recovery_codes: MfaRecoveryCodeRow;
 }
 
 export type DB = Kysely<Database>;
@@ -66,6 +68,12 @@ CREATE TABLE IF NOT EXISTS users (
   mfa_secret             TEXT,
   mfa_enabled            INTEGER NOT NULL DEFAULT 0,
   mfa_last_counter       INTEGER NOT NULL DEFAULT 0,
+  -- Essais ratés consécutifs sur le second facteur, et échéance du blocage.
+  -- Par COMPTE et en base : la limitation de @fastify/rate-limit compte par
+  -- adresse IP, qu'un attaquant fait tourner, et six chiffres se devinent vite
+  -- quand on peut essayer sans compter.
+  mfa_failed_attempts    INTEGER NOT NULL DEFAULT 0,
+  mfa_locked_until       INTEGER,
   encrypted_user_key_recovery TEXT,
   recovery_auth_hash     TEXT,
   recovery_salt          TEXT,
@@ -195,6 +203,23 @@ CREATE TABLE IF NOT EXISTS collection_access (
   UNIQUE (collection_id, user_id)
 );
 
+-- Codes de récupération du second facteur. Sans eux, un téléphone perdu est un
+-- compte perdu : la récupération de coffre (encrypted_user_key_recovery) rend le
+-- MOT DE PASSE, pas la porte. mfa_enabled reste à 1 après un /api/auth/recover,
+-- et la connexion redemande ensuite un code que plus personne ne peut produire.
+--
+-- Seule l'empreinte est stockée, comme pour les jetons de session : une base lue
+-- ne rend aucun code utilisable.
+CREATE TABLE IF NOT EXISTS mfa_recovery_codes (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code_hash   TEXT NOT NULL,
+  used_at     INTEGER,
+  created_at  INTEGER NOT NULL,
+  UNIQUE (user_id, code_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_user ON mfa_recovery_codes(user_id);
+
 CREATE INDEX IF NOT EXISTS idx_vault_items_user ON vault_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_webauthn_user ON webauthn_credentials(user_id);
 CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id);
@@ -302,12 +327,18 @@ async function migratePostgres(db: DB): Promise<void> {
   await sql
     .raw("ALTER TABLE collections ADD COLUMN IF NOT EXISTS is_default BIGINT NOT NULL DEFAULT 0")
     .execute(db);
+  await sql
+    .raw("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_failed_attempts BIGINT NOT NULL DEFAULT 0")
+    .execute(db);
+  await sql.raw("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_locked_until BIGINT").execute(db);
 }
 
 /// Migrations idempotentes SQLite (bases créées avant l'ajout d'une colonne).
 function migrateSqlite(handle: BetterSqlite3.Database): void {
   ensureColumn(handle, "vault_items", "deleted_at", "INTEGER");
   ensureColumn(handle, "collections", "is_default", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(handle, "users", "mfa_failed_attempts", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(handle, "users", "mfa_locked_until", "INTEGER");
 }
 
 function ensureColumn(

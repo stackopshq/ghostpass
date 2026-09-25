@@ -18,7 +18,7 @@ import {
   normalizeEmail,
   verifyServerSecret,
 } from "../services/security.js";
-import { verifyAndConsumeTotp } from "../services/mfa.js";
+import { verifierLeSecondFacteur } from "../services/mfa.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
 const DEFAULT_KDF_PARAMS = JSON.stringify({
@@ -177,7 +177,23 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
         return reply.code(401).send({ error: "authentification 2FA échouée" });
       }
     } else if (user.mfa_enabled) {
-      if (!totpCode || !await verifyAndConsumeTotp(db, user, totpCode)) {
+      const verdict = await verifierLeSecondFacteur(db, user, totpCode);
+      if (!verdict.ok) {
+        // 429 et non 401 pour un compte bloqué : ce n'est pas « mauvais code »,
+        // c'est « trop d'essais ». Les confondre fait tourner un client
+        // légitime en boucle sur une saisie qui ne peut plus aboutir, et ne dit
+        // pas à son propriétaire que quelqu'un s'acharne sur son compte.
+        if (verdict.raison === "bloque") {
+          return reply.code(429).send({
+            error: "trop d'essais sur le second facteur",
+            mfaRequired: true,
+            mfaType: "totp",
+            lockedUntil: verdict.jusqua,
+          });
+        }
+        // Même message pour « code requis », « code faux » et « code rejoué » :
+        // distinguer le rejeu dirait à qui vient de capter un code qu'il a bien
+        // capté un code.
         return reply
           .code(401)
           .send({ error: "code 2FA requis ou invalide", mfaRequired: true, mfaType: "totp" });

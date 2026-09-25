@@ -13,9 +13,28 @@ export interface UserRow {
   mfa_secret: string | null;
   mfa_enabled: number;
   mfa_last_counter: number;
+  mfa_failed_attempts: number;
+  /// Epoch-ms jusqu'auquel le second facteur est bloqué, ou null.
+  mfa_locked_until: number | null;
   encrypted_user_key_recovery: string | null;
   recovery_auth_hash: string | null;
   recovery_salt: string | null;
+  created_at: number;
+}
+
+/// Un code de récupération du second facteur, à usage unique.
+///
+/// Seule l'empreinte est stockée : `code_hash` est un SHA-256 du code normalisé.
+/// SHA-256 et non scrypt comme `hashServerSecret`, délibérément — le code est
+/// tiré au hasard sur ~49 bits, il n'a aucune structure à deviner et ne souffre
+/// donc pas de l'attaque par dictionnaire contre laquelle scrypt défend. Et
+/// comme on retrouve la ligne PAR son empreinte, un sel par code obligerait à
+/// dérouler scrypt sur chacun des dix à chaque tentative.
+export interface MfaRecoveryCodeRow {
+  id: string;
+  user_id: string;
+  code_hash: string;
+  used_at: number | null;
   created_at: number;
 }
 
