@@ -27,7 +27,7 @@ struct OrgInviteView: View {
                     GhostSection(
                         titre: "La personne",
                         note:
-                            "Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe."
+                            "Elle doit déjà posséder un compte GhostPass : c'est sa clé publique qui protège celle de l'équipe. Aucun courriel n'est envoyé — elle verra l'invitation en ouvrant l'application."
                     ) {
                         TextField("adresse@exemple.com", text: $email)
                             .textInputAutocapitalization(.never)

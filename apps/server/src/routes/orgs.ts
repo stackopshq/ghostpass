@@ -98,7 +98,21 @@ export function registerOrgRoutes(app: FastifyInstance, db: DB): void {
         return reply.code(403).send({ error: "réservé à l'administrateur de l'organisation" });
       }
       const invitee = await users.findByEmail(db, normalizeEmail(parsed.data.email));
-      if (!invitee) return reply.code(404).send({ error: "utilisateur introuvable" });
+      if (!invitee) {
+        // « utilisateur introuvable » se lisait comme une faute de frappe, alors que le cas
+        // courant est tout autre : la personne n'a simplement pas encore de compte. On ne peut
+        // pas l'inviter avant — c'est sa clé publique qui scelle celle de l'équipe, et elle
+        // n'en a pas tant qu'elle ne s'est pas inscrite.
+        //
+        // Le message le dit ici, et pas sur la route de recherche de clé publique plus haut :
+        // le vague y est **délibéré**, pour limiter l'énumération d'adresses. Celle-ci est
+        // réservée à l'administrateur de l'organisation, qui distingue déjà les deux cas par le
+        // code de retour — nommer la cause ne lui apprend rien qu'il ne puisse déduire.
+        return reply.code(404).send({
+          error:
+            "cette personne n'a pas encore de compte GhostPass — demandez-lui d'en créer un, puis réessayez",
+        });
+      }
       if (await orgMembers.findByOrgAndUser(db, req.params.id, invitee.id)) {
         return reply.code(409).send({ error: "déjà membre" });
       }
