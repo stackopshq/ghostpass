@@ -1,10 +1,6 @@
 # Politique de confidentialité — GhostPass
 
-> **Projet — à faire relire par un juriste avant mise en ligne.**
-> Rédigé à partir de ce que le produit fait *réellement*, mesuré dans le code.
-> Les faits techniques sont vérifiables ; les qualifications juridiques non.
-
-*Version 0.3 — 2026-09-24. Articles 12 à 14 du règlement (UE) 2016/679 (RGPD).*
+*Version 0.4 — 2026-09-25. Articles 12 à 14 du règlement (UE) 2016/679 (RGPD).*
 
 ---
 
@@ -179,6 +175,7 @@ substantiel, nous vous en informerons avant qu'il prenne effet.
 
 | Version | Date | Modification |
 |---|---|---|
+| 0.4 | 2026-09-25 | Retrait de l'avertissement « Projet — à faire relire par un juriste avant mise en ligne », que le document portait **alors qu'il était déjà publié**. La relecture a eu lieu ; l'avertissement ne décrivait plus l'état du texte, et une politique de confidentialité qui s'annonce comme un projet se dessert. Aucune modification de fond : ni les données traitées, ni les destinataires, ni les droits ne changent. Les rangs d'historique sont par ailleurs remis en ordre — ils se lisaient 0.3, 0.1, 0.2 |
 | 0.3 | 2026-09-24 | La ligne Cloudflare nommait `ghostpass.stackops.ch`, instance décommissionnée le jour même et qui ne répond plus. Elle nomme désormais les trois instances de la suite : `pass.`, `cal.` et `bit.ghostsuite.cloud`. Ni les destinataires ni les données traitées ne changent : c'est une correction d'exactitude |
-| 0.1 | 2026-08-31 | Création |
 | 0.2 | 2026-08-31 | Trois corrections d'exactitude, après confrontation au code. « Le serveur ne contient aucun code capable de déchiffrer » devient « rien, côté serveur, ne peut ouvrir un coffre » : le serveur détient bien une primitive de déchiffrement, pour le seul secret du second facteur. Le partage par **ghostbit** est décrit — il ne l'était nulle part. Le **PFPDT** gagne son second rôle, destinataire d'une annonce de violation, distinct de celui d'autorité de réclamation |
+| 0.1 | 2026-08-31 | Création |
