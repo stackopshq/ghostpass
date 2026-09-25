@@ -364,10 +364,28 @@ export const api = {
       token,
     });
   },
+  /// L'activation rend les codes de récupération — **la seule fois** où ils
+  /// sont lisibles. Le serveur n'en garde que les empreintes : ni le support ni
+  /// nous ne pourrons les réafficher. L'appelant doit donc les montrer tout de
+  /// suite, et non les laisser dans une réponse qu'on oublie de lire.
   mfaActivate(token: string, code: string) {
-    return http<{ enabled: boolean }>("/api/mfa/activate", {
+    return http<{ enabled: boolean; recoveryCodes: string[] }>("/api/mfa/activate", {
       method: "POST",
       body: { code },
+      token,
+    });
+  },
+  /// L'état du second facteur, dont le nombre de codes encore utilisables :
+  /// c'est ce qui permet de prévenir AVANT que la réserve soit vide.
+  mfaStatus(token: string) {
+    return http<{ enabled: boolean; recoveryCodesRemaining: number }>("/api/mfa", { token });
+  },
+  /// Refait la réserve. Les anciens codes cessent de valoir à cet instant.
+  /// `code` accepte un TOTP à six chiffres ou un code de récupération.
+  mfaRegenerateRecoveryCodes(token: string, masterPasswordHash: string, code: string) {
+    return http<{ recoveryCodes: string[] }>("/api/mfa/recovery-codes", {
+      method: "POST",
+      body: { masterPasswordHash, code },
       token,
     });
   },

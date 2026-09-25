@@ -266,11 +266,15 @@ export function AuthScreen() {
                   />
                 </Champ>
                 {totpDemande && (
-                  <Champ label={t("auth.totpCode")}>
+                  // Le champ accepte aussi un code de récupération, et le dit.
+                  // Il le transmettait déjà — le serveur essaie les deux — mais
+                  // l'étiquette « code à 6 chiffres » et le clavier numérique
+                  // affirmaient le contraire : qui avait perdu son téléphone
+                  // n'avait aucune raison d'essayer d'y taper des lettres.
+                  <Champ label={t("auth.totpOrRecovery")}>
                     <Saisie
                       value={codeTotp}
                       onChange={(e) => setCodeTotp(e.target.value)}
-                      inputMode="numeric"
                       autoComplete="one-time-code"
                       autoFocus
                     />
