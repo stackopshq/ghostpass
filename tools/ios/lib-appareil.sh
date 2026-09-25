@@ -22,10 +22,24 @@ say() { printf "\n\033[1m▸ %s\033[0m\n" "$*" >&2; }
 # seul quand il y a plusieurs candidats.
 #
 # Pose `NOM` et `DEVICE`.
+# ─── « available », et non « connected » ───
+#
+# `devicectl` rapporte l'état d'un appareil comme `available` ou `unavailable`. Le filtre
+# cherchait `connected`, un mot que la sortie actuelle n'emploie plus : Xcode a changé de
+# vocabulaire, et l'outillage a cessé de voir le moindre téléphone. Le message d'erreur
+# conseillait alors de vérifier le câble et le mode développeur — sur un iPhone qui
+# figurait **dans la liste qu'il imprimait lui-même**, en `available`.
+#
+# Les montres sont écartées : une Apple Watch appairée paraît `available (paired)` et
+# devenait un candidat, forçant à lever une ambiguïté entre un téléphone et une montre sur
+# laquelle cette application n'ira jamais.
+#
+# `available` est une sous-chaîne d'`unavailable` : c'est l'exclusion voisine qui fait le
+# tri, et elle est évaluée séparément.
 trouver_l_appareil() {
   local candidats nombre
   candidats="$(xcrun devicectl list devices 2>/dev/null |
-    awk '$0 ~ /connected/ && $0 !~ /no DDI/ && $0 !~ /unavailable/ {
+    awk '$0 ~ /available/ && $0 !~ /no DDI/ && $0 !~ /unavailable/ && $0 !~ /Watch/ {
            nom = $1; for (i = 2; $i !~ /coredevice\.local/; i++) nom = nom " " $i
            print nom "\t" $(i+1) }')"
 

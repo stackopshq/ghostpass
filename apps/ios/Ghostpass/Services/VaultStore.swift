@@ -375,6 +375,27 @@ final class VaultStore: ObservableObject {
             // présenter — application pas encore au premier plan, le plus souvent.
             NSLog("GP-BIO relecture=indisponible")
             return false
+        case .absent:
+            // ─── L'enrôlement est cassé : on le referme au lieu de le prétendre ───
+            //
+            // Le drapeau dit que la biométrie est active, le trousseau dit qu'il n'a rien.
+            // Cet état survient après un changement de serveur : le mot de passe maître
+            // disparaît, le drapeau reste. L'écran affiche donc un bouton qui ne peut rien
+            // faire, et chaque tentative se terminait en silence.
+            //
+            // Remettre le drapeau à zéro rend deux choses : le bouton cesse de mentir, et
+            // la proposition d'activer la biométrie revient au prochain déverrouillage —
+            // `proposeBiometricsIfPossible` ne la refait que si le drapeau est **absent**.
+            // L'application se répare donc d'elle-même, sans que personne ait à deviner
+            // qu'il faut aller la désactiver puis la réactiver.
+            NSLog("GP-BIO relecture=absent — enrôlement refermé")
+            Keychain.remove(Keychain.Key.biometricsEnabled)
+            // Une seule littérale, pas une concaténation : `tr` attend une clef de
+            // traduction, et deux morceaux recollés n'en forment pas une.
+            errorMessage = tr(
+                "\(Biometrics.label) a été désactivé : le secret enregistré n'est plus lisible. Ouvrez le coffre avec votre mot de passe maître pour le réactiver."
+            )
+            return true
         case .echec(let statut):
             NSLog("GP-BIO relecture=échec statut=%d", Int(statut))
             errorMessage = tr("\(Biometrics.label) n'a pas permis d'ouvrir le coffre.")

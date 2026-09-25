@@ -80,6 +80,13 @@ enum Keychain {
         /// L'entrée n'est pas lisible maintenant — application pas au premier plan,
         /// enrôlement modifié. Silencieux aussi : le mot de passe maître reste offert.
         case indisponible
+        /// Il n'y a **rien à lire** : aucun secret n'est enregistré sous cette clef.
+        ///
+        /// Distinct d'`indisponible`, et c'est tout le point. Les deux étaient confondus,
+        /// et la confusion rendait le défaut invisible : l'appelant croyait « je n'ai pas
+        /// pu demander, je réessaierai » là où la vérité était « ce que tu cherches
+        /// n'existe pas ». Il réessayait donc indéfiniment.
+        case absent
         case echec(OSStatus)
     }
 
@@ -104,9 +111,26 @@ enum Keychain {
         case errSecUserCanceled:
             return .interrompue
         // `interactionNotAllowed` est ce que rend le trousseau quand l'application n'est
-        // pas au premier plan : c'est le cas exact du retour d'arrière-plan.
-        case errSecInteractionNotAllowed, errSecAuthFailed, errSecItemNotFound:
+        // pas au premier plan : c'est le cas exact du retour d'arrière-plan, et le seul
+        // qu'il vaille la peine de réessayer.
+        case errSecInteractionNotAllowed:
             return .indisponible
+        // ─── `itemNotFound` n'est pas « pas maintenant » ───
+        //
+        // Ces trois statuts étaient rendus sous le même mot, `indisponible`, et le plus
+        // rassurant des trois l'emportait. Constaté sur l'iPhone de Kevin le 2026-09-25 :
+        // après un changement de serveur, le mot de passe maître avait disparu du
+        // trousseau alors que le drapeau « biométrie activée » était resté à `1`. Le
+        // bouton s'affichait donc, chaque tentative rendait `indisponible`, et
+        // l'application concluait « je réessaierai » — pour l'éternité.
+        //
+        // Sept tentatives consécutives dans les journaux, toutes identiques, sans qu'une
+        // seule demande biométrique n'apparaisse à l'écran.
+        case errSecItemNotFound:
+            return .absent
+        // Une authentification qui échoue est un échec, pas une question non posée.
+        case errSecAuthFailed:
+            return .echec(errSecAuthFailed)
         default:
             return .echec(statut)
         }
