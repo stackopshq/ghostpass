@@ -34,7 +34,7 @@ import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Organisation, Partage, Plus } from "@/components/Icones";
+import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Organisation, Partage, Plus } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
 import { Securite } from "@/components/Securite";
 import { Partages } from "@/components/Partages";
@@ -652,18 +652,35 @@ export function VaultScreen() {
                 <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2.5">
                   <span className="text-xs text-muted">{t("app.selected", { n: selection.size })}</span>
                   <span className="flex-1" />
-                  <Bouton
-                    variante="discret"
+                  {/* Des icônes plutôt que des intitulés : « Annuler la sélection » et
+                      « Supprimer la sélection » se repliaient sur trois lignes dans cette
+                      barre étroite, donnant deux pastilles énormes. Le libellé vit
+                      désormais dans `aria-label` et dans l'infobulle — il n'est pas perdu,
+                      il n'occupe simplement plus la place. */}
+                  <button
+                    type="button"
+                    aria-label={t("app.clearSelection")}
+                    title={t("app.clearSelection")}
                     onClick={() => {
                       setSelection(new Set());
                       setAncre(null);
                     }}
+                    className="cursor-pointer rounded-lg p-2 text-muted transition-colors hover:bg-surface hover:text-foreground"
                   >
-                    {t("app.clearSelection")}
-                  </Bouton>
-                  <Bouton variante="danger" onClick={supprimerSelection} disabled={occupe}>
-                    {t("app.deleteSelected")}
-                  </Bouton>
+                    <Croix className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("app.deleteSelected")}
+                    title={t("app.deleteSelected")}
+                    onClick={supprimerSelection}
+                    disabled={occupe}
+                    className="cursor-pointer rounded-lg p-2 text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {/* `IconeCorbeille` et non `Corbeille` : ce dernier nom désigne
+                        l'écran de la corbeille, importé juste en dessous. */}
+                    <IconeCorbeille className="size-4" />
+                  </button>
                 </div>
               )}
               <ListeSecrets
