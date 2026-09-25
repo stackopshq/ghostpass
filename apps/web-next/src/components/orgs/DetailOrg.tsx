@@ -7,7 +7,7 @@
 // chaque membre restant, et toutes les entrées ré-enveloppées — sans quoi la
 // personne révoquée garderait de quoi lire ce qu'elle a déjà vu passer.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import {
   createOrg,
@@ -54,19 +54,39 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
 
   const echoue = (e: unknown) => setErreur(e instanceof Error ? e.message : String(e));
 
+  // `ouvrir` a besoin d'`ouvrirCollection`, qui est déclarée après elle. Une référence
+  // brise le cycle sans réordonner le fichier ni recréer `ouvrir` à chaque rendu — ce qui
+  // relancerait son `useEffect` en boucle.
+  const ouvrirCollectionRef = useRef<
+    ((c: Collection, poignee?: OrgHandle | null) => Promise<void>) | null
+  >(null);
+
   const ouvrir = useCallback(async () => {
     if (!token || !account) return;
     setOccupe(true);
     try {
       const m = await api.getMembership(token, org.orgId);
       if (!m.encryptedOrgKey || !m.sealedByPublicKey) throw new Error(t("org.keyUnavailable"));
-      setCle(openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey));
-      setCollections((await api.listCollections(token, org.orgId)).collections);
+      const poignee = openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey);
+      setCle(poignee);
+      const cols = (await api.listCollections(token, org.orgId)).collections;
+      setCollections(cols);
       setMembres(org.role === "admin" ? (await api.listMembers(token, org.orgId)).members : []);
       setChoisie(null);
       setItems([]);
       setVolet(null);
       setErreur(null);
+      // ─── Ouvrir sur le contenu, pas sur une invitation à cliquer ───
+      //
+      // Le panneau s'ouvrait vide, avec un texte d'attente. Quelqu'un qui entre dans son
+      // organisation vient voir des mots de passe : les lui faire chercher derrière un clic
+      // supplémentaire, quand il n'y a le plus souvent **qu'une seule collection**, donne
+      // l'impression d'un coffre vide.
+      //
+      // `poignee` est passée explicitement : `setCle` ne met pas `cle` à jour avant le
+      // rendu suivant, et `ouvrirCollection` sortirait en silence sur sa garde `!poignee`.
+      // C'est exactement pour cela que ce paramètre existe.
+      if (cols.length > 0) await ouvrirCollectionRef.current?.(cols[0], poignee);
     } catch (e) {
       echoue(e);
     } finally {
@@ -80,7 +100,14 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
 
   const ouvrirCollection = useCallback(
     async (c: Collection, poignee = cle) => {
-      if (!token || !poignee) return;
+      // Sortir en silence laissait un clic sans effet : ni contenu, ni message, et un
+      // panneau qui affiche « choisissez une collection » alors qu'on vient d'en choisir
+      // une. On dit pourquoi.
+      if (!token) return;
+      if (!poignee) {
+        setErreur(t("org.keyUnavailable"));
+        return;
+      }
       setChoisie(c);
       setVolet("collection");
       try {
@@ -106,6 +133,8 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
     },
     [token, org.orgId, cle],
   );
+
+  ouvrirCollectionRef.current = ouvrirCollection;
 
   const agir = async (fn: () => Promise<unknown>) => {
     setOccupe(true);
