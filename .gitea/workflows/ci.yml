@@ -135,6 +135,39 @@ jobs:
     # job est écarté, dans tous les autres cas il tourne.
     if: vars.MACOS_RUNNER != 'false'
     runs-on: macos
+    # ─── Un Mac, un port 3111, donc un job iOS à la fois ───
+    #
+    # La garde de concurrence du workflow ne protège pas ce job, et c'est pire que si
+    # elle n'existait pas — on la croit. Son groupe est `ci-${{ github.ref }}` : pour un
+    # `push` sur une branche, `github.ref` vaut `refs/heads/<branche>` ; pour l'événement
+    # `pull_request`, il vaut `refs/pull/<n>/merge`. Deux groupes distincts, aucune
+    # annulation, les deux runs partent ensemble.
+    #
+    # Ils ne peuvent pas cohabiter. `tools/ios/run-ios-tests.sh` fige `PORT=3111` parce
+    # que les tests Swift portent la même constante : le second run trouve le port pris,
+    # refuse de démarrer le serveur de banc et rend 1. Mesuré sur le run 3961 — les
+    # suites de contrat passent (elles n'ont pas besoin du banc), puis l'étape des tests
+    # d'interface meurt au démarrage sur « Le port 3111 est déjà occupé ». D'où
+    # l'impression trompeuse d'un job qui échoue *après* des tests verts : aucun test
+    # d'interface n'avait démarré.
+    #
+    # Deux hypothèses écartées en les mesurant, plutôt que par raisonnement : le cache
+    # `act` crée un répertoire par exécution et non par job, et les simulateurs sont
+    # éphémères, nommés par PID, avec un ménage qui épargne ceux dont le créateur vit.
+    # Seul le port est partagé.
+    #
+    # `cancel-in-progress: false` : on met en **file**, on n'annule pas. Le job plus haut
+    # a déjà tranché ce principe pour l'interrupteur `MACOS_RUNNER` — « une file d'attente
+    # se voit ; une absence, non » — et il vaut ici pour la même raison. Annuler
+    # produirait un statut qui ressemble à un verdict sans en être un.
+    #
+    # Concurrence au niveau job : disponible depuis Gitea **1.26**, l'instance est en
+    # 1.27.2. Sémantique de GitHub reprise telle quelle : un run en cours plus **un
+    # seul** en attente par groupe — un troisième remplace celui qui patientait. C'est
+    # le comportement voulu, le run en attente étant de toute façon périmé.
+    concurrency:
+      group: ios-runner-macos
+      cancel-in-progress: false
     # Le cœur crypto et son binding doivent déjà être verts : sans eux, l'app n'a rien
     # à lier, et un échec ici ne dirait pas où le problème se trouve.
     needs: crypto
