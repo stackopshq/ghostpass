@@ -1503,6 +1503,119 @@ final class VaultStore: ObservableObject {
         }
     }
 
+    // ─── Déplacer un élément personnel vers une équipe ───
+
+    /// Une collection d'équipe où l'on a le droit d'écrire.
+    struct DestinationDEquipe: Identifiable {
+        var id: String { "\(organisation.id)/\(collection)" }
+        let organisation: Organisation
+        let nomEquipe: String
+        let collection: String
+        let nomCollection: String
+    }
+
+    /// Les collections d'équipe où déposer un identifiant personnel.
+    ///
+    /// Demandées au serveur plutôt que déduites de `collectionsVisibles`, qui ne connaît que
+    /// les collections **d'où l'on voit déjà quelque chose**. Une collection d'équipe vide en
+    /// serait absente, et l'écran n'offrirait aucune destination — l'utilisateur en
+    /// conclurait que la fonction n'existe pas, alors qu'il a le droit d'écrire. Un
+    /// aller-retour réseau au moment où l'on ouvre le choix, contre une omission muette.
+    func destinationsDEquipe() async -> [DestinationDEquipe] {
+        guard let api, let token else { return [] }
+        var trouvees: [DestinationDEquipe] = []
+        for equipe in await organisations() where equipe.etat == .active {
+            do {
+                for collection in try await api.orgCollections(token: token, org: equipe.id)
+                where peutEcrire(collection, role: equipe.role) {
+                    trouvees.append(
+                        DestinationDEquipe(
+                            organisation: equipe, nomEquipe: equipe.nom,
+                            collection: collection.id, nomCollection: collection.name))
+                }
+            } catch {
+                // Une équipe injoignable ne doit pas faire disparaître les autres, mais elle
+                // ne doit pas disparaître en silence non plus : sans ce message, la liste
+                // reviendrait incomplète en ayant l'air complète.
+                errorMessage = tr("Les coffres de « \(equipe.nom) » n'ont pas pu être listés.")
+            }
+        }
+        return trouvees.sorted {
+            ($0.nomEquipe, $0.nomCollection) < ($1.nomEquipe, $1.nomCollection)
+        }
+    }
+
+    /// Le serveur reste seul juge ; ceci évite seulement de proposer un geste qu'il refusera.
+    ///
+    /// **La même règle qu'Android**, volontairement — `PermissionDeCollection.depuis`. Deux
+    /// clients de la même suite qui n'offrent pas la même destination pour le même compte
+    /// seraient un défaut à eux seuls, et c'est le genre d'écart que personne ne pense à
+    /// tester parce qu'il faut deux appareils pour le voir.
+    ///
+    /// Le repli quand le serveur ne dit pas la permission — antérieur au 2026-08-29 — est
+    /// donc conservateur comme là-bas : seul un administrateur passe.
+    private func peutEcrire(_ collection: OrgCollectionDTO, role: RoleDOrganisation) -> Bool {
+        switch collection.permission?.lowercased() {
+        case "write", "manage": return true
+        case .some: return false
+        case nil: return role == .admin
+        }
+    }
+
+    /// Déplace un identifiant du coffre personnel vers une collection d'équipe.
+    ///
+    /// **On dépose avant de retirer.** L'ordre inverse serait plus propre à lire et
+    /// beaucoup plus coûteux à rater : entre les deux appels il y a un réseau, et si le
+    /// second échoue, la version « retirer d'abord » a détruit le seul exemplaire d'un mot
+    /// de passe que le serveur ne sait pas relire. Ici le pire cas laisse un doublon —
+    /// visible, corrigeable à la main, et qui ne perd rien.
+    ///
+    /// Le contenu est rechiffré sous l'Org Key : ce n'est pas un déplacement de ligne, c'est
+    /// un nouveau scellement. C'est précisément ce qui le rend lisible par les collègues.
+    func deplacerVersLEquipe(_ entry: VaultEntry, vers destination: DestinationDEquipe) async
+        -> Bool
+    {
+        guard let api, let token else { return false }
+        guard entry.origine.appartenance == nil else {
+            errorMessage = tr("Cet élément appartient déjà à un coffre d'équipe.")
+            return false
+        }
+        isBusy = true
+        defer { isBusy = false }
+
+        guard let ouvert = await ouvrirLOrganisation(destination.organisation) else {
+            // `ouvrirLOrganisation` a déjà posé le message. Rien n'a été touché.
+            return false
+        }
+        guard
+            await enregistrerDansLaCollection(
+                ouvert, collection: destination.collection, item: entry.item, remplace: nil)
+        else {
+            return false
+        }
+
+        do {
+            try await api.deleteItem(token: token, id: entry.id)
+        } catch {
+            // Le dépôt a réussi, le retrait non : le mot de passe existe maintenant aux deux
+            // endroits. Le dire, et nommer les deux, plutôt que rendre un échec qui laisserait
+            // croire que rien ne s'est passé et inviterait à recommencer — ce qui en ferait
+            // un troisième.
+            errorMessage = tr(
+                "Copié dans « \(destination.nomCollection) », mais la version personnelle n'a pas pu être supprimée. Elle est encore dans votre coffre."
+            )
+            await refresh()
+            return false
+        }
+
+        entries.removeAll { $0.id == entry.id }
+        if let dtos = VaultCache.load() {
+            VaultCache.save(dtos.filter { $0.id != entry.id })
+        }
+        await refresh()
+        return true
+    }
+
     // ─── Administration d'organisation ───
 
     /// Crée une équipe. L'Org Key naît ici, dans le cœur Rust, et le créateur se la scelle à
