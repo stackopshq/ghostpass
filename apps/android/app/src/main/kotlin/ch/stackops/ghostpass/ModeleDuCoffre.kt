@@ -228,6 +228,46 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         private set
 
     /**
+     * Ce serveur propose-t-il l'authentification unique ? `null` tant qu'on n'a pas demandé.
+     *
+     * Trois états et non deux, comme partout ailleurs : `null` veut dire « on ne sait pas
+     * encore », pas « non ». L'écran n'affiche le lien que sur `true`, donc l'ignorance et le
+     * refus se ressemblent à l'affichage — mais ils ne se confondent pas dans le code, et
+     * c'est ce qui permet de réinterroger quand l'adresse change sans effacer ce qu'on sait.
+     */
+    var ssoDisponible by mutableStateOf<Boolean?>(null)
+        private set
+
+    /**
+     * Demande au serveur s'il propose le SSO, pour savoir s'il faut offrir le lien.
+     *
+     * Jusqu'ici le lien s'affichait toujours, et c'est seulement après l'avoir touché qu'on
+     * apprenait que l'instance n'en a pas — `pass.ghostsuite.cloud` est dans ce cas. Honnête,
+     * mais c'est proposer un geste qui ne mène nulle part. Le web et iOS interrogent déjà
+     * avant d'afficher ; Android était le seul des trois à ne pas le faire.
+     *
+     * **L'échec vaut « pas de SSO », pas une erreur.** Un serveur antérieur à cette fonction
+     * ne connaît pas la route, et un incident affiché pour une fonction que personne n'a
+     * demandée serait du bruit. C'est le seul endroit de ce fichier où avaler une exception
+     * est le bon geste, et c'est parce que la conséquence est un lien en moins — pas une
+     * donnée perdue ni une panne masquée. `demarrerLeSso` revérifie de toute façon.
+     */
+    fun interrogerLeSso(serveurSaisi: String) {
+        val adresse = AdresseServeur.normaliser(serveurSaisi)
+        if (adresse == null) {
+            ssoDisponible = null
+            return
+        }
+        viewModelScope.launch {
+            ssoDisponible = try {
+                withContext(Dispatchers.IO) { ClientApi(adresse).statutSso() }
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
+
+    /**
      * Ouvre le flux SSO dans un onglet de navigateur.
      *
      * On interroge d'abord `/api/auth/sso/status` : une instance sans SSO répond `false`, et
