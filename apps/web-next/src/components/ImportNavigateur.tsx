@@ -26,6 +26,7 @@
 // se désignent par leur numéro d'entrée et leur motif, jamais par leur valeur.
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "@/lib/api";
 import { encryptItem } from "@/lib/crypto";
 import { analyser, parMotif, type Analyse } from "@/lib/importNavigateur";
@@ -62,6 +63,9 @@ export function ImportNavigateur({
   onFerme: () => void;
   onImporte: () => void;
 }) {
+  const [monte, setMonte] = useState(false);
+  useEffect(() => setMonte(true), []);
+
   const { t } = useI18n();
   const { token, account } = useSession();
   const champ = useRef<HTMLInputElement>(null);
@@ -122,7 +126,24 @@ export function ImportNavigateur({
     setEtape({ nom: "fait", analyse, importees, echecs });
   };
 
-  return (
+  // ─── Le dialogue sort de l'arbre, et il le doit ───
+  //
+  // `fixed inset-0` se mesure par rapport à la fenêtre — **sauf** si un ancêtre porte un
+  // `backdrop-filter`, qui crée alors un bloc conteneur pour ses descendants fixés.
+  //
+  // `VaultScreen` rend ce composant dans sa colonne de gauche, qui porte `verre-dense`,
+  // donc `backdrop-filter: blur(12px)`. Le dialogue croyait couvrir l'écran et ne couvrait
+  // que la colonne : son texte s'écrasait sur deux cents pixels de large et débordait sous
+  // le pli. Constaté le 2026-09-25, capture à l'appui.
+  //
+  // Le CSS de ce fichier était juste ; c'est l'endroit où il s'appliquait qui ne l'était
+  // pas — et rien ici ne pouvait le laisser deviner, le défaut venant du parent.
+  //
+  // `createPortal` le rattache au `body`, hors de portée de tout verre. `monte` évite de
+  // toucher `document` pendant le rendu serveur, que Next fait aussi.
+  if (!monte) return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       // Le fond ferme le panneau, sauf pendant l'envoi : un clic distrait au
@@ -214,7 +235,8 @@ export function ImportNavigateur({
           </p>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

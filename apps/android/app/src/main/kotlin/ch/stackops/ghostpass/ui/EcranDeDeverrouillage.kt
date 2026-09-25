@@ -49,6 +49,7 @@ import ch.stackops.ghostpass.theme.LocalCouleurs
 import ch.stackops.ghostpass.theme.ValeurFigee
 import ch.stackops.ghostpass.theme.carteDeVerre
 import ch.stackops.ghostpass.theme.neon
+import kotlinx.coroutines.delay
 
 /**
  * Déverrouillage : la carte de verre posée sur la nuit, comme l'écran d'entrée des autres
@@ -128,6 +129,16 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
     // « compte enregistré, entrez votre mot de passe maître ». Sans cela, l'utilisateur
     // reviendrait du navigateur devant le même formulaire vide, sans savoir si quelque chose
     // s'est passé.
+    // On demande au serveur s'il propose le SSO, après une pause : sans elle, chaque lettre
+    // tapée dans le champ d'adresse déclencherait une requête, dont la plupart viseraient une
+    // adresse incomplète.
+    LaunchedEffect(serveur, sessionEnregistree) {
+        if (!sessionEnregistree) {
+            delay(500)
+            modele.interrogerLeSso(serveur)
+        }
+    }
+
     LaunchedEffect(modele.identitesVerifiees) {
         if (modele.identitesVerifiees > 0) sessionEnregistree = true
     }
@@ -261,7 +272,11 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                         // reste à saisir. Le libellé le dit — « s'identifier », pas
                         // « se connecter » — parce que confondre les deux est la première
                         // erreur de conception d'un client à connaissance nulle.
-                        if (!sessionEnregistree) {
+                        //
+                        // Le lien n'apparaît que si le serveur **dit** proposer le SSO.
+                        // Avant, il s'affichait toujours et l'on n'apprenait qu'après l'avoir
+                        // touché que l'instance n'en avait pas.
+                        if (!sessionEnregistree && modele.ssoDisponible == true) {
                             LienDiscret(
                                 texte = stringResource(R.string.deverrouillage_sso),
                                 actif = !modele.occupe && serveur.isNotBlank(),

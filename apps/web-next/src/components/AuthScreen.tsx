@@ -166,6 +166,31 @@ export function AuthScreen() {
     }
   }
 
+  // ─── Le bouton SSO ne paraît que si l'instance en propose un ───
+  //
+  // `api.ssoStatus()` existait déjà et n'était appelée nulle part : le bouton
+  // s'affichait donc partout, y compris sur `pass.ghostsuite.cloud` qui répond
+  // `{"enabled": false}`. Le toucher menait à une erreur, sur l'écran par lequel tout
+  // le monde entre.
+  //
+  // `null` tant qu'on ne sait pas, et le bouton reste caché dans cet état : un bouton
+  // qui apparaît après coup est moins déroutant qu'un bouton qui disparaît sous le
+  // doigt. Un serveur trop ancien pour connaître la route est traité comme « pas de
+  // SSO », pour la même raison qu'ailleurs dans ce produit — afficher un incident pour
+  // une fonction que personne n'a demandée serait du bruit.
+  const [ssoDisponible, setSsoDisponible] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let vivant = true;
+    void api
+      .ssoStatus()
+      .then((r) => vivant && setSsoDisponible(r.enabled))
+      .catch(() => vivant && setSsoDisponible(false));
+    return () => {
+      vivant = false;
+    };
+  }, []);
+
   async function versSso() {
     setErreur(null);
     setOccupe(true);
@@ -282,9 +307,11 @@ export function AuthScreen() {
                 >
                   {t("auth.passkey")}
                 </Bouton>
-                <Bouton variante="discret" onClick={versSso} disabled={occupe} className="w-full">
-                  {t("auth.sso")}
-                </Bouton>
+                {ssoDisponible && (
+                  <Bouton variante="discret" onClick={versSso} disabled={occupe} className="w-full">
+                    {t("auth.sso")}
+                  </Bouton>
+                )}
                 {/* La question reste du texte, l'action seule est le bouton.
                     Avant, la phrase entière était le bouton, en `text-muted`,
                     et son unique signal d'interactivité était `hover:` — un

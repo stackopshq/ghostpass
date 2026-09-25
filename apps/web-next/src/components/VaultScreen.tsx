@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { sealSend } from "@/lib/send";
 import {
   decryptOrgItem,
+  encryptOrgLogin,
   openOrg,
   decryptVaultItem,
   encryptFolders,
@@ -34,7 +35,7 @@ import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Organisation, Partage, Plus } from "@/components/Icones";
+import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Organisation, Partage, Plus } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
 import { Securite } from "@/components/Securite";
 import { Partages } from "@/components/Partages";
@@ -43,6 +44,14 @@ import { ListeOrgs } from "@/components/orgs/ListeOrgs";
 import { DetailOrg } from "@/components/orgs/DetailOrg";
 import type { OrgSummary } from "@/lib/orgs";
 import { Reglages } from "@/components/Reglages";
+
+/// Une collection d'équipe où l'utilisateur peut écrire.
+interface Destination {
+  orgId: string;
+  orgName: string;
+  collectionId: string;
+  collectionName: string;
+}
 
 export function VaultScreen() {
   const { t } = useI18n();
@@ -66,6 +75,10 @@ export function VaultScreen() {
   const [replies, setReplies] = useState<Set<string>>(new Set());
   const [erreur, setErreur] = useState<string | null>(null);
   const [occupe, setOccupe] = useState(false);
+  /// Les collections d'équipe où l'on peut écrire, rassemblées au chargement.
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  /// L'élément en cours de déplacement, `null` hors de ce geste.
+  const [deplacement, setDeplacement] = useState<VaultEntry | null>(null);
   const [chargement, setChargement] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   // `null` = pas de formulaire ouvert ; sinon l'identifiant en cours de
@@ -98,14 +111,18 @@ export function VaultScreen() {
   /// inaccessible : on passe. L'alternative afficherait une erreur de coffre à
   /// quelqu'un dont le coffre va très bien — et le coffre personnel, lui, est
   /// déjà chargé. Le silence porte sur un supplément, jamais sur le tout.
-  const chargerElementsDEquipe = useCallback(async (): Promise<VaultEntry[]> => {
-    if (!token || !account) return [];
+  const chargerElementsDEquipe = useCallback(async (): Promise<{
+    items: VaultEntry[];
+    destinations: Destination[];
+  }> => {
+    if (!token || !account) return { items: [], destinations: [] };
     const sortis: VaultEntry[] = [];
+    const destinations: Destination[] = [];
     let orgs: Awaited<ReturnType<typeof api.listOrgs>>["organizations"] = [];
     try {
       orgs = (await api.listOrgs(token)).organizations;
     } catch {
-      return [];
+      return { items: [], destinations: [] };
     }
     for (const org of orgs) {
       if (org.status !== "active") continue;
@@ -115,6 +132,17 @@ export function VaultScreen() {
         const handle = openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey);
         const { collections } = await api.listCollections(token, org.orgId);
         for (const col of collections) {
+          // Les destinations possibles d'un déplacement : seulement là où l'on peut
+          // écrire. Proposer une collection en lecture seule ferait échouer l'envoi
+          // après que l'utilisateur a choisi, ce qui est la pire façon de le lui dire.
+          if (col.permission === "write" || col.permission === "manage") {
+            destinations.push({
+              orgId: org.orgId,
+              orgName: org.name,
+              collectionId: col.id,
+              collectionName: col.name,
+            });
+          }
           try {
             const { items: dtos } = await api.listCollectionItems(token, org.orgId, col.id);
             for (const d of dtos) {
@@ -139,7 +167,7 @@ export function VaultScreen() {
         // Organisation illisible : les autres restent lisibles.
       }
     }
-    return sortis;
+    return { items: sortis, destinations };
   }, [token, account]);
 
   const charger = useCallback(async (): Promise<VaultEntry[]> => {
@@ -173,7 +201,8 @@ export function VaultScreen() {
       // lentes ou inaccessibles, la liste reste utilisable.
       setItems(entrees);
       const equipe = await chargerElementsDEquipe();
-      if (equipe.length > 0) setItems([...entrees, ...equipe]);
+      setDestinations(equipe.destinations);
+      if (equipe.items.length > 0) setItems([...entrees, ...equipe.items]);
       setRegistreId(regId);
       setDossiersVides(regChemins);
       setRegistrePartagesId(regPartagesId);
@@ -382,6 +411,57 @@ export function VaultScreen() {
       const suivant = partages.filter((x) => x.id !== p.id);
       setPartages(suivant);
       await enregistrerPartages(suivant);
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOccupe(false);
+    }
+  };
+
+  /// Déplace un identifiant personnel vers une collection d'équipe.
+  ///
+  /// ─── L'ordre des opérations est la seule chose qui compte ici ───
+  ///
+  /// On **crée d'abord, on supprime ensuite**. Si la création échoue, rien n'a bougé. Si
+  /// la suppression échoue après une création réussie, il reste un doublon — visible,
+  /// corrigeable, et bien préférable à un secret perdu entre les deux. L'ordre inverse
+  /// aurait une fenêtre où le mot de passe n'existe nulle part.
+  ///
+  /// ─── Ce que le serveur ne voit pas ───
+  ///
+  /// Le secret est déchiffré en mémoire depuis le coffre personnel, puis rechiffré sous
+  /// la clé de l'équipe **avant** de partir. Le serveur reçoit deux chiffrés successifs
+  /// et jamais le clair. La clé d'équipe est rouverte ici plutôt que gardée en mémoire
+  /// depuis le chargement : un appel de plus, aucune clé qui traîne.
+  const deplacerVersEquipe = async (item: VaultEntry, dest: Destination) => {
+    if (!token || !account) return;
+    setOccupe(true);
+    setErreur(null);
+    try {
+      const m = await api.getMembership(token, dest.orgId);
+      if (!m.encryptedOrgKey || !m.sealedByPublicKey) throw new Error(t("org.keyUnavailable"));
+      const poignee = openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey);
+      const { encryptedKey, encryptedData } = encryptOrgLogin(poignee, {
+        name: item.name,
+        username: item.username,
+        password: item.password,
+        url: item.url,
+        // Le dossier n'est pas repris : l'arborescence est celle du coffre personnel, et
+        // la porter dans une collection d'équipe y créerait des dossiers que personne
+        // d'autre n'a choisis.
+        totp: item.totp,
+        notes: item.note,
+        passwordHistory: item.passwordHistory,
+      });
+      await api.createOrgItem(token, dest.orgId, dest.collectionId, {
+        encryptedKey,
+        encryptedData,
+      });
+      await api.deleteItem(token, item.id);
+      setDeplacement(null);
+      setChoisi(null);
+      await charger();
+      setMessage(t("app.moveDone", { collection: dest.collectionName }));
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e));
     } finally {
@@ -652,18 +732,35 @@ export function VaultScreen() {
                 <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2.5">
                   <span className="text-xs text-muted">{t("app.selected", { n: selection.size })}</span>
                   <span className="flex-1" />
-                  <Bouton
-                    variante="discret"
+                  {/* Des icônes plutôt que des intitulés : « Annuler la sélection » et
+                      « Supprimer la sélection » se repliaient sur trois lignes dans cette
+                      barre étroite, donnant deux pastilles énormes. Le libellé vit
+                      désormais dans `aria-label` et dans l'infobulle — il n'est pas perdu,
+                      il n'occupe simplement plus la place. */}
+                  <button
+                    type="button"
+                    aria-label={t("app.clearSelection")}
+                    title={t("app.clearSelection")}
                     onClick={() => {
                       setSelection(new Set());
                       setAncre(null);
                     }}
+                    className="cursor-pointer rounded-lg p-2 text-muted transition-colors hover:bg-surface hover:text-foreground"
                   >
-                    {t("app.clearSelection")}
-                  </Bouton>
-                  <Bouton variante="danger" onClick={supprimerSelection} disabled={occupe}>
-                    {t("app.deleteSelected")}
-                  </Bouton>
+                    <Croix className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("app.deleteSelected")}
+                    title={t("app.deleteSelected")}
+                    onClick={supprimerSelection}
+                    disabled={occupe}
+                    className="cursor-pointer rounded-lg p-2 text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {/* `IconeCorbeille` et non `Corbeille` : ce dernier nom désigne
+                        l'écran de la corbeille, importé juste en dessous. */}
+                    <IconeCorbeille className="size-4" />
+                  </button>
                 </div>
               )}
               <ListeSecrets
@@ -707,9 +804,46 @@ export function VaultScreen() {
               onValider={enregistrer}
               onAnnuler={() => setEdition(null)}
             />
+          ) : deplacement ? (
+            // En ligne dans le panneau, et non en superposition : la colonne voisine
+            // porte `verre-dense`, donc `backdrop-filter`, qui capture les éléments en
+            // `position: fixed` et les enferme dans leur conteneur. Le panneau d'import
+            // y est tombé ; on ne recommence pas.
+            <div className="flex min-h-0 flex-col gap-3 p-5">
+              <h2 className="text-base font-semibold text-foreground">
+                {t("app.moveToShared")}
+              </h2>
+              <p className="text-sm text-muted">{deplacement.name}</p>
+              <p className="text-xs leading-relaxed text-muted">{t("app.moveToSharedPick")}</p>
+              <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
+                {destinations.map((d) => (
+                  <button
+                    key={`${d.orgId}/${d.collectionId}`}
+                    type="button"
+                    disabled={occupe}
+                    onClick={() => void deplacerVersEquipe(deplacement, d)}
+                    className="cursor-pointer rounded-lg border border-border px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="block font-medium">{d.collectionName}</span>
+                    <span className="block text-xs text-muted">{d.orgName}</span>
+                  </button>
+                ))}
+              </div>
+              <Bouton variante="discret" onClick={() => setDeplacement(null)} disabled={occupe}>
+                {t("app.cancelBack")}
+              </Bouton>
+            </div>
           ) : choisi ? (
             <DetailSecret
               item={choisi}
+              // Le déplacement n'est proposé que s'il peut aboutir : un identifiant
+              // personnel, et au moins une collection où l'on puisse écrire. Un bouton
+              // qui mène toujours à un refus vaut moins qu'un bouton absent.
+              onDeplacer={
+                !choisi.shared && choisi.kind === "login" && destinations.length > 0
+                  ? () => setDeplacement(choisi)
+                  : undefined
+              }
               onModifier={() => setEdition(choisi.id)}
               onSupprimer={supprimerEntree}
               onPartager={() => void partager(choisi)}

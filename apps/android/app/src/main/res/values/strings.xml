@@ -479,7 +479,7 @@
          écrit `vous@exemple.ch` en français et `you@example.com` en anglais ; ici l'adresse
          est celle d'un tiers, d'où le prénom. Seul le domaine suit la convention du
          catalogue. -->
-    <string name="urgence_email_invite">kevin@exemple.ch</string>
+    <string name="urgence_email_invite">jean.dupont@exemple.ch</string>
     <string name="urgence_role">Rôle</string>
     <!-- « Entre 1 et 90 jours » ne compte rien : les bornes sont fixes, ce n'est pas un
          pluriel mais une phrase. -->
@@ -662,4 +662,12 @@
     <!-- Prononcé par le lecteur d\'écran sur la ligne ou la vignette choisie. %1$s est le
          libellé du choix (« Sombre », « Après 5 minutes »), qui vient de `Preferences.kt`. -->
     <string name="reglages_choisi">%1$s, choisi</string>
+    <string name="modele_deja_dans_une_equipe">Cet élément est déjà dans un coffre d\'équipe.</string>
+    <string name="modele_equipe_refermee">Le coffre « %1$s » n\'est plus ouvert.</string>
+    <string name="modele_deplacement_a_moitie">Copié dans « %1$s », mais la version personnelle n\'a pas pu être supprimée. Elle est encore dans votre coffre.</string>
+    <string name="element_deplacer_vers_equipe">Déplacer vers un coffre d\'équipe</string>
+    <string name="element_choisir_le_coffre">Vers quel coffre ?</string>
+    <string name="element_deplacement_explique">L\'élément sera rechiffré pour l\'équipe et rangé à la corbeille de votre coffre personnel. Les membres du coffre pourront le lire.</string>
+    <string name="element_aucune_equipe">Vous n\'avez de droit d\'écriture sur aucun coffre d\'équipe.</string>
+    <string name="element_equipes_illisibles">Certains coffres d\'équipe n\'ont pas pu être ouverts : la liste ci-dessus est peut-être incomplète.</string>
 </resources>

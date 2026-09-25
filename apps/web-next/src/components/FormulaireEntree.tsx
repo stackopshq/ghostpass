@@ -224,7 +224,7 @@ export function FormulaireEntree({
       {v.kind === "card" && (
         <>
           <Champ label={t("app.cardholder")}>
-            <Saisie value={v.cardholder} onChange={(e) => maj("cardholder", e.target.value)} placeholder="Kevin Allioli" />
+            <Saisie value={v.cardholder} onChange={(e) => maj("cardholder", e.target.value)} placeholder="Jean Dupont" />
           </Champ>
           <Champ label={t("app.cardNumber")}>
             <Saisie value={v.cardNumber} onChange={(e) => maj("cardNumber", e.target.value)} inputMode="numeric" placeholder="4111 1111 1111 1111" />

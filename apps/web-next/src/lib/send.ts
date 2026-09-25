@@ -11,6 +11,8 @@
 
 import { open_send, seal_send } from "ghostpass-crypto-wasm";
 
+import { ensureCryptoReady } from "@/lib/crypto";
+
 export interface SealedSend {
   ciphertext: string;
   /// Le nonce du chiffre. Le serveur le stocke sous le nom `iv`, hérité de l'AES-GCM.
@@ -32,6 +34,21 @@ function depuisFragment(fragment: string): string {
 /// Chiffre un texte ; renvoie le chiffré et son nonce (pour le serveur), et la clé (pour le
 /// fragment d'URL).
 export async function sealSend(plaintext: string): Promise<SealedSend> {
+  // ─── Le cœur doit être chargé avant qu'on lui parle ───
+  //
+  // `seal_send` n'existe pas tant que `init()` n'a pas rendu la main : le module
+  // engendré par wasm-bindgen appelle `wasm.seal_send(…)` sur une instance encore
+  // vide, d'où « seal_send is not a function » — un message qui accuse la fonction
+  // alors que c'est le moment qui est faux.
+  //
+  // Ces deux fonctions étaient déjà `async` **sans jamais rien attendre** : la
+  // signature disait l'intention, le corps l'avait perdue.
+  //
+  // `ensureCryptoReady` ne charge qu'une fois ; l'appeler ici ne coûte rien quand le
+  // coffre est déjà ouvert, et répare le cas où il ne l'est pas — notamment la page
+  // publique de lecture d'un partage, qui n'ouvre aucun coffre et n'initialisait donc
+  // jamais le cœur.
+  await ensureCryptoReady();
   const scelle = JSON.parse(seal_send(plaintext)) as {
     ciphertext: string;
     nonce: string;
@@ -50,5 +67,8 @@ export async function openSend(
   iv: string,
   keyFragment: string,
 ): Promise<string> {
+  // Même raison que pour `sealSend`, et le cas est ici plus certain : la page qui
+  // ouvre un partage n'ouvre pas de coffre, donc rien d'autre n'a chargé le cœur.
+  await ensureCryptoReady();
   return open_send(depuisFragment(keyFragment), iv, ciphertext);
 }

@@ -20,6 +20,17 @@ struct ItemDetailView: View {
     /// il s'affiche, donc il se traduit.
     @State private var copie: LocalizedStringKey?
 
+    /// Les coffres d'équipe où cet élément pourrait aller. Chargés au moment du clic, pas à
+    /// l'ouverture de l'écran : c'est un aller-retour réseau, et la plupart des consultations
+    /// ne déplacent rien.
+    @State private var destinations: [VaultStore.DestinationDEquipe] = []
+    @State private var choixDeLEquipe = false
+    @State private var chargeLesDestinations = false
+    /// Le mot à dire quand la liste revient vide **sans erreur** — distinct d'un échec de
+    /// chargement, qui parle par `store.errorMessage`. « Rien à proposer » et « je n'ai pas
+    /// pu regarder » ne se disent pas de la même façon.
+    @State private var aucuneDestination = false
+
     /// L'entrée telle qu'elle est *maintenant* dans le coffre. Sans cela, l'écran garderait
     /// la copie reçue à la navigation et continuerait d'afficher l'ancien contenu après une
     /// modification — l'utilisateur croirait son enregistrement perdu.
@@ -74,6 +85,8 @@ struct ItemDetailView: View {
                     .padding(14)
                 }
             }
+
+            if peutSeDeplacer { sectionDeplacement }
         }
         .navigationTitle(Text(verbatim: live.item.name))
         .navigationBarTitleDisplayMode(.inline)
@@ -97,6 +110,77 @@ struct ItemDetailView: View {
         }
         .overlay(alignment: .bottom) { confirmationDeCopie }
         .animation(.snappy, value: copie)
+    }
+
+    /// Un élément **personnel** peut partir vers une équipe. Un élément déjà d'équipe, non :
+    /// il y est. Et le coffre d'un tiers ouvert en accès d'urgence encore moins — on le
+    /// consulte, on ne le redistribue pas.
+    ///
+    /// Tous les types sont offerts, y compris notes et cartes : le scellement sous Org Key
+    /// prend l'élément entier sans regarder ce qu'il contient.
+    private var peutSeDeplacer: Bool {
+        !lectureSeule && live.origine.appartenance == nil
+    }
+
+    @ViewBuilder
+    private var sectionDeplacement: some View {
+        GhostSection(titre: "Coffre d'équipe") {
+            Button {
+                Task {
+                    chargeLesDestinations = true
+                    aucuneDestination = false
+                    let trouvees = await store.destinationsDEquipe()
+                    chargeLesDestinations = false
+                    destinations = trouvees
+                    if trouvees.isEmpty {
+                        // Vide *et* sans erreur : il n'y a réellement rien. Si le chargement
+                        // a échoué, `store.errorMessage` le dit déjà, et annoncer « aucun
+                        // coffre » par-dessus ferait passer une panne pour un état normal.
+                        aucuneDestination = store.errorMessage == nil
+                    } else {
+                        choixDeLEquipe = true
+                    }
+                }
+            } label: {
+                HStack {
+                    Label("Déplacer vers un coffre d'équipe", systemImage: "person.2")
+                    Spacer()
+                    if chargeLesDestinations { ProgressView() }
+                }
+                .padding(14)
+            }
+            .disabled(chargeLesDestinations)
+            .foregroundStyle(Color.gpAccentText)
+            .accessibilityIdentifier("button.move-to-team")
+
+            if aucuneDestination {
+                Text("Vous n'avez de droit d'écriture sur aucun coffre d'équipe.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.gpMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 14)
+            }
+        }
+        .confirmationDialog(
+            "Déplacer vers quel coffre ?", isPresented: $choixDeLEquipe, titleVisibility: .visible
+        ) {
+            ForEach(destinations) { destination in
+                Button {
+                    Task { _ = await store.deplacerVersLEquipe(live, vers: destination) }
+                } label: {
+                    // `verbatim` : ce sont les noms choisis par l'équipe, pas des clefs de
+                    // traduction. Sans cela, une collection nommée « Done » s'afficherait
+                    // traduite.
+                    Text(verbatim: "\(destination.nomEquipe) — \(destination.nomCollection)")
+                }
+            }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text(
+                "L'élément sera rechiffré pour l'équipe et retiré de votre coffre personnel. Les membres du coffre pourront le lire."
+            )
+        }
     }
 
     @ViewBuilder

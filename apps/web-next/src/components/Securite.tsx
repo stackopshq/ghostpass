@@ -94,6 +94,9 @@ export function Securite() {
   const [infoCompte, setInfoCompte] = useState<{ email: string; kdfParams: string; mfaEnabled: boolean } | null>(null);
   const [suppressionOuverte, setSuppressionOuverte] = useState(false);
   const [motDePasseSuppression, setMotDePasseSuppression] = useState("");
+  /// Le mot de passe demandé avant de (re)configurer la 2FA. `null` tant que personne
+  /// ne l'a demandé : le champ n'apparaît qu'après un clic sur « Activer ».
+  const [motDePasse2fa, setMotDePasse2fa] = useState<string | null>(null);
   const [codeSuppression, setCodeSuppression] = useState("");
   const [occupeDonnees, setOccupeDonnees] = useState(false);
   const [erreurDonnees, setErreurDonnees] = useState<string | null>(null);
@@ -218,21 +221,59 @@ export function Securite() {
           titre={t("app.twoFactor")}
           sous={t("app.twoFactorSub")}
           action={
-            !mfa && (
-              <Bouton
-                disabled={occupe}
-                onClick={() =>
-                  void agir(async () => {
-                    setMfa(await api.mfaSetup(token!));
-                    setMessage(null);
-                  })
-                }
-              >
+            !mfa &&
+            motDePasse2fa === null && (
+              // Le clic ouvre le champ ; il ne lance plus la configuration.
+              //
+              // `/api/mfa/setup` **remet le secret à zéro** — c'est écrit dans la route —
+              // et exige donc une re-authentification. L'appel partait sans corps, le
+              // schéma le refusait, et le bouton rendait « requête invalide ». Il n'avait
+              // jamais pu fonctionner.
+              <Bouton disabled={occupe} onClick={() => setMotDePasse2fa("")}>
                 {t("app.enable2fa")}
               </Bouton>
             )
           }
         >
+          {!mfa && motDePasse2fa !== null && (
+            <div className="flex flex-col gap-2">
+              {/* Le mot de passe est redemandé, comme pour la suppression de compte :
+                  une session ouverte prouve qu'on est devant l'écran, pas qu'on en est
+                  la titulaire. Et configurer la 2FA efface le secret précédent. */}
+              <Champ label={t("app.masterPassword")}>
+                <Saisie
+                  type="password"
+                  value={motDePasse2fa}
+                  onChange={(e) => setMotDePasse2fa(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </Champ>
+              <div className="flex gap-2">
+                <Bouton
+                  disabled={occupe || !motDePasse2fa || !infoCompte}
+                  onClick={() =>
+                    void agir(async () => {
+                      // La même dérivation qu'à la connexion : le serveur ne voit jamais
+                      // le mot de passe maître, seulement la preuve qui en découle.
+                      const preuve = computeLoginHash(
+                        infoCompte!.email,
+                        motDePasse2fa,
+                        infoCompte!.kdfParams,
+                      );
+                      setMfa(await api.mfaSetup(token!, preuve));
+                      setMotDePasse2fa(null);
+                      setMessage(null);
+                    })
+                  }
+                >
+                  {t("app.confirm")}
+                </Bouton>
+                <Bouton variante="discret" onClick={() => setMotDePasse2fa(null)}>
+                  {t("app.cancelBack")}
+                </Bouton>
+              </div>
+            </div>
+          )}
           {mfa && (
             <div className="space-y-3">
               <p className="text-xs text-muted">{t("app.scanQr")}</p>

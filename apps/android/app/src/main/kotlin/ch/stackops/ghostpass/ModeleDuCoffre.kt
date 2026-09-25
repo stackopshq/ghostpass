@@ -228,6 +228,46 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         private set
 
     /**
+     * Ce serveur propose-t-il l'authentification unique ? `null` tant qu'on n'a pas demandé.
+     *
+     * Trois états et non deux, comme partout ailleurs : `null` veut dire « on ne sait pas
+     * encore », pas « non ». L'écran n'affiche le lien que sur `true`, donc l'ignorance et le
+     * refus se ressemblent à l'affichage — mais ils ne se confondent pas dans le code, et
+     * c'est ce qui permet de réinterroger quand l'adresse change sans effacer ce qu'on sait.
+     */
+    var ssoDisponible by mutableStateOf<Boolean?>(null)
+        private set
+
+    /**
+     * Demande au serveur s'il propose le SSO, pour savoir s'il faut offrir le lien.
+     *
+     * Jusqu'ici le lien s'affichait toujours, et c'est seulement après l'avoir touché qu'on
+     * apprenait que l'instance n'en a pas — `pass.ghostsuite.cloud` est dans ce cas. Honnête,
+     * mais c'est proposer un geste qui ne mène nulle part. Le web et iOS interrogent déjà
+     * avant d'afficher ; Android était le seul des trois à ne pas le faire.
+     *
+     * **L'échec vaut « pas de SSO », pas une erreur.** Un serveur antérieur à cette fonction
+     * ne connaît pas la route, et un incident affiché pour une fonction que personne n'a
+     * demandée serait du bruit. C'est le seul endroit de ce fichier où avaler une exception
+     * est le bon geste, et c'est parce que la conséquence est un lien en moins — pas une
+     * donnée perdue ni une panne masquée. `demarrerLeSso` revérifie de toute façon.
+     */
+    fun interrogerLeSso(serveurSaisi: String) {
+        val adresse = AdresseServeur.normaliser(serveurSaisi)
+        if (adresse == null) {
+            ssoDisponible = null
+            return
+        }
+        viewModelScope.launch {
+            ssoDisponible = try {
+                withContext(Dispatchers.IO) { ClientApi(adresse).statutSso() }
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
+
+    /**
      * Ouvre le flux SSO dans un onglet de navigateur.
      *
      * On interroge d'abord `/api/auth/sso/status` : une instance sans SSO répond `false`, et
@@ -1549,6 +1589,113 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      * modification d'équipe faite depuis la liste fondue doit y revenir, et ne relire que le
      * personnel la ferait disparaître de l'écran jusqu'au prochain passage.
      */
+    // ─── Déplacer un élément personnel vers une équipe ───
+
+    /** Une collection d'équipe où l'on a le droit d'écrire. */
+    data class DestinationDEquipe(
+        val organisation: String,
+        val nomEquipe: String,
+        val collection: String,
+        val nomCollection: String,
+    )
+
+    /**
+     * Les collections d'équipe où déposer un élément personnel.
+     *
+     * Tirées de [coffresOuverts], que [chargerLesCoffresDEquipe] remplit à l'ouverture du
+     * coffre : les clés sont déjà en mémoire, les collections déjà listées, et leurs
+     * permissions déjà résolues par le serveur. Rien à redemander.
+     *
+     * **Une organisation dont l'ouverture a échoué n'y figure pas** — on ne saurait pas y
+     * écrire. C'est [echecsDOrganisation] qui porte le pourquoi, et l'écran s'en sert pour
+     * distinguer « aucune destination » de « je n'ai pas pu regarder ». Les deux se
+     * ressemblent et ne se disent pas pareil.
+     */
+    val destinationsDEquipe: List<DestinationDEquipe>
+        get() = coffresOuverts.values
+            .flatMap { ouvert ->
+                ouvert.collections
+                    .filter { it.permission != PermissionDeCollection.Lecture }
+                    .map {
+                        DestinationDEquipe(
+                            organisation = ouvert.organisation.id,
+                            nomEquipe = ouvert.organisation.nom,
+                            collection = it.id,
+                            nomCollection = it.nom,
+                        )
+                    }
+            }
+            .sortedWith(compareBy({ it.nomEquipe }, { it.nomCollection }))
+
+    /**
+     * Déplace un élément du coffre personnel vers une collection d'équipe.
+     *
+     * **On dépose avant de retirer.** L'ordre inverse se lit mieux et se rate beaucoup plus
+     * cher : entre les deux appels il y a un réseau, et « retirer d'abord » détruirait le
+     * seul exemplaire d'un secret que le serveur ne sait pas relire. Ici le pire cas laisse
+     * un doublon — visible, corrigeable, et qui ne perd rien.
+     *
+     * Le retrait passe par [Coffre.supprimer], qui **range à la corbeille** plutôt
+     * qu'effacer : même si l'utilisateur se ravise, l'original reste récupérable un temps.
+     * C'est le contraire du dépôt, qui est définitif pour l'équipe.
+     *
+     * Le contenu est rechiffré sous l'Org Key. Ce n'est pas un déplacement de ligne mais un
+     * nouveau scellement — c'est précisément ce qui le rend lisible par les collègues.
+     */
+    fun deplacerVersLEquipe(
+        entree: EntreeDuCoffre.Lisible,
+        destination: DestinationDEquipe,
+        surFin: (Boolean) -> Unit = {},
+    ) {
+        if (entree.origine is OrigineDuCoffre.Equipe) {
+            message = texte(R.string.modele_deja_dans_une_equipe)
+            surFin(false)
+            return
+        }
+        val ouvert = coffresOuverts[destination.organisation]
+        if (ouvert == null) {
+            message = texte(R.string.modele_equipe_refermee, destination.nomEquipe)
+            surFin(false)
+            return
+        }
+
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                withContext(Dispatchers.IO) {
+                    coffre.creerDansCollection(ouvert, destination.collection, entree.element)
+                }
+            } catch (e: Exception) {
+                // Rien n'a bougé : l'original est intact, et c'est tout ce qu'il y a à dire.
+                message = messageLisible(e)
+                occupe = false
+                surFin(false)
+                return@launch
+            }
+
+            try {
+                withContext(Dispatchers.IO) { coffre.supprimer(entree.id) }
+            } catch (e: Exception) {
+                // Le dépôt a réussi, le retrait non. Le dire, et nommer les deux endroits :
+                // rendre un échec sec laisserait croire que rien ne s'est passé, inviterait à
+                // recommencer, et ferait un troisième exemplaire.
+                message =
+                    texte(R.string.modele_deplacement_a_moitie, destination.nomCollection)
+                relireApres()
+                chargerLesCoffresDEquipe()
+                occupe = false
+                surFin(false)
+                return@launch
+            }
+
+            relireApres()
+            chargerLesCoffresDEquipe()
+            occupe = false
+            surFin(true)
+        }
+    }
+
     private fun relireApres() {
         val collection = collectionOuverte
         if (collection != null) ouvrirUneCollection(collection) else rafraichir()
