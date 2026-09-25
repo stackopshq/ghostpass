@@ -30,13 +30,26 @@ export const metadata: Metadata = {
 //
 // Le défaut par défaut est **sombre** : c'est le thème de la charte, et celui dans
 // lequel le produit a été dessiné.
-const THEME_SANS_CLIGNOTEMENT = `(function(){try{var t=localStorage.getItem('gp_theme');document.documentElement.dataset.theme=t==='light'?'light':'dark';}catch(e){document.documentElement.dataset.theme='dark';}})();`;
+// La langue est posée par le même script, et pour une raison voisine.
+//
+// `useI18nValue` démarre en anglais et corrige après le montage — c'est ce qu'exige
+// l'hydratation, `localStorage` n'existant pas au rendu serveur. L'attribut `lang`
+// restait donc faux pendant ce court moment, et il pilote la césure, la correction
+// orthographique et surtout **la synthèse vocale** : un lecteur d'écran prononçait le
+// français avec une voix anglaise jusqu'au montage.
+//
+// Le poser ici le rend juste dès le premier tracé. `suppressHydrationWarning` sur
+// <html> parce que le script modifie l'arbre avant que React ne s'y reconnaisse.
+const AVANT_LE_PREMIER_TRACE = `(function(){var d=document.documentElement;try{var t=localStorage.getItem('gp_theme');d.dataset.theme=t==='light'?'light':'dark';}catch(e){d.dataset.theme='dark';}try{var l=localStorage.getItem('gp_locale');if(!l){l=(navigator.language||'en').slice(0,2);}d.lang=l==='fr'?'fr':'en';}catch(e){d.lang='en';}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    // `lang="en"` et non « fr » : c'est la langue que React rend réellement au premier
+    // passage, `useI18nValue` démarrant en anglais. Annoncer « fr » ici décrivait un
+    // contenu qui n'était pas celui-là. Le script ci-dessus corrige avant le tracé.
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SANS_CLIGNOTEMENT }} />
+        <script dangerouslySetInnerHTML={{ __html: AVANT_LE_PREMIER_TRACE }} />
       </head>
       <body>
         <I18nProvider>

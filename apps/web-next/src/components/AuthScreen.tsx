@@ -17,6 +17,25 @@ import { useSession } from "@/lib/session";
 import { Bouton, Champ, Saisie, TeteDePanneau } from "@/components/champs";
 import { Cadenas } from "@/components/Icones";
 
+// Vers quoi pointe « Politique de confidentialité ».
+//
+// Par défaut la page servie par l'application elle-même, `/confidentialite`, construite
+// depuis `docs/legal/`. C'est juste pour une instance hébergée par StackOps.
+//
+// **Ce ne l'est pas pour une instance auto-hébergée.** GhostPass s'auto-héberge — c'est
+// une promesse du produit — et là, le responsable du traitement est celui qui héberge,
+// pas nous. Servir notre texte sous son nom de domaine lui ferait endosser des
+// engagements qu'il n'a pas pris : nos coordonnées, nos sous-traitants, nos délais de
+// conservation. Le piège est qu'une page présente et lisible **paraît** correcte ;
+// personne ne vient signaler qu'elle décrit la mauvaise entreprise.
+//
+// La page interne reste servie dans tous les cas : la dérogation ne change que ce vers
+// quoi l'écran d'entrée renvoie.
+//
+// Même forme que `NEXT_PUBLIC_PRIVACY_URL` chez GhostCal, exprès — deux produits de la
+// suite qui se configurent autrement pour le même besoin, c'est un défaut en soi.
+const URL_CONFIDENTIALITE = process.env.NEXT_PUBLIC_PRIVACY_URL ?? "/confidentialite";
+
 type Mode = "login" | "register";
 type SsoEnAttente = Awaited<ReturnType<typeof api.ssoCallback>> | null;
 
@@ -293,7 +312,7 @@ export function AuthScreen() {
                 <p className="mt-3 text-xs leading-relaxed text-muted">
                   {t("auth.privacyNotice")}{" "}
                   <a
-                    href="/confidentialite"
+                    href={URL_CONFIDENTIALITE}
                     className="font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
                   >
                     {t("auth.privacy")}
@@ -360,7 +379,7 @@ export function AuthScreen() {
             elle a consenti sans avoir à recréer un compte pour revoir le lien. */}
         <p className="mt-3 text-center">
           <a
-            href="/confidentialite"
+            href={URL_CONFIDENTIALITE}
             className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
           >
             {t("auth.privacy")}
