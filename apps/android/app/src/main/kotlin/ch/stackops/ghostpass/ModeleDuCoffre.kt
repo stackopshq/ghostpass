@@ -1549,6 +1549,113 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      * modification d'équipe faite depuis la liste fondue doit y revenir, et ne relire que le
      * personnel la ferait disparaître de l'écran jusqu'au prochain passage.
      */
+    // ─── Déplacer un élément personnel vers une équipe ───
+
+    /** Une collection d'équipe où l'on a le droit d'écrire. */
+    data class DestinationDEquipe(
+        val organisation: String,
+        val nomEquipe: String,
+        val collection: String,
+        val nomCollection: String,
+    )
+
+    /**
+     * Les collections d'équipe où déposer un élément personnel.
+     *
+     * Tirées de [coffresOuverts], que [chargerLesCoffresDEquipe] remplit à l'ouverture du
+     * coffre : les clés sont déjà en mémoire, les collections déjà listées, et leurs
+     * permissions déjà résolues par le serveur. Rien à redemander.
+     *
+     * **Une organisation dont l'ouverture a échoué n'y figure pas** — on ne saurait pas y
+     * écrire. C'est [echecsDOrganisation] qui porte le pourquoi, et l'écran s'en sert pour
+     * distinguer « aucune destination » de « je n'ai pas pu regarder ». Les deux se
+     * ressemblent et ne se disent pas pareil.
+     */
+    val destinationsDEquipe: List<DestinationDEquipe>
+        get() = coffresOuverts.values
+            .flatMap { ouvert ->
+                ouvert.collections
+                    .filter { it.permission != PermissionDeCollection.Lecture }
+                    .map {
+                        DestinationDEquipe(
+                            organisation = ouvert.organisation.id,
+                            nomEquipe = ouvert.organisation.nom,
+                            collection = it.id,
+                            nomCollection = it.nom,
+                        )
+                    }
+            }
+            .sortedWith(compareBy({ it.nomEquipe }, { it.nomCollection }))
+
+    /**
+     * Déplace un élément du coffre personnel vers une collection d'équipe.
+     *
+     * **On dépose avant de retirer.** L'ordre inverse se lit mieux et se rate beaucoup plus
+     * cher : entre les deux appels il y a un réseau, et « retirer d'abord » détruirait le
+     * seul exemplaire d'un secret que le serveur ne sait pas relire. Ici le pire cas laisse
+     * un doublon — visible, corrigeable, et qui ne perd rien.
+     *
+     * Le retrait passe par [Coffre.supprimer], qui **range à la corbeille** plutôt
+     * qu'effacer : même si l'utilisateur se ravise, l'original reste récupérable un temps.
+     * C'est le contraire du dépôt, qui est définitif pour l'équipe.
+     *
+     * Le contenu est rechiffré sous l'Org Key. Ce n'est pas un déplacement de ligne mais un
+     * nouveau scellement — c'est précisément ce qui le rend lisible par les collègues.
+     */
+    fun deplacerVersLEquipe(
+        entree: EntreeDuCoffre.Lisible,
+        destination: DestinationDEquipe,
+        surFin: (Boolean) -> Unit = {},
+    ) {
+        if (entree.origine is OrigineDuCoffre.Equipe) {
+            message = texte(R.string.modele_deja_dans_une_equipe)
+            surFin(false)
+            return
+        }
+        val ouvert = coffresOuverts[destination.organisation]
+        if (ouvert == null) {
+            message = texte(R.string.modele_equipe_refermee, destination.nomEquipe)
+            surFin(false)
+            return
+        }
+
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            try {
+                withContext(Dispatchers.IO) {
+                    coffre.creerDansCollection(ouvert, destination.collection, entree.element)
+                }
+            } catch (e: Exception) {
+                // Rien n'a bougé : l'original est intact, et c'est tout ce qu'il y a à dire.
+                message = messageLisible(e)
+                occupe = false
+                surFin(false)
+                return@launch
+            }
+
+            try {
+                withContext(Dispatchers.IO) { coffre.supprimer(entree.id) }
+            } catch (e: Exception) {
+                // Le dépôt a réussi, le retrait non. Le dire, et nommer les deux endroits :
+                // rendre un échec sec laisserait croire que rien ne s'est passé, inviterait à
+                // recommencer, et ferait un troisième exemplaire.
+                message =
+                    texte(R.string.modele_deplacement_a_moitie, destination.nomCollection)
+                relireApres()
+                chargerLesCoffresDEquipe()
+                occupe = false
+                surFin(false)
+                return@launch
+            }
+
+            relireApres()
+            chargerLesCoffresDEquipe()
+            occupe = false
+            surFin(true)
+        }
+    }
+
     private fun relireApres() {
         val collection = collectionOuverte
         if (collection != null) ouvrirUneCollection(collection) else rafraichir()

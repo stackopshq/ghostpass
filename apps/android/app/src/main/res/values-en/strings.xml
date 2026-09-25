@@ -569,4 +569,12 @@
         <item quantity="one">%d vault</item>
         <item quantity="other">%d vaults</item>
     </plurals>
+    <string name="modele_deja_dans_une_equipe">This item is already in a team vault.</string>
+    <string name="modele_equipe_refermee">The “%1$s” vault is no longer open.</string>
+    <string name="modele_deplacement_a_moitie">Copied to “%1$s”, but the personal version could not be removed. It is still in your vault.</string>
+    <string name="element_deplacer_vers_equipe">Move to a team vault</string>
+    <string name="element_choisir_le_coffre">Which vault?</string>
+    <string name="element_deplacement_explique">The item will be re-encrypted for the team and moved to your personal vault\'s trash. Members of the vault will be able to read it.</string>
+    <string name="element_aucune_equipe">You have write access to no team vault.</string>
+    <string name="element_equipes_illisibles">Some team vaults could not be opened: the list above may be incomplete.</string>
 </resources>

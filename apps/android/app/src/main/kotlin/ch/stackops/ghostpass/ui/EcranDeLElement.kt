@@ -32,6 +32,7 @@ import ch.stackops.ghostpass.Identifiants
 import ch.stackops.ghostpass.LienOtpauth
 import ch.stackops.ghostpass.ModeleDuCoffre
 import ch.stackops.ghostpass.Note
+import ch.stackops.ghostpass.OrigineDuCoffre
 import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.theme.BoutonPrincipal
 import ch.stackops.ghostpass.theme.BoutonSecondaire
@@ -422,6 +423,15 @@ private fun CorpsDeLElement(
                             }
                         }
 
+                        // Le déplacement ne concerne qu'un élément **personnel** déjà
+                        // enregistré : un élément d'équipe y est déjà, et un formulaire
+                        // non enregistré n'a rien à déplacer.
+                        if (entree != null && !lectureSeule &&
+                            entree.origine !is OrigineDuCoffre.Equipe
+                        ) {
+                            PanneauDeDeplacement(modele, entree, surFin)
+                        }
+
                         // Le partage ne s'offre que sur un élément **existant** : il n'y a
                         // rien à partager d'un formulaire qu'on n'a pas encore enregistré,
                         // et le proposer laisserait croire que le secret saisi part déjà.
@@ -475,6 +485,79 @@ private fun historique(origine: Identifiants?, nouveau: String): List<String> {
  * `BoitesDePartage` qui affiche soit la confirmation de destination, soit le lien. L'ordre
  * est le point : la destination se confirme avant que la clé ne soit remise.
  */
+/**
+ * Déposer un élément personnel dans un coffre d'équipe.
+ *
+ * Les destinations viennent de ce que le modèle a déjà ouvert : aucun appel réseau pour
+ * afficher la liste. Voir `ModeleDuCoffre.destinationsDEquipe`.
+ */
+@Composable
+private fun PanneauDeDeplacement(
+    modele: ModeleDuCoffre,
+    entree: EntreeDuCoffre.Lisible,
+    surFin: () -> Unit,
+) {
+    val couleurs = LocalCouleurs.current
+    var ouvert by rememberSaveable { mutableStateOf(false) }
+    val destinations = modele.destinationsDEquipe
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LienDiscret(
+            texte = stringResource(R.string.element_deplacer_vers_equipe),
+            actif = !modele.occupe,
+            identifiant = "button.moveToTeam",
+        ) { ouvert = !ouvert }
+
+        if (ouvert) {
+            Text(
+                stringResource(R.string.element_deplacement_explique),
+                color = couleurs.attenue,
+                fontSize = 12.sp,
+            )
+
+            if (destinations.isEmpty()) {
+                Text(
+                    stringResource(R.string.element_aucune_equipe),
+                    color = couleurs.attenue,
+                    fontSize = 12.sp,
+                )
+            }
+
+            // Une organisation qu'on n'a pas su ouvrir n'a pas de destination dans la liste.
+            // Le dire : sans cela, « aucun coffre » et « je n'ai pas pu les lire » auraient
+            // exactement la même apparence, et la seconde passerait pour la première.
+            if (modele.echecsDOrganisation.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.element_equipes_illisibles),
+                    color = couleurs.attenue,
+                    fontSize = 12.sp,
+                )
+            }
+
+            if (destinations.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.element_choisir_le_coffre),
+                    color = couleurs.attenue,
+                    fontSize = 12.sp,
+                )
+                for (destination in destinations) {
+                    BoutonSecondaire(
+                        // Le nom de l'équipe et celui de la collection, tels que l'équipe les
+                        // a écrits : ce sont des données, pas des clefs de traduction.
+                        texte = "${destination.nomEquipe} — ${destination.nomCollection}",
+                        actif = !modele.occupe,
+                        identifiant = "button.moveTo.${destination.collection}",
+                    ) {
+                        modele.deplacerVersLEquipe(entree, destination) { fait ->
+                            if (fait) surFin()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun PanneauDePartage(modele: ModeleDuCoffre, entree: EntreeDuCoffre.Lisible) {
     val couleurs = LocalCouleurs.current
