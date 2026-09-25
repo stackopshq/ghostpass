@@ -241,6 +241,10 @@ export const api = {
   ssoStatus() {
     return http<{ enabled: boolean }>("/api/auth/sso/status");
   },
+  /** Les faits propres au déploiement. Voir `routes/config.ts` côté serveur. */
+  config() {
+    return http<{ privacyUrl: string }>("/api/config");
+  },
   ssoLogin() {
     return http<{ url: string }>("/api/auth/sso/login");
   },

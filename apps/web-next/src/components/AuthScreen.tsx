@@ -17,24 +17,14 @@ import { useSession } from "@/lib/session";
 import { Bouton, Champ, Saisie, TeteDePanneau } from "@/components/champs";
 import { Cadenas } from "@/components/Icones";
 
-// Vers quoi pointe « Politique de confidentialité ».
+// Le repli d'affichage, le temps que le déploiement réponde.
 //
-// Par défaut la page servie par l'application elle-même, `/confidentialite`, construite
-// depuis `docs/legal/`. C'est juste pour une instance hébergée par StackOps.
-//
-// **Ce ne l'est pas pour une instance auto-hébergée.** GhostPass s'auto-héberge — c'est
-// une promesse du produit — et là, le responsable du traitement est celui qui héberge,
-// pas nous. Servir notre texte sous son nom de domaine lui ferait endosser des
-// engagements qu'il n'a pas pris : nos coordonnées, nos sous-traitants, nos délais de
-// conservation. Le piège est qu'une page présente et lisible **paraît** correcte ;
-// personne ne vient signaler qu'elle décrit la mauvaise entreprise.
-//
-// La page interne reste servie dans tous les cas : la dérogation ne change que ce vers
-// quoi l'écran d'entrée renvoie.
-//
-// Même forme que `NEXT_PUBLIC_PRIVACY_URL` chez GhostCal, exprès — deux produits de la
-// suite qui se configurent autrement pour le même besoin, c'est un défaut en soi.
-const URL_CONFIDENTIALITE = process.env.NEXT_PUBLIC_PRIVACY_URL ?? "/confidentialite";
+// L'adresse réelle vient de `/api/config`. Elle ne peut pas venir d'une variable de
+// construction : ce client est un export statique, donc tout `NEXT_PUBLIC_*` y est gravé
+// dans le paquet. Un auto-hébergeur tire l'image publiée et la poser chez lui ne
+// changerait rien — c'est précisément ce que j'avais livré, et c'était inerte pour le
+// seul public que la dérogation vise.
+const CONFIDENTIALITE_PAR_DEFAUT = "/confidentialite";
 
 type Mode = "login" | "register";
 type SsoEnAttente = Awaited<ReturnType<typeof api.ssoCallback>> | null;
@@ -198,6 +188,23 @@ export function AuthScreen() {
   // une fonction que personne n'a demandée serait du bruit.
   const [ssoDisponible, setSsoDisponible] = useState<boolean | null>(null);
 
+  // Demandée au déploiement. L'échec retombe sur la page servie par l'application
+  // elle-même : un lien vers notre texte vaut mieux qu'aucun lien, et c'est de toute
+  // façon la bonne réponse pour la grande majorité des instances.
+  const [urlConfidentialite, setUrlConfidentialite] = useState(CONFIDENTIALITE_PAR_DEFAUT);
+  useEffect(() => {
+    let vivant = true;
+    void api
+      .config()
+      .then((c) => vivant && c.privacyUrl && setUrlConfidentialite(c.privacyUrl))
+      .catch(() => {
+        /* Sans conséquence visible : le repli est déjà en place. */
+      });
+    return () => {
+      vivant = false;
+    };
+  }, []);
+
   useEffect(() => {
     let vivant = true;
     void api
@@ -312,7 +319,7 @@ export function AuthScreen() {
                 <p className="mt-3 text-xs leading-relaxed text-muted">
                   {t("auth.privacyNotice")}{" "}
                   <a
-                    href={URL_CONFIDENTIALITE}
+                    href={urlConfidentialite}
                     className="font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
                   >
                     {t("auth.privacy")}
@@ -379,7 +386,7 @@ export function AuthScreen() {
             elle a consenti sans avoir à recréer un compte pour revoir le lien. */}
         <p className="mt-3 text-center">
           <a
-            href={URL_CONFIDENTIALITE}
+            href={urlConfidentialite}
             className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
           >
             {t("auth.privacy")}

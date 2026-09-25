@@ -15,6 +15,7 @@ import { registerOrgRoutes } from "./routes/orgs.js";
 import { registerOrgVaultRoutes } from "./routes/orgVault.js";
 import { registerRecoveryRoutes } from "./routes/recovery.js";
 import { registerSendRoutes } from "./routes/send.js";
+import { registerConfigRoutes } from "./routes/config.js";
 import { registerSsoRoutes } from "./routes/sso.js";
 import { registerVaultRoutes } from "./routes/vault.js";
 import { registerWebAuthnRoutes } from "./routes/webauthn.js";
@@ -147,6 +148,7 @@ function registerAllRoutes(app: FastifyInstance, db: DB): void {
   registerAccountRoutes(app, db);
   registerAuditRoutes(app, db);
   registerSsoRoutes(app, db);
+  registerConfigRoutes(app);
   registerMfaRoutes(app, db);
   registerRecoveryRoutes(app, db);
   registerVaultRoutes(app, db);
