@@ -96,6 +96,17 @@ export const Coffre = ({ className }: Props) => (
   </svg>
 );
 
+// La croix, pour défaire une sélection.
+//
+// Une croix et non une flèche de retour : on ne revient pas en arrière dans une
+// navigation, on referme un état. Une flèche promettrait de revenir à l'écran
+// précédent, ce que ce bouton ne fait pas.
+export const Croix = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+);
+
 export const Corbeille = ({ className }: Props) => (
   <svg {...commun} strokeWidth={1.8} className={className} aria-hidden="true">
     <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
