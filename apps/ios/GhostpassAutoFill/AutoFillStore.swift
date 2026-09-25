@@ -150,6 +150,13 @@ final class AutoFillStore: ObservableObject {
             // La question n'a pas été posée. L'appelant doit pouvoir la reprendre quand
             // l'hôte rend l'extension active.
             return false
+        case .absent:
+            // Rien à lire sous cette clef. L'extension ne referme pas l'enrôlement
+            // elle-même : elle n'a aucun moyen de proposer de le refaire, et le drapeau
+            // est partagé avec l'application, qui s'en chargera au prochain
+            // déverrouillage. Ici on cesse simplement de prétendre que la biométrie peut
+            // ouvrir quelque chose — le champ du mot de passe maître reste à portée.
+            return true
         case .echec:
             errorMessage = tr("\(Biometrics.label) n'a pas permis d'ouvrir le coffre.")
             return true
