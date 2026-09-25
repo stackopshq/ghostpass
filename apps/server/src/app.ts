@@ -104,7 +104,22 @@ export function buildApp(db: DB): FastifyInstance {
   // alors introuvable sans le journal du conteneur.
   app.register(cors, { origin: process.env.CORS_ORIGIN || false });
   // Rate-limiting global par IP (anti brute-force / DoS). Durcissable par route ensuite.
-  app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+  //
+  // Les routes sont déclarées DANS cet enregistrement, après l'`await`, et non
+  // à côté. Ce n'est pas un rangement : un hook Fastify ne s'applique qu'aux
+  // routes ajoutées APRÈS lui, et `register` est différé jusqu'à `ready()`.
+  // Déclarées au niveau du dessus, toutes les routes étaient donc en place
+  // AVANT que le hook du limiteur n'existe — et **aucune n'était limitée**, ni
+  // par le plafond global, ni par les `config.rateLimit` posés route par route
+  // sur /api/auth/login, /api/auth/prelogin et /api/auth/recover.
+  //
+  // Le symptôme était invisible : tout répondait 200, ce qu'on attend d'un
+  // serveur qui va bien. Mesuré le 2026-09-25 — 130 requêtes de suite sur
+  // /health (plafond 100) sans un seul 429.
+  app.register(async (instance) => {
+    await instance.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+    registerAllRoutes(instance, db);
+  });
 
   // Valeur par défaut de la propriété attachée à la requête par le preHandler d'auth.
   app.decorateRequest("currentUser", null);
@@ -116,6 +131,11 @@ export function buildApp(db: DB): FastifyInstance {
     reply.code(status).send({ error: status < 500 ? error.message : "erreur interne" });
   });
 
+  return app;
+}
+
+/// Toutes les routes, dans le contexte où le limiteur est déjà posé.
+function registerAllRoutes(app: FastifyInstance, db: DB): void {
   app.get("/health", async () => ({ status: "ok" }));
 
   // WebAuthn Related Origin Requests : permet à des origines liées (ex. l'extension navigateur,
@@ -138,6 +158,4 @@ export function buildApp(db: DB): FastifyInstance {
   registerWebAuthnRoutes(app, db);
   registerPasskeyRoutes(app, db);
   registerEmergencyRoutes(app, db);
-
-  return app;
 }
