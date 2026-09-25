@@ -16,7 +16,6 @@ import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { Bouton, Champ, Saisie, TeteDePanneau } from "@/components/champs";
 import { Cadenas } from "@/components/Icones";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 type Mode = "login" | "register";
 type SsoEnAttente = Awaited<ReturnType<typeof api.ssoCallback>> | null;
@@ -342,16 +341,18 @@ export function AuthScreen() {
           )}
         </section>
 
-        {/* Le sélecteur de langue passe SOUS la carte : au-dessus, il partageait
-            la ligne de la marque et lui disputait le regard. Et la mention
-            `zero-knowledge`, la même qu'au pied du coffre — c'est la promesse du
-            produit, elle a sa place là où l'on décide d'y entrer. */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-muted">
+        {/* La mention `zero-knowledge`, la même qu'au pied du coffre : c'est la
+            promesse du produit, elle a sa place là où l'on décide d'y entrer.
+        
+            Le sélecteur de langue vivait ici. Il est désormais dans la pastille
+            flottante, rendue pour **toutes** les pages et non plus seulement le
+            coffre ouvert. Le laisser aussi sous la carte afficherait « EN FR »
+            deux fois sur le même écran. */}
+        <div className="mt-6 flex items-center justify-center text-muted">
           <span className="flex items-center gap-1.5 text-xs">
             <Cadenas className="size-3.5" />
             {t("app.pt1b")}
           </span>
-          <LanguageSwitcher />
         </div>
 
         {/* Toujours atteignable, y compris pour qui est déjà inscrit : une

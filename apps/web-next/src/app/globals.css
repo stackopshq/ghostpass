@@ -199,3 +199,23 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
 }
+
+/* La bascule de thème : le soleil en sombre (→ on passe au clair), la lune en clair.
+   `inline-flex` parce que chaque porteuse contient un SVG **et** son libellé `sr-only` ;
+   en `inline`, l'icône se poserait sur la ligne de base au lieu du milieu.
+   C'est ce basculement qui fait suivre le nom accessible du bouton : la porteuse cachée
+   sort de l'arbre d'accessibilité avec son texte, donc sans état React. */
+.icone-soleil {
+  display: inline-flex;
+  align-items: center;
+}
+.icone-lune {
+  display: none;
+}
+:root[data-theme="light"] .icone-soleil {
+  display: none;
+}
+:root[data-theme="light"] .icone-lune {
+  display: inline-flex;
+  align-items: center;
+}
