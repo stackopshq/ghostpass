@@ -479,7 +479,7 @@
          écrit `vous@exemple.ch` en français et `you@example.com` en anglais ; ici l'adresse
          est celle d'un tiers, d'où le prénom. Seul le domaine suit la convention du
          catalogue. -->
-    <string name="urgence_email_invite">kevin@exemple.ch</string>
+    <string name="urgence_email_invite">jean.dupont@exemple.ch</string>
     <string name="urgence_role">Rôle</string>
     <!-- « Entre 1 et 90 jours » ne compte rien : les bornes sont fixes, ce n'est pas un
          pluriel mais une phrase. -->

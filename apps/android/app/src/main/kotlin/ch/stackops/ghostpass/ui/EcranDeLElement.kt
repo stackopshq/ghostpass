@@ -275,7 +275,7 @@ private fun CorpsDeLElement(
                                 intitule = stringResource(R.string.element_titulaire),
                                 valeur = porteur,
                                 // Un nom propre : il s'écrit de la même façon partout.
-                                invite = "Clara Vanacker",
+                                invite = "Jean Dupont",
                                 identifiant = "field.cardholder",
                                 onChange = { porteur = it },
                             )
