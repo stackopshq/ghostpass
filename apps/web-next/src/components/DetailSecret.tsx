@@ -78,12 +78,16 @@ function Ligne({
 
 export function DetailSecret({
   item,
+  onDeplacer,
   onModifier,
   onSupprimer,
   onPartager,
   occupe,
 }: {
   item: VaultEntry;
+  /// Absent quand le déplacement n'a pas lieu d'être : élément déjà partagé,
+  /// aucune collection où l'on puisse écrire, ou type autre qu'un identifiant.
+  onDeplacer?: () => void;
   onModifier: () => void;
   onSupprimer: () => void;
   onPartager: () => void;
@@ -116,6 +120,11 @@ export function DetailSecret({
           <Bouton variante="discret" onClick={onPartager} disabled={occupe}>
             {t("app.share")}
           </Bouton>
+          {onDeplacer && (
+            <Bouton variante="discret" onClick={onDeplacer} disabled={occupe}>
+              {t("app.moveToShared")}
+            </Bouton>
+          )}
           <Bouton variante="discret" onClick={onModifier}>
             {t("app.edit")}
           </Bouton>
