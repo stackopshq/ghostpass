@@ -353,9 +353,14 @@ export const api = {
     return http<{ ok: boolean }>(`/api/emergency/${id}/takeover`, { method: "POST", body, token });
   },
 
-  mfaSetup(token: string) {
+  /// `masterPasswordHash` n'est pas facultatif : `/api/mfa/setup` **remet le secret à
+  /// zéro**, donc le serveur exige une re-authentification. L'appel partait sans corps,
+  /// et le schéma le refusait — « requête invalide » sur un bouton qui n'avait jamais pu
+  /// marcher.
+  mfaSetup(token: string, masterPasswordHash: string) {
     return http<{ secret: string; otpauthUri: string }>("/api/mfa/setup", {
       method: "POST",
+      body: { masterPasswordHash },
       token,
     });
   },
