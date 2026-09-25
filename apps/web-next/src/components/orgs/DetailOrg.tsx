@@ -276,6 +276,11 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
               }}
             >
               <h3 className="mb-3 text-sm font-semibold text-foreground">{t("org.invite")}</h3>
+              {/* Dit avant l'action ce qui se passe après : la personne doit déjà avoir un compte
+                  (c'est sa clé publique qui scelle celle de l'équipe), et rien ne lui est envoyé —
+                  aucun courriel n'existe dans ce produit. Sans cette phrase, on invite puis on
+                  attend un message qui ne viendra jamais. */}
+              <p className="mb-3 text-xs text-muted">{t("org.inviteNote")}</p>
               <Champ label={t("org.email")}>
                 <Saisie type="email" value={courriel} onChange={(e) => setCourriel(e.target.value)} required />
               </Champ>

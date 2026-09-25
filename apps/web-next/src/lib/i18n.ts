@@ -24,6 +24,8 @@ const en: Dict = {
   "org.unknownEmail": "Unknown address",
   "org.revoke": "Revoke",
   "org.inviteTitle": "Invite a member",
+  "org.inviteNote":
+    "They must already have a GhostPass account — their public key is what seals the team's. No email is sent: they will see the invitation when they open GhostPass.",
   "org.email": "Email",
   "org.role": "Role",
   "org.roleMember": "Member",
@@ -399,6 +401,8 @@ const fr: Dict = {
   "org.unknownEmail": "Adresse inconnue",
   "org.revoke": "Révoquer",
   "org.inviteTitle": "Inviter un membre",
+  "org.inviteNote":
+    "Elle doit déjà posséder un compte GhostPass — c'est sa clé publique qui scelle celle de l'équipe. Aucun courriel n'est envoyé : elle verra l'invitation en ouvrant GhostPass.",
   "org.email": "Email",
   "org.role": "Rôle",
   "org.roleMember": "Membre",
