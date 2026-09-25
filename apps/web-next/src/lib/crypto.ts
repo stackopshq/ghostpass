@@ -655,5 +655,19 @@ export function decryptOrgItem(
     url: item.data.data.uris?.[0] ?? "",
     totp: item.data.data.totp ?? "",
     passwordHistory: item.data.data.password_history ?? [],
+    // ─── Les notes étaient écrites et jamais relues ───
+    //
+    // `encryptOrgLogin` pose `notes` dans la charge chiffrée ; cette fonction ne les
+    // reprenait pas. Le champ existe pourtant dans le formulaire d'équipe, et l'édition
+    // le pré-remplit avec `item.note` — toujours vide.
+    //
+    // Conséquence, et c'est plus qu'un défaut d'affichage : on saisit une note, elle
+    // part chiffrée, elle revient invisible. La modification suivante la **réécrit avec
+    // du vide**, et le texte disparaît pour de bon. Une perte silencieuse, sur des
+    // données que le serveur ne peut pas récupérer pour nous.
+    //
+    // Même asymétrie de nom qu'ailleurs dans ce fichier : `notes` dans la charge,
+    // `note` dans le modèle déchiffré.
+    note: item.notes ?? "",
   };
 }
