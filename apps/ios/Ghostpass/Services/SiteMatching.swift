@@ -28,12 +28,43 @@ enum SiteMatching {
         return a == b || a.hasSuffix("." + b) || b.hasSuffix("." + a)
     }
 
+    /// Le nom d'un item, quand il **est** un nom d'hôte.
+    ///
+    /// Un coffre importé range très souvent le domaine dans le nom et laisse l'adresse
+    /// vide : « accounts.google.com (admin@exemple.ch) », « app.indy.fr (compta@…) ».
+    /// C'est le format que produisent la plupart des exports de navigateur, et le
+    /// rapprochement ne le voyait pas — le domaine était sous les yeux du code, dans le
+    /// champ d'à côté.
+    ///
+    /// On ne prend que le **premier mot**, et seulement s'il ressemble à un hôte : au
+    /// moins un point, aucun espace, et rien qui trahisse une phrase. « Google » ne
+    /// donne donc rien, et c'est voulu — un nom sans point ne peut correspondre à aucun
+    /// domaine, et deviner au-delà créerait des suggestions fausses. Une suggestion
+    /// fausse est pire qu'une absence de suggestion : elle fait remplir un formulaire
+    /// avec le mauvais mot de passe.
+    static func hostDansLeNom(_ nom: String) -> String {
+        let premier = nom.split(whereSeparator: { $0 == " " || $0 == "\t" }).first.map(String.init) ?? ""
+        let candidat = host(of: premier)
+        guard candidat.contains("."),
+              !candidat.hasPrefix("."), !candidat.hasSuffix("."),
+              candidat.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" })
+        else { return "" }
+        return candidat
+    }
+
     /// L'item convient-il à l'un des domaines demandés ?
     static func matches(_ item: VaultItem, domains: [String]) -> Bool {
         guard case .login(let login) = item.data else { return false }
         let cibles = domains.map(host(of:)).filter { !$0.isEmpty }
         guard !cibles.isEmpty else { return false }
-        let adresses = login.uris.map(host(of:)).filter { !$0.isEmpty }
+
+        // Les adresses déclarées d'abord — c'est la source la plus sûre. Puis le nom, s'il
+        // est lui-même un hôte : sans ce repli, un coffre importé ne suggère jamais rien,
+        // et l'extension s'ouvre sur tout le coffre en vrac.
+        var adresses = login.uris.map(host(of:)).filter { !$0.isEmpty }
+        let duNom = hostDansLeNom(item.name)
+        if !duNom.isEmpty { adresses.append(duNom) }
+
         return adresses.contains { adresse in cibles.contains { sameSite(adresse, $0) } }
     }
 }

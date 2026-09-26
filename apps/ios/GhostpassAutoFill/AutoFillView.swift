@@ -25,6 +25,7 @@ struct AutoFillView: View {
     /// une question avortée parce que l'hôte n'avait pas encore rendu l'extension active
     /// ne compte pas, sans quoi le déclenchement automatique se consomme dans le vide.
     @State private var biometrieDemandee = false
+    @State private var recherche = ""
 
     var body: some View {
         NavigationStack {
@@ -208,21 +209,45 @@ struct AutoFillView: View {
         }
     }
 
-    private var liste: some View {
-        List {
-            if !store.suggested.isEmpty {
-                section(Text("Pour ce site"), store.suggested)
+    /// Ne garder que ce qui répond à la recherche.
+    ///
+    /// Sur le nom **et** sur l'identifiant : un coffre contient souvent plusieurs entrées
+    /// pour le même site, et c'est l'adresse de courriel qui les distingue. Chercher
+    /// « compta » doit donc trouver ce qu'on vise.
+    private func filtrees(_ entries: [VaultEntry]) -> [VaultEntry] {
+        let q = recherche.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return entries }
+        return entries.filter { entree in
+            if entree.item.name.lowercased().contains(q) { return true }
+            if case .login(let login) = entree.item.data {
+                if login.username.lowercased().contains(q) { return true }
+                if login.uris.contains(where: { $0.lowercased().contains(q) }) { return true }
             }
-            if !store.others.isEmpty {
+            return false
+        }
+    }
+
+    private var liste: some View {
+        let proposees = filtrees(store.suggested)
+        let autres = filtrees(store.others)
+        return List {
+            if !proposees.isEmpty {
+                section(Text("Pour ce site"), proposees)
+            }
+            if !autres.isEmpty {
                 section(
-                    store.suggested.isEmpty ? Text("Coffre") : Text(titreDesAutres),
-                    store.others)
+                    proposees.isEmpty ? Text("Coffre") : Text(titreDesAutres),
+                    autres)
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        // La recherche manquait tout simplement : l'extension s'ouvrait sur le coffre
+        // entier, sans moyen d'y retrouver quoi que ce soit. Sur un coffre de deux cents
+        // entrées, c'est un défilement à l'aveugle au moment précis où l'on est pressé.
+        .searchable(text: $recherche, prompt: Text("Rechercher"))
         .overlay {
-            if store.suggested.isEmpty && store.others.isEmpty {
+            if proposees.isEmpty && autres.isEmpty {
                 ContentUnavailableView {
                     Label(titreDuVide, systemImage: iconeDuMode)
                 } description: {

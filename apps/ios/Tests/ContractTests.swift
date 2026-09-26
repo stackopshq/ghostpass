@@ -721,6 +721,47 @@ final class GeneratorAndTotpTests: XCTestCase {
 /// rien ; trop lâche, elle offre les identifiants d'un site à un autre.
 final class SiteMatchingTests: XCTestCase {
 
+    /// Un coffre importé range le domaine dans le **nom** et laisse l'adresse vide.
+    ///
+    /// C'est le format que produisent la plupart des exports de navigateur —
+    /// « accounts.google.com (admin@exemple.ch) » — et le rapprochement ne le voyait pas.
+    /// Le remplissage s'ouvrait donc sur le coffre entier, sans rien proposer, alors que
+    /// le domaine était dans le champ d'à côté.
+    func testLeNomSertDHoteQuandIlEnEstUn() {
+        XCTAssertEqual(
+            SiteMatching.hostDansLeNom("accounts.google.com (admin@exemple.ch)"),
+            "accounts.google.com")
+        XCTAssertEqual(SiteMatching.hostDansLeNom("app.indy.fr"), "app.indy.fr")
+        XCTAssertEqual(SiteMatching.hostDansLeNom("https://git.stackops.ch/x"), "git.stackops.ch")
+    }
+
+    /// Et surtout : ce qui n'est pas un hôte ne doit rien donner.
+    ///
+    /// Une suggestion fausse est pire qu'une absence de suggestion — elle fait remplir un
+    /// formulaire avec le mauvais mot de passe. Un nom sans point ne peut correspondre à
+    /// aucun domaine, et deviner au-delà ouvrirait exactement cette porte.
+    func testUnNomQuiNEstPasUnHoteNeDonneRien() {
+        XCTAssertEqual(SiteMatching.hostDansLeNom("Google"), "")
+        XCTAssertEqual(SiteMatching.hostDansLeNom("Mon compte bancaire"), "")
+        XCTAssertEqual(SiteMatching.hostDansLeNom("Carte Visa 4242"), "")
+        XCTAssertEqual(SiteMatching.hostDansLeNom(""), "")
+        // Un point isolé ou en bordure ne fait pas un hôte.
+        XCTAssertEqual(SiteMatching.hostDansLeNom("."), "")
+        XCTAssertEqual(SiteMatching.hostDansLeNom("truc."), "")
+    }
+
+    /// Le cas complet : un identifiant sans adresse, mais nommé d'après son site.
+    func testUnItemSansAdresseEstProposeParSonNom() {
+        let item = VaultItem(
+            name: "accounts.google.com (admin@exemple.ch)",
+            notes: nil,
+            data: .login(Login(username: "admin", password: "x", uris: [], totp: nil)))
+        XCTAssertTrue(SiteMatching.matches(item, domains: ["accounts.google.com"]))
+        // Le sous-domaine reste couvert par la même règle qu'une adresse déclarée.
+        XCTAssertTrue(SiteMatching.matches(item, domains: ["google.com"]))
+        XCTAssertFalse(SiteMatching.matches(item, domains: ["example.org"]))
+    }
+
     func testUneUrlEstRamenéeASonHote() {
         XCTAssertEqual(SiteMatching.host(of: "https://github.com/login?next=/x"), "github.com")
         XCTAssertEqual(SiteMatching.host(of: "HTTPS://WWW.GitHub.COM/"), "github.com")
