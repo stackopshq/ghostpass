@@ -78,6 +78,10 @@ export function VaultScreen() {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   /// L'élément en cours de déplacement, `null` hors de ce geste.
   const [deplacement, setDeplacement] = useState<VaultEntry | null>(null);
+  // Le déplacement d'une sélection entière. Un booléen et non une liste : la sélection
+  // vit déjà dans `selection`, et en garder une copie ici les ferait diverger dès qu'on
+  // coche une case de plus pendant que le panneau est ouvert.
+  const [deplacementLot, setDeplacementLot] = useState(false);
   const [chargement, setChargement] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   // `null` = pas de formulaire ouvert ; sinon l'identifiant en cours de
@@ -509,6 +513,91 @@ export function VaultScreen() {
   /// Il n'existe pas de route de suppression en lot : on enchaîne les appels et
   /// on COMPTE. Annoncer « supprimés » alors que l'un a échoué serait pire que
   /// l'échec lui-même, puisque personne n'irait vérifier.
+  /** Ce qui, dans la sélection, peut aller dans un coffre d'équipe — et ce qui ne peut pas.
+   *
+   * Un coffre partagé ne prend que des **identifiants personnels**. Une note, une carte ou
+   * un élément déjà d'équipe n'y a pas sa place, et les écarter en silence serait la pire
+   * réponse : quelqu'un qui sélectionne onze lignes et en voit partir sept croirait à une
+   * panne. L'écran annonce donc les deux nombres avant d'agir.
+   */
+  const triDeLaSelection = useMemo(() => {
+    const retenus: VaultEntry[] = [];
+    let ecartes = 0;
+    for (const item of items) {
+      if (!selection.has(item.id)) continue;
+      if (!item.shared && item.kind === "login") retenus.push(item);
+      else ecartes++;
+    }
+    return { retenus, ecartes };
+  }, [items, selection]);
+
+  /** Déplace la sélection retenue vers une collection d'équipe.
+   *
+   * **La clé d'équipe s'ouvre une fois**, pas une fois par élément : la déballer coûte une
+   * requête et une opération cryptographique, et onze éléments n'en font pas onze coffres.
+   *
+   * Et comme pour un seul élément, **on dépose avant de retirer**. Entre les deux il y a un
+   * réseau ; l'ordre inverse détruirait le seul exemplaire d'un mot de passe que le serveur
+   * ne sait pas relire. Le pire cas laisse un doublon, jamais un trou.
+   */
+  const deplacerSelectionVersEquipe = async (dest: Destination) => {
+    if (!token || !account) return;
+    const { retenus } = triDeLaSelection;
+    if (retenus.length === 0) return;
+    setOccupe(true);
+    setErreur(null);
+    let ok = 0;
+    let ko = 0;
+    try {
+      const m = await api.getMembership(token, dest.orgId);
+      if (!m.encryptedOrgKey || !m.sealedByPublicKey) throw new Error(t("org.keyUnavailable"));
+      const poignee = openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey);
+
+      for (const item of retenus) {
+        try {
+          const { encryptedKey, encryptedData } = encryptOrgLogin(poignee, {
+            name: item.name,
+            username: item.username,
+            password: item.password,
+            url: item.url,
+            // Le dossier n'est pas repris : l'arborescence est celle du coffre personnel,
+            // et la porter dans une collection d'équipe y créerait des dossiers que
+            // personne d'autre n'a choisis.
+            totp: item.totp,
+            notes: item.note,
+            passwordHistory: item.passwordHistory,
+          });
+          await api.createOrgItem(token, dest.orgId, dest.collectionId, {
+            encryptedKey,
+            encryptedData,
+          });
+          await api.deleteItem(token, item.id);
+          ok++;
+        } catch {
+          // Un élément qui échoue ne doit pas emporter les suivants : ils sont
+          // indépendants, et s'arrêter au premier laisserait un lot à moitié déplacé
+          // sans dire lequel.
+          ko++;
+        }
+      }
+
+      setDeplacementLot(false);
+      setSelection(new Set());
+      setAncre(null);
+      setChoisi(null);
+      await charger();
+      setMessage(
+        ko > 0
+          ? t("app.movedSome", { ok, ko, collection: dest.collectionName })
+          : t("app.movedAll", { n: ok, collection: dest.collectionName }),
+      );
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOccupe(false);
+    }
+  };
+
   const supprimerSelection = async () => {
     if (!token || selection.size === 0) return;
     if (!confirm(t("app.confirmDeleteMany", { n: selection.size }))) return;
@@ -748,6 +837,22 @@ export function VaultScreen() {
                   >
                     <Croix className="size-4" />
                   </button>
+                  {/* Déplacer la sélection vers un coffre d'équipe.
+                      Offert seulement s'il peut aboutir : au moins un identifiant personnel
+                      dans la sélection, et au moins une collection où l'on puisse écrire.
+                      Un bouton qui mène toujours à un refus vaut moins qu'un bouton absent. */}
+                  {triDeLaSelection.retenus.length > 0 && destinations.length > 0 && (
+                    <button
+                      type="button"
+                      aria-label={t("app.moveSelected")}
+                      title={t("app.moveSelected")}
+                      onClick={() => setDeplacementLot(true)}
+                      disabled={occupe}
+                      className="cursor-pointer rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                    >
+                      <Organisation className="size-4" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     aria-label={t("app.deleteSelected")}
@@ -803,6 +908,48 @@ export function VaultScreen() {
               onValider={enregistrer}
               onAnnuler={() => setEdition(null)}
             />
+            ) : deplacementLot ? (
+              // Même placement en ligne que pour un seul élément, et pour la même
+              // raison : la colonne voisine porte `backdrop-filter`, qui capture les
+              // éléments en `position: fixed` et les enferme dans leur conteneur.
+              <div className="flex min-h-0 flex-col gap-3 p-5">
+                <h2 className="text-base font-semibold text-foreground">
+                  {t("app.moveToShared")}
+                </h2>
+                <p className="text-sm text-muted">
+                  {t("app.moveManyCount", { n: triDeLaSelection.retenus.length })}
+                </p>
+                {triDeLaSelection.ecartes > 0 && (
+                  // Dit avant d'agir, et non après. Un coffre d'équipe ne prend que des
+                  // identifiants personnels ; quelqu'un qui en sélectionne onze et en
+                  // voit partir sept croirait à une panne si on ne l'avait pas prévenu.
+                  <p className="text-xs leading-relaxed text-muted">
+                    {t("app.moveManyExcluded", { n: triDeLaSelection.ecartes })}
+                  </p>
+                )}
+                <p className="text-xs leading-relaxed text-muted">{t("app.moveToSharedPick")}</p>
+                <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
+                  {destinations.map((d) => (
+                    <button
+                      key={`${d.orgId}/${d.collectionId}`}
+                      type="button"
+                      disabled={occupe}
+                      onClick={() => void deplacerSelectionVersEquipe(d)}
+                      className="cursor-pointer rounded-lg border border-border px-3 py-2.5 text-left text-sm transition-colors hover:border-border-strong hover:bg-surface-2 disabled:opacity-60"
+                    >
+                      <span className="block font-medium">{d.collectionName}</span>
+                      <span className="block text-xs text-muted">{d.orgName}</span>
+                    </button>
+                  ))}
+                </div>
+                <Bouton
+                  variante="discret"
+                  onClick={() => setDeplacementLot(false)}
+                  disabled={occupe}
+                >
+                  {t("app.cancelBack")}
+                </Bouton>
+              </div>
           ) : deplacement ? (
             // En ligne dans le panneau, et non en superposition : la colonne voisine
             // porte `verre-dense`, donc `backdrop-filter`, qui capture les éléments en
