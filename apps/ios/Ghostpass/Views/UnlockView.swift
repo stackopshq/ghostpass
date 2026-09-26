@@ -225,9 +225,15 @@ struct UnlockView: View {
                         .accessibilityIdentifier("field.master")
                 }
                 if needsTotp {
-                    champ("Code à six chiffres") {
+                    // **Pas de clavier numérique, et pas « six chiffres ».** Ce champ accepte
+                    // aussi un code de récupération, que le serveur essaie en second. Un
+                    // `numberPad` ne permet pas de taper des lettres : le filet posé pour le
+                    // téléphone perdu était donc **physiquement inatteignable** depuis
+                    // l'appareil qui en a le plus besoin.
+                    champ("Code de vérification") {
                         TextField("", text: $totpCode, prompt: invite("123456"))
-                            .keyboardType(.numberPad)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
                             .ghostField()
                             .accessibilityIdentifier("field.totp")
                     }
@@ -376,11 +382,10 @@ struct UnlockView: View {
                     totpCode: needsTotp ? totpCode : nil)
                 // Le serveur ne réclame le second facteur qu'après validation du
                 // mot de passe : le champ n'apparaît donc qu'une fois utile.
-                if case .some(let message) = store.errorMessage,
-                    message.contains("2FA") || message.contains("Second facteur")
-                {
-                    needsTotp = true
-                }
+                // On lit l'état du magasin, et non le texte du message. Celui-ci est
+                // traduit : la comparaison de sous-chaîne qui vivait ici ne reconnaissait
+                // que le français, et le champ n'apparaissait donc jamais en anglais.
+                if store.secondFacteurDemande { needsTotp = true }
             }
             if store.isUnlocked { password = "" }
         }

@@ -107,6 +107,11 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 deverrouille = true
                 secondFacteurRequis = false
                 rafraichir()
+            } catch (e: ErreurApi.SecondFacteurBloque) {
+                // Le champ reste : il faudra bien retaper un code une fois le délai écoulé,
+                // et le faire disparaître donnerait l'impression que la 2FA s'est désactivée.
+                secondFacteurRequis = true
+                message = e.message
             } catch (e: ErreurApi.SecondFacteurRequis) {
                 // Le serveur ne réclame le second facteur qu'après validation du mot de
                 // passe : le champ n'apparaît donc qu'une fois utile.

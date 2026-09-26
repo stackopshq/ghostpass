@@ -7,6 +7,12 @@ enum APIError: LocalizedError, Equatable {
     case badURL
     case http(status: Int, message: String)
     case mfaRequired(type: String)
+    /// Trop d'essais sur le second facteur. **Distinct de `mfaRequired`**, et le serveur
+    /// envoie pourtant `mfaRequired: true` avec — volontairement, pour que le champ de code
+    /// reste affiché. Le client lisait ce drapeau avant le code HTTP, et annonçait donc
+    /// « Second facteur requis » à quelqu'un dont le compte était verrouillé : il repartait
+    /// chercher son téléphone pour une saisie qui ne pouvait plus aboutir.
+    case mfaBloque
     case malformedResponse
     case reponseTropGrande
 
@@ -19,6 +25,9 @@ enum APIError: LocalizedError, Equatable {
         case .badURL: return trHorsFilPrincipal("Adresse de serveur invalide.")
         case .http(_, let message): return message
         case .mfaRequired: return trHorsFilPrincipal("Second facteur requis.")
+        case .mfaBloque:
+            return trHorsFilPrincipal(
+                "Trop d'essais sur le second facteur. Réessayez dans un quart d'heure.")
         case .malformedResponse: return trHorsFilPrincipal("Réponse inattendue du serveur.")
         case .reponseTropGrande:
             return trHorsFilPrincipal("Le serveur a renvoyé une réponse anormalement volumineuse.")
@@ -413,6 +422,13 @@ struct APIClient {
         guard let http = response as? HTTPURLResponse else { throw APIError.malformedResponse }
         guard (200..<300).contains(http.statusCode) else {
             let parsed = try? JSONDecoder().decode(ServerError.self, from: data)
+            // **Le statut d'abord, le drapeau ensuite.** Le serveur envoie `mfaRequired: true`
+            // sur un 429 de blocage comme sur un 401 de demande, pour que le champ de code
+            // reste affiché dans les deux cas. Lire le drapeau en premier confondait donc
+            // « il faut un code » et « trop d'essais ».
+            if http.statusCode == 429, parsed?.mfaRequired == true {
+                throw APIError.mfaBloque
+            }
             if parsed?.mfaRequired == true {
                 throw APIError.mfaRequired(type: parsed?.mfaType ?? "totp")
             }

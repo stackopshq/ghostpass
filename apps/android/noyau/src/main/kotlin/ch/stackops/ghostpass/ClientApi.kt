@@ -206,6 +206,19 @@ sealed class ErreurApi(message: String) : Exception(message) {
     class SecondFacteurRequis(val genre: String) : ErreurApi("Second facteur requis.")
 
     /**
+     * Trop d'essais sur le second facteur, et le compte est verrouillé un moment.
+     *
+     * **Distincte de [SecondFacteurRequis]**, alors que le serveur envoie `mfaRequired: true`
+     * dans les deux cas — volontairement, pour que le champ de code reste affiché. Le client
+     * lisait ce drapeau sans regarder le statut, et annonçait donc « Second facteur requis »
+     * à quelqu'un dont le compte était bloqué : il repartait chercher son téléphone pour une
+     * saisie qui ne pouvait plus aboutir.
+     *
+     * Le message vient du serveur, qui le formule mieux que nous : il connaît l'échéance.
+     */
+    class SecondFacteurBloque(message: String) : ErreurApi(message)
+
+    /**
      * Une écriture a été demandée alors que le coffre est fermé.
      *
      * Distincte de [Reseau] : rien n'a été tenté, rien n'a échoué côté serveur. Les
@@ -948,6 +961,13 @@ class ClientApi(baseUrl: String) {
                     json.decodeFromString(ErreurServeur.serializer(), texte)
                 } catch (_: Exception) {
                     null
+                }
+                // **Le statut d'abord, le drapeau ensuite.** Un 429 porteur de `mfaRequired`
+                // est un blocage, pas une demande ; les confondre fait afficher « il faut un
+                // code » à qui n'en a plus le droit pour un quart d'heure.
+                if (statut == 429 && erreur?.mfaRequired == true) {
+                    throw ErreurApi.SecondFacteurBloque(
+                        erreur.error ?: "Trop d'essais sur le second facteur.")
                 }
                 if (erreur?.mfaRequired == true) {
                     throw ErreurApi.SecondFacteurRequis(erreur.mfaType ?: "totp")

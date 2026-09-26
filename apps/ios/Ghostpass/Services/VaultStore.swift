@@ -87,6 +87,20 @@ final class VaultStore: ObservableObject {
     /// Connexion complète : prelogin pour les paramètres KDF, dérivation du hash
     /// d'authentification côté Rust, puis déverrouillage local avec les blobs reçus.
     /// Le mot de passe ne quitte jamais l'appareil ; le serveur ne voit qu'un hash.
+    /// Le serveur a-t-il réclamé un second facteur à la dernière tentative ?
+    ///
+    /// **Un booléen et non une sous-chaîne.** L'écran le déduisait jusqu'ici du message
+    /// d'erreur affiché :
+    ///
+    ///     message.contains("2FA") || message.contains("Second facteur")
+    ///
+    /// Ce message est traduit. En anglais il vaut « Second factor required. », qui ne
+    /// contient ni l'un ni l'autre — le champ de code **n'apparaissait donc jamais sur une
+    /// interface anglaise**, et personne ayant activé la 2FA ne pouvait s'y connecter. Une
+    /// panne dure, invisible depuis le français, et qu'aucun test ne pouvait attraper
+    /// puisque le lien passait par du texte d'affichage.
+    var secondFacteurDemande = false
+
     func signIn(server: String, email: String, password: String, totpCode: String?) async {
         // `ServerAddress` complète ce qui manque : taper « ghostpass.stackops.ch » est le
         // geste naturel, et le refuser au motif qu'il manque « https:// » ferait échouer la
@@ -130,8 +144,16 @@ final class VaultStore: ObservableObject {
                     encryptedUserKey: session.encryptedUserKey,
                     encryptedPrivateKey: session.encryptedPrivateKey))
 
+            secondFacteurDemande = false
             proposeBiometricsIfPossible(password)
             await refresh()
+        } catch let erreur as APIError {
+            // Le blocage réclame lui aussi le champ : il faudra bien retaper un code une
+            // fois le quart d'heure écoulé, et le faire disparaître donnerait l'impression
+            // que la 2FA s'est désactivée.
+            if case .mfaRequired = erreur { secondFacteurDemande = true }
+            if case .mfaBloque = erreur { secondFacteurDemande = true }
+            errorMessage = erreur.localizedDescription
         } catch {
             errorMessage = error.localizedDescription
         }

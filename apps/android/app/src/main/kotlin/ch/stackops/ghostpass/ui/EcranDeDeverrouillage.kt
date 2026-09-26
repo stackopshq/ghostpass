@@ -219,13 +219,17 @@ fun EcranDeDeverrouillage(modele: ModeleDuCoffre) {
                             onChange = { motDePasse = it },
                         )
                         if (modele.secondFacteurRequis) {
+                            // **Pas de clavier numérique, et pas « six chiffres ».** Ce champ accepte aussi
+                            // un code de récupération, que le serveur essaie en second. Un clavier numérique
+                            // ne permet pas de taper des lettres : le filet posé pour le téléphone perdu
+                            // était donc physiquement inatteignable depuis l'appareil qui en a le plus besoin.
                             ChampGhost(
                                 intitule =
-                                    stringResource(R.string.deverrouillage_code_six_chiffres),
+                                    stringResource(R.string.deverrouillage_code_verification),
                                 valeur = codeTotp,
                                 invite = "123456",
                                 identifiant = "field.totp",
-                                typeDeClavier = KeyboardType.NumberPassword,
+                                typeDeClavier = KeyboardType.Text,
                                 onChange = { codeTotp = it },
                             )
                         }
