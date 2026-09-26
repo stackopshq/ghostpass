@@ -164,12 +164,16 @@ export function nomDepuisUrl(url: string): string {
 /// informations distinctes, dont l'une est peut-être la seule à jour. Les
 /// confondre ferait perdre silencieusement un secret, ce qu'un doublon n'est
 /// jamais censé coûter. On ne rejette donc que le strictement redondant.
-function cle(e: { url?: string; username?: string; password?: string }): string {
-  const url = (e.url ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/\/+$/, "");
-  return `${url} ${e.username ?? ""} ${e.password ?? ""}`;
+///
+/// Les adresses comptent TOUTES dans la clé, et dans l'ordre où elles sont
+/// écrites. Ne retenir que la première ferait passer pour un doublon une entrée
+/// qui porte une adresse de plus — et la rejeter perdrait cette adresse-là,
+/// c'est-à-dire exactement ce que ce changement entier vient fermer.
+function cle(e: { urls?: readonly string[]; username?: string; password?: string }): string {
+  const adresses = (e.urls ?? [])
+    .map((u) => u.trim().toLowerCase().replace(/\/+$/, ""))
+    .join(" ");
+  return `${adresses} ${e.username ?? ""} ${e.password ?? ""}`;
 }
 
 /// Lire le fichier et dire, entrée par entrée, ce qui entrera et ce qui non.
@@ -179,7 +183,7 @@ function cle(e: { url?: string; username?: string; password?: string }): string 
 /// un import dont le bilan ne plaît pas.
 export function analyser(
   texte: string,
-  dejaPresentes: readonly { url?: string; username?: string; password?: string }[],
+  dejaPresentes: readonly { urls?: readonly string[]; username?: string; password?: string }[],
   sansNom: string,
 ): Analyse {
   const { entetes, lignes } = parseCsvDetaille(texte);
@@ -204,7 +208,7 @@ export function analyser(
     }
     const brut = depuisLigneCsv(champs, "");
 
-    if (brut.url === "" && brut.name === "" && brut.username === "") {
+    if (brut.urls.length === 0 && brut.name === "" && brut.username === "") {
       ignorees.push({ numero: ligne.numero, motif: "sansIdentifiant" });
       continue;
     }
@@ -225,7 +229,10 @@ export function analyser(
     vues.add(k);
 
     if (brut.password === "") sansMotDePasse++;
-    aImporter.push({ ...brut, name: brut.name || nomDepuisUrl(brut.url) || sansNom });
+    // Le nom se dérive de la PREMIÈRE adresse : c'est une étiquette pour la
+    // liste, pas une donnée à conserver. Les autres adresses restent dans
+    // l'entrée, elles n'ont simplement rien à faire dans son nom.
+    aImporter.push({ ...brut, name: brut.name || nomDepuisUrl(brut.urls[0] ?? "") || sansNom });
   }
 
   return { navigateur, formatReconnu, lues: lignes.length, aImporter, ignorees, sansMotDePasse };

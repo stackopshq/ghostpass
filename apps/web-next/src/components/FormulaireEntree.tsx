@@ -12,6 +12,7 @@ import { DEFAULT_GEN_OPTIONS, generatePassword, type GenOptions } from "@/lib/ge
 import { useI18n } from "@/lib/i18n";
 import type { VaultEntry } from "@/lib/vault";
 import { Bouton, BoutonIcone, Champ, Saisie, Zone } from "@/components/champs";
+import { adressesPourSaisie, ChampsAdresses } from "@/components/ChampsAdresses";
 import { De, Oeil, OeilBarre, Reglages } from "@/components/Icones";
 
 /// Ce que le formulaire rend à son appelant. Il ne chiffre pas et n'appelle pas
@@ -23,7 +24,10 @@ export interface SaisieEntree {
   folder: string;
   username: string;
   password: string;
-  url: string;
+  /// Toutes les adresses, jamais la seule première. Le formulaire en garde
+  /// toujours au moins une case, vide au besoin ; ce sont `encryptItem` et
+  /// `encryptOrgLogin` qui retirent les vides au moment d'écrire.
+  urls: string[];
   totp: string;
   note: string;
   cardholder: string;
@@ -33,20 +37,23 @@ export interface SaisieEntree {
 }
 
 const VIDE: SaisieEntree = {
-  kind: "login", name: "", folder: "", username: "", password: "", url: "",
+  kind: "login", name: "", folder: "", username: "", password: "", urls: [""],
   totp: "", note: "", cardholder: "", cardNumber: "", cardExp: "", cardCode: "",
 };
 
 /// Une saisie vierge. Exportée pour que l'appelant puisse en pré-remplir un
 /// champ — le dossier ouvert, typiquement — sans connaître la forme complète.
 export function vide(): SaisieEntree {
-  return { ...VIDE };
+  // La liste d'adresses est recopiée : sans cela, tous les formulaires
+  // vierges partageraient le même tableau et la frappe dans l'un
+  // apparaîtrait dans le suivant.
+  return { ...VIDE, urls: [...VIDE.urls] };
 }
 
 export function depuisEntree(e: VaultEntry): SaisieEntree {
   return {
     kind: e.kind, name: e.name, folder: e.folder, username: e.username,
-    password: e.password, url: e.url, totp: e.totp, note: e.note,
+    password: e.password, urls: adressesPourSaisie(e.urls), totp: e.totp, note: e.note,
     cardholder: e.cardholder, cardNumber: e.cardNumber,
     cardExp: e.cardExp, cardCode: e.cardCode,
   };
@@ -133,9 +140,7 @@ export function FormulaireEntree({
 
       {v.kind === "login" && (
         <>
-          <Champ label={t("app.website")}>
-            <Saisie value={v.url} onChange={(e) => maj("url", e.target.value)} placeholder="github.com" inputMode="url" />
-          </Champ>
+          <ChampsAdresses valeurs={v.urls} onChange={(u) => maj("urls", u)} />
           <Champ label={t("app.kindLogin")}>
             <Saisie value={v.username} onChange={(e) => maj("username", e.target.value)} placeholder="kevin" />
           </Champ>

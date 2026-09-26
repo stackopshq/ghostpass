@@ -81,7 +81,7 @@ export function Corbeille({ onRestaure }: { onRestaure: () => void }) {
         ) : (
           items.map((item) => (
             <div key={item.id} className="carte flex items-center gap-3 px-4 py-3">
-              <Avatar nom={item.name} url={item.url} />
+              <Avatar nom={item.name} url={item.urls[0]} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-foreground">{item.name}</p>
                 <p className="truncate text-2xs text-muted">{formatDate(item.updatedAt, locale)}</p>

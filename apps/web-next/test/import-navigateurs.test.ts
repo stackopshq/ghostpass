@@ -98,7 +98,7 @@ test("Chrome : les quatre entrées arrivent, virgules et guillemets compris", ()
 test("Chrome : un identifiant d'application Android n'est pas une URL, et passe quand même", () => {
   const a = analyse("chrome.csv");
   const appli = a.aImporter[2]!;
-  assert.equal(appli.url, "android://f4Kk9Q==@com.spotify.music/");
+  assert.deepEqual(appli.urls, ["android://f4Kk9Q==@com.spotify.music/"]);
   assert.equal(appli.name, "com.spotify.music");
 });
 
@@ -157,7 +157,7 @@ test("les espaces d'un mot de passe sont gardées, celles d'une adresse non", ()
     [],
     SANS_NOM,
   );
-  assert.equal(b.aImporter[0]!.url, "https://site.example");
+  assert.deepEqual(b.aImporter[0]!.urls, ["https://site.example"]);
   assert.equal(b.aImporter[0]!.username, "clara");
   assert.equal(b.aImporter[0]!.password, "  mdp  ");
 });
@@ -184,7 +184,7 @@ test("une entrée sans mot de passe NI note ni code n'a rien à protéger", () =
 test("une adresse vide n'empêche pas l'import quand l'entrée a un nom", () => {
   const a = analyse("chrome-penible.csv");
   const portail = a.aImporter.find((e) => e.name === "Code du portail")!;
-  assert.equal(portail.url, "");
+  assert.deepEqual(portail.urls, []);
   assert.equal(portail.password, "4821");
 });
 
@@ -210,7 +210,7 @@ test("un doublon strict dans le fichier n'entre qu'une fois", () => {
 
 test("un doublon strict de ce qui est déjà au coffre n'entre pas non plus", () => {
   const a = analyser(fixture("chrome.csv"), [
-    { url: "https://example.com/", username: "clara@example.com", password: "3XnP-quatre" },
+    { urls: ["https://example.com/"], username: "clara@example.com", password: "3XnP-quatre" },
   ], SANS_NOM);
   assert.deepEqual(
     a.ignorees.map((i) => i.motif),

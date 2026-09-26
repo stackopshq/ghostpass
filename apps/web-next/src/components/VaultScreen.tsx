@@ -463,7 +463,7 @@ export function VaultScreen() {
         name: item.name,
         username: item.username,
         password: item.password,
-        url: item.url,
+        urls: item.urls,
         // Le dossier n'est pas repris : l'arborescence est celle du coffre personnel, et
         // la porter dans une collection d'équipe y créerait des dossiers que personne
         // d'autre n'a choisis.
@@ -574,7 +574,7 @@ export function VaultScreen() {
             name: item.name,
             username: item.username,
             password: item.password,
-            url: item.url,
+            urls: item.urls,
             // Le dossier n'est pas repris : l'arborescence est celle du coffre personnel,
             // et la porter dans une collection d'équipe y créerait des dossiers que
             // personne d'autre n'a choisis.
