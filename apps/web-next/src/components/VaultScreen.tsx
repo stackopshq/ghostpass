@@ -43,7 +43,6 @@ import { ImportExport } from "@/components/ImportExport";
 import { ListeOrgs } from "@/components/orgs/ListeOrgs";
 import { DetailOrg } from "@/components/orgs/DetailOrg";
 import type { OrgSummary } from "@/lib/orgs";
-import { Reglages } from "@/components/Reglages";
 
 /// Une collection d'équipe où l'utilisateur peut écrire.
 interface Destination {
@@ -859,7 +858,6 @@ export function VaultScreen() {
           )}
         </div>
       </div>
-      <Reglages />
     </div>
   );
 }

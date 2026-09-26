@@ -16,7 +16,15 @@ import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { Bouton, Champ, Saisie, TeteDePanneau } from "@/components/champs";
 import { Cadenas } from "@/components/Icones";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+
+// Le repli d'affichage, le temps que le déploiement réponde.
+//
+// L'adresse réelle vient de `/api/config`. Elle ne peut pas venir d'une variable de
+// construction : ce client est un export statique, donc tout `NEXT_PUBLIC_*` y est gravé
+// dans le paquet. Un auto-hébergeur tire l'image publiée et la poser chez lui ne
+// changerait rien — c'est précisément ce que j'avais livré, et c'était inerte pour le
+// seul public que la dérogation vise.
+const CONFIDENTIALITE_PAR_DEFAUT = "/confidentialite";
 
 type Mode = "login" | "register";
 type SsoEnAttente = Awaited<ReturnType<typeof api.ssoCallback>> | null;
@@ -180,6 +188,23 @@ export function AuthScreen() {
   // une fonction que personne n'a demandée serait du bruit.
   const [ssoDisponible, setSsoDisponible] = useState<boolean | null>(null);
 
+  // Demandée au déploiement. L'échec retombe sur la page servie par l'application
+  // elle-même : un lien vers notre texte vaut mieux qu'aucun lien, et c'est de toute
+  // façon la bonne réponse pour la grande majorité des instances.
+  const [urlConfidentialite, setUrlConfidentialite] = useState(CONFIDENTIALITE_PAR_DEFAUT);
+  useEffect(() => {
+    let vivant = true;
+    void api
+      .config()
+      .then((c) => vivant && c.privacyUrl && setUrlConfidentialite(c.privacyUrl))
+      .catch(() => {
+        /* Sans conséquence visible : le repli est déjà en place. */
+      });
+    return () => {
+      vivant = false;
+    };
+  }, []);
+
   useEffect(() => {
     let vivant = true;
     void api
@@ -294,7 +319,7 @@ export function AuthScreen() {
                 <p className="mt-3 text-xs leading-relaxed text-muted">
                   {t("auth.privacyNotice")}{" "}
                   <a
-                    href="/confidentialite"
+                    href={urlConfidentialite}
                     className="font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
                   >
                     {t("auth.privacy")}
@@ -342,16 +367,18 @@ export function AuthScreen() {
           )}
         </section>
 
-        {/* Le sélecteur de langue passe SOUS la carte : au-dessus, il partageait
-            la ligne de la marque et lui disputait le regard. Et la mention
-            `zero-knowledge`, la même qu'au pied du coffre — c'est la promesse du
-            produit, elle a sa place là où l'on décide d'y entrer. */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-muted">
+        {/* La mention `zero-knowledge`, la même qu'au pied du coffre : c'est la
+            promesse du produit, elle a sa place là où l'on décide d'y entrer.
+        
+            Le sélecteur de langue vivait ici. Il est désormais dans la pastille
+            flottante, rendue pour **toutes** les pages et non plus seulement le
+            coffre ouvert. Le laisser aussi sous la carte afficherait « EN FR »
+            deux fois sur le même écran. */}
+        <div className="mt-6 flex items-center justify-center text-muted">
           <span className="flex items-center gap-1.5 text-xs">
             <Cadenas className="size-3.5" />
             {t("app.pt1b")}
           </span>
-          <LanguageSwitcher />
         </div>
 
         {/* Toujours atteignable, y compris pour qui est déjà inscrit : une
@@ -359,7 +386,7 @@ export function AuthScreen() {
             elle a consenti sans avoir à recréer un compte pour revoir le lien. */}
         <p className="mt-3 text-center">
           <a
-            href="/confidentialite"
+            href={urlConfidentialite}
             className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
           >
             {t("auth.privacy")}
