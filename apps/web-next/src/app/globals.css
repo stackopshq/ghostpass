@@ -3,75 +3,82 @@
  * Trois imports, et l'ordre compte : les polices hébergées, le thème généré du
  * produit, puis Tailwind qui lit ces jetons par `@theme` ci-dessous.
  *
- * `ghost-theme.css` est COPIÉ depuis ghostsuite, pas édité ici. Il est produit
- * par `tools/brand/emit_theme.py` à partir de `PRODUITS`, qui porte déjà les
- * couleurs des logos : un accent changé là traverse les icônes ET le thème, ou
- * aucun des deux. Le modifier à la main serait écrasé à la régénération, et la
- * CI de ghostsuite refuse d'ailleurs un fichier généré qui a dérivé.
+ * `ghost-theme.css` est COPIÉ depuis ghostsuite (`assets/ghostpass/`), pas édité
+ * ici. Il est produit par `tools/brand/emit_theme.py` à partir de `PRODUITS`,
+ * qui porte déjà les couleurs des logos : un accent changé là traverse les
+ * icônes ET le thème, ou aucun des deux. Le modifier à la main serait écrasé à
+ * la régénération, et la CI de ghostsuite refuse un fichier généré qui a dérivé.
+ *
+ * Depuis le 2026-09-26 ce fichier porte les DEUX modes, les classes de
+ * composants et la pastille de marque — 197 lignes contre les 40 de la copie
+ * précédente. Le bloc clair écrit à la main ici disparaît donc : c'est le §0 de
+ * la charte, « interdiction de diverger de ghost-theme.css ». Un produit qui a
+ * besoin d'une valeur l'ajoute au générateur, pas chez lui.
  */
 @import "./fonts.css";
 @import "./ghost-theme.css";
 @import "tailwindcss";
 
-/* Les valeurs sémantiques, reprises telles quelles de l'interface en service
- * pour que le portage ne change pas ce que Clara voit. Le thème généré est
- * sombre et unique ; si la charte gagne un jour un mode clair, ces trois-là
- * devront le suivre au même endroit qu'elle. */
+/* Les tests ne sont pas de l'interface, et leur texte ne doit pas décider du CSS
+ * livré : Tailwind v4 découvre ses sources tout seul, fichiers de test compris,
+ * et `echelle.test.ts` CITE les classes qu'il interdit pour expliquer ce qu'il
+ * refuse. Sans cette exclusion, le document qui interdit ferait livrer, et
+ * quiconque auditerait la feuille conclurait l'inverse de la vérité.
+ *
+ * Les tests de ce produit vivent dans `test/`, à côté de `src/` et non dedans —
+ * d'où les deux niveaux de remontée, mesurés sur l'arbre et non supposés. */
+@source not "../../test/**/*.test.ts";
+@source not "../../test/**/*.test.tsx";
+
+/* Les jetons que la charte ne porte pas encore, et qui vivent donc dans la
+ * couche locale du produit plutôt que dans le fichier généré — qu'une
+ * régénération écraserait sans rien dire.
+ *
+ * Ils ne REDÉCLARENT rien : aucun de ces quatre noms n'existe dans
+ * `ghost-theme.css`. C'est la limite que pose le §0 — on ajoute ce que la
+ * charte n'a pas, on ne redéfinit pas ce qu'elle a.
+ *
+ * `--color-accent-hover` est DÉRIVÉ des marches d'accent de la charte plutôt
+ * que réécrit en hexadécimal : le survol d'un lien doit MONTER en contraste,
+ * jamais descendre, et c'est vrai dans les deux modes sans qu'on ait à le
+ * mesurer deux fois. En sombre, `--color-accent-light` (#9CC3FF) monte de 4,90
+ * à 10,40 sur le fond ; en clair, l'accent clair donnerait 1,80 sur la carte
+ * blanche — sous le seuil AA et même sous 3,00 — donc le survol part vers
+ * `--color-accent-deep`. Les deux marches viennent du thème et suivront une
+ * régénération ; recopier leurs valeurs ici, c'était deux endroits à corriger.
+ *
+ * Sa place naturelle reste la charte — un lien survolé se comporte pareil dans
+ * les huit produits — le jour où le générateur saura l'émettre. */
 :root {
-  /* Le survol d'un lien doit MONTER en contraste, jamais descendre. Sur le
-     fond sombre, c'est l'accent clair de la charte : #2E7DFF au repos donne
-     4,90, #9CC3FF au survol donne 10,40.
-
-     Ce jeton vit ici et non dans `ghost-theme.css`, qui est GÉNÉRÉ par
-     tools/brand/emit_theme.py : une valeur écrite à la main y disparaîtrait
-     à la régénération suivante, sans que rien ne le signale. Sa place
-     naturelle reste la charte — un lien survolé se comporte pareil dans les
-     huit produits — le jour où le générateur saura émettre les deux thèmes. */
-  --color-accent-hover: #9CC3FF;
-
-  /* L'aurore du thème généré est à 8 %, calibrée sur les accents clairs de la
-     suite. Sur le bleu de ghostpass — 3,1 fois moins lumineux que le cyan de
-     ghostcal — elle ne se voit pas. On la renforce ici plutôt que dans le
-     fichier généré, qu'une régénération écraserait. */
-  --aurora: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  --color-accent-hover: var(--color-accent-light);
 
   --danger: #ef6b72;
   --warn: #e0a23c;
   --success: #4fc28a;
 }
 
-/* Le mode clair.
+/* Le mode clair — ce qu'il en RESTE ici.
  *
- * Le thème généré par la charte est SOMBRE et unique : il ne porte pas de
- * variante claire. Ghostcal en a une, et Clara veut la même bascule ici. Elle
- * vit donc dans ce fichier, sous `data-theme="light"` posé sur <html>, comme
- * chez ghostcal — et pas dans `ghost-theme.css`, qui est généré et serait
- * écrasé à la régénération.
+ * Le générateur sait désormais émettre les deux modes : `ghost-theme.css` porte
+ * son propre `:root[data-theme="light"]`, neutres et accent compris. Le bloc
+ * complet qui vivait ici est donc parti, et avec lui la dérive qu'il portait —
+ * son accent clair était #1b5fd9, posé à l'œil ; la charte le dérive à #276ad9
+ * en multipliant les trois canaux jusqu'au premier palier qui atteint 4,50:1
+ * sur #eef3f9, le plus sombre des fonds de ce mode. La teinte change donc un
+ * peu, et c'est l'intention : elle est mesurée plutôt que choisie.
  *
- * Le jour où le générateur saura produire les deux, ce bloc disparaît : c'est
- * sa place naturelle, une teinte claire devant être la même dans les huit
- * produits.
- *
- * L'accent fonce : le bleu du logo passe sur fond blanc en dessous du seuil de
- * contraste, et un accent illisible ne signale plus rien. */
+ * Ne subsistent que les trois teintes sémantiques, que la charte ne porte pas.
+ * `--color-accent-hover` n'a pas besoin d'être redéclaré ici : il pointe sur
+ * `--color-accent-deep`, que le thème ne redéfinit pas en mode clair, donc la
+ * même écriture vaut pour les deux modes. */
 :root[data-theme="light"] {
-  --color-base: #f5f8fc;
-  --color-surface: #ffffff;
-  --color-surface-2: #eef3f9;
-  --color-foreground: #0f1b2d;
-  --color-muted: #5b6b82;
-  --color-border: rgba(15, 23, 42, 0.1);
-  --color-border-strong: rgba(15, 23, 42, 0.18);
-  --color-accent: #1b5fd9;
-  --color-accent-ink: #ffffff;
-  /* Mesure sur la carte blanche : #1b5fd9 au repos donne 5,70, et
-     l'accent clair #9CC3FF donnerait 1,80 — sous le seuil AA de 4,50
-     et même sous 3,00. Le survol part donc vers le profond, à 9,83. */
-  --color-accent-hover: #143F8F;
-  --aurora: color-mix(in srgb, #1b5fd9 10%, transparent);
   --danger: #b3261e;
   --warn: #8a5300;
   --success: #11663f;
+
+  /* En plein jour l'accent clair donnerait 1,80 sur la carte blanche — sous le
+     seuil AA de 4,50 et même sous 3,00. Le survol part donc vers le profond. */
+  --color-accent-hover: var(--color-accent-deep);
 }
 
 /* Le pont entre les jetons de la suite et les classes Tailwind. Aucune valeur
@@ -97,10 +104,17 @@
   --color-foreground: var(--color-foreground);
   --color-muted: var(--color-muted);
   --color-accent: var(--color-accent);
-  --color-accent-light: var(--color-accent-light);
   --color-accent-hover: var(--color-accent-hover);
-  --color-accent-deep: var(--color-accent-deep);
   --color-accent-ink: var(--color-accent-ink);
+
+  /* `--color-accent-light` et `--color-accent-deep` arrivent avec le thème mais
+     ne sont VOLONTAIREMENT plus pontés, comme chez ghostmail et ghostcal : le
+     thème ne les redéclare pas en mode clair, et exposer `bg-accent-light`
+     reviendrait à offrir un utilitaire qui garde sa teinte de nuit en plein
+     jour. Ils restent joignables en `var()`, et c'est ainsi que
+     `--color-accent-hover` s'en sert — dans une déclaration, pas dans une
+     classe, donc au bon moment de la résolution. Vérifié : aucun composant ne
+     portait `bg-`, `text-` ou `border-accent-light|deep`. */
 
   /* Les trois teintes sémantiques, définies plus bas puis pontées ici.
    *
@@ -164,6 +178,28 @@ body {
 @utility verre-dense {
   background-color: color-mix(in srgb, var(--color-base) 86%, transparent);
   backdrop-filter: blur(12px);
+}
+
+/* Le verre OPAQUE — ce qui se superpose à du CONTENU et doit le masquer.
+ *
+ * `verre` et `verre-dense` laissent passer 28 % et 14 % de ce qu'il y a
+ * derrière. C'est juste pour une carte posée sur l'aurore, qui n'a rien à
+ * cacher ; ça ne l'est pas pour un menu qui se déroule SUR une liste de
+ * dossiers. Le menu contextuel de l'arborescence s'adossait à `bg-surface`, et
+ * `--color-surface` est translucide PAR CONCEPTION — blanc à 3 %, le thème
+ * l'écrit dans son propre commentaire. Vérifié au navigateur et non déduit :
+ * en thème sombre, les noms de dossiers se lisaient À TRAVERS le menu.
+ *
+ * Même recette que `carte` — une fraction du texte — mais composée SUR
+ * `--color-base` au lieu du transparent. `--color-base` est le seul jeton
+ * opaque dans les deux thèmes ET dans les deux modes ; c'est ce qui fait que
+ * cette matière ne dépend d'aucune surface et ne casse pas si la charte rend
+ * `--color-surface` plus ou moins translucide.
+ *
+ * Le liseré est laissé à l'appelant : un menu n'en veut pas au même endroit
+ * qu'une infobulle. */
+@utility verre-opaque {
+  background-color: color-mix(in srgb, var(--color-foreground) 4%, var(--color-base));
 }
 
 /* Le néon de l'action principale.
