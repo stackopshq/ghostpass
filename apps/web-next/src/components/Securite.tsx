@@ -124,6 +124,19 @@ export function Securite() {
     }
   }, [token]);
 
+  /// Les codes en fichier texte. Comme l'export : c'est quelque chose qu'on
+  /// range, pas qu'on lit à l'écran, et l'imprimer est un usage légitime.
+  const telechargerLesCodes = (codes: string[]) => {
+    const url = URL.createObjectURL(
+      new Blob([codes.join("\n") + "\n"], { type: "text/plain" }),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ghostpass-codes-de-recuperation-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const supprimerLeCompte = useCallback(async () => {
     if (!token || !infoCompte) return;
     setOccupeDonnees(true);
@@ -157,6 +170,18 @@ export function Securite() {
   // sens.
   const [kit, setKit] = useState<string | null>(null);
   const [codeMfa, setCodeMfa] = useState("");
+  /// Les codes de récupération, affichés **une seule fois**, exactement comme le
+  /// kit ci-dessus et pour la même raison : le serveur n'en garde que les
+  /// empreintes. Les réafficher supposerait de les détenir, ce qui les viderait
+  /// de leur sens. Ils ne sont donc jamais rechargés — seulement reçus.
+  const [codesRecup, setCodesRecup] = useState<string[] | null>(null);
+  /// Combien il en reste, ça en revanche se recharge : c'est ce qui permet de
+  /// prévenir avant que la réserve soit vide.
+  const [codesRestants, setCodesRestants] = useState<number | null>(null);
+  /// Refaire la série : mot de passe + un code encore valide (TOTP ou de
+  /// récupération). `null` tant que personne ne l'a demandé.
+  const [motDePasseRegen, setMotDePasseRegen] = useState<string | null>(null);
+  const [codeRegen, setCodeRegen] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [occupe, setOccupe] = useState(false);
@@ -178,6 +203,13 @@ export function Securite() {
     // un code de second facteur à la suppression, et pour recalculer la preuve
     // d'authentification sans faire retaper l'adresse.
     api.accountInfo(token).then(setInfoCompte).catch(() => setInfoCompte(null));
+    // À part, et non dans le `allSettled` ci-dessus : celui-ci compte ses échecs
+    // pour composer un message, et lui ajouter un quatrième appel fausserait le
+    // décompte. Un état de second facteur illisible n'est pas une panne d'écran.
+    api
+      .mfaStatus(token)
+      .then((e) => setCodesRestants(e.enabled ? e.recoveryCodesRemaining : null))
+      .catch(() => setCodesRestants(null));
     const echecs = [pk, ck, act].filter((r) => r.status === "rejected").length;
     setErreur(echecs > 0 ? t("app.deletedSome", { ok: 3 - echecs, ko: echecs }) : null);
   }, [token, t]);
@@ -298,7 +330,11 @@ export function Securite() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   void agir(async () => {
-                    await api.mfaActivate(token!, codeMfa);
+                    // Les codes rendus ici sont la seule occasion de les lire :
+                    // on les affiche tout de suite plutôt que de les laisser
+                    // dans une réponse que personne ne regarde.
+                    const { recoveryCodes } = await api.mfaActivate(token!, codeMfa);
+                    setCodesRecup(recoveryCodes);
                     setMfa(null);
                     setCodeMfa("");
                     setMessage(t("app.twoFactor"));
@@ -323,6 +359,114 @@ export function Securite() {
                   </Bouton>
                 </div>
               </form>
+            </div>
+          )}
+
+          {/* Les codes de récupération, à leur seule occasion d'être lus.
+              L'avertissement passe AVANT la liste, comme pour le kit : lu dans
+              l'autre ordre, il arrive quand la fenêtre est déjà fermée. */}
+          {codesRecup && (
+            <div className="mt-3 space-y-3">
+              <p className="rounded-lg bg-warn/10 px-3 py-2 text-xs text-warn">
+                {t("app.recoveryCodesShownOnce")}
+              </p>
+              <ul className="grid grid-cols-2 gap-1 rounded-lg bg-surface-2 px-3 py-2">
+                {codesRecup.map((c) => (
+                  <li key={c} className="font-mono text-xs text-foreground">
+                    {c}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex flex-wrap gap-2">
+                <Bouton
+                  variante="discret"
+                  onClick={() => copier(codesRecup.join("\n"), "codes")}
+                >
+                  {copie === "codes" ? t("app.copied") : t("app.copyAll")}
+                </Bouton>
+                <Bouton variante="discret" onClick={() => telechargerLesCodes(codesRecup)}>
+                  {t("app.download")}
+                </Bouton>
+                {/* Le panneau ne se ferme que sur un geste explicite : un
+                    rechargement de page les perdrait sans que personne ne
+                    puisse les retrouver. */}
+                <Bouton onClick={() => setCodesRecup(null)}>{t("app.iSavedThem")}</Bouton>
+              </div>
+            </div>
+          )}
+
+          {/* La réserve, une fois le second facteur en place. Le compte sert à
+              prévenir avant qu'elle soit vide — le moment où l'on se croit
+              protégé sans plus avoir de porte de sortie. */}
+          {!codesRecup && !mfa && codesRestants !== null && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-muted">
+                {t("app.recoveryCodesRemaining", { n: codesRestants, total: 10 })}
+              </p>
+              {codesRestants === 0 && (
+                <p className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
+                  {t("app.recoveryCodesNone")}
+                </p>
+              )}
+              {codesRestants > 0 && codesRestants <= 3 && (
+                <p className="rounded-lg bg-warn/10 px-3 py-2 text-xs text-warn">
+                  {t("app.recoveryCodesLow")}
+                </p>
+              )}
+              {motDePasseRegen === null ? (
+                <Bouton
+                  variante="discret"
+                  disabled={occupe}
+                  onClick={() => setMotDePasseRegen("")}
+                >
+                  {t("app.newRecoveryCodes")}
+                </Bouton>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs text-muted">{t("app.regenerateWarning")}</p>
+                  <Champ label={t("app.masterPassword")}>
+                    <Saisie
+                      type="password"
+                      value={motDePasseRegen}
+                      onChange={(e) => setMotDePasseRegen(e.target.value)}
+                      autoComplete="current-password"
+                    />
+                  </Champ>
+                  {/* Un code de récupération est accepté ici autant qu'un TOTP :
+                      sans quoi refaire sa réserve serait impossible à qui a
+                      justement perdu son téléphone. */}
+                  <Champ label={t("app.codeOrRecovery")}>
+                    <Saisie value={codeRegen} onChange={(e) => setCodeRegen(e.target.value)} />
+                  </Champ>
+                  <div className="flex gap-2">
+                    <Bouton
+                      disabled={occupe || !motDePasseRegen || !codeRegen || !infoCompte}
+                      onClick={() =>
+                        void agir(async () => {
+                          const preuve = computeLoginHash(
+                            infoCompte!.email,
+                            motDePasseRegen,
+                            infoCompte!.kdfParams,
+                          );
+                          const { recoveryCodes } = await api.mfaRegenerateRecoveryCodes(
+                            token!,
+                            preuve,
+                            codeRegen,
+                          );
+                          setCodesRecup(recoveryCodes);
+                          setMotDePasseRegen(null);
+                          setCodeRegen("");
+                        })
+                      }
+                    >
+                      {t("app.confirm")}
+                    </Bouton>
+                    <Bouton variante="discret" onClick={() => setMotDePasseRegen(null)}>
+                      {t("app.cancelBack")}
+                    </Bouton>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Carte>

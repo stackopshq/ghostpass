@@ -15,6 +15,9 @@ export type AuditAction =
   | "webauthn.remove"
   | "mfa.enable"
   | "mfa.disable"
+  // Refaire la réserve invalide les anciens codes : c'est un geste qui retire
+  // un accès, et il mérite une trace autant que l'activation.
+  | "mfa.recovery.regenerate"
   | "recovery.reset"
   | "org.member.add"
   | "org.member.remove"

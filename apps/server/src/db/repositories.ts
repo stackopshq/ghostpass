@@ -59,6 +59,8 @@ export const users = {
         mfa_secret: null,
         mfa_enabled: 0,
         mfa_last_counter: 0,
+        mfa_failed_attempts: 0,
+        mfa_locked_until: null,
         encrypted_user_key_recovery: null,
         recovery_auth_hash: null,
         recovery_salt: null,
@@ -83,7 +85,15 @@ export const users = {
     // chemin serait alors en clair sans que rien ne le signale.
     await db
       .updateTable("users")
-      .set({ mfa_secret: chiffrerAuRepos(secret), mfa_enabled: 0, mfa_last_counter: 0 })
+      .set({
+        mfa_secret: chiffrerAuRepos(secret),
+        mfa_enabled: 0,
+        mfa_last_counter: 0,
+        // Un enrôlement neuf ne doit pas hériter du blocage de l'ancien : les
+        // essais ratés portaient sur un secret qui n'existe plus.
+        mfa_failed_attempts: 0,
+        mfa_locked_until: null,
+      })
       .where("id", "=", userId)
       .execute();
   },
@@ -100,6 +110,30 @@ export const users = {
     await db
       .updateTable("users")
       .set({ mfa_last_counter: counter })
+      .where("id", "=", userId)
+      .execute();
+  },
+
+  /// Un second facteur accepté : la période consommée avance et le compteur
+  /// d'essais ratés repart de zéro. Les deux écritures vont ensemble — remettre
+  /// le compteur à zéro sans avancer la période rouvrirait le rejeu.
+  async setMfaSuccess(db: DB, userId: string, counter: number): Promise<void> {
+    await db
+      .updateTable("users")
+      .set({ mfa_last_counter: counter, mfa_failed_attempts: 0, mfa_locked_until: null })
+      .where("id", "=", userId)
+      .execute();
+  },
+
+  async setMfaFailure(
+    db: DB,
+    userId: string,
+    attempts: number,
+    lockedUntil: number | null,
+  ): Promise<void> {
+    await db
+      .updateTable("users")
+      .set({ mfa_failed_attempts: attempts, mfa_locked_until: lockedUntil })
       .where("id", "=", userId)
       .execute();
   },

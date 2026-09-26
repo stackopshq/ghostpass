@@ -25,6 +25,7 @@ test("la purge retire les vieilles traces et garde les récentes", async () => {
       id: "u1", email: "a@b.c", kdf_params: "{}", server_password_hash: "h",
       password_salt: "s", encrypted_user_key: "k", encrypted_private_key: "p",
       public_key: "pk", mfa_secret: null, mfa_enabled: 0, mfa_last_counter: 0,
+      mfa_failed_attempts: 0, mfa_locked_until: null,
       encrypted_user_key_recovery: null, recovery_auth_hash: null,
       recovery_salt: null, created_at: maintenant,
     })
