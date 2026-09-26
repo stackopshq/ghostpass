@@ -6,6 +6,7 @@
 // n'est pas encore en place. L'écran doit répondre à « suis-je protégé ? »
 // avant de proposer de l'être davantage.
 
+import { AccesDUrgence } from "@/components/AccesDUrgence";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { computeLoginHash, createRecovery, wrapUserKeyForPasskey } from "@/lib/crypto";
@@ -672,6 +673,11 @@ export function Securite() {
             </div>
           )}
         </Carte>
+
+        {/* L'accès d'urgence, qui n'avait aucun écran : huit routes serveur, six fonctions
+            clientes, zéro appelant. Placé après les seconds facteurs et avant le journal —
+            c'est une protection du compte, pas une donnée à consulter. */}
+        <AccesDUrgence />
 
         <Carte titre={t("app.recentActivity")}>
           {connexions.length === 0 ? (
