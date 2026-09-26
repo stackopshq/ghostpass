@@ -10,7 +10,15 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { computeLoginHash, ensureCryptoReady, register, unlock, unlockWithPasskey } from "@/lib/crypto";
+import {
+  computeLoginHash,
+  ensureCryptoReady,
+  recoverAccount,
+  register,
+  unlock,
+  unlockWithPasskey,
+} from "@/lib/crypto";
+import { EchecDeRecuperation, recupererLeCoffre } from "@/lib/recuperation";
 import { authenticatePasskey, getAssertion } from "@/lib/webauthn";
 import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
@@ -26,7 +34,14 @@ import { Cadenas } from "@/components/Icones";
 // seul public que la dérogation vise.
 const CONFIDENTIALITE_PAR_DEFAUT = "/confidentialite";
 
-type Mode = "login" | "register";
+// Trois modes, et le troisième manquait.
+//
+// `recover` rouvre un coffre avec son kit de récupération. Les trois routes serveur, les
+// trois fonctions d'`api.ts` et `recoverAccount` existaient toutes ; `api.recoveryBlob` et
+// `api.recover` n'avaient simplement AUCUN appelant. On pouvait donc générer un kit depuis
+// la carte Sécurité, le noter soigneusement, et n'avoir aucun écran pour s'en servir le
+// jour où il sert.
+type Mode = "login" | "register" | "recover";
 type SsoEnAttente = Awaited<ReturnType<typeof api.ssoCallback>> | null;
 
 export function AuthScreen() {
@@ -36,6 +51,8 @@ export function AuthScreen() {
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [codeTotp, setCodeTotp] = useState("");
+  const [cleDeRecuperation, setCleDeRecuperation] = useState("");
+  const [recuperationFaite, setRecuperationFaite] = useState(false);
   const [totpDemande, setTotpDemande] = useState(false);
   const [sso, setSso] = useState<SsoEnAttente>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -216,6 +233,50 @@ export function AuthScreen() {
     };
   }, []);
 
+  // La bascule de mode remet l'écran à plat : garder une erreur ou un succès d'un mode à
+  // l'autre montre un message qui ne parle plus de ce qu'on regarde.
+  function allerVers(m: Mode) {
+    setMode(m);
+    setErreur(null);
+    setRecuperationFaite(false);
+    setCleDeRecuperation("");
+    setMotDePasse("");
+  }
+
+  async function recuperer(e: React.FormEvent) {
+    e.preventDefault();
+    setErreur(null);
+    setOccupe(true);
+    try {
+      await ensureCryptoReady();
+      await recupererLeCoffre(
+        {
+          lireLesBlobs: (adresse) => api.recoveryBlob(adresse),
+          rouvrir: recoverAccount,
+          reinitialiser: (corps) => api.recover(corps),
+        },
+        { email, cleDeRecuperation, nouveauMotDePasse: motDePasse },
+      );
+      // On ne connecte PAS automatiquement : le serveur vient d'invalider toutes les
+      // sessions, celle qu'on ouvrirait comprise. Et retaper le nouveau mot de passe une
+      // fois, tout de suite, est le seul moyen de vérifier qu'il a bien été noté.
+      setRecuperationFaite(true);
+      setCleDeRecuperation("");
+      setMotDePasse("");
+    } catch (err) {
+      if (err instanceof EchecDeRecuperation) {
+        // `champ-vide` n'arrive pas depuis cet écran — les trois champs sont `required` —
+        // mais la fonction est publique et le motif existe : lui faire emprunter la phrase
+        // du réseau afficherait « le serveur n'a pas répondu » alors qu'on n'a rien envoyé.
+        setErreur(err.motif === "cle-refusee" ? t("auth.errKeyRefused") : t("auth.errNetwork"));
+      } else {
+        setErreur(msg(err));
+      }
+    } finally {
+      setOccupe(false);
+    }
+  }
+
   async function versSso() {
     setErreur(null);
     setOccupe(true);
@@ -275,6 +336,72 @@ export function AuthScreen() {
                   {t("auth.unlock")}
                 </Bouton>
               </form>
+            </>
+          ) : mode === "recover" ? (
+            <>
+              <TeteDePanneau titre={t("auth.recoverTitle")} />
+              {recuperationFaite ? (
+                <>
+                  <p className="mb-4 text-sm text-foreground">{t("auth.recoverDone")}</p>
+                  <Bouton onClick={() => allerVers("login")} className="w-full">
+                    {t("auth.signIn")}
+                  </Bouton>
+                </>
+              ) : (
+                <>
+                  {/* Ce que la clé peut, et ce que personne ne peut sans elle. Dit AVANT le
+                      formulaire : quelqu'un qui n'a pas son kit doit l'apprendre ici, pas
+                      après trois tentatives. */}
+                  <p className="mb-3 text-sm text-muted">{t("auth.recoverSub")}</p>
+                  <form onSubmit={recuperer}>
+                    <Champ label={t("auth.email")}>
+                      <Saisie
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        autoComplete="email"
+                        required
+                      />
+                    </Champ>
+                    <Champ label={t("auth.recoveryKey")}>
+                      <Saisie
+                        value={cleDeRecuperation}
+                        onChange={(e) => setCleDeRecuperation(e.target.value)}
+                        autoComplete="off"
+                        spellCheck={false}
+                        required
+                      />
+                    </Champ>
+                    <Champ label={t("auth.newMasterPassword")}>
+                      <Saisie
+                        type="password"
+                        value={motDePasse}
+                        onChange={(e) => setMotDePasse(e.target.value)}
+                        autoComplete="new-password"
+                        required
+                      />
+                    </Champ>
+                    {/* La réinitialisation ferme toutes les sessions, y compris celles des
+                        autres appareils. C'est une conséquence qu'on subit sans l'avoir lue
+                        si on ne l'écrit pas ici. */}
+                    <p className="mb-3 text-xs text-muted">{t("auth.recoverEndsSessions")}</p>
+                    <Bouton type="submit" disabled={occupe} className="w-full">
+                      {t("auth.recoverAction")}
+                    </Bouton>
+                  </form>
+                  {/* `mt-5` et non `mt-4` : l'action principale porte un néon qui déborde de
+                      quelques pixels, et à 16 px le lien s'asseyait dedans. */}
+                  <p className="mt-5 text-xs text-muted">
+                    <button
+                      type="button"
+                      className="cursor-pointer font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
+                      onClick={() => allerVers("login")}
+                    >
+                      {t("auth.backToSignIn")}
+                    </button>
+                  </p>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -359,11 +486,25 @@ export function AuthScreen() {
                   <button
                     type="button"
                     className="cursor-pointer font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
-                    onClick={() => { setMode(mode === "login" ? "register" : "login"); setErreur(null); }}
+                    onClick={() => allerVers(mode === "login" ? "register" : "login")}
                   >
                     {mode === "login" ? t("auth.needAccountAction") : t("auth.haveAccountAction")}
                   </button>
                 </p>
+                {/* Il n'y avait RIEN ici, et le kit de récupération était donc sans usage.
+                    En mode inscription seulement il n'aurait pas de sens : on ne récupère
+                    pas un compte qu'on n'a pas encore. */}
+                {mode === "login" && (
+                  <p className="text-xs text-muted">
+                    <button
+                      type="button"
+                      className="cursor-pointer font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
+                      onClick={() => allerVers("recover")}
+                    >
+                      {t("auth.forgot")}
+                    </button>
+                  </p>
+                )}
               </div>
             </>
           )}

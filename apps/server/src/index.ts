@@ -3,6 +3,7 @@ import { createDb } from "./db/database.js";
 import { ensureDefaultCollections } from "./services/defaultCollection.js";
 import { programmerLaPurge } from "./services/retention.js";
 import { chargerLaCle, definirLaCle } from "./services/secretAtRest.js";
+import { avertissementDOrigine } from "./services/webauthn.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 
@@ -36,8 +37,18 @@ try {
         "Poser une clé : openssl rand -hex 32",
     );
   }
+  // Même raisonnement que pour la clé au repos, et même remède : ne pas empêcher de démarrer,
+  // mais ne pas laisser croire non plus. Sans cette ligne, l'oubli de WEBAUTHN_ORIGIN ne se
+  // découvre qu'au clic d'un utilisateur sur « ajouter une passkey », et les journaux du serveur
+  // sont muets parce que le navigateur refuse la cérémonie avant d'appeler quoi que ce soit.
+  const oubli = avertissementDOrigine();
+  if (oubli) {
+    app.log.warn(oubli);
+  }
   if (backfilled > 0) {
-    app.log.info(`Collection par défaut créée pour ${backfilled} organisation(s) sans collection`);
+    app.log.info(
+      `Collection par défaut créée pour ${backfilled} organisation(s) sans collection`,
+    );
   }
   // Purge des traces : au démarrage puis toutes les six heures. Rien ne la
   // déclenchait auparavant, et `login_events` gardait une IP par connexion
