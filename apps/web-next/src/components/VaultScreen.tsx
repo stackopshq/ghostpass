@@ -28,6 +28,7 @@ import {
   buildTree,
   filtrerVisibles,
   folderPaths,
+  historiqueApresModification,
   type VaultEntry,
 } from "@/lib/vault";
 import { ArbreDossiers } from "@/components/ArbreDossiers";
@@ -308,14 +309,16 @@ export function VaultScreen() {
     if (!token || !account) return;
     setOccupe(true);
     try {
-      // Un mot de passe remplacé n'est pas perdu : on en garde vingt versions.
-      // Sans cela, une modification faite par erreur est définitive, et c'est
-      // exactement le moment où l'on voudrait revenir en arrière.
+      // Un mot de passe remplacé n'est pas perdu. Sans cela, une modification
+      // faite par erreur est définitive, et c'est exactement le moment où l'on
+      // voudrait revenir en arrière. La règle est dans `vault.ts`, parce que les
+      // deux écrans d'équipe doivent appliquer la même.
       const enCours = edition ? items.find((i) => i.id === edition) : undefined;
-      let passwordHistory = enCours?.passwordHistory ?? [];
-      if (enCours?.password && v.password !== enCours.password) {
-        passwordHistory = [enCours.password, ...passwordHistory].slice(0, 20);
-      }
+      const passwordHistory = historiqueApresModification(
+        enCours?.password,
+        v.password,
+        enCours?.passwordHistory,
+      );
       const enc = encryptItem(account, { ...v, passwordHistory });
       const id = edition
         ? (await api.updateItem(token, edition, enc), edition)

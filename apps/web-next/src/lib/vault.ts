@@ -145,3 +145,32 @@ export function formatDate(ms: number, locale: string): string {
     return "";
   }
 }
+
+/// Vingt versions d'un mot de passe remplacé, et la règle vit ici.
+///
+/// Elle vivait en dur dans l'écran du coffre personnel, avec son plafond écrit
+/// en chiffre. Les deux écrans d'équipe ne la portaient pas — ils ne
+/// transportaient même pas l'historique — et **l'effaçaient** à chaque
+/// modification. C'est le même mécanisme que la troncature des adresses : une
+/// règle recopiée dans un écran sur trois, et le formulaire qui la perd est
+/// celui qui n'en a jamais entendu parler.
+///
+/// Sans plafond, l'entrée chiffrée grossit sans fin ; vingt est ce que le
+/// coffre personnel appliquait déjà, et changer ce nombre ici le change partout.
+export const VERSIONS_DE_MOT_DE_PASSE_GARDEES = 20;
+
+/// Rend l'historique à écrire. `ancien` est le mot de passe tel qu'il est
+/// enregistré, `nouveau` celui que le formulaire propose.
+///
+/// Un mot de passe inchangé n'ajoute rien : sans ce test, ouvrir une entrée et
+/// la réenregistrer sans y toucher empilerait vingt fois la même valeur et
+/// chasserait le véritable historique.
+export function historiqueApresModification(
+  ancien: string | undefined,
+  nouveau: string,
+  historique: string[] | undefined,
+): string[] {
+  const actuel = historique ?? [];
+  if (!ancien || ancien === nouveau) return actuel;
+  return [ancien, ...actuel].slice(0, VERSIONS_DE_MOT_DE_PASSE_GARDEES);
+}
