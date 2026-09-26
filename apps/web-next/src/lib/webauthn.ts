@@ -20,15 +20,41 @@ export function getAssertion(optionsJSON: unknown): Promise<unknown> {
 }
 
 // ─── Passkey passwordless via l'extension PRF ───
-// Sel fixe et stable (base64url) : il doit être identique à l'enrôlement et au login pour que la
-// passkey régénère le même secret PRF. Le contenu importe peu, seule la stabilité compte.
-const PRF_SALT = "Z2hvc3RwYXNzLXBhc3NrZXktcHJmLXYx";
+//
+// Sel fixe et stable : il doit être identique à l'enrôlement et au login pour que la passkey
+// régénère le même secret PRF. Le contenu importe peu, seule la stabilité compte.
+//
+// ⚠️ `prf.eval.first` est un `BufferSource` DANS LA SPÉCIFICATION, pas une chaîne. Ce sel était
+// passé tel quel, en base64url, et le navigateur refusait la cérémonie entière :
+//
+//     Failed to read the 'first' property from 'AuthenticationExtensionsPRFValues':
+//     The provided value is not of type '(ArrayBuffer or ArrayBufferView)'
+//
+// Aucune passkey n'a donc jamais pu être enrôlée ni utilisée depuis un navigateur — ni
+// `registerPasskey`, ni `authenticatePasskey`, qui partagent cette fonction. La conséquence est
+// qu'il n'y a AUCUN enrôlement existant à préserver : changer l'interprétation du sel ne casse
+// la clé de personne.
+//
+// `@simplewebauthn/browser` ne pouvait pas rattraper le coup : il convertit les champs qu'il
+// connaît (`challenge`, `user.id`, `excludeCredentials[].id`) et laisse `extensions` intact,
+// puisque c'est une zone d'extension dont le contenu ne lui appartient pas.
+const PRF_SALT_B64URL = "Z2hvc3RwYXNzLXBhc3NrZXktcHJmLXYx";
+
+/// base64url → octets. Exportée pour que le test puisse mesurer ce qui part vraiment.
+export function base64urlEnOctets(s: string): Uint8Array {
+  const b64 = s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=");
+  const brut = atob(b64);
+  return Uint8Array.from(brut, (c) => c.charCodeAt(0));
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function withPrf(optionsJSON: any): any {
+export function withPrf(optionsJSON: any): any {
   return {
     ...optionsJSON,
-    extensions: { ...(optionsJSON.extensions ?? {}), prf: { eval: { first: PRF_SALT } } },
+    extensions: {
+      ...(optionsJSON.extensions ?? {}),
+      prf: { eval: { first: base64urlEnOctets(PRF_SALT_B64URL) } },
+    },
   };
 }
 
