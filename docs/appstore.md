@@ -34,7 +34,12 @@ exactement ce que valait la clé — et les obligations BIS et ANSSI restent ent
 ### Compte et identifiants
 
 - Compte développeur Apple — **validé le 14 septembre 2026**, équipe `9WHCJ5W7S6`
-  (« Clara Vanacker », type Individual).
+  (« Clara Allioli », type Individual).
+
+  Le nom porté par le compte Apple est celui qui s'affiche comme vendeur sur
+  l'App Store. Changer cette ligne ne le change PAS chez Apple : il faut le
+  faire dans App Store Connect, et la validation d'identité peut être redemandée.
+  Tant que ce n'est pas fait, la fiche publique portera l'ancien nom.
 - Les deux identifiants `ch.stackops.ghostpass` et `ch.stackops.ghostpass.autofill` sont
   enregistrés — créés par la signature automatique au premier build vers un appareil.
 - Le groupe d'applications est **`group.ch.stackops.ghostpass.coffre`**, et le suffixe
