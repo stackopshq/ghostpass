@@ -386,6 +386,18 @@ export const api = {
   },
   /// Refait la réserve. Les anciens codes cessent de valoir à cet instant.
   /// `code` accepte un TOTP à six chiffres ou un code de récupération.
+  /// `POST /api/mfa/disable` existe depuis toujours côté serveur, et AUCUN client
+  /// web ne l'appelait : l'écran n'offrait donc aucun moyen de revenir en arrière.
+  /// Même forme que la régénération — mot de passe maître ET second facteur —
+  /// parce que retirer une porte demande d'en franchir une.
+  mfaDisable(token: string, masterPasswordHash: string, code: string) {
+    return http<{ enabled: boolean }>("/api/mfa/disable", {
+      method: "POST",
+      token,
+      body: { masterPasswordHash, code },
+    });
+  },
+
   mfaRegenerateRecoveryCodes(token: string, masterPasswordHash: string, code: string) {
     return http<{ recoveryCodes: string[] }>("/api/mfa/recovery-codes", {
       method: "POST",

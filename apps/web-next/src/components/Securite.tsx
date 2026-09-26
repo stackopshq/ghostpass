@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { computeLoginHash, createRecovery, wrapUserKeyForPasskey } from "@/lib/crypto";
 import { useI18n } from "@/lib/i18n";
+import { actionSecondFacteur } from "@/lib/mfa";
 import { useSession } from "@/lib/session";
 import { libelleAppareil } from "@/lib/securite";
 import { formatDate } from "@/lib/vault";
@@ -178,6 +179,13 @@ export function Securite() {
   /// Combien il en reste, ça en revanche se recharge : c'est ce qui permet de
   /// prévenir avant que la réserve soit vide.
   const [codesRestants, setCodesRestants] = useState<number | null>(null);
+  /// Trois états et non deux : `true` active, `false` inactive, `null` « je n'ai
+  /// pas pu regarder ». Le bouton s'affichait sans jamais consulter ce fait —
+  /// il proposait donc d'activer un second facteur déjà actif, à côté d'un
+  /// décompte de codes de récupération qui prouvait le contraire.
+  const [mfaActive, setMfaActive] = useState<boolean | null>(null);
+  const [motDePasseDesac, setMotDePasseDesac] = useState<string | null>(null);
+  const [codeDesac, setCodeDesac] = useState("");
   /// Refaire la série : mot de passe + un code encore valide (TOTP ou de
   /// récupération). `null` tant que personne ne l'a demandé.
   const [motDePasseRegen, setMotDePasseRegen] = useState<string | null>(null);
@@ -208,8 +216,14 @@ export function Securite() {
     // décompte. Un état de second facteur illisible n'est pas une panne d'écran.
     api
       .mfaStatus(token)
-      .then((e) => setCodesRestants(e.enabled ? e.recoveryCodesRemaining : null))
-      .catch(() => setCodesRestants(null));
+      .then((e) => {
+        setMfaActive(e.enabled);
+        setCodesRestants(e.enabled ? e.recoveryCodesRemaining : null);
+      })
+      .catch(() => {
+        setMfaActive(null);
+        setCodesRestants(null);
+      });
     const echecs = [pk, ck, act].filter((r) => r.status === "rejected").length;
     setErreur(echecs > 0 ? t("app.deletedSome", { ok: 3 - echecs, ko: echecs }) : null);
   }, [token, t]);
@@ -254,7 +268,10 @@ export function Securite() {
           sous={t("app.twoFactorSub")}
           action={
             !mfa &&
-            motDePasse2fa === null && (
+            motDePasse2fa === null &&
+            motDePasseDesac === null &&
+            // La décision est dans `lib/mfa.ts`, pour qu'un test puisse la tenir.
+            (actionSecondFacteur(mfaActive) === "activer" ? (
               // Le clic ouvre le champ ; il ne lance plus la configuration.
               //
               // `/api/mfa/setup` **remet le secret à zéro** — c'est écrit dans la route —
@@ -264,7 +281,15 @@ export function Securite() {
               <Bouton disabled={occupe} onClick={() => setMotDePasse2fa("")}>
                 {t("app.enable2fa")}
               </Bouton>
-            )
+            ) : actionSecondFacteur(mfaActive) === "desactiver" ? (
+              <Bouton
+                variante="danger"
+                disabled={occupe}
+                onClick={() => setMotDePasseDesac("")}
+              >
+                {t("app.disable2fa")}
+              </Bouton>
+            ) : null)
           }
         >
           {!mfa && motDePasse2fa !== null && (
@@ -395,10 +420,67 @@ export function Securite() {
             </div>
           )}
 
+          {/* L'état, dit à l'écran. Il n'apparaissait nulle part : la seule chose
+              visible était un bouton « Activer », qui restait le même une fois
+              la 2FA activée. */}
+          {!mfa && motDePasse2fa === null && mfaActive === true && motDePasseDesac === null && (
+            <p className="text-xs text-muted">{t("app.twoFactorOn")}</p>
+          )}
+          {mfaActive === null && (
+            <p className="text-xs text-muted">{t("app.twoFactorUnknown")}</p>
+          )}
+
+          {/* La désactivation. La route existait depuis toujours, l'écran ne
+              l'offrait pas — le seul moyen de revenir en arrière était de ne
+              pas avancer. Même exigence que la régénération : le mot de passe
+              maître ET un second facteur. */}
+          {motDePasseDesac !== null && (
+            <div className="mt-3 flex flex-col gap-2">
+              <p className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
+                {t("app.disable2faWarning")}
+              </p>
+              <Champ label={t("app.masterPassword")}>
+                <Saisie
+                  type="password"
+                  value={motDePasseDesac}
+                  onChange={(e) => setMotDePasseDesac(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </Champ>
+              <Champ label={t("app.codeOrRecovery")}>
+                <Saisie value={codeDesac} onChange={(e) => setCodeDesac(e.target.value)} />
+              </Champ>
+              <div className="flex gap-2">
+                <Bouton
+                  variante="danger"
+                  disabled={occupe || !motDePasseDesac || !codeDesac || !infoCompte}
+                  onClick={() =>
+                    void agir(async () => {
+                      const preuve = computeLoginHash(
+                        infoCompte!.email,
+                        motDePasseDesac,
+                        infoCompte!.kdfParams,
+                      );
+                      await api.mfaDisable(token!, preuve, codeDesac);
+                      setMotDePasseDesac(null);
+                      setCodeDesac("");
+                      setCodesRecup(null);
+                    })
+                  }
+                >
+                  {t("app.confirm")}
+                </Bouton>
+                <Bouton variante="discret" onClick={() => setMotDePasseDesac(null)}>
+                  {t("app.cancelBack")}
+                </Bouton>
+              </div>
+            </div>
+          )}
+
           {/* La réserve, une fois le second facteur en place. Le compte sert à
               prévenir avant qu'elle soit vide — le moment où l'on se croit
               protégé sans plus avoir de porte de sortie. */}
-          {!codesRecup && !mfa && codesRestants !== null && (
+          {!codesRecup && !mfa && motDePasseDesac === null && codesRestants !== null && (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-muted">
                 {t("app.recoveryCodesRemaining", { n: codesRestants, total: 10 })}
