@@ -84,6 +84,21 @@ export function VaultScreen() {
   const [deplacementLot, setDeplacementLot] = useState(false);
   const [chargement, setChargement] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+
+  // Un message de succès s'efface tout seul.
+  //
+  // `setMessage(null)` n'était appelé **nulle part** : « Déplacé vers … » restait donc en
+  // haut de l'écran pour le reste de la session, et le suivant le remplaçait sans que le
+  // premier ait jamais disparu. Un bandeau permanent cesse d'être lu — et le jour où il
+  // dit quelque chose d'important, personne ne le regarde plus.
+  //
+  // Le délai se réarme à chaque nouveau message, et se nettoie au démontage : sans cela,
+  // deux actions rapprochées laisseraient le premier compte à rebours effacer le second.
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(() => setMessage(null), 6000);
+    return () => clearTimeout(t);
+  }, [message]);
   // `null` = pas de formulaire ouvert ; sinon l'identifiant en cours de
   // modification, ou la chaîne vide pour une création.
   const [edition, setEdition] = useState<string | null>(null);
@@ -586,11 +601,16 @@ export function VaultScreen() {
       setAncre(null);
       setChoisi(null);
       await charger();
-      setMessage(
-        ko > 0
-          ? t("app.movedSome", { ok, ko, collection: dest.collectionName })
-          : t("app.movedAll", { n: ok, collection: dest.collectionName }),
-      );
+      // Un lot à moitié déplacé n'est pas un succès : il reste des éléments dans le
+      // coffre personnel, et c'est à l'utilisateur d'en faire quelque chose. Il passe
+      // donc par le bandeau d'erreur, qui **ne s'efface pas tout seul** — contrairement
+      // au message de réussite. Le vert qui disparaît et le rouge qui reste ne disent pas
+      // la même chose, et c'est voulu.
+      if (ko > 0) {
+        setErreur(t("app.movedSome", { ok, ko, collection: dest.collectionName }));
+      } else {
+        setMessage(t("app.movedAll", { n: ok, collection: dest.collectionName }));
+      }
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e));
     } finally {
@@ -641,9 +661,15 @@ export function VaultScreen() {
         </p>
       )}
       {message && (
-        <p className="shrink-0 border-b border-border bg-success/10 px-4 py-2 text-sm text-success">
+        // Cliquable autant qu'éphémère : six secondes suffisent à lire « Déplacé vers … »
+        // et sont longues quand le bandeau masque ce qu'on regarde.
+        <button
+          type="button"
+          onClick={() => setMessage(null)}
+          className="shrink-0 cursor-pointer border-b border-border bg-success/10 px-4 py-2 text-left text-sm text-success"
+        >
           {message}
-        </p>
+        </button>
       )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[16rem_21rem_1fr]">
