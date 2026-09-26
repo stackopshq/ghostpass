@@ -20,10 +20,12 @@ import {
   type OrgHandle,
 } from "@/lib/crypto";
 import { useI18n } from "@/lib/i18n";
+import { historiqueApresModification } from "@/lib/vault";
+import { saisieDepuisElement, saisieEquipeVide } from "@/lib/formulaireEquipe";
 import { useSession } from "@/lib/session";
 import { peutEcrire, type AccesEffectif, type Collection, type Member, type OrgSummary } from "@/lib/orgs";
 import { Bouton, Champ, Liste, Saisie, Zone } from "@/components/champs";
-import { adressesPourSaisie, ChampsAdresses } from "@/components/ChampsAdresses";
+import { ChampsAdresses } from "@/components/ChampsAdresses";
 import { SecretRow, type LigneSecret } from "@/components/SecretRow";
 import { useCopie } from "@/components/useCopie";
 import { Dossier, Membres } from "@/components/Icones";
@@ -33,7 +35,7 @@ type Volet = "collection" | "membres" | null;
 /// `urls` et non `url` : un secret d'équipe porte autant d'adresses qu'un
 /// secret personnel. Une FONCTION et non une constante, pour que deux
 /// formulaires vierges ne partagent pas le même tableau d'adresses.
-const formulaireVide = () => ({ name: "", username: "", password: "", urls: [""], notes: "", totp: "" });
+
 
 export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => void }) {
   const { t } = useI18n();
@@ -53,7 +55,7 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
   const [nouvelleColl, setNouvelleColl] = useState("");
   const [courriel, setCourriel] = useState("");
   const [role, setRole] = useState("member");
-  const [saisie, setSaisie] = useState(formulaireVide());
+  const [saisie, setSaisie] = useState(saisieEquipeVide());
   const [edition, setEdition] = useState<string | null>(null);
 
   const echoue = (e: unknown) => setErreur(e instanceof Error ? e.message : String(e));
@@ -122,7 +124,7 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
         setItems(
           dtos.map((d) => ({ ...decryptOrgItem(poignee, d.encryptedKey, d.encryptedData), itemId: d.id })),
         );
-        setSaisie(formulaireVide());
+        setSaisie(saisieEquipeVide());
         setEdition(null);
         try {
           setActes((await api.listCollectionAccess(token, org.orgId, c.id)).access);
@@ -155,7 +157,15 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
     e.preventDefault();
     if (!token || !cle || !choisie) return;
     await agir(async () => {
-      const enc = encryptOrgLogin(cle, saisie);
+      const enCours = edition ? items.find((i) => i.itemId === edition) : undefined;
+      const enc = encryptOrgLogin(cle, {
+        ...saisie,
+        passwordHistory: historiqueApresModification(
+          enCours?.password,
+          saisie.password,
+          saisie.passwordHistory,
+        ),
+      });
       if (edition) await api.updateOrgItem(token, org.orgId, choisie.id, edition, enc);
       else await api.createOrgItem(token, org.orgId, choisie.id, enc);
       await ouvrirCollection(choisie);
@@ -354,14 +364,7 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
                             variante="discret"
                             onClick={() => {
                               setEdition(item.itemId);
-                              setSaisie({
-                                name: item.name,
-                                username: item.username,
-                                password: item.password,
-                                urls: adressesPourSaisie(item.urls),
-                                notes: item.note,
-                                totp: item.totp,
-                              });
+                              setSaisie(saisieDepuisElement(item));
                             }}
                           >
                             {t("org.edit")}
@@ -427,7 +430,7 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
                       type="button"
                       onClick={() => {
                         setEdition(null);
-                        setSaisie(formulaireVide());
+                        setSaisie(saisieEquipeVide());
                       }}
                     >
                       {t("app.cancel")}
