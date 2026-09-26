@@ -609,7 +609,7 @@ export function VaultScreen() {
                 onChange={(e) => setRecherche(e.target.value)}
                 placeholder={t("app.searchVault")}
                 aria-label={t("app.searchVault")}
-                className="mb-6 w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+                className="mb-6 w-full rounded border border-border bg-surface-2 px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
               />
             </>
           )}

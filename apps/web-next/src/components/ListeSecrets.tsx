@@ -143,7 +143,7 @@ export function ListeSecrets({
                       collection était coupé net, sans points de suite. */}
                   {item.shared && (
                     <span
-                      className="ml-2 hidden max-w-[9rem] shrink-0 truncate rounded-full bg-accent/12 px-2 py-0.5 text-2xs text-accent sm:block"
+                      className="ml-2 hidden max-w-[9rem] shrink-0 truncate rounded-pill bg-accent/12 px-2 py-0.5 text-2xs text-accent sm:block"
                       title={`${item.shared.orgName} · ${item.shared.collectionName}`}
                     >
                       {item.shared.collectionName}

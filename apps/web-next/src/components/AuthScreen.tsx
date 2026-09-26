@@ -236,8 +236,16 @@ export function AuthScreen() {
             générique tenait sa place, si bien que l'écran par lequel tout le
             monde entre était le seul à ne pas porter l'identité du produit. */}
         <div className="mb-7 flex flex-col items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="" width={44} height={44} className="size-11" />
+          {/* `ghost-mark` : la pastille sombre que la charte pose derrière la
+              marque. Le dégradé du logo va d'un bleu clair à un bleu profond ;
+              sur le fond clair de ce mode il mesurait 1,69:1, autant dire qu'il
+              s'effaçait. La pastille vaut le `base` du thème SOMBRE dans les
+              deux thèmes : en sombre elle se confond avec la page et ne se voit
+              pas, en clair elle apparaît et porte le logo. */}
+          <span className="ghost-mark">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" width={44} height={44} className="size-11" />
+          </span>
           <span className="text-2xl font-semibold tracking-tight text-foreground">GhostPass</span>
         </div>
 

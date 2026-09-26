@@ -165,7 +165,11 @@ function NouveauDossier({ chemins, onCreer }: { chemins: string[]; onCreer: (p: 
       </summary>
       <form
         aria-label={t("app.newFolder")}
-        className="absolute right-0 z-10 mt-1 flex w-56 gap-1 rounded border border-border bg-surface p-2 shadow-lg"
+        // `verre-opaque` et non `bg-surface` : ce panneau se déroule SUR les noms
+        // de dossiers, et `--color-surface` est translucide par conception (blanc
+        // à 3 %). Il laissait donc lire l'arborescence à travers lui en thème
+        // sombre — vu en capture, pas déduit du CSS.
+        className="verre-opaque absolute right-0 z-10 mt-1 flex w-56 gap-1 rounded border border-border p-2 shadow-lg"
         onSubmit={(e) => {
           e.preventDefault();
           const champ = e.currentTarget.elements.namedItem("dossier") as HTMLInputElement;

@@ -37,8 +37,14 @@ export function Champ({ label, children }: { label: string; children: ReactNode 
   );
 }
 
+// `rounded` (12 px) et non `rounded-lg` (18) : un champ n'est pas une carte.
+// Jusqu'au 2026-09-26 les deux étaient sur la même marche, si bien que la
+// saisie avait exactement la forme du panneau qui la contient — la hiérarchie
+// aplatie que ghostcal avait documentée le 2026-08-31 chez lui. GhostMail et
+// GhostCal posent tous deux leurs champs sur `rounded` ; les trois écrans de
+// connexion de la suite se superposent désormais.
 const saisie =
-  "w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm text-foreground " +
+  "w-full rounded border border-border bg-surface-2 px-3.5 py-2.5 text-sm text-foreground " +
   "placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25";
 
 export function Saisie(props: React.InputHTMLAttributes<HTMLInputElement>) {

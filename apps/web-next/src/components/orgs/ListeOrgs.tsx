@@ -47,7 +47,7 @@ function Pastille({
       aria-pressed={choisie}
       aria-expanded={ouvre}
       title={label}
-      className="size-5 shrink-0 rounded-full border border-border-strong focus:outline-none focus:ring-2 focus:ring-accent/40"
+      className="size-5 shrink-0 rounded-pill border border-border-strong focus:outline-none focus:ring-2 focus:ring-accent/40"
       style={{ backgroundColor: couleur }}
     />
   );
