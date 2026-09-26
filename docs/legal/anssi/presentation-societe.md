@@ -37,7 +37,7 @@ site en Suisse romande et en Haute-Savoie, à distance dans le reste de l'Europe
 ## Organisation
 
 Deux personnes : **Kevin Allioli**, architecte cloud et exploitant de l'entreprise, et
-**Clara Vanacker**, ingénieure logiciel. Pas de sous-traitance de la production.
+**Clara Allioli**, ingénieure logiciel. Pas de sous-traitance de la production.
 
 ## Les produits édités
 
