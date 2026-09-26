@@ -670,4 +670,5 @@
     <string name="element_deplacement_explique">L\'élément sera rechiffré pour l\'équipe et rangé à la corbeille de votre coffre personnel. Les membres du coffre pourront le lire.</string>
     <string name="element_aucune_equipe">Vous n\'avez de droit d\'écriture sur aucun coffre d\'équipe.</string>
     <string name="element_equipes_illisibles">Certains coffres d\'équipe n\'ont pas pu être ouverts : la liste ci-dessus est peut-être incomplète.</string>
+    <string name="deverrouillage_code_verification">Code de vérification</string>
 </resources>

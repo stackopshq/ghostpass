@@ -577,4 +577,5 @@
     <string name="element_deplacement_explique">The item will be re-encrypted for the team and moved to your personal vault\'s trash. Members of the vault will be able to read it.</string>
     <string name="element_aucune_equipe">You have write access to no team vault.</string>
     <string name="element_equipes_illisibles">Some team vaults could not be opened: the list above may be incomplete.</string>
+    <string name="deverrouillage_code_verification">Verification code</string>
 </resources>

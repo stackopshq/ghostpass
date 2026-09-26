@@ -1473,6 +1473,17 @@
         }
       }
     },
+    "Code de vérification": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification code"
+          }
+        }
+      }
+    },
     "Code à six chiffres": {
       "localizations": {
         "en": {
@@ -4472,6 +4483,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Too short, or made of a single kind of character."
+          }
+        }
+      }
+    },
+    "Trop d'essais sur le second facteur. Réessayez dans un quart d'heure.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many second-factor attempts. Try again in about fifteen minutes."
           }
         }
       }
