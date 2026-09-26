@@ -14,6 +14,7 @@ import { api } from "@/lib/api";
 import { decryptOrgItem, encryptOrgLogin, type OrgHandle } from "@/lib/crypto";
 import { useI18n } from "@/lib/i18n";
 import { Bouton, BoutonIcone, Champ, Liste, Panneau, Saisie, TeteDePanneau, Zone } from "@/components/champs";
+import { adressesPourSaisie, ChampsAdresses } from "@/components/ChampsAdresses";
 import { Oeil, OeilBarre } from "@/components/Icones";
 import { SecretRow, type LigneSecret } from "@/components/SecretRow";
 import { useCopie } from "@/components/useCopie";
@@ -28,7 +29,13 @@ type Acces = {
   revocable: boolean;
 };
 
-const VIDE = { name: "", username: "", password: "", url: "", notes: "", totp: "" };
+/// `urls` et non `url` : un secret d'équipe porte autant d'adresses qu'un
+/// secret personnel, et le formulaire en garde toujours au moins une case.
+///
+/// Une FONCTION et non une constante depuis que le formulaire porte une liste :
+/// une constante partagerait le même tableau entre le formulaire vierge et
+/// tous ceux qui le réinitialisent.
+const vide = () => ({ name: "", username: "", password: "", urls: [""], notes: "", totp: "" });
 
 export function CollectionPane({
   token, orgId, orgRole, poignee, collection, membres, onErreur,
@@ -46,7 +53,7 @@ export function CollectionPane({
   const [items, setItems] = useState<LigneSecret[]>([]);
   const [acces, setAcces] = useState<Acces[]>([]);
   const [occupe, setOccupe] = useState(false);
-  const [form, setForm] = useState(VIDE);
+  const [form, setForm] = useState(vide());
   const [enEdition, setEnEdition] = useState<string | null>(null);
   const [motDePasseVisible, setMotDePasseVisible] = useState(false);
   const [beneficiaire, setBeneficiaire] = useState("");
@@ -72,7 +79,7 @@ export function CollectionPane({
       const dtos = (await api.listCollectionItems(token, orgId, collection.id)).items;
       // `d.id` est conservé : c'est lui qui rend la modification possible.
       setItems(dtos.map((d) => ({ ...decryptOrgItem(poignee, d.encryptedKey, d.encryptedData), itemId: d.id })));
-      setForm(VIDE);
+      setForm(vide());
       setEnEdition(null);
       await chargerAcces();
     } catch (err) {
@@ -172,7 +179,7 @@ export function CollectionPane({
                           setEnEdition(it.itemId);
                           setForm({
                             name: it.name, username: it.username, password: it.password,
-                            url: it.url, notes: it.note ?? "", totp: it.totp ?? "",
+                            urls: adressesPourSaisie(it.urls), notes: it.note ?? "", totp: it.totp ?? "",
                           });
                           setMotDePasseVisible(false);
                         }}
@@ -198,9 +205,11 @@ export function CollectionPane({
             <Champ label={t("org.name")}>
               <Saisie value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("org.namePh")} required />
             </Champ>
-            <Champ label={t("org.website")}>
-              <Saisie value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder={t("org.websitePh")} inputMode="url" />
-            </Champ>
+            <ChampsAdresses
+              valeurs={form.urls}
+              onChange={(urls) => setForm({ ...form, urls })}
+              invite={t("org.websitePh")}
+            />
             <Champ label={t("org.username")}>
               <Saisie value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder={t("org.usernamePh")} />
             </Champ>
@@ -231,7 +240,7 @@ export function CollectionPane({
                 {enEdition ? t("org.save") : t("org.addItem")}
               </Bouton>
               {enEdition && (
-                <Bouton type="button" variante="discret" onClick={() => { setForm(VIDE); setEnEdition(null); }}>
+                <Bouton type="button" variante="discret" onClick={() => { setForm(vide()); setEnEdition(null); }}>
                   {t("org.cancel")}
                 </Bouton>
               )}

@@ -23,13 +23,17 @@ import { useI18n } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { peutEcrire, type AccesEffectif, type Collection, type Member, type OrgSummary } from "@/lib/orgs";
 import { Bouton, Champ, Liste, Saisie, Zone } from "@/components/champs";
+import { adressesPourSaisie, ChampsAdresses } from "@/components/ChampsAdresses";
 import { SecretRow, type LigneSecret } from "@/components/SecretRow";
 import { useCopie } from "@/components/useCopie";
 import { Dossier, Membres } from "@/components/Icones";
 
 type Volet = "collection" | "membres" | null;
 
-const FORMULAIRE_VIDE = { name: "", username: "", password: "", url: "", notes: "", totp: "" };
+/// `urls` et non `url` : un secret d'équipe porte autant d'adresses qu'un
+/// secret personnel. Une FONCTION et non une constante, pour que deux
+/// formulaires vierges ne partagent pas le même tableau d'adresses.
+const formulaireVide = () => ({ name: "", username: "", password: "", urls: [""], notes: "", totp: "" });
 
 export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => void }) {
   const { t } = useI18n();
@@ -49,7 +53,7 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
   const [nouvelleColl, setNouvelleColl] = useState("");
   const [courriel, setCourriel] = useState("");
   const [role, setRole] = useState("member");
-  const [saisie, setSaisie] = useState({ ...FORMULAIRE_VIDE });
+  const [saisie, setSaisie] = useState(formulaireVide());
   const [edition, setEdition] = useState<string | null>(null);
 
   const echoue = (e: unknown) => setErreur(e instanceof Error ? e.message : String(e));
@@ -118,7 +122,7 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
         setItems(
           dtos.map((d) => ({ ...decryptOrgItem(poignee, d.encryptedKey, d.encryptedData), itemId: d.id })),
         );
-        setSaisie({ ...FORMULAIRE_VIDE });
+        setSaisie(formulaireVide());
         setEdition(null);
         try {
           setActes((await api.listCollectionAccess(token, org.orgId, c.id)).access);
@@ -354,7 +358,7 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
                                 name: item.name,
                                 username: item.username,
                                 password: item.password,
-                                url: item.url,
+                                urls: adressesPourSaisie(item.urls),
                                 notes: item.note,
                                 totp: item.totp,
                               });
@@ -401,13 +405,11 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
                     autoComplete="off"
                   />
                 </Champ>
-                <Champ label={t("org.website")}>
-                  <Saisie
-                    value={saisie.url}
-                    onChange={(e) => setSaisie({ ...saisie, url: e.target.value })}
-                    placeholder={t("org.websitePh")}
-                  />
-                </Champ>
+                <ChampsAdresses
+                  valeurs={saisie.urls}
+                  onChange={(urls) => setSaisie({ ...saisie, urls })}
+                  invite={t("org.websitePh")}
+                />
                 <Champ label={t("org.notes")}>
                   <Zone
                     value={saisie.notes}
@@ -425,7 +427,7 @@ export function DetailOrg({ org, onRetour }: { org: OrgSummary; onRetour: () => 
                       type="button"
                       onClick={() => {
                         setEdition(null);
-                        setSaisie({ ...FORMULAIRE_VIDE });
+                        setSaisie(formulaireVide());
                       }}
                     >
                       {t("app.cancel")}

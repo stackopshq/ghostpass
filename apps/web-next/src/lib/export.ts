@@ -11,6 +11,31 @@ const echappe = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
 
 export const EN_TETE_CSV = "name,folder,url,username,password,totp";
 
+/// Le séparateur des adresses DANS la cellule `url`.
+///
+/// Une entrée porte plusieurs adresses — `connect.ulys.com` et
+/// `user.ulys.com` valent pour le même compte. Le CSV n'a qu'une colonne pour
+/// les loger, et n'en écrire qu'une recréerait à la sortie la perte que le
+/// reste de ce changement vient de fermer : un coffre exporté puis réimporté
+/// reviendrait amputé.
+///
+/// Le retour à la ligne plutôt que la virgule ou l'espace, pour trois raisons
+/// qui tiennent toutes à ce qu'on sait vérifier :
+///
+///  - il est légal dans une cellule entre guillemets (RFC 4180), et
+///    `parseCsvDetaille` le relit déjà comme tel — le tour complet
+///    export → import est donc éprouvé, pas supposé ;
+///  - la virgule apparaît dans de vraies URL (paramètres de requête), et la
+///    prendre pour un séparateur couperait une adresse en deux ;
+///  - c'est la forme qu'Android présente déjà à l'écran dans son champ
+///    d'adresses (`EcranDeLElement.kt`, `uris = adresses.lines()`).
+///
+/// Ce qu'il ne fait PAS : deviner le séparateur d'un autre gestionnaire. Un
+/// export tiers qui logerait deux adresses dans une cellule autrement qu'à la
+/// ligne entre ici comme UNE adresse — exactement comme avant ce changement,
+/// donc sans régression, mais sans progrès non plus.
+const SEPARATEUR_ADRESSES = "\n";
+
 /// Rend le CSV d'une liste d'entrées **personnelles**.
 ///
 /// Le nom du paramètre n'est pas décoratif. L'application Svelte exportait
@@ -26,7 +51,16 @@ export const EN_TETE_CSV = "name,folder,url,username,password,totp";
 /// donner et que son nom dit lequel.
 export function versCsv(personnels: VaultEntry[]): string {
   const lignes = personnels.map((i) =>
-    [i.name, i.folder, i.url, i.username, i.password, i.totp].map(echappe).join(","),
+    [
+      i.name,
+      i.folder,
+      i.urls.join(SEPARATEUR_ADRESSES),
+      i.username,
+      i.password,
+      i.totp,
+    ]
+      .map(echappe)
+      .join(","),
   );
   return [EN_TETE_CSV, ...lignes].join("\n");
 }
@@ -69,6 +103,15 @@ const ALIAS = {
   note: ["notes", "note", "extra", "comments"],
 } as const;
 
+/// Découpe la cellule d'adresses en adresses. Voir `SEPARATEUR_ADRESSES` pour
+/// le choix du retour à la ligne, et pour ce qu'il ne prétend pas deviner.
+export function decouperAdresses(cellule: string): string[] {
+  return cellule
+    .split(/\r\n?|\n/)
+    .map((u) => u.trim())
+    .filter((u) => u !== "");
+}
+
 export function depuisLigneCsv(
   r: Record<string, string>,
   sansNom: string,
@@ -77,7 +120,7 @@ export function depuisLigneCsv(
   name: string;
   username: string;
   password: string;
-  url: string;
+  urls: string[];
   folder: string;
   totp: string;
   note: string;
@@ -89,7 +132,7 @@ export function depuisLigneCsv(
     name: prends("name") || sansNom,
     username: prends("username"),
     password: prends("password"),
-    url: prends("url"),
+    urls: decouperAdresses(prends("url")),
     folder: prends("folder"),
     totp: prends("totp"),
     note: prends("note"),

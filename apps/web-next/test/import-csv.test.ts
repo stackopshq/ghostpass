@@ -36,7 +36,7 @@ test("Bitwarden : la note arrive, et le dossier avec", () => {
   assert.equal(e.folder, "Travail");
   assert.equal(e.username, "kevin");
   assert.equal(e.password, "s3cr3t");
-  assert.equal(e.url, "https://bascule.example");
+  assert.deepEqual(e.urls, ["https://bascule.example"]);
   assert.equal(e.totp, "JBSWY3DPEHPK3PXP");
 });
 

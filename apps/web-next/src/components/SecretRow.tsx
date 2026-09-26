@@ -51,7 +51,10 @@ export function SecretRow({
   }, [item.totp]);
 
   const { jetonIcone } = useSession();
-  const favicon = faviconUrl(item.url, jetonIcone);
+  // Le favicon de la PREMIÈRE adresse : une pastille de 32 px n'en porte
+  // qu'une. Les autres adresses restent dans l'élément et s'affichent au
+  // détail — c'est un choix d'affichage, pas une troncature de donnée.
+  const favicon = faviconUrl(item.urls[0] ?? "", jetonIcone);
 
   return (
     <li className="flex items-start gap-3 border-b border-border py-3 last:border-0">

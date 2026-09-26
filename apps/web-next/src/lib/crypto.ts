@@ -40,11 +40,49 @@ export interface LoginBlobs {
 
 export type ItemKind = "login" | "note" | "card";
 
+// ─── Un identifiant porte PLUSIEURS adresses ───
+//
+// Le format chiffré l'a toujours su : `uris` est une liste, et le cœur Rust la
+// déclare `Vec<String>` (`crates/ghostpass-crypto/src/vault.rs`). Ce sont les
+// clients qui la rabotaient — on lisait `uris[0]` et on réécrivait `[url]`.
+// L'effet n'était pas une fonction manquante mais une PERTE : un élément
+// importé avec `connect.ulys.com` et `user.ulys.com` revenait avec une seule
+// adresse, et la première modification entérinait la disparition de l'autre,
+// sans message et sans que le serveur puisse la rendre.
+//
+// D'où `urls: string[]` dans le modèle déchiffré, et NON un second champ posé
+// à côté de `url`. Deux champs pour une même vérité divergent à la première
+// modification : c'est exactement le défaut qu'on vient de corriger trois fois
+// ailleurs dans ce fichier (les notes écrites et jamais relues).
+
+/// Ce qui part dans la charge chiffrée : rognées, les vides retirées.
+///
+/// Rogner est sans danger ici, contrairement à un mot de passe : aucune adresse
+/// ne commence par une espace, et le formulaire produit des lignes vides dès
+/// qu'on ajoute un champ sans le remplir.
+function adressesAEcrire(urls: readonly string[] | undefined): string[] {
+  return (urls ?? []).map((u) => u.trim()).filter((u) => u !== "");
+}
+
+/// Ce qu'on relit de la charge chiffrée.
+///
+/// Le cœur Rust déclare `uris: Vec<String>` SANS `#[serde(default)]`
+/// (`crates/ghostpass-crypto/src/vault.rs`) : une charge où le champ manque,
+/// vaut `null`, ou contient autre chose que des chaînes ne se déchiffre pas du
+/// tout — l'erreur arrive AVANT cette fonction, et c'est vérifié. Le garde
+/// ci-dessous n'est donc pas une protection contre le format d'aujourd'hui
+/// mais contre son assouplissement : le jour où quelqu'un ajoutera
+/// `#[serde(default)]` pour de la rétrocompatibilité, ce chemin rendra une
+/// liste vide au lieu de lever sur un `undefined.filter`.
+function adressesLues(brut: unknown): string[] {
+  return Array.isArray(brut) ? brut.filter((u): u is string => typeof u === "string") : [];
+}
+
 export interface LoginInput {
   name: string;
   username: string;
   password: string;
-  url?: string;
+  urls?: string[];
   folder?: string;
   totp?: string;
   notes?: string;
@@ -59,7 +97,7 @@ export interface ItemInput {
   // login
   username?: string;
   password?: string;
-  url?: string;
+  urls?: string[];
   totp?: string;
   passwordHistory?: string[];
   // note
@@ -78,7 +116,10 @@ export interface DecryptedItem {
   // login
   username: string;
   password: string;
-  url: string;
+  /// Toutes les adresses de l'élément, dans l'ordre où elles ont été saisies.
+  /// La première est celle qu'on montre quand la place manque (favicon,
+  /// vignette de liste) ; les autres ne sont jamais jetées pour autant.
+  urls: string[];
   totp: string;
   passwordHistory: string[];
   // note
@@ -98,7 +139,7 @@ function emptyItem(kind: ItemKind, name: string, folder: string): DecryptedItem 
     folder,
     username: "",
     password: "",
-    url: "",
+    urls: [],
     totp: "",
     passwordHistory: [],
     note: "",
@@ -240,7 +281,7 @@ export function encryptLogin(
       data: {
         username: login.username,
         password: login.password,
-        uris: login.url ? [login.url] : [],
+        uris: adressesAEcrire(login.urls),
         totp: login.totp || null,
         password_history: login.passwordHistory ?? [],
       },
@@ -311,7 +352,7 @@ export function decryptItem(
     ...emptyItem("login", item.name, item.folder ?? ""),
     username: item.data.data.username,
     password: item.data.data.password,
-    url: item.data.data.uris?.[0] ?? "",
+    urls: adressesLues(item.data.data.uris),
     totp: item.data.data.totp ?? "",
     // La charge chiffree ecrit `notes` (schema d'item), le modele dechiffre
     // expose `note` -- asymetrie reelle, a respecter des deux cotes. Ce champ
@@ -412,7 +453,7 @@ export function decryptVaultItem(
       note: raw.notes ?? "",
       username: l.username ?? "",
       password: l.password ?? "",
-      url: l.uris?.[0] ?? "",
+      urls: adressesLues(l.uris),
       totp: l.totp ?? "",
       passwordHistory: l.password_history ?? [],
     },
@@ -445,7 +486,7 @@ export function encryptItem(
       data: {
         username: input.username ?? "",
         password: input.password ?? "",
-        uris: input.url ? [input.url] : [],
+        uris: adressesAEcrire(input.urls),
         totp: input.totp || null,
         password_history: input.passwordHistory ?? [],
       },
@@ -535,7 +576,7 @@ export interface EmergencyItem {
   name: string;
   username: string;
   password: string;
-  url: string;
+  urls: string[];
 }
 
 /// (Grantor) Scelle son USK pour la clé publique d'un contact de confiance.
@@ -562,7 +603,7 @@ export function decryptEmergencyItem(
     name: item.name,
     username: d.username ?? "",
     password: d.password ?? "",
-    url: d.uris?.[0] ?? "",
+    urls: adressesLues(d.uris),
   };
 }
 
@@ -611,7 +652,7 @@ export function encryptOrgLogin(
       data: {
         username: login.username,
         password: login.password,
-        uris: login.url ? [login.url] : [],
+        uris: adressesAEcrire(login.urls),
         totp: login.totp || null,
         password_history: login.passwordHistory ?? [],
       },
@@ -652,7 +693,7 @@ export function decryptOrgItem(
     ...emptyItem("login", item.name, item.folder ?? ""),
     username: item.data.data.username,
     password: item.data.data.password,
-    url: item.data.data.uris?.[0] ?? "",
+    urls: adressesLues(item.data.data.uris),
     totp: item.data.data.totp ?? "",
     passwordHistory: item.data.data.password_history ?? [],
     // ─── Les notes étaient écrites et jamais relues ───

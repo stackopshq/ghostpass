@@ -109,7 +109,9 @@ export function DetailSecret({
   return (
     <div className="flex min-h-0 flex-col">
       <div className="flex items-center gap-3.5 px-5 pb-4 pt-5">
-        <Avatar nom={item.name} url={item.url} grand />
+        {/* Le favicon n'a qu'une pastille : c'est la première adresse qui la
+            décide. Les autres sont montrées en toutes lettres plus bas. */}
+        <Avatar nom={item.name} url={item.urls[0]} grand />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-base font-semibold text-foreground">{item.name}</h2>
           <p className="text-xs text-muted">{genre}</p>
@@ -173,25 +175,34 @@ export function DetailSecret({
           </>
         ) : (
           <>
-            {item.url && (
+            {/* TOUTES les adresses, une ligne chacune, avec leur propre
+                bouton de copie. N'afficher que la première serait la moitié
+                visible de la troncature qu'on vient de retirer du modèle : la
+                donnée survivrait à l'aller-retour, et resterait invisible.
+
+                Le libellé n'est porté que par la première ligne : répété sur
+                chacune, il ferait lire quatre champs distincts là où il n'y a
+                qu'un champ à plusieurs valeurs. */}
+            {item.urls.map((adresse, i) => (
               <Ligne
-                label={t("app.website")}
-                valeur={item.url}
-                cle="url"
+                key={`${i}-${adresse}`}
+                label={i === 0 ? t("app.website") : ""}
+                valeur={adresse}
+                cle={`url-${i}`}
                 copie={copie}
                 onCopier={copier}
                 enfant={
                   <a
-                    href={item.url.includes("://") ? item.url : `https://${item.url}`}
+                    href={adresse.includes("://") ? adresse : `https://${adresse}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="truncate text-accent hover:underline"
                   >
-                    {item.url}
+                    {adresse}
                   </a>
                 }
               />
-            )}
+            ))}
             <Ligne label={t("app.kindLogin")} valeur={item.username} cle="user" copie={copie} onCopier={copier} />
             <Ligne
               label={t("app.password")}

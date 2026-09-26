@@ -125,7 +125,9 @@ export function ListeSecrets({
                   aria-current={actif ? "true" : undefined}
                   className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
                 >
-                  <Avatar nom={item.name} url={item.url} />
+                  {/* La vignette de liste montre le favicon de la première
+                      adresse : une pastille ne peut en porter qu'une. */}
+                  <Avatar nom={item.name} url={item.urls[0]} />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className={`truncate text-sm ${actif ? "text-accent" : "text-foreground"}`}>{item.name}</span>
                     {sous && <span className="truncate text-xs text-muted">{sous}</span>}
