@@ -43,11 +43,12 @@ enum SiteMatching {
     /// fausse est pire qu'une absence de suggestion : elle fait remplir un formulaire
     /// avec le mauvais mot de passe.
     static func hostDansLeNom(_ nom: String) -> String {
-        let premier = nom.split(whereSeparator: { $0 == " " || $0 == "\t" }).first.map(String.init) ?? ""
+        let mots = nom.split(whereSeparator: { $0 == " " || $0 == "\t" })
+        let premier = mots.first.map(String.init) ?? ""
         let candidat = host(of: premier)
         guard candidat.contains("."),
-              !candidat.hasPrefix("."), !candidat.hasSuffix("."),
-              candidat.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" })
+            !candidat.hasPrefix("."), !candidat.hasSuffix("."),
+            candidat.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" })
         else { return "" }
         return candidat
     }
