@@ -58,7 +58,8 @@ const en: Dict = {
   "auth.ssoFailed": "SSO sign-in failed.",
   "auth.badMaster": "Invalid master password.",
   "auth.ssoUnlock": "Unlock your vault",
-  "auth.ssoUnlockSub": "Signed in as {email}. Your master password is still needed — the server has never seen it.",
+  "auth.ssoUnlockSub":
+    "Signed in as {email}. Your master password is still needed — the server has never seen it.",
   "auth.masterPassword": "Master password",
   "auth.unlock": "Unlock",
   "auth.signIn": "Sign in",
@@ -70,19 +71,23 @@ const en: Dict = {
   "auth.needAccountAction": "Create an account",
   "auth.forgot": "Forgotten master password?",
   "auth.recoverTitle": "Reopen your vault",
-  "auth.recoverSub": "Your recovery key reopens the vault and sets a new master password. Without that key, nobody can — us included.",
+  "auth.recoverSub":
+    "Your recovery key reopens the vault and sets a new master password. Without that key, nobody can — us included.",
   "auth.recoveryKey": "Recovery key",
   "auth.newMasterPassword": "New master password",
   "auth.recoverAction": "Reset my master password",
-  "auth.recoverDone": "Your vault is reopened. Sign in with your new master password.",
-  "auth.recoverEndsSessions": "Every open session is signed out, on every device.",
+  "auth.recoverDone":
+    "Your vault is reopened. Sign in with your new master password.",
+  "auth.recoverEndsSessions":
+    "Every open session is signed out, on every device.",
   "auth.errKeyRefused": "That recovery key does not open this account.",
   "auth.errNetwork": "The server could not be reached. Nothing was changed.",
   "auth.backToSignIn": "Back to sign in",
   "auth.haveAccount": "Already have an account?",
   "auth.haveAccountAction": "Sign in",
   "auth.privacy": "Privacy policy",
-  "auth.privacyNotice": "By creating an account you accept our handling of your data — what we hold, and what we cannot read:",
+  "auth.privacyNotice":
+    "By creating an account you accept our handling of your data — what we hold, and what we cannot read:",
   "org.copyTotp": "Copy TOTP code",
   "org.noUsername": "No username",
   "org.accessTitle": "Collection access",
@@ -103,11 +108,14 @@ const en: Dict = {
   "org.createCollection": "Create collection",
   "org.backToOrgs": "← My organisations",
   "org.myOrgs": "My organisations",
-  "org.keyUnavailable": "Organisation key unavailable — accept the invitation first.",
-  "org.confirmRevoke": "Revoke {email}? The organisation key will be rotated and every shared secret re-wrapped.",
+  "org.keyUnavailable":
+    "Organisation key unavailable — accept the invitation first.",
+  "org.confirmRevoke":
+    "Revoke {email}? The organisation key will be rotated and every shared secret re-wrapped.",
   "org.add": "Add",
   "org.newSecret": "New shared secret",
-  "org.accessEffective": "Effective access: direct grants and role inheritance combined.",
+  "org.accessEffective":
+    "Effective access: direct grants and role inheritance combined.",
   "org.createOrg": "Create an organisation",
   "org.orgName": "Organisation name",
   "org.orgNamePh": "StackOps Team",
@@ -126,7 +134,8 @@ const en: Dict = {
   "org.colorDefault": "Default",
   "org.collections": "Collections",
   "org.noCollections": "No collection.",
-  "org.pickInLeft": "Choose a collection or the member list in the left column.",
+  "org.pickInLeft":
+    "Choose a collection or the member list in the left column.",
   "org.toggleReveal": "Show/hide",
   "org.namePh": "Prod DB",
   "org.usernamePh": "svc",
@@ -144,7 +153,8 @@ const en: Dict = {
   "app.pt3c": ": recovery through a rescue kit.",
   "app.footer": "Hosted in France · end-to-end encrypted",
   "app.ssoTitle": "SSO sign-in",
-  "app.ssoSub": "Identity verified. Enter your master password to unlock your vault.",
+  "app.ssoSub":
+    "Identity verified. Enter your master password to unlock your vault.",
   "app.email": "Email",
   "app.masterPassword": "Master password",
   "app.cancelBack": "← Cancel",
@@ -159,25 +169,32 @@ const en: Dict = {
   "app.loginPasskey": "Sign in with a passkey",
   "app.loginSso": "Sign in with SSO",
   "app.forgot": "Forgotten password?",
-  "app.authFoot": "End-to-end encrypted. Your master password is never transmitted.",
+  "app.authFoot":
+    "End-to-end encrypted. Your master password is never transmitted.",
   "app.newItem": "New item",
   "app.myVault": "My vault",
   "app.orgs": "Organisations",
   "app.security": "Security",
   "app.twoFactor": "Two-factor authentication",
-  "app.twoFactorSub": "A code from your phone, in addition to the master password.",
-  "app.scanQr": "Scan this key in your authenticator app, then confirm with a code.",
+  "app.twoFactorSub":
+    "A code from your phone, in addition to the master password.",
+  "app.scanQr":
+    "Scan this key in your authenticator app, then confirm with a code.",
   "app.recoveryCodes": "Recovery codes",
-  "app.recoveryCodesShownOnce": "Write these down now. They are shown once and cannot be displayed again — we only keep their fingerprints. Without them, a lost phone means a lost account.",
+  "app.recoveryCodesShownOnce":
+    "Write these down now. They are shown once and cannot be displayed again — we only keep their fingerprints. Without them, a lost phone means a lost account.",
   "app.recoveryCodesRemaining": "{n} of {total} recovery codes left",
-  "app.recoveryCodesLow": "Few recovery codes left. Generate a new set before the last one is spent.",
-  "app.recoveryCodesNone": "No recovery code left. If you lose your phone, you will not be able to sign in.",
+  "app.recoveryCodesLow":
+    "Few recovery codes left. Generate a new set before the last one is spent.",
+  "app.recoveryCodesNone":
+    "No recovery code left. If you lose your phone, you will not be able to sign in.",
   "app.copyAll": "Copy all",
   "app.copied": "Copied",
   "app.download": "Download",
   "app.iSavedThem": "I have saved them",
   "app.newRecoveryCodes": "New recovery codes",
-  "app.regenerateWarning": "Generating a new set immediately invalidates the previous one.",
+  "app.regenerateWarning":
+    "Generating a new set immediately invalidates the previous one.",
   "app.codeOrRecovery": "6-digit code or recovery code",
   "auth.totpOrRecovery": "6-digit code or recovery code",
   "app.codeSixDigits": "6-digit code",
@@ -199,22 +216,27 @@ const en: Dict = {
   "app.darkMode": "Switch to dark theme",
   "app.shares": "Shares in progress",
   "app.noShares": "No share in progress.",
-  "app.sharesSub": "Links issued from this browser or from the app. Revoking one makes it unreadable immediately. A link whose registry entry could not be written is missing here — it exists, but nothing can revoke it.",
+  "app.sharesSub":
+    "Links issued from this browser or from the app. Revoking one makes it unreadable immediately. A link whose registry entry could not be written is missing here — it exists, but nothing can revoke it.",
   "app.revoke": "Revoke",
-  "app.shareCreated": "Link created — it is in « Shares in progress » if you need to revoke it.",
+  "app.shareCreated":
+    "Link created — it is in « Shares in progress » if you need to revoke it.",
   "auth.passkey": "Sign in with a passkey",
   "app.yourData": "Your data",
   "app.yourDataSub": "Take it with you, or leave for good.",
   "app.exportData": "Export my data",
   "app.deleteAccount": "Delete my account",
   "app.deleteAccountConfirm": "Delete for good",
-  "app.deleteAccountWarn": "This erases your vault, your keys and your sessions. It cannot be undone, and we cannot recover anything for you: we never had your master password.",
-  "auth.passkeyNeedsEmail": "Enter your email first: the server needs it to offer your keys.",
+  "app.deleteAccountWarn":
+    "This erases your vault, your keys and your sessions. It cannot be undone, and we cannot recover anything for you: we never had your master password.",
+  "auth.passkeyNeedsEmail":
+    "Enter your email first: the server needs it to offer your keys.",
   "app.sharedOn": "shared {date}",
   "app.confirmShareHost":
     "This link points at {host}, which is not this server. The decryption key will be placed in the link and read by that site. Continue only if you recognise it.",
   "app.shareCancelled": "Share cancelled and revoked.",
-  "app.shareRefused.url-illisible": "The server returned an unreadable address. The share was revoked.",
+  "app.shareRefused.url-illisible":
+    "The server returned an unreadable address. The share was revoked.",
   "app.shareRefused.schema-non-chiffre":
     "The server returned an unencrypted address. The share was revoked.",
   "app.expiresOn": "expires {date}",
@@ -237,14 +259,17 @@ const en: Dict = {
   "app.encryptAndSave": "Encrypt & save",
   "app.share": "Share",
   "app.moveToShared": "Move to a team vault",
-  "app.moveToSharedPick": "Choose the collection that will receive it. The secret is re-encrypted under the team key; your personal copy is removed once the copy exists.",
+  "app.moveToSharedPick":
+    "Choose the collection that will receive it. The secret is re-encrypted under the team key; your personal copy is removed once the copy exists.",
   "app.moveToSharedLoginOnly": "Only logins can live in a team vault.",
   "app.moveDone": "Moved to « {collection} ».",
   "app.moveSelected": "Move the selection to a team vault",
   "app.moveManyCount": "{n} item(s) will be moved.",
-  "app.moveManyExcluded": "{n} left out: a team vault only holds personal logins, not notes, cards, or items already shared.",
+  "app.moveManyExcluded":
+    "{n} left out: a team vault only holds personal logins, not notes, cards, or items already shared.",
   "app.movedAll": "{n} item(s) moved to « {collection} ».",
-  "app.movedSome": "{ok} moved to « {collection} », {ko} could not be. Those are still in your vault.",
+  "app.movedSome":
+    "{ok} moved to « {collection} », {ko} could not be. Those are still in your vault.",
   "app.notSet": "Not set",
   "app.hide": "Hide",
   "app.show": "Show",
@@ -292,9 +317,11 @@ const en: Dict = {
   "app.edit": "Edit",
   "app.delete": "Delete",
   "app.secureNote": "Secure note",
-  "app.sharedReadOnly": "This secret belongs to a team. Edit it from Organisations \u2014 saving it here would create a private copy, and the team would never see the change.",
+  "app.sharedReadOnly":
+    "This secret belongs to a team. Edit it from Organisations \u2014 saving it here would create a private copy, and the team would never see the change.",
   "app.sharedOrigin": "Shared \u00b7 {org} \u203a {collection}",
-  "app.exportPersonalOnly": "The export covers your personal vault only. Team secrets stay with the team.",
+  "app.exportPersonalOnly":
+    "The export covers your personal vault only. Team secrets stay with the team.",
   "app.shareA": "Share link: ",
   "app.shareB": "one view, expires in 24 h",
   "app.shareC": ". The key is in the URL (#), never sent to the server.",
@@ -308,17 +335,20 @@ const en: Dict = {
   "app.breaches": "Known breaches (dark web)",
   "app.noBreach": "No password found in a known breach.",
   "app.twoFa": "Two-factor authentication",
-  "app.twoFaAdd": "Add this URI to your authenticator app, then enter a generated code:",
+  "app.twoFaAdd":
+    "Add this URI to your authenticator app, then enter a generated code:",
   "app.generatedCode": "Generated code",
   "app.enable2fa": "Enable 2FA",
   "app.disable2fa": "Disable 2FA",
   "app.twoFactorOn": "Two-factor authentication is on.",
   "app.twoFactorUnknown": "Couldn't read the two-factor state.",
-  "app.disable2faWarning": "Your recovery codes are destroyed with it. Re-enrolling later issues new ones.",
+  "app.disable2faWarning":
+    "Your recovery codes are destroyed with it. Re-enrolling later issues new ones.",
   "app.twoFaSub": "Strengthens sign-in with a one-time code (TOTP).",
   "app.setup2fa": "Set up two-factor authentication",
   "app.passkeys": "Passkeys (passwordless sign-in)",
-  "app.passkeysReq": "Requires https or localhost and a PRF-capable authenticator.",
+  "app.passkeysReq":
+    "Requires https or localhost and a PRF-capable authenticator.",
   "app.securityKeys": "Security keys (WebAuthn)",
   "app.securityKeysReq": "Requires https or localhost.",
   "app.emergency": "Emergency access",
@@ -330,7 +360,8 @@ const en: Dict = {
   "app.emRoleView": "Read the vault",
   "app.emRoleTakeover": "Read it, and take the account over",
   "app.emWaitDays": "Waiting period, in days",
-  "app.emWaitExplain": "When they ask for access, you are the one who decides during this window. If you say nothing, access opens on its own once it has elapsed — which is the point: it has to work when you cannot answer.",
+  "app.emWaitExplain":
+    "When they ask for access, you are the one who decides during this window. If you say nothing, access opens on its own once it has elapsed — which is the point: it has to work when you cannot answer.",
   "app.emNone": "Nobody yet.",
   "app.emTheirs": "Vaults I can reach",
   "app.emTheirsSub": "People who named me as their emergency contact",
@@ -338,7 +369,12 @@ const en: Dict = {
   "app.emOpened": "{email} — {n} entries",
   "app.emClose": "Close",
   "app.emUnnamed": "(unnamed entry)",
-  "app.emNewPassword": "New master password for this account. Every one of its sessions will be signed out.",
+  "app.emNote": "Note",
+  "app.emTotp": "Two-factor secret",
+  "app.emTotpHint":
+    "Add this secret to an authenticator app to obtain the codes.",
+  "app.emNewPassword":
+    "New master password for this account. Every one of its sessions will be signed out.",
   "app.emConfirmRemove": "Remove the emergency access shared with {email}?",
   "app.em_accepter": "Accept",
   "app.em_demander": "Ask for access",
@@ -370,8 +406,10 @@ const en: Dict = {
   "app.takeover": "Take over",
   "app.noSecret": "No secret.",
   "app.recoveryKit": "Recovery kit",
-  "app.recoveryWarn": "Keep this key somewhere safe: it will never be shown again. Without it, a lost master password is lost for good.",
-  "app.recoverySub": "Generates a rescue key that resets the master password, with no server-side backdoor.",
+  "app.recoveryWarn":
+    "Keep this key somewhere safe: it will never be shown again. Without it, a lost master password is lost for good.",
+  "app.recoverySub":
+    "Generates a rescue key that resets the master password, with no server-side backdoor.",
   "app.genRecovery": "Generate a recovery kit",
   "app.data": "Data",
   "app.exportA": "The export holds your secrets ",
@@ -414,7 +452,8 @@ const en: Dict = {
   "send.decrypting": "Decrypting locally…",
   "send.invalid": "This link is invalid, expired, or has already been viewed.",
   "send.intro": "A secret has been shared with you through a secure link:",
-  "send.local": "Decrypted in your browser: the server never saw this content in clear.",
+  "send.local":
+    "Decrypted in your browser: the server never saw this content in clear.",
   "send.toggleReveal": "Show/hide",
   "send.show": "Show",
   "send.hide": "Hide",
@@ -426,15 +465,16 @@ const en: Dict = {
   "import.howto": "Getting the file out of your browser",
   "import.chrome.nom": "Chrome",
   "import.chrome.etapes":
-    "open chrome://password-manager/settings, then \"Download file\" under \"Export passwords\".",
+    'open chrome://password-manager/settings, then "Download file" under "Export passwords".',
   "import.edge.nom": "Edge",
-  "import.edge.etapes": "open edge://wallet/passwords/settings, then \"Export passwords\".",
+  "import.edge.etapes":
+    'open edge://wallet/passwords/settings, then "Export passwords".',
   "import.firefox.nom": "Firefox",
   "import.firefox.etapes":
-    "open about:logins, click the \"...\" button at the top right, then \"Export logins\".",
+    'open about:logins, click the "..." button at the top right, then "Export logins".',
   "import.safari.nom": "Safari",
   "import.safari.etapes":
-    "Safari menu, \"Settings\", \"Passwords\" tab, then the \"...\" button below the list and \"Export all passwords\".",
+    'Safari menu, "Settings", "Passwords" tab, then the "..." button below the list and "Export all passwords".',
   "import.warning":
     "That file holds every one of your passwords in clear text. Delete it from your disk as soon as the import is done, and empty the bin.",
   "import.deleteFile":
@@ -444,20 +484,26 @@ const en: Dict = {
   "import.back": "Choose another file",
   "import.close": "Close",
   "import.readError": "That file could not be read.",
-  "import.detected.chromium": "Recognised format: Chrome, Edge, Brave or Opera.",
+  "import.detected.chromium":
+    "Recognised format: Chrome, Edge, Brave or Opera.",
   "import.detected.firefox": "Recognised format: Firefox.",
   "import.detected.safari": "Recognised format: Safari.",
-  "import.detected.autre": "Format not identified: the usual column names will be used.",
+  "import.detected.autre":
+    "Format not identified: the usual column names will be used.",
   "import.notRecognised":
     "This file does not look like a password export: it has no password column.",
-  "import.summary": "{lues} entry/entries read, {aImporter} to import, {ignorees} skipped.",
+  "import.summary":
+    "{lues} entry/entries read, {aImporter} to import, {ignorees} skipped.",
   "import.noPassword":
     "{n} entry/entries have no password; they will be imported for their note or their code.",
   "import.reason.doublonCoffre": "{n} already in your vault, identical",
   "import.reason.doublonFichier": "{n} repeated within the file",
-  "import.reason.sansSecret": "{n} with no password, no code and no note: nothing to protect",
-  "import.reason.sansIdentifiant": "{n} with no name, no address and no username",
-  "import.reason.illisible": "{n} unreadable line(s): the columns do not line up",
+  "import.reason.sansSecret":
+    "{n} with no password, no code and no note: nothing to protect",
+  "import.reason.sansIdentifiant":
+    "{n} with no name, no address and no username",
+  "import.reason.illisible":
+    "{n} unreadable line(s): the columns do not line up",
   "import.confirm": "Import {n} entry/entries",
   "import.nothing": "Nothing to import in this file",
   "import.progress": "Encrypting and sending... {n} of {total}",
@@ -506,7 +552,8 @@ const fr: Dict = {
   "auth.ssoFailed": "Échec de la connexion SSO.",
   "auth.badMaster": "Mot de passe maître invalide.",
   "auth.ssoUnlock": "Déverrouillez votre coffre",
-  "auth.ssoUnlockSub": "Connecté en tant que {email}. Votre mot de passe maître reste nécessaire : le serveur ne l'a jamais vu.",
+  "auth.ssoUnlockSub":
+    "Connecté en tant que {email}. Votre mot de passe maître reste nécessaire : le serveur ne l'a jamais vu.",
   "auth.masterPassword": "Mot de passe maître",
   "auth.unlock": "Déverrouiller",
   "auth.signIn": "Se connecter",
@@ -518,19 +565,23 @@ const fr: Dict = {
   "auth.needAccountAction": "Créer un compte",
   "auth.forgot": "Mot de passe maître oublié ?",
   "auth.recoverTitle": "Rouvrir votre coffre",
-  "auth.recoverSub": "Votre clé de récupération rouvre le coffre et pose un nouveau mot de passe maître. Sans cette clé, personne ne le peut — nous compris.",
+  "auth.recoverSub":
+    "Votre clé de récupération rouvre le coffre et pose un nouveau mot de passe maître. Sans cette clé, personne ne le peut — nous compris.",
   "auth.recoveryKey": "Clé de récupération",
   "auth.newMasterPassword": "Nouveau mot de passe maître",
   "auth.recoverAction": "Réinitialiser mon mot de passe maître",
-  "auth.recoverDone": "Votre coffre est rouvert. Connectez-vous avec votre nouveau mot de passe maître.",
-  "auth.recoverEndsSessions": "Toutes les sessions ouvertes sont fermées, sur tous vos appareils.",
+  "auth.recoverDone":
+    "Votre coffre est rouvert. Connectez-vous avec votre nouveau mot de passe maître.",
+  "auth.recoverEndsSessions":
+    "Toutes les sessions ouvertes sont fermées, sur tous vos appareils.",
   "auth.errKeyRefused": "Cette clé de récupération n'ouvre pas ce compte.",
   "auth.errNetwork": "Le serveur n'a pas répondu. Rien n'a été modifié.",
   "auth.backToSignIn": "Revenir à la connexion",
   "auth.haveAccount": "Déjà un compte ?",
   "auth.haveAccountAction": "Se connecter",
   "auth.privacy": "Politique de confidentialité",
-  "auth.privacyNotice": "En créant un compte, vous acceptez le traitement de vos données — ce que nous détenons, et ce que nous ne pouvons pas lire :",
+  "auth.privacyNotice":
+    "En créant un compte, vous acceptez le traitement de vos données — ce que nous détenons, et ce que nous ne pouvons pas lire :",
   "org.copyTotp": "Copier le code TOTP",
   "org.noUsername": "Sans identifiant",
   "org.accessTitle": "Accès à la collection",
@@ -548,11 +599,14 @@ const fr: Dict = {
   "org.createCollection": "Créer la collection",
   "org.backToOrgs": "← Mes organisations",
   "org.myOrgs": "Mes organisations",
-  "org.keyUnavailable": "Clé d'organisation indisponible — acceptez d'abord l'invitation.",
-  "org.confirmRevoke": "Révoquer {email} ? La clé d'organisation sera tournée et tous les secrets partagés ré-enveloppés.",
+  "org.keyUnavailable":
+    "Clé d'organisation indisponible — acceptez d'abord l'invitation.",
+  "org.confirmRevoke":
+    "Révoquer {email} ? La clé d'organisation sera tournée et tous les secrets partagés ré-enveloppés.",
   "org.add": "Ajouter",
   "org.newSecret": "Nouveau secret partagé",
-  "org.accessEffective": "Accès effectif : octrois directs et héritage de rôle confondus.",
+  "org.accessEffective":
+    "Accès effectif : octrois directs et héritage de rôle confondus.",
   "org.createOrg": "Créer une organisation",
   "org.orgName": "Nom de l'organisation",
   "org.orgNamePh": "StackOps Team",
@@ -571,7 +625,8 @@ const fr: Dict = {
   "org.colorDefault": "Par défaut",
   "org.collections": "Collections",
   "org.noCollections": "Aucune collection.",
-  "org.pickInLeft": "Choisissez une collection ou la liste des membres dans la colonne de gauche.",
+  "org.pickInLeft":
+    "Choisissez une collection ou la liste des membres dans la colonne de gauche.",
   "org.toggleReveal": "Afficher/masquer",
   "org.namePh": "DB prod",
   "org.usernamePh": "svc",
@@ -589,12 +644,14 @@ const fr: Dict = {
   "app.pt3c": ", par kit de secours.",
   "app.footer": "Hébergé en France · chiffré de bout en bout",
   "app.ssoTitle": "Connexion SSO",
-  "app.ssoSub": "Identité vérifiée. Saisissez votre mot de passe maître pour déverrouiller votre coffre.",
+  "app.ssoSub":
+    "Identité vérifiée. Saisissez votre mot de passe maître pour déverrouiller votre coffre.",
   "app.email": "Email",
   "app.masterPassword": "Mot de passe maître",
   "app.cancelBack": "← Annuler",
   "app.forgotTitle": "Mot de passe oublié",
-  "app.forgotSub": "Réinitialisez votre mot de passe maître avec votre clé de récupération.",
+  "app.forgotSub":
+    "Réinitialisez votre mot de passe maître avec votre clé de récupération.",
   "app.recoveryKey": "Clé de récupération",
   "app.newMaster": "Nouveau mot de passe maître",
   "app.backToLogin": "← Retour à la connexion",
@@ -604,25 +661,33 @@ const fr: Dict = {
   "app.loginPasskey": "Se connecter avec une passkey",
   "app.loginSso": "Se connecter en SSO",
   "app.forgot": "Mot de passe oublié ?",
-  "app.authFoot": "Chiffré de bout en bout. Votre mot de passe maître n'est jamais transmis.",
+  "app.authFoot":
+    "Chiffré de bout en bout. Votre mot de passe maître n'est jamais transmis.",
   "app.newItem": "Nouvel élément",
   "app.myVault": "Mon coffre",
   "app.orgs": "Organisations",
   "app.security": "Sécurité",
   "app.twoFactor": "Double authentification",
-  "app.twoFactorSub": "Un code depuis votre téléphone, en plus du mot de passe maître.",
-  "app.scanQr": "Enregistrez cette clé dans votre application d'authentification, puis confirmez avec un code.",
+  "app.twoFactorSub":
+    "Un code depuis votre téléphone, en plus du mot de passe maître.",
+  "app.scanQr":
+    "Enregistrez cette clé dans votre application d'authentification, puis confirmez avec un code.",
   "app.recoveryCodes": "Codes de récupération",
-  "app.recoveryCodesShownOnce": "Notez-les maintenant. Ils ne s'affichent qu'une fois et ne pourront pas être réaffichés — nous n'en gardons que les empreintes. Sans eux, un téléphone perdu est un compte perdu.",
-  "app.recoveryCodesRemaining": "{n} codes de récupération restants sur {total}",
-  "app.recoveryCodesLow": "Il reste peu de codes de récupération. Refaites-en une série avant d'épuiser le dernier.",
-  "app.recoveryCodesNone": "Plus aucun code de récupération. En cas de perte du téléphone, la connexion sera impossible.",
+  "app.recoveryCodesShownOnce":
+    "Notez-les maintenant. Ils ne s'affichent qu'une fois et ne pourront pas être réaffichés — nous n'en gardons que les empreintes. Sans eux, un téléphone perdu est un compte perdu.",
+  "app.recoveryCodesRemaining":
+    "{n} codes de récupération restants sur {total}",
+  "app.recoveryCodesLow":
+    "Il reste peu de codes de récupération. Refaites-en une série avant d'épuiser le dernier.",
+  "app.recoveryCodesNone":
+    "Plus aucun code de récupération. En cas de perte du téléphone, la connexion sera impossible.",
   "app.copyAll": "Tout copier",
   "app.copied": "Copié",
   "app.download": "Télécharger",
   "app.iSavedThem": "Je les ai notés",
   "app.newRecoveryCodes": "Nouveaux codes de récupération",
-  "app.regenerateWarning": "Refaire une série invalide immédiatement la précédente.",
+  "app.regenerateWarning":
+    "Refaire une série invalide immédiatement la précédente.",
   "app.codeOrRecovery": "Code à 6 chiffres ou code de récupération",
   "auth.totpOrRecovery": "Code à 6 chiffres ou code de récupération",
   "app.codeSixDigits": "Code à 6 chiffres",
@@ -644,22 +709,27 @@ const fr: Dict = {
   "app.darkMode": "Passer au thème sombre",
   "app.shares": "Partages en cours",
   "app.noShares": "Aucun partage en cours.",
-  "app.sharesSub": "Les liens émis depuis ce navigateur ou depuis l'application. En révoquer un le rend illisible immédiatement. Un lien dont l'inscription au registre a échoué n'apparaît pas ici — il existe, mais rien ne peut le révoquer.",
+  "app.sharesSub":
+    "Les liens émis depuis ce navigateur ou depuis l'application. En révoquer un le rend illisible immédiatement. Un lien dont l'inscription au registre a échoué n'apparaît pas ici — il existe, mais rien ne peut le révoquer.",
   "app.revoke": "Révoquer",
-  "app.shareCreated": "Lien créé — il est dans « Partages en cours » si vous devez le révoquer.",
+  "app.shareCreated":
+    "Lien créé — il est dans « Partages en cours » si vous devez le révoquer.",
   "auth.passkey": "Se connecter avec une clé d'accès",
   "app.yourData": "Vos données",
   "app.yourDataSub": "Les emporter, ou partir pour de bon.",
   "app.exportData": "Exporter mes données",
   "app.deleteAccount": "Supprimer mon compte",
   "app.deleteAccountConfirm": "Supprimer définitivement",
-  "app.deleteAccountWarn": "Cela efface votre coffre, vos clés et vos sessions. C'est irréversible, et nous ne pourrons rien vous rendre : nous n'avons jamais eu votre mot de passe maître.",
-  "auth.passkeyNeedsEmail": "Saisissez d'abord votre adresse : le serveur en a besoin pour proposer vos clés.",
+  "app.deleteAccountWarn":
+    "Cela efface votre coffre, vos clés et vos sessions. C'est irréversible, et nous ne pourrons rien vous rendre : nous n'avons jamais eu votre mot de passe maître.",
+  "auth.passkeyNeedsEmail":
+    "Saisissez d'abord votre adresse : le serveur en a besoin pour proposer vos clés.",
   "app.sharedOn": "partagé le {date}",
   "app.confirmShareHost":
     "Ce lien pointe vers {host}, qui n'est pas ce serveur. La clé de déchiffrement sera placée dans le lien et lue par ce site. Ne continuez que si vous le reconnaissez.",
   "app.shareCancelled": "Partage annulé et révoqué.",
-  "app.shareRefused.url-illisible": "Le serveur a rendu une adresse illisible. Le partage a été révoqué.",
+  "app.shareRefused.url-illisible":
+    "Le serveur a rendu une adresse illisible. Le partage a été révoqué.",
   "app.shareRefused.schema-non-chiffre":
     "Le serveur a rendu une adresse non chiffrée. Le partage a été révoqué.",
   "app.expiresOn": "expire le {date}",
@@ -673,8 +743,10 @@ const fr: Dict = {
   "app.confirmDeleteMany": "Déplacer {n} élément(s) vers la corbeille ?",
   "app.deletedSome": "{ok} supprimé(s), {ko} refusé(s).",
   "app.selectItem": "Sélectionner {name}",
-  "app.confirmPurge": "Supprimer définitivement « {name} » ? Cette action est irréversible.",
-  "app.trashHint": "Les éléments supprimés restent ici jusqu'à ce que vous les purgiez.",
+  "app.confirmPurge":
+    "Supprimer définitivement « {name} » ? Cette action est irréversible.",
+  "app.trashHint":
+    "Les éléments supprimés restent ici jusqu'à ce que vous les purgiez.",
   "app.pickOrCreate": "Sélectionnez un secret pour l'afficher, ou créez-en un.",
   "app.itemCount": "{n} élément(s)",
   "app.length": "Longueur",
@@ -682,14 +754,18 @@ const fr: Dict = {
   "app.encryptAndSave": "Chiffrer & enregistrer",
   "app.share": "Partager",
   "app.moveToShared": "Déplacer vers un coffre d'équipe",
-  "app.moveToSharedPick": "Choisissez la collection qui le recevra. Le secret est rechiffré sous la clé de l'équipe ; votre copie personnelle n'est retirée qu'une fois la copie créée.",
-  "app.moveToSharedLoginOnly": "Seuls les identifiants peuvent vivre dans un coffre d'équipe.",
+  "app.moveToSharedPick":
+    "Choisissez la collection qui le recevra. Le secret est rechiffré sous la clé de l'équipe ; votre copie personnelle n'est retirée qu'une fois la copie créée.",
+  "app.moveToSharedLoginOnly":
+    "Seuls les identifiants peuvent vivre dans un coffre d'équipe.",
   "app.moveDone": "Déplacé vers « {collection} ».",
   "app.moveSelected": "Déplacer la sélection vers un coffre d'équipe",
   "app.moveManyCount": "{n} élément(s) seront déplacés.",
-  "app.moveManyExcluded": "{n} écarté(s) : un coffre d'équipe ne prend que des identifiants personnels, ni notes, ni cartes, ni éléments déjà partagés.",
+  "app.moveManyExcluded":
+    "{n} écarté(s) : un coffre d'équipe ne prend que des identifiants personnels, ni notes, ni cartes, ni éléments déjà partagés.",
   "app.movedAll": "{n} élément(s) déplacé(s) vers « {collection} ».",
-  "app.movedSome": "{ok} déplacé(s) vers « {collection} », {ko} n'ont pas pu l'être. Ceux-là sont encore dans votre coffre.",
+  "app.movedSome":
+    "{ok} déplacé(s) vers « {collection} », {ko} n'ont pas pu l'être. Ceux-là sont encore dans votre coffre.",
   "app.notSet": "Non renseigné",
   "app.hide": "Masquer",
   "app.show": "Afficher",
@@ -734,9 +810,11 @@ const fr: Dict = {
   "app.edit": "Modifier",
   "app.delete": "Supprimer",
   "app.secureNote": "Note sécurisée",
-  "app.sharedReadOnly": "Ce secret appartient à une équipe. Modifiez-le depuis Organisations \u2014 l'enregistrer ici en créerait une copie privée, et l'équipe ne verrait jamais le changement.",
+  "app.sharedReadOnly":
+    "Ce secret appartient à une équipe. Modifiez-le depuis Organisations \u2014 l'enregistrer ici en créerait une copie privée, et l'équipe ne verrait jamais le changement.",
   "app.sharedOrigin": "Partagé \u00b7 {org} \u203a {collection}",
-  "app.exportPersonalOnly": "L'export ne couvre que votre coffre personnel. Les secrets d'équipe restent avec l'équipe.",
+  "app.exportPersonalOnly":
+    "L'export ne couvre que votre coffre personnel. Les secrets d'équipe restent avec l'équipe.",
   "app.shareA": "Lien de partage : ",
   "app.shareB": "1 vue, expire dans 24 h",
   "app.shareC": ". La clé est dans l'URL (#), jamais envoyée au serveur.",
@@ -750,17 +828,20 @@ const fr: Dict = {
   "app.breaches": "Fuites connues (dark web)",
   "app.noBreach": "Aucun mot de passe trouvé dans une fuite connue.",
   "app.twoFa": "Double authentification",
-  "app.twoFaAdd": "Ajoutez cette URI dans votre application d'authentification, puis saisissez un code généré :",
+  "app.twoFaAdd":
+    "Ajoutez cette URI dans votre application d'authentification, puis saisissez un code généré :",
   "app.generatedCode": "Code généré",
   "app.enable2fa": "Activer la 2FA",
   "app.disable2fa": "Désactiver la 2FA",
   "app.twoFactorOn": "La double authentification est active.",
   "app.twoFactorUnknown": "État de la double authentification illisible.",
-  "app.disable2faWarning": "Vos codes de récupération sont détruits avec elle. Un réenrôlement plus tard en délivrera de nouveaux.",
+  "app.disable2faWarning":
+    "Vos codes de récupération sont détruits avec elle. Un réenrôlement plus tard en délivrera de nouveaux.",
   "app.twoFaSub": "Renforce la connexion avec un code à usage unique (TOTP).",
   "app.setup2fa": "Configurer la double authentification",
   "app.passkeys": "Passkeys (connexion sans mot de passe)",
-  "app.passkeysReq": "Nécessite https ou localhost + un authentificateur compatible PRF.",
+  "app.passkeysReq":
+    "Nécessite https ou localhost + un authentificateur compatible PRF.",
   "app.securityKeys": "Clés de sécurité (WebAuthn)",
   "app.securityKeysReq": "Nécessite https ou localhost.",
   "app.emergency": "Accès d'urgence",
@@ -772,7 +853,8 @@ const fr: Dict = {
   "app.emRoleView": "Lire le coffre",
   "app.emRoleTakeover": "Le lire, et reprendre le compte",
   "app.emWaitDays": "Délai d'attente, en jours",
-  "app.emWaitExplain": "Quand il demandera l'accès, c'est vous qui tranchez pendant ce délai. Si vous ne dites rien, l'accès s'ouvre tout seul une fois écoulé — c'est le principe : il doit fonctionner quand vous ne pouvez pas répondre.",
+  "app.emWaitExplain":
+    "Quand il demandera l'accès, c'est vous qui tranchez pendant ce délai. Si vous ne dites rien, l'accès s'ouvre tout seul une fois écoulé — c'est le principe : il doit fonctionner quand vous ne pouvez pas répondre.",
   "app.emNone": "Personne pour l'instant.",
   "app.emTheirs": "Coffres auxquels j'ai accès",
   "app.emTheirsSub": "Les personnes qui m'ont désigné comme contact d'urgence",
@@ -780,7 +862,12 @@ const fr: Dict = {
   "app.emOpened": "{email} — {n} entrées",
   "app.emClose": "Fermer",
   "app.emUnnamed": "(entrée sans nom)",
-  "app.emNewPassword": "Nouveau mot de passe maître pour ce compte. Toutes ses sessions seront fermées.",
+  "app.emNote": "Note",
+  "app.emTotp": "Secret du second facteur",
+  "app.emTotpHint":
+    "Ajoutez ce secret à une application d'authentification pour obtenir les codes.",
+  "app.emNewPassword":
+    "Nouveau mot de passe maître pour ce compte. Toutes ses sessions seront fermées.",
   "app.emConfirmRemove": "Retirer l'accès d'urgence partagé avec {email} ?",
   "app.em_accepter": "Accepter",
   "app.em_demander": "Demander l'accès",
@@ -812,13 +899,16 @@ const fr: Dict = {
   "app.takeover": "Reprendre",
   "app.noSecret": "Aucun secret.",
   "app.recoveryKit": "Kit de récupération",
-  "app.recoveryWarn": "Conservez cette clé en lieu sûr : elle ne sera plus jamais affichée. Sans elle, un mot de passe maître perdu est définitivement perdu.",
-  "app.recoverySub": "Génère une clé de secours qui permet de réinitialiser le mot de passe maître, sans backdoor côté serveur.",
+  "app.recoveryWarn":
+    "Conservez cette clé en lieu sûr : elle ne sera plus jamais affichée. Sans elle, un mot de passe maître perdu est définitivement perdu.",
+  "app.recoverySub":
+    "Génère une clé de secours qui permet de réinitialiser le mot de passe maître, sans backdoor côté serveur.",
   "app.genRecovery": "Générer un kit de récupération",
   "app.data": "Données",
   "app.exportA": "L'export contient vos secrets ",
   "app.exportB": "en clair",
-  "app.exportC": " dans un fichier CSV. Conservez-le en lieu sûr et supprimez-le après usage.",
+  "app.exportC":
+    " dans un fichier CSV. Conservez-le en lieu sûr et supprimez-le après usage.",
   "app.exportCsv": "Exporter (CSV)",
   "app.recentLogins": "Connexions récentes",
   "app.noLogins": "Aucune connexion enregistrée.",
@@ -856,7 +946,8 @@ const fr: Dict = {
   "send.decrypting": "Déchiffrement local…",
   "send.invalid": "Ce lien est invalide, expiré, ou a déjà été consulté.",
   "send.intro": "Un secret vous a été partagé via un lien sécurisé :",
-  "send.local": "Déchiffré dans votre navigateur : le serveur n'a jamais vu ce contenu en clair.",
+  "send.local":
+    "Déchiffré dans votre navigateur : le serveur n'a jamais vu ce contenu en clair.",
   "send.toggleReveal": "Afficher/masquer",
   "send.show": "Afficher",
   "send.hide": "Masquer",
@@ -890,17 +981,22 @@ const fr: Dict = {
   "import.detected.chromium": "Format reconnu : Chrome, Edge, Brave ou Opera.",
   "import.detected.firefox": "Format reconnu : Firefox.",
   "import.detected.safari": "Format reconnu : Safari.",
-  "import.detected.autre": "Format non identifié : les noms de colonnes usuels seront utilisés.",
+  "import.detected.autre":
+    "Format non identifié : les noms de colonnes usuels seront utilisés.",
   "import.notRecognised":
     "Ce fichier ne ressemble pas à un export de mots de passe : il n'a aucune colonne de mot de passe.",
-  "import.summary": "{lues} entrée(s) lue(s), {aImporter} à importer, {ignorees} ignorée(s).",
+  "import.summary":
+    "{lues} entrée(s) lue(s), {aImporter} à importer, {ignorees} ignorée(s).",
   "import.noPassword":
     "{n} entrée(s) sans mot de passe seront importées pour leur note ou leur code.",
-  "import.reason.doublonCoffre": "{n} déjà présente(s) dans votre coffre, à l'identique",
+  "import.reason.doublonCoffre":
+    "{n} déjà présente(s) dans votre coffre, à l'identique",
   "import.reason.doublonFichier": "{n} répétée(s) dans le fichier",
-  "import.reason.sansSecret": "{n} sans mot de passe, ni code, ni note : rien à protéger",
+  "import.reason.sansSecret":
+    "{n} sans mot de passe, ni code, ni note : rien à protéger",
   "import.reason.sansIdentifiant": "{n} sans nom, ni adresse, ni identifiant",
-  "import.reason.illisible": "{n} ligne(s) illisible(s) : les colonnes ne tombent pas juste",
+  "import.reason.illisible":
+    "{n} ligne(s) illisible(s) : les colonnes ne tombent pas juste",
   "import.confirm": "Importer {n} entrée(s)",
   "import.nothing": "Rien à importer dans ce fichier",
   "import.progress": "Chiffrement et envoi... {n} sur {total}",
@@ -932,7 +1028,14 @@ function detect(): Locale {
 // rendre côté serveur ce que seul le navigateur peut savoir produirait une
 // discordance d'hydratation, et React remplacerait alors tout l'arbre.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 export function traduire(
   locale: Locale,
@@ -941,7 +1044,8 @@ export function traduire(
 ): string {
   let s = messages[locale][key] ?? en[key] ?? key;
   if (params) {
-    for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, String(v));
+    for (const [k, v] of Object.entries(params))
+      s = s.replaceAll(`{${k}}`, String(v));
   }
   return s;
 }
@@ -974,7 +1078,8 @@ export function useI18nValue(): I18n {
   }, []);
 
   const t = useCallback(
-    (key: string, params?: Record<string, string | number>) => traduire(locale, key, params),
+    (key: string, params?: Record<string, string | number>) =>
+      traduire(locale, key, params),
     [locale],
   );
 

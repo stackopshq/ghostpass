@@ -1,7 +1,15 @@
 // Couche crypto côté client : encapsule le module WASM.
 // Les clés en clair restent DANS le WASM ; ce module n'expose que des données chiffrées.
-import init, { Account, type EmergencyVault, type Org } from "ghostpass-crypto-wasm";
-import { lireRegistreCouleurs, ORG_COLORS_ITEM_NAME, type RegistreCouleurs } from "./couleursOrg";
+import init, {
+  Account,
+  type EmergencyVault,
+  type Org,
+} from "ghostpass-crypto-wasm";
+import {
+  lireRegistreCouleurs,
+  ORG_COLORS_ITEM_NAME,
+  type RegistreCouleurs,
+} from "./couleursOrg";
 // Le module WASM est servi depuis `public/`, pas importé par le empaqueteur.
 //
 // Vite acceptait `import wasmUrl from "….wasm?url"` — un suffixe qui lui est
@@ -75,7 +83,9 @@ function adressesAEcrire(urls: readonly string[] | undefined): string[] {
 /// `#[serde(default)]` pour de la rétrocompatibilité, ce chemin rendra une
 /// liste vide au lieu de lever sur un `undefined.filter`.
 function adressesLues(brut: unknown): string[] {
-  return Array.isArray(brut) ? brut.filter((u): u is string => typeof u === "string") : [];
+  return Array.isArray(brut)
+    ? brut.filter((u): u is string => typeof u === "string")
+    : [];
 }
 
 export interface LoginInput {
@@ -132,7 +142,11 @@ export interface DecryptedItem {
 }
 
 /// Valeurs par défaut (tous champs vides) pour construire un DecryptedItem.
-function emptyItem(kind: ItemKind, name: string, folder: string): DecryptedItem {
+function emptyItem(
+  kind: ItemKind,
+  name: string,
+  folder: string,
+): DecryptedItem {
   return {
     kind,
     name,
@@ -210,7 +224,10 @@ export interface PartageEnCours {
 }
 
 /// Crée un compte localement et renvoie les données à transmettre au serveur + l'objet `Account`.
-export function register(email: string, password: string): {
+export function register(
+  email: string,
+  password: string,
+): {
   data: RegistrationData;
   account: Account;
 } {
@@ -243,7 +260,9 @@ export function register(email: string, password: string): {
 export function faviconUrl(raw: string, jeton: string | null): string | null {
   if (!raw || !jeton) return null;
   try {
-    const host = new URL(raw.includes("://") ? raw : `https://${raw}`).hostname.replace(/^www\./, "");
+    const host = new URL(
+      raw.includes("://") ? raw : `https://${raw}`,
+    ).hostname.replace(/^www\./, "");
     if (!host.includes(".")) return null;
     return `/api/icons?domain=${encodeURIComponent(host)}&t=${encodeURIComponent(jeton)}`;
   } catch {
@@ -252,12 +271,20 @@ export function faviconUrl(raw: string, jeton: string | null): string | null {
 }
 
 /// Calcule le hash d'authentification à envoyer au serveur lors d'une connexion.
-export function computeLoginHash(email: string, password: string, kdfParams: string): string {
+export function computeLoginHash(
+  email: string,
+  password: string,
+  kdfParams: string,
+): string {
   return Account.master_password_hash(password, email, kdfParams);
 }
 
 /// Reconstruit l'objet `Account` (les clés) à partir des blobs renvoyés par le serveur.
-export function unlock(email: string, password: string, blobs: LoginBlobs): Account {
+export function unlock(
+  email: string,
+  password: string,
+  blobs: LoginBlobs,
+): Account {
   return Account.unlock(
     password,
     email,
@@ -345,7 +372,10 @@ export function decryptItem(
   encryptedData: string,
 ): DecryptedItem {
   const json = account.decrypt_item(
-    JSON.stringify({ encrypted_key: encryptedKey, encrypted_data: encryptedData }),
+    JSON.stringify({
+      encrypted_key: encryptedKey,
+      encrypted_data: encryptedData,
+    }),
   );
   const item = JSON.parse(json);
   return {
@@ -365,6 +395,36 @@ export function decryptItem(
 }
 
 /// Déchiffre un item du coffre perso : soit une entrée (login/note/carte), soit le registre de dossiers.
+/// La charge d'un item telle qu'elle sort du déchiffrement, écrite une fois.
+///
+/// Les noms sont ceux du FORMAT CHIFFRÉ (`crates/ghostpass-crypto/src/vault.rs`), pas ceux du
+/// modèle affiché : `notes` au niveau de l'item contre `note` dans `DecryptedItem`, `uris` au
+/// pluriel, `password_history` en serpent. Chacune de ces asymétries a déjà causé une perte
+/// silencieuse ; les nommer ici évite de les redécouvrir dans un troisième lecteur.
+interface ChampsLus {
+  content?: string;
+  username?: string;
+  password?: string;
+  uris?: unknown;
+  totp?: string | null;
+  password_history?: string[];
+  cardholder?: string;
+  number?: string;
+  exp_month?: string;
+  exp_year?: string;
+  code?: string;
+}
+
+interface ItemChiffreLu {
+  name?: string;
+  /// La note d'un identifiant ou d'une carte. Une note AUTONOME vit ailleurs, dans
+  /// `data.data.content` : c'est exactement la distinction que la projection d'urgence
+  /// ignorait, et qui rendait une note sécurisée vide pour un proche.
+  notes?: string | null;
+  folder?: string | null;
+  data?: { kind?: string; data?: ChampsLus };
+}
+
 export type VaultDecryptResult =
   | { kind: "item"; item: DecryptedItem }
   | { kind: "shares"; shares: PartageEnCours[] }
@@ -376,18 +436,37 @@ export function decryptVaultItem(
   encryptedKey: string,
   encryptedData: string,
 ): VaultDecryptResult {
-  const raw = JSON.parse(
-    account.decrypt_item(
-      JSON.stringify({ encrypted_key: encryptedKey, encrypted_data: encryptedData }),
+  return projeterItemDechiffre(
+    JSON.parse(
+      account.decrypt_item(
+        JSON.stringify({
+          encrypted_key: encryptedKey,
+          encrypted_data: encryptedData,
+        }),
+      ),
     ),
   );
+}
+
+/// La projection d'un item DÉJÀ déchiffré, séparée de ce qui l'a déchiffré.
+///
+/// Elle existe parce qu'il y a DEUX déchiffreurs qui partagent ce format : le compte, et la
+/// poignée d'accès d'urgence. La version d'urgence était une copie plus courte — nom,
+/// identifiant, mot de passe, adresses. Donc pour un contact d'urgence **une note sécurisée
+/// était vide, une carte n'affichait rien du tout, et le second facteur manquait**, alors que
+/// tout était déjà déchiffré dans son navigateur puis jeté ici.
+///
+/// Une règle recopiée dans deux lecteurs casse dans celui qui ne la connaît pas. Une seule
+/// projection est le seul remède qui tienne.
+function projeterItemDechiffre(raw: ItemChiffreLu): VaultDecryptResult {
   const d = raw.data ?? {};
+  const nom = raw.name ?? "";
   const folder = raw.folder ?? "";
 
-  if (raw.name === SHARES_ITEM_NAME && d.kind === "SecureNote") {
+  if (nom === SHARES_ITEM_NAME && d.kind === "SecureNote") {
     let partages: unknown = [];
     try {
-      partages = JSON.parse(d.data.content);
+      partages = JSON.parse(d.data?.content ?? "");
     } catch {
       // Un registre illisible vaut vide, pas panne : il ne contient aucun
       // secret, seulement des jetons de révocation. Faire échouer le
@@ -395,13 +474,16 @@ export function decryptVaultItem(
       // confort.
       partages = [];
     }
-    return { kind: "shares", shares: Array.isArray(partages) ? (partages as PartageEnCours[]) : [] };
+    return {
+      kind: "shares",
+      shares: Array.isArray(partages) ? (partages as PartageEnCours[]) : [],
+    };
   }
 
-  if (raw.name === ORG_COLORS_ITEM_NAME && d.kind === "SecureNote") {
+  if (nom === ORG_COLORS_ITEM_NAME && d.kind === "SecureNote") {
     let couleurs: unknown = {};
     try {
-      couleurs = JSON.parse(d.data.content);
+      couleurs = JSON.parse(d.data?.content ?? "");
     } catch {
       // Comme les deux registres voisins : illisible vaut vide, pas panne. Ce
       // fichier ne porte que des teintes, et faire échouer le chargement du
@@ -413,25 +495,31 @@ export function decryptVaultItem(
     return { kind: "orgcolors", couleurs: lireRegistreCouleurs(couleurs) };
   }
 
-  if (raw.name === FOLDERS_ITEM_NAME && d.kind === "SecureNote") {
+  if (nom === FOLDERS_ITEM_NAME && d.kind === "SecureNote") {
     let paths: unknown = [];
     try {
-      paths = JSON.parse(d.data.content);
+      paths = JSON.parse(d.data?.content ?? "");
     } catch {
       paths = [];
     }
-    return { kind: "folders", paths: Array.isArray(paths) ? (paths as string[]) : [] };
+    return {
+      kind: "folders",
+      paths: Array.isArray(paths) ? (paths as string[]) : [],
+    };
   }
 
   if (d.kind === "SecureNote") {
-    return { kind: "item", item: { ...emptyItem("note", raw.name, folder), note: d.data?.content ?? "" } };
+    return {
+      kind: "item",
+      item: { ...emptyItem("note", nom, folder), note: d.data?.content ?? "" },
+    };
   }
   if (d.kind === "Card") {
     const c = d.data ?? {};
     return {
       kind: "item",
       item: {
-        ...emptyItem("card", raw.name, folder),
+        ...emptyItem("card", nom, folder),
         // La charge chiffrée écrit `notes`, le modèle déchiffré expose `note` :
         // asymétrie réelle du schéma d'item, à respecter des deux côtés. La
         // relire ici est ce qui rend la note visible après un aller-retour ;
@@ -448,7 +536,7 @@ export function decryptVaultItem(
   return {
     kind: "item",
     item: {
-      ...emptyItem("login", raw.name, folder),
+      ...emptyItem("login", nom, folder),
       // Même asymétrie que pour la carte : `notes` chiffré, `note` déchiffré.
       note: raw.notes ?? "",
       username: l.username ?? "",
@@ -556,7 +644,10 @@ export function encryptFolders(
 
 // ─── Passkey passwordless (PRF) ───
 /// (Enrôlement) Enveloppe l'USK avec le secret PRF (base64) de la passkey.
-export function wrapUserKeyForPasskey(account: Account, prfSecretB64: string): string {
+export function wrapUserKeyForPasskey(
+  account: Account,
+  prfSecretB64: string,
+): string {
   return account.wrap_user_key_for_passkey(prfSecretB64);
 }
 
@@ -566,45 +657,63 @@ export function unlockWithPasskey(
   prfWrappedUserKey: string,
   encryptedPrivateKey: string,
 ): Account {
-  return Account.unlock_with_passkey(prfSecretB64, prfWrappedUserKey, encryptedPrivateKey);
+  return Account.unlock_with_passkey(
+    prfSecretB64,
+    prfWrappedUserKey,
+    encryptedPrivateKey,
+  );
 }
 
 // ─── Accès d'urgence ───
 export type EmergencyHandle = EmergencyVault;
 
-export interface EmergencyItem {
-  name: string;
-  username: string;
-  password: string;
-  urls: string[];
-}
+/// Ce qu'un contact d'urgence lit d'un item : **exactement** ce que son propriétaire lit.
+///
+/// C'était un type plus pauvre, à quatre champs. Il promettait donc moins que la fonction :
+/// « un proche peut ouvrir votre coffre » est écrit sur la page produit, et une note sécurisée
+/// lui arrivait vide.
+export type EmergencyItem = DecryptedItem;
 
 /// (Grantor) Scelle son USK pour la clé publique d'un contact de confiance.
-export function sealUserKeyFor(account: Account, contactPublicKey: string): string {
+export function sealUserKeyFor(
+  account: Account,
+  contactPublicKey: string,
+): string {
   return account.seal_user_key_for(contactPublicKey);
 }
 
 /// (Contact) Ouvre l'accès d'urgence reçu (vérifie l'émetteur) → handle détenant l'USK du grantor.
-export function openEmergency(account: Account, grantorPublicKey: string, sealed: string): EmergencyVault {
+export function openEmergency(
+  account: Account,
+  grantorPublicKey: string,
+  sealed: string,
+): EmergencyVault {
   return account.open_emergency(grantorPublicKey, sealed);
 }
 
 /// (Contact) Déchiffre un item du coffre du grantor via le handle d'urgence.
+/// (Contact) Déchiffre un item du coffre du grantor via le handle d'urgence.
+///
+/// Rend `null` pour les items de SERVICE — registre de dossiers, registre de partages,
+/// teintes d'organisation. Ce sont des métadonnées à nom réservé, pas des secrets : les
+/// afficher dans la liste d'un contact d'urgence lui montrerait des entrées qui ne veulent
+/// rien dire. L'ancienne version les rendait comme des items vides.
 export function decryptEmergencyItem(
   vault: EmergencyVault,
   encryptedKey: string,
   encryptedData: string,
-): EmergencyItem {
-  const item = JSON.parse(
-    vault.decrypt_item(JSON.stringify({ encrypted_key: encryptedKey, encrypted_data: encryptedData })),
+): EmergencyItem | null {
+  const projete = projeterItemDechiffre(
+    JSON.parse(
+      vault.decrypt_item(
+        JSON.stringify({
+          encrypted_key: encryptedKey,
+          encrypted_data: encryptedData,
+        }),
+      ),
+    ),
   );
-  const d = item.data?.data ?? {};
-  return {
-    name: item.name,
-    username: d.username ?? "",
-    password: d.password ?? "",
-    urls: adressesLues(d.uris),
-  };
+  return projete.kind === "item" ? projete.item : null;
 }
 
 /// (Contact, takeover) Prépare la réinitialisation du mot de passe maître du grantor.
@@ -614,27 +723,43 @@ export function emergencyTakeover(
   grantorKdfParams: string,
   newPassword: string,
 ): { masterPasswordHash: string; encryptedUserKey: string } {
-  const r = JSON.parse(vault.takeover(grantorEmail, grantorKdfParams, newPassword));
-  return { masterPasswordHash: r.master_password_hash, encryptedUserKey: r.encrypted_user_key };
+  const r = JSON.parse(
+    vault.takeover(grantorEmail, grantorKdfParams, newPassword),
+  );
+  return {
+    masterPasswordHash: r.master_password_hash,
+    encryptedUserKey: r.encrypted_user_key,
+  };
 }
 
 // ─── Partage / organisations ───
 export type OrgHandle = Org;
 
 /// Crée une organisation : renvoie le contexte `Org` + l'Org Key scellée pour soi (au serveur).
-export function createOrg(account: Account): { org: Org; sealedForSelf: string } {
+export function createOrg(account: Account): {
+  org: Org;
+  sealedForSelf: string;
+} {
   const creation = account.create_org();
   const sealedForSelf = creation.sealed_for_self;
   return { org: creation.org(), sealedForSelf };
 }
 
 /// Ouvre l'Org Key reçue (vérifie qu'elle provient bien de l'admin).
-export function openOrg(account: Account, adminPublicKey: string, sealed: string): Org {
+export function openOrg(
+  account: Account,
+  adminPublicKey: string,
+  sealed: string,
+): Org {
   return account.open_org(adminPublicKey, sealed);
 }
 
 /// Scelle l'Org Key pour un membre (en tant qu'admin).
-export function sealOrgKeyForMember(account: Account, org: Org, memberPublicKey: string): string {
+export function sealOrgKeyForMember(
+  account: Account,
+  org: Org,
+  memberPublicKey: string,
+): string {
   return account.seal_org_key_for_member(org, memberPublicKey);
 }
 
@@ -673,7 +798,10 @@ export function rewrapOrgItem(
   const r = JSON.parse(
     newOrg.rewrap_item(
       oldOrg,
-      JSON.stringify({ encrypted_key: encryptedKey, encrypted_data: encryptedData }),
+      JSON.stringify({
+        encrypted_key: encryptedKey,
+        encrypted_data: encryptedData,
+      }),
     ),
   );
   return r.encrypted_key;
@@ -686,7 +814,10 @@ export function decryptOrgItem(
   encryptedData: string,
 ): DecryptedItem {
   const json = org.decrypt_item(
-    JSON.stringify({ encrypted_key: encryptedKey, encrypted_data: encryptedData }),
+    JSON.stringify({
+      encrypted_key: encryptedKey,
+      encrypted_data: encryptedData,
+    }),
   );
   const item = JSON.parse(json);
   return {
