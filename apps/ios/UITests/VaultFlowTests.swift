@@ -882,8 +882,20 @@ func revenirAuCoffre(_ app: XCUIApplication) {
     if retour.exists { retour.tap() }
 }
 
-func coffreNavBar(_ app: XCUIApplication, titre: String = "Coffre") -> XCUIElement {
-    app.navigationBars.containing(
-        NSPredicate(format: "identifier CONTAINS %@", titre)
+/// La barre de navigation du coffre, quelle que soit la langue de l'appareil.
+///
+/// Le titre par défaut était « Coffre », donc français. Les captures de la fiche se
+/// prennent désormais aussi en anglais, où la barre s'appelle « Vault » : le prédicat ne
+/// trouvait rien et le test attendait ses 180 secondes avant d'abandonner sur
+/// « serveur injoignable ou identifiants refusés » — un message qui accuse le réseau
+/// alors que le serveur répondait parfaitement.
+///
+/// Les deux titres sont donc acceptés. Passer `titre` explicitement reste possible et
+/// ne regarde alors que celui-là.
+func coffreNavBar(_ app: XCUIApplication, titre: String? = nil) -> XCUIElement {
+    let titres = titre.map { [$0] } ?? ["Coffre", "Vault"]
+    let predicats = titres.map { NSPredicate(format: "identifier CONTAINS %@", $0) }
+    return app.navigationBars.containing(
+        NSCompoundPredicate(orPredicateWithSubpredicates: predicats)
     ).firstMatch
 }
