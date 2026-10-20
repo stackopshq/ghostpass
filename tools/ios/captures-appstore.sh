@@ -27,11 +27,22 @@ PORT=3122
 EMAIL="clara@ghostpass.test"
 PASSWORD="correct horse battery staple"
 APPAREIL="${GHOSTPASS_APPAREIL:-iPhone 17 Pro Max}"
+# La langue de la prise de vue. App Store Connect réclame un jeu **par langue** déclarée
+# sur la fiche : une fiche bilingue dont une langue n'a pas de captures ne se soumet pas.
+# Le français reste le défaut, parce que c'est la langue source du produit.
+LANGUE="${GHOSTPASS_LANGUE:-fr}"
+case "$LANGUE" in
+  fr|en) ;;
+  *) echo "GHOSTPASS_LANGUE doit valoir fr ou en, pas « $LANGUE »" >&2; exit 2 ;;
+esac
 # Exporté : le fragment Python ci-dessous le lit dans son environnement.
 export APPAREIL
 case "$APPAREIL" in
   iPad*) SORTIE="$IOS/AppStore/captures-ipad" ;;
 esac
+# Un répertoire par langue, pour la même raison qu'un répertoire par appareil : la seconde
+# passe écraserait la première, et l'on s'en apercevrait devant App Store Connect.
+[ "$LANGUE" = fr ] || SORTIE="$SORTIE-$LANGUE"
 
 say() { printf "\n\033[1m▸ %s\033[0m\n" "$*" >&2; }
 
@@ -76,7 +87,7 @@ print(sorted(r, key=lambda x: [int(n) for n in x["version"].split(".")])[-1]["id
 ')"
 DEVICE="$(xcrun simctl create "captures-appstore" "$TYPE" "$RUNTIME")"
 xcrun simctl boot "$DEVICE" >/dev/null 2>&1 || true
-xcrun simctl spawn "$DEVICE" defaults write .GlobalPreferences AppleLanguages -array fr || true
+xcrun simctl spawn "$DEVICE" defaults write .GlobalPreferences AppleLanguages -array "$LANGUE" || true
 xcrun simctl bootstatus "$DEVICE" -b >/dev/null 2>&1 || true
 
 # Barre d'état figée : c'est l'usage pour une fiche App Store, et cela évite qu'une heure
