@@ -148,8 +148,12 @@ final class AppStoreShots: XCTestCase {
 
         // Le menu, puis les écrans qu'il ouvre. Chaque bascule repasse par lui : une
         // navigation à partir d'un état connu échoue moins qu'un enchaînement d'allers.
-        ouvrirDepuisLeMenu(app, "button.health", titre: "Santé du coffre", rang: 3, nom: "sante")
-        ouvrirDepuisLeMenu(app, "button.send", titre: "Partager un secret", rang: 4, nom: "partage")
+        ouvrirDepuisLeMenu(
+            app, "button.health", titres: ["Santé du coffre", "Vault health"],
+            rang: 3, nom: "sante")
+        ouvrirDepuisLeMenu(
+            app, "button.send", titres: ["Partager un secret", "Share a secret"],
+            rang: 4, nom: "partage")
         prendreLeGenerateur(app)
     }
 
@@ -172,7 +176,14 @@ final class AppStoreShots: XCTestCase {
             return
         }
         taper(de)
-        guard app.navigationBars["Générer"].waitForExistence(timeout: 20) else {
+        // Les deux langues, comme partout ailleurs dans ce fichier : la fiche App Store
+        // réclame un jeu de captures par langue déclarée, et l'anglais dit « Generate ».
+        let generateur = app.navigationBars.containing(
+            NSCompoundPredicate(orPredicateWithSubpredicates: ["Générer", "Generate"].map {
+                NSPredicate(format: "identifier CONTAINS %@", $0)
+            })
+        ).firstMatch
+        guard generateur.waitForExistence(timeout: 20) else {
             XCTFail("le générateur ne s'ouvre pas — capture « generateur » manquée")
             return
         }
@@ -187,12 +198,23 @@ final class AppStoreShots: XCTestCase {
     /// première frappe déplie le menu, et la deuxième, au même endroit, atterrit sur sa
     /// première entrée. On ouvrait ainsi un écran au hasard tout en concluant que l'entrée
     /// était introuvable. Ici, dès que le titre attendu paraît, on s'arrête.
+    /// Ouvre un écran depuis le menu, et l'attend **dans les deux langues**.
+    ///
+    /// `titres` et non `titre` : les captures de la fiche se prennent aussi en anglais, et
+    /// un écran attendu sous son seul nom français ne s'y trouve jamais. Le test échouait
+    /// alors sur « ne s'ouvre pas depuis le menu » — ce qui accuse le menu, alors que
+    /// l'écran était ouvert et s'appelait simplement « Vault health ».
     private func ouvrirDepuisLeMenu(
-        _ app: XCUIApplication, _ identifiant: String, titre: String, rang: Int, nom: String
+        _ app: XCUIApplication, _ identifiant: String, titres: [String], rang: Int, nom: String
     ) {
+        let titre = titres.joined(separator: " / ")
         let menu = app.buttons["button.settings"]
         let entree = app.descendants(matching: .any).matching(identifier: identifiant).firstMatch
-        let titreDeLEcran = app.navigationBars[titre]
+        let titreDeLEcran = app.navigationBars.containing(
+            NSCompoundPredicate(orPredicateWithSubpredicates: titres.map {
+                NSPredicate(format: "identifier CONTAINS %@", $0)
+            })
+        ).firstMatch
 
         var ouvert = titreDeLEcran.exists
         for _ in 0..<6 where !ouvert {
