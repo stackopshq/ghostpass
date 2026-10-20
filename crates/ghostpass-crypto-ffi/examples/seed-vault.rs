@@ -65,7 +65,7 @@ fn main() {
     );
     let demo = vault_item(
         "GitHub",
-        r#"{"kind":"Login","data":{"username":"clara","password":"hunter2","uris":["https://github.com"],"totp":null,"password_history":[]}}"#,
+        r#"{"kind":"Login","data":{"username":"alex.durand","password":"hunter2","uris":["https://github.com"],"totp":null,"password_history":[]}}"#,
     );
 
     // Un identifiant pointant sur la page de test locale : c'est lui qui doit remonter
@@ -77,12 +77,29 @@ fn main() {
     // et un coffre sans TOTP rendrait ce chemin intestable.
     let local = vault_item(
         "Site local",
-        r#"{"kind":"Login","data":{"username":"clara","password":"local-s3cret","uris":["http://127.0.0.1:8099"],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
+        r#"{"kind":"Login","data":{"username":"alex.durand","password":"local-s3cret","uris":["http://127.0.0.1:8099"],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
     );
 
     // La vitrine : des entrées plausibles, aux noms reconnaissables, dont une avec un
     // second facteur et une carte — de quoi montrer que le coffre ne range pas que des
     // mots de passe.
+    //
+    // ─── Une identité fictive, et pourquoi elle l'est ───
+    //
+    // Ce coffre finit sur les captures de la fiche App Store. Il portait l'identité réelle
+    // de l'éditrice : deux adresses de courriel valides, son nom sur une carte bancaire, et
+    // dans le champ « nom d'utilisateur » d'une entrée Banque un début d'IBAN réel, code
+    // banque compris. La chaîne n'est pas recopiée ici : la décrire suffit, la republier
+    // referait la faute dans le fichier qui la corrige.
+    //
+    // Publier ça, c'est publier des données personnelles sur une page que le monde entier
+    // consulte, dans la vitrine d'un produit qui promet de les garder. Le défaut n'était
+    // pas dans une manipulation mais **ici** : chaque exécution le reproduisait, y compris
+    // celle qui produirait les captures d'une autre langue.
+    //
+    // `example.com` est réservé par la RFC 2606 et ne peut appartenir à personne. Le numéro
+    // de carte `4111111111111111` est le vecteur de test de Visa, et reste tel quel : il
+    // est fait pour ça.
     let mut items = vec![
         encrypted(&account, folders),
         encrypted(&account, demo),
@@ -92,23 +109,23 @@ fn main() {
         for (nom, data) in [
             (
                 "Gmail",
-                r#"{"kind":"Login","data":{"username":"clara.vanacker@gmail.com","password":"Wq7!fRk2$mZp9Lx","uris":["https://mail.google.com"],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
+                r#"{"kind":"Login","data":{"username":"alex.durand@example.com","password":"Wq7!fRk2$mZp9Lx","uris":["https://mail.google.com"],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
             ),
             (
                 "Amazon",
-                r#"{"kind":"Login","data":{"username":"clara.vanacker","password":"T4#vNs8qLd2!Wm","uris":["https://amazon.fr"],"totp":null,"password_history":[]}}"#,
+                r#"{"kind":"Login","data":{"username":"alex.durand@example.com","password":"T4#vNs8qLd2!Wm","uris":["https://amazon.fr"],"totp":null,"password_history":[]}}"#,
             ),
             (
                 "Netflix",
-                r#"{"kind":"Login","data":{"username":"clara@stackops.ch","password":"Zx9$bKt5!nQv3R","uris":["https://netflix.com"],"totp":null,"password_history":[]}}"#,
+                r#"{"kind":"Login","data":{"username":"alex.durand@example.com","password":"Zx9$bKt5!nQv3R","uris":["https://netflix.com"],"totp":null,"password_history":[]}}"#,
             ),
             (
                 "Banque",
-                r#"{"kind":"Login","data":{"username":"FR7630001007","password":"Hn4!pXw8$cJm6T","uris":[],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
+                r#"{"kind":"Login","data":{"username":"client 4821993","password":"Hn4!pXw8$cJm6T","uris":[],"totp":"JBSWY3DPEHPK3PXP","password_history":[]}}"#,
             ),
             (
                 "Carte bleue",
-                r#"{"kind":"Card","data":{"cardholder":"CLARA VANACKER","number":"4111111111111111","exp_month":"09","exp_year":"2029","code":"123"}}"#,
+                r#"{"kind":"Card","data":{"cardholder":"ALEX DURAND","number":"4111111111111111","exp_month":"09","exp_year":"2029","code":"123"}}"#,
             ),
             (
                 "Codes de secours",
