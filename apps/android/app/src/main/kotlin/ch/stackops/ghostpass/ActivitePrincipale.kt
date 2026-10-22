@@ -21,6 +21,7 @@ import ch.stackops.ghostpass.ui.EcranDeDeverrouillage
 import ch.stackops.ghostpass.ui.BoitesDePartage
 import ch.stackops.ghostpass.ui.EcranDeLElement
 import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
+import ch.stackops.ghostpass.ui.EcranDAdministration
 import ch.stackops.ghostpass.ui.EcranDExport
 import ch.stackops.ghostpass.ui.EcranDImport
 import ch.stackops.ghostpass.ui.EcranDeLaSante
@@ -153,10 +154,16 @@ class ActivitePrincipale : AppCompatActivity() {
                     enabled = edition != null || modele.corbeilleOuverte ||
                         modele.santeOuverte || reglagesOuverts || importOuvert ||
                         exportOuvert || secondFacteurOuvert || journalOuvert ||
-                        cleDeRecuperationOuverte || urgenceOuverte,
+                        cleDeRecuperationOuverte || urgenceOuverte ||
+                        modele.administrationDe != null,
                 ) {
                     when {
                         edition != null -> edition = null
+                        // Les accès d'une collection se referment avant l'écran qui y mène,
+                        // comme le coffre d'un donneur : un retour arrière qui sauterait les
+                        // deux ferait perdre de vue de quelle collection on parlait.
+                        modele.accesDe != null -> modele.fermerLesAcces()
+                        modele.administrationDe != null -> modele.fermerLAdministration()
                         // Le coffre d'un donneur se referme avant l'écran qui y mène : un
                         // retour arrière qui sauterait les deux ferait perdre de vue qu'on
                         // lisait le coffre de quelqu'un d'autre.
@@ -184,6 +191,12 @@ class ActivitePrincipale : AppCompatActivity() {
                 // composition entre « Préparer » et le choix du fichier. Le refermer jette
                 // ce texte avec l'écran.
                 if (!modele.deverrouille && exportOuvert) exportOuvert = false
+                // L'administration ne porte pas de secret du coffre, mais elle porte la
+                // liste nominative d'une équipe et ses groupes. Ce n'est pas un mot de
+                // passe ; ce n'est pas rien non plus.
+                if (!modele.deverrouille && modele.administrationDe != null) {
+                    modele.fermerLAdministration()
+                }
                 // Le second facteur montre un secret TOTP en clair : il ne survit pas non
                 // plus au verrouillage.
                 if (!modele.deverrouille && secondFacteurOuvert) secondFacteurOuvert = false
@@ -209,6 +222,9 @@ class ActivitePrincipale : AppCompatActivity() {
                     }
                     importOuvert -> EcranDImport(modele) { importOuvert = false }
                     exportOuvert -> EcranDExport(modele) { exportOuvert = false }
+                    modele.administrationDe != null -> EcranDAdministration(modele) {
+                        modele.fermerLAdministration()
+                    }
                     secondFacteurOuvert -> EcranDuSecondFacteur(modele) {
                         secondFacteurOuvert = false
                     }

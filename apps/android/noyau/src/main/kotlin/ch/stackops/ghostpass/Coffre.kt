@@ -934,6 +934,144 @@ class Coffre {
             throw ErreurApi.Reseau("Rôle inconnu : cette version ne sait pas l'attribuer.")
     }
 
+    /**
+     * **Révoque un membre et fait tourner l'Org Key dans le même mouvement.**
+     *
+     * Les deux sont indissociables. Retirer quelqu'un sans changer la clé le laisserait
+     * capable de lire tout ce que l'équipe écrira ensuite, puisqu'il en garde une copie :
+     * la révocation serait une ligne retirée d'une table, et rien de plus.
+     *
+     * Ce que la rotation ne fait **pas** : re-protéger ce qu'il a déjà vu. Ces mots de passe
+     * doivent être changés, un par un, et l'écran le dit — c'est la seule chose honnête à
+     * dire, et la taire ferait de cet écran une fausse assurance.
+     *
+     * ─── Pourquoi tout part en une requête ───
+     *
+     * Le serveur applique la rotation dans une transaction. Découper en plusieurs appels
+     * laisserait, à la première coupure de réseau, un coffre dont une part serait scellée
+     * sous l'ancienne clé et l'autre sous la neuve — **illisible pour tout le monde**,
+     * administrateur compris, et sans rien pour le réparer depuis un client.
+     *
+     * ─── Pourquoi un membre sans email annule tout ───
+     *
+     * Le serveur ne rend pas la clé publique des membres : il faut la résoudre par leur
+     * adresse. Sauter celui dont on n'a pas l'adresse l'**exclurait en silence** — il ne
+     * recevrait pas la nouvelle clé et perdrait l'accès sans que personne l'ait décidé. On
+     * refuse donc la rotation entière, ce qui est visible et réparable.
+     *
+     * [restants] est la liste des membres **autres** que le révoqué, et c'est à l'appelant
+     * de l'établir : un révoqué laissé dedans se verrait rescellé la clé neuve, ce qui
+     * annulerait exactement ce qu'on vient de faire.
+     */
+    fun revoquerEtFaireTourner(
+        ouvert: CoffreDOrganisation,
+        aRevoquer: String?,
+        restants: List<MembreDto>,
+    ) {
+        val compteOuvert = compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        exigerLaCleCourante(ouvert)
+
+        val anciens = api.itemsDOrganisation(j, ouvert.organisation.id)
+
+        // La nouvelle Org Key naît d'une création d'organisation jetable : c'est le seul
+        // chemin que le binding expose pour en produire une, et il fait exactement cela.
+        // L'organisation ainsi créée n'est **jamais déclarée au serveur** — seule sa clé sert.
+        //
+        // Les deux objets se referment, y compris si la rotation échoue en cours de route :
+        // ce sont des poignées sur de la mémoire Rust, que le ramasse-miettes de la JVM ne
+        // libère pas. Une rotation est rare, donc la fuite serait petite — mais elle
+        // porterait une Org Key, et une clé qui traîne en mémoire plus longtemps que
+        // nécessaire est le genre de détail que ce produit n'a pas le droit de laisser.
+        compteOuvert.createOrg().use { creation ->
+            creation.org().use { neuve ->
+                val reenveloppes = anciens.map { chiffre ->
+                    ElementReenveloppeDto(
+                        chiffre.id,
+                        reenvelopperSousOrg(chiffre, ouvert.org, neuve),
+                    )
+                }
+
+                val scelles = restants.map { membre ->
+                    val email = membre.email ?: throw RotationImpossible(membre.userId)
+                    val cle = try {
+                        api.clePubliqueAnnoncee(j, email).publicKey
+                    } catch (e: ErreurApi.Http) {
+                        throw RotationImpossible(email)
+                    }
+                    MembreScelleDto(membre.userId, compteOuvert.sealOrgKeyForMember(neuve, cle))
+                }
+
+                api.faireTournerLaCle(
+                    j,
+                    ouvert.organisation.id,
+                    CorpsDeRotation(
+                        revokeUserId = aRevoquer,
+                        members = scelles,
+                        items = reenveloppes,
+                    ),
+                )
+            }
+        }
+    }
+
+    /**
+     * Un membre dont la clé publique n'a pas pu être résolue, et la rotation qu'on refuse
+     * plutôt que de l'exclure sans le dire.
+     */
+    class RotationImpossible(val membre: String) : Exception(
+        "La clé publique de $membre n'a pas pu être trouvée : la rotation est annulée " +
+            "plutôt que de lui faire perdre l'accès sans que personne l'ait décidé.",
+    )
+
+    /** Crée une collection dans l'organisation. */
+    fun creerUneCollection(ouvert: CoffreDOrganisation, nom: String): CollectionDto {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return api.creerUneCollection(j, ouvert.organisation.id, nom)
+    }
+
+    /** Les groupes de l'organisation, membres et accès compris. Réservé à l'administrateur. */
+    fun groupesDe(ouvert: CoffreDOrganisation): List<GroupeDetailleDto> {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return api.groupesDOrganisation(j, ouvert.organisation.id)
+    }
+
+    /** Qui a accès à cette collection, **effectivement** — voir [AccesDto]. */
+    fun accesDe(ouvert: CoffreDOrganisation, collection: String): List<AccesDto> {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        return api.accesDeCollection(j, ouvert.organisation.id, collection)
+    }
+
+    /** Accorde une permission directe sur une collection. */
+    fun accorderUnAcces(
+        ouvert: CoffreDOrganisation,
+        collection: String,
+        utilisateur: String,
+        permission: PermissionDeCollection,
+    ) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.accorderUnAcces(
+            j, ouvert.organisation.id, collection, utilisateur, permission.versLeServeur())
+    }
+
+    /**
+     * Retire un accès **direct**, et lui seul.
+     *
+     * Un accès venu du rôle d'administrateur ou d'un groupe ne se retire pas ici, et
+     * [AccesDto.revocable] dit lequel est lequel. L'écran doit s'y tenir : proposer le
+     * retrait d'un accès qui ne part pas ferait croire qu'une porte s'est fermée.
+     */
+    fun retirerLAcces(ouvert: CoffreDOrganisation, collection: String, utilisateur: String) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        api.retirerLAcces(j, ouvert.organisation.id, collection, utilisateur)
+    }
+
     /** Accepte une invitation. Le contenu ne devient lisible qu'ensuite. */
     fun accepterLOrganisation(id: String) {
         val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
@@ -1366,6 +1504,31 @@ class Coffre {
                 (objet["encrypted_data"] as? kotlinx.serialization.json.JsonPrimitive)?.content
                     ?: throw ErreurApi.ReponseIllisible()
             return cle to donnees
+        }
+
+        /**
+         * Ré-enveloppe un élément de l'ancienne Org Key vers la neuve, et rend la nouvelle
+         * clé chiffrée — **sans jamais déchiffrer le contenu**.
+         *
+         * C'est le cœur qui le fait (`Org.rewrapItem`), et c'est ce qui rend une rotation
+         * tenable : les données restent scellées, seule leur clé d'enveloppe change. Un
+         * client qui déchiffrerait pour rechiffrer ferait passer tout le coffre de l'équipe
+         * en clair dans la mémoire du téléphone, pour une opération qui n'en a aucun besoin.
+         *
+         * Il vit ici, à côté de [scellerSousOrg] et d'[ouvrirSousOrg], parce qu'il fait la
+         * même conversion camelCase → snake_case qu'eux. C'est le troisième usage de
+         * [enveloppeDe], et le commentaire de celle-ci disait déjà pourquoi il ne doit pas
+         * en exister de copie.
+         */
+        fun reenvelopperSousOrg(
+            chiffre: ElementChiffre,
+            ancienne: uniffi.ghost_crypto_ffi.Org,
+            neuve: uniffi.ghost_crypto_ffi.Org,
+        ): String {
+            val refait = neuve.rewrapItem(ancienne, enveloppeDe(chiffre))
+            val objet = json.parseToJsonElement(refait) as kotlinx.serialization.json.JsonObject
+            return (objet["encrypted_key"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                ?: throw ErreurApi.ReponseIllisible()
         }
 
         /**

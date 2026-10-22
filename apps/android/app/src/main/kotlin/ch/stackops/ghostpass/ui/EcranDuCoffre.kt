@@ -47,6 +47,7 @@ import ch.stackops.ghostpass.Organisation
 import ch.stackops.ghostpass.OrigineDuCoffre
 import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.RaisonDIllisibilite
+import ch.stackops.ghostpass.RoleDOrganisation
 import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.ChampGhost
 import ch.stackops.ghostpass.theme.FondGhost
@@ -530,6 +531,25 @@ private fun ChoixDuCoffre(modele: ModeleDuCoffre) {
                     fontSize = 12.sp,
                 )
             }
+        }
+
+        // ─── L'entrée de l'administration ───
+        //
+        // Elle vit **ici** et non dans le menu, parce qu'elle a besoin de savoir *quelle*
+        // équipe on administre. Le menu est global : un compte membre de trois
+        // organisations y verrait « Administrer l'équipe » sans que rien ne dise laquelle,
+        // et le choix se ferait au hasard de ce qui était ouvert.
+        //
+        // Elle ne paraît qu'au rôle d'administrateur, et le reste de l'écran ne s'y fie
+        // pas : le serveur rend `403` sur la liste des membres à qui n'en est pas un, et
+        // l'écran d'administration l'affiche tel quel. Cacher le bouton est une commodité,
+        // pas la règle d'accès.
+        val equipe = modele.organisationOuverte?.organisation
+        if (equipe != null && equipe.role == RoleDOrganisation.Admin) {
+            LienDiscret(
+                texte = stringResource(R.string.coffre_administrer, equipe.nom),
+                identifiant = "button.orgAdmin",
+            ) { modele.ouvrirLAdministration(equipe) }
         }
 
         // Les collections de l'organisation ouverte.

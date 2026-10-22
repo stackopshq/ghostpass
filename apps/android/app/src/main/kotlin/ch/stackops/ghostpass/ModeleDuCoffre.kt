@@ -823,6 +823,308 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ─── L'administration d'équipe ───
+
+    /**
+     * Ce que l'écran d'administration affiche.
+     *
+     * Trois états, comme pour l'accès d'urgence, et la même raison de les distinguer : « je
+     * n'ai pas encore regardé », « je n'ai pas le droit de regarder » et « il n'y a rien »
+     * sont trois phrases différentes. La route des membres rend `403` à qui n'est pas
+     * administrateur, et la traduire en liste vide ferait croire à une équipe déserte.
+     */
+    sealed interface EtatDeLAdministration {
+        data object EnLecture : EtatDeLAdministration
+        data class Lu(
+            val membres: List<MembreDto>,
+            val collections: List<CollectionDOrganisation>,
+            val groupes: List<GroupeDetailleDto>,
+        ) : EtatDeLAdministration
+        data class Indisponible(val cause: String) : EtatDeLAdministration
+    }
+
+    /**
+     * L'équipe qu'on administre, ou `null`.
+     *
+     * Elle vit dans le modèle plutôt que dans la composition pour la raison qui vaut déjà
+     * pour la corbeille et la santé : le verrouillage automatique doit pouvoir refermer
+     * l'écran. Celui-ci porte la liste nominative des membres d'une équipe et ses groupes —
+     * ce n'est pas le coffre, mais ce n'est pas rien non plus.
+     */
+    var administrationDe by mutableStateOf<Organisation?>(null)
+        private set
+
+    var administration by mutableStateOf<EtatDeLAdministration>(EtatDeLAdministration.EnLecture)
+        private set
+
+    /**
+     * L'invitation préparée et **en attente de confirmation humaine**.
+     *
+     * Tant que ceci n'est pas nul, aucune clé n'a été scellée. C'est la même forme que
+     * [destinationAConfirmer] pour le partage, et elle tient la même règle du côté opposé :
+     * rien n'authentifie la clé publique que le serveur annonce pour un email, et sceller
+     * l'Org Key vers elle sans la montrer laisserait **le serveur désigner qui reçoit la clé
+     * de l'équipe**. Après le scellement, il est trop tard pour demander.
+     */
+    var invitationAConfirmer by mutableStateOf<Coffre.Invitation.AConfirmer?>(null)
+        private set
+
+    /** Un email sans compte sur ce serveur. Distinct d'une erreur : il n'y a rien à réessayer. */
+    var invitationSansCompte by mutableStateOf<String?>(null)
+        private set
+
+    fun ouvrirLAdministration(organisation: Organisation) {
+        administrationDe = organisation
+        message = null
+        lireLAdministration()
+    }
+
+    fun fermerLAdministration() {
+        administrationDe = null
+        administration = EtatDeLAdministration.EnLecture
+        invitationAConfirmer = null
+        invitationSansCompte = null
+        // Les accès partent avec : ils désignent une collection de **cette** équipe, et les
+        // laisser derrière ferait rouvrir l'administration directement sur l'écran des
+        // accès d'une collection qu'on ne regarde plus.
+        fermerLesAcces()
+    }
+
+    fun lireLAdministration() {
+        val organisation = administrationDe ?: return
+        viewModelScope.launch {
+            administration = EtatDeLAdministration.EnLecture
+            val ouvert = coffresOuverts[organisation.id]
+            if (ouvert == null) {
+                // On n'administre pas une équipe qu'on n'a pas ouverte : toutes les
+                // opérations d'ici — l'invitation comme la rotation — ont besoin de l'Org Key
+                // en mémoire, et aucune ne peut se rattraper si elle manque.
+                administration = EtatDeLAdministration.Indisponible(
+                    texte(R.string.admin_equipe_non_ouverte),
+                )
+                return@launch
+            }
+            administration = try {
+                val membres = withContext(Dispatchers.IO) { coffre.membresDe(ouvert) }
+                // Les groupes sont **tolérés absents** : leur route est réservée à
+                // l'administrateur, et un gestionnaire de collection qui n'est pas admin de
+                // l'organisation doit garder le reste de l'écran. Un échec ici vaut « liste
+                // vide » là où, pour les membres, il vaut « je n'ai pas le droit ».
+                val groupes = runCatching {
+                    withContext(Dispatchers.IO) { coffre.groupesDe(ouvert) }
+                }.getOrDefault(emptyList())
+                EtatDeLAdministration.Lu(membres, ouvert.collections, groupes)
+            } catch (e: Exception) {
+                EtatDeLAdministration.Indisponible(messageLisible(e))
+            }
+        }
+    }
+
+    /** Première moitié de l'invitation : demander au serveur qui est cet email. Rien n'est scellé. */
+    fun preparerUneInvitation(email: String) {
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            invitationSansCompte = null
+            try {
+                when (val trouve = withContext(Dispatchers.IO) {
+                    coffre.preparerUneInvitation(email.trim())
+                }) {
+                    is Coffre.Invitation.AConfirmer -> invitationAConfirmer = trouve
+                    is Coffre.Invitation.Inconnu -> invitationSansCompte = trouve.email
+                }
+            } catch (e: Exception) {
+                message = messageLisible(e)
+            } finally {
+                occupe = false
+            }
+        }
+    }
+
+    fun oublierLInvitation() {
+        invitationAConfirmer = null
+        invitationSansCompte = null
+    }
+
+    /** Seconde moitié : sceller l'Org Key vers la clé **confirmée**, et poser l'invitation. */
+    fun poserLInvitation(role: RoleDOrganisation, surFin: (Boolean) -> Unit = {}) {
+        val organisation = administrationDe ?: return
+        val invitation = invitationAConfirmer ?: return
+        val ouvert = coffresOuverts[organisation.id] ?: return
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) { coffre.poserLInvitation(ouvert, invitation, role) }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
+            if (resultat.isSuccess) {
+                invitationAConfirmer = null
+                lireLAdministration()
+            }
+            surFin(resultat.isSuccess)
+        }
+    }
+
+    /**
+     * Révoque un membre et fait tourner l'Org Key.
+     *
+     * [surFin] reçoit `true` quand la clé a tourné — et l'écran doit alors **se refermer et
+     * tout relire**. Ce n'est pas de la courtoisie : les coffres ouverts en mémoire tiennent
+     * encore l'ancienne Org Key, et tout ce qu'ils afficheraient désormais serait illisible.
+     */
+    fun revoquerEtFaireTourner(membre: MembreDto, surFin: (Boolean) -> Unit = {}) {
+        val organisation = administrationDe ?: return
+        val ouvert = coffresOuverts[organisation.id] ?: return
+        val lu = administration as? EtatDeLAdministration.Lu ?: return
+        val restants = lu.membres.filter { it.userId != membre.userId }
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching {
+                withContext(Dispatchers.IO) {
+                    coffre.revoquerEtFaireTourner(ouvert, membre.userId, restants)
+                }
+            }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
+            if (resultat.isSuccess) {
+                // La clé de l'équipe a changé : on lâche **tous** les coffres ouverts et on
+                // relit depuis le serveur. Garder celui-ci afficherait des lignes scellées
+                // sous une clé que cette session n'a plus.
+                rendreLesClesDEquipe()
+                fermerLAdministration()
+                chargerLesCoffresDEquipe()
+            }
+            surFin(resultat.isSuccess)
+        }
+    }
+
+    fun creerUneCollectionDEquipe(nom: String, surFin: (Boolean) -> Unit = {}) {
+        agirSurLEquipe(surFin) { ouvert -> coffre.creerUneCollection(ouvert, nom.trim()) }
+    }
+
+    fun creerUnGroupeDEquipe(nom: String, surFin: (Boolean) -> Unit = {}) {
+        agirSurLEquipe(surFin) { ouvert -> coffre.creerUnGroupe(ouvert, nom.trim()) }
+    }
+
+    fun ajouterAuGroupe(groupe: String, utilisateur: String, surFin: (Boolean) -> Unit = {}) {
+        agirSurLEquipe(surFin) { ouvert -> coffre.ajouterAuGroupe(ouvert, groupe, utilisateur) }
+    }
+
+    fun accorderAuGroupe(
+        groupe: String,
+        collection: String,
+        permission: PermissionDeCollection,
+        surFin: (Boolean) -> Unit = {},
+    ) {
+        agirSurLEquipe(surFin) { ouvert ->
+            coffre.accorderSurUneCollection(ouvert, groupe, collection, permission)
+        }
+    }
+
+    /**
+     * Le squelette commun aux écritures d'administration : occupé, message, relecture.
+     *
+     * Elles font toutes la même chose autour d'un appel qui change — et la relecture en fin
+     * de course est ce qu'on oublie une fois sur quatre en les écrivant à la main. Un écran
+     * qui ne se relit pas après une création affiche une liste à laquelle il manque ce qu'on
+     * vient d'y mettre, ce qui se lit « ça n'a pas marché ».
+     */
+    private fun agirSurLEquipe(
+        surFin: (Boolean) -> Unit,
+        action: suspend (Coffre.CoffreDOrganisation) -> Unit,
+    ) {
+        val organisation = administrationDe ?: return
+        val ouvert = coffresOuverts[organisation.id] ?: return
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching { withContext(Dispatchers.IO) { action(ouvert) } }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
+            if (resultat.isSuccess) lireLAdministration()
+            surFin(resultat.isSuccess)
+        }
+    }
+
+    // ─── Qui a accès à une collection ───
+
+    sealed interface EtatDesAcces {
+        data object EnLecture : EtatDesAcces
+        data class Lu(val acces: List<AccesDto>) : EtatDesAcces
+        data class Indisponible(val cause: String) : EtatDesAcces
+    }
+
+    /** La collection dont on regarde les accès, ou `null`. */
+    var accesDe by mutableStateOf<CollectionDOrganisation?>(null)
+        private set
+
+    var acces by mutableStateOf<EtatDesAcces>(EtatDesAcces.EnLecture)
+        private set
+
+    fun ouvrirLesAcces(collection: CollectionDOrganisation) {
+        accesDe = collection
+        lireLesAcces()
+    }
+
+    fun fermerLesAcces() {
+        accesDe = null
+        acces = EtatDesAcces.EnLecture
+    }
+
+    fun lireLesAcces() {
+        val organisation = administrationDe ?: return
+        val collection = accesDe ?: return
+        val ouvert = coffresOuverts[organisation.id] ?: return
+        viewModelScope.launch {
+            acces = EtatDesAcces.EnLecture
+            acces = try {
+                EtatDesAcces.Lu(
+                    withContext(Dispatchers.IO) { coffre.accesDe(ouvert, collection.id) },
+                )
+            } catch (e: Exception) {
+                EtatDesAcces.Indisponible(messageLisible(e))
+            }
+        }
+    }
+
+    fun accorderUnAcces(
+        utilisateur: String,
+        permission: PermissionDeCollection,
+        surFin: (Boolean) -> Unit = {},
+    ) {
+        val collection = accesDe ?: return
+        agirSurLesAcces(surFin) { ouvert ->
+            coffre.accorderUnAcces(ouvert, collection.id, utilisateur, permission)
+        }
+    }
+
+    fun retirerLAcces(utilisateur: String, surFin: (Boolean) -> Unit = {}) {
+        val collection = accesDe ?: return
+        agirSurLesAcces(surFin) { ouvert ->
+            coffre.retirerLAcces(ouvert, collection.id, utilisateur)
+        }
+    }
+
+    private fun agirSurLesAcces(
+        surFin: (Boolean) -> Unit,
+        action: suspend (Coffre.CoffreDOrganisation) -> Unit,
+    ) {
+        val organisation = administrationDe ?: return
+        val ouvert = coffresOuverts[organisation.id] ?: return
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val resultat = runCatching { withContext(Dispatchers.IO) { action(ouvert) } }
+            occupe = false
+            resultat.exceptionOrNull()?.let { message = messageLisible(it) }
+            if (resultat.isSuccess) lireLesAcces()
+            surFin(resultat.isSuccess)
+        }
+    }
+
     // ─── Le partage de lien (§4) ───
 
     /** Le lien prêt à être remis, ou `null`. Effacé dès que l'écran le referme. */

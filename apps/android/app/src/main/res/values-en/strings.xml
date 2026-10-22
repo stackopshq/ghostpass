@@ -596,4 +596,75 @@
     <string name="export_echec_ecriture">The file could not be written. If it was created, it is empty: erase it rather than keep it — a zero-byte CSV looks like an empty vault.</string>
     <string name="modele_aucune_session">No session saved on this device.</string>
     <string name="modele_mot_de_passe_maitre_incorrect">Incorrect master password.</string>
+
+    <!-- ─── Team administration ─── -->
+    <string name="coffre_administrer">Manage %1$s</string>
+    <string name="admin_termine">Done</string>
+    <string name="admin_annuler">Cancel</string>
+    <string name="admin_creer">Create</string>
+    <string name="admin_lecture">Reading the team…</string>
+    <string name="admin_equipe_non_ouverte">Open this team vault first: managing it needs its key, and nothing here can do without it.</string>
+
+    <string name="admin_membres_titre">Members</string>
+    <string name="admin_membres_note">The role is shown but cannot be changed from the phone: that request is a PATCH, which Android\'s HTTP stack refuses. Use the web app.</string>
+    <string name="admin_aucun_membre">No members.</string>
+    <string name="admin_role_et_etat">%1$s · %2$s</string>
+    <string name="admin_revoquer">Revoke</string>
+    <string name="admin_inviter">Invite someone</string>
+
+    <string name="admin_revoquer_titre">Revoke this member?</string>
+    <string name="admin_revoquer_corps">%1$s will lose access, and the team key will be rotated: nothing written from now on will be readable to them.</string>
+    <string name="admin_revoquer_deja_vu">What they have already seen, however, they still know. Those passwords must be changed, one by one — rotating the key does nothing about them.</string>
+    <string name="admin_revoquer_confirmer">Revoke and rotate the key</string>
+
+    <string name="admin_collections_titre">Collections</string>
+    <string name="admin_aucune_collection">No collections.</string>
+    <string name="admin_qui_a_acces">Who has access</string>
+    <string name="admin_nouvelle_collection">New collection</string>
+    <string name="admin_nom_collection">Collection name</string>
+
+    <string name="admin_groupes_titre">Groups</string>
+    <string name="admin_groupes_note">A group holds a permission on a collection and passes it to all its members. It is the only grant the phone can ask for.</string>
+    <string name="admin_aucun_groupe">No groups.</string>
+    <string name="admin_groupe_vide">Nobody in it.</string>
+    <string name="admin_nouveau_groupe">New group</string>
+    <string name="admin_nom_groupe">Group name</string>
+    <string name="admin_ajouter_un_membre">Add someone</string>
+    <string name="admin_accorder">Grant on a collection</string>
+    <string name="admin_ajouter_au_groupe">Add to group %1$s</string>
+    <string name="admin_accorder_au_groupe">Grant to group %1$s</string>
+    <string name="admin_tous_deja_dedans">Every member of the team is already in it.</string>
+    <string name="admin_choisir_la_collection">On which collection?</string>
+    <string name="admin_choisir_la_permission">Which permission on %1$s?</string>
+
+    <string name="admin_inviter_titre">Invite</string>
+    <string name="admin_email">Address</string>
+    <string name="admin_role_a_donner">Which role?</string>
+    <string name="admin_role_choix">%1$s %2$s</string>
+    <string name="admin_chercher">Look this address up</string>
+    <string name="admin_sans_compte">No GhostPass account for %1$s on this server. There is nothing to retry: that person has to create their account first.</string>
+    <string name="admin_confirmer_la_cle_titre">Confirm the key</string>
+    <string name="admin_confirmer_la_cle_note">Nothing authenticates this public key: it is the one the server announces for that address. Sealing to it without looking would let the server decide who receives the team key. Compare it with the person over another channel.</string>
+    <string name="admin_cle_annoncee">Announced key</string>
+    <string name="admin_sceller_et_inviter">Seal and invite</string>
+    <string name="admin_renoncer">Give up</string>
+
+    <string name="admin_role_admin">Administrator</string>
+    <string name="admin_role_membre">Member</string>
+    <string name="admin_role_lecture">Read-only</string>
+    <string name="admin_role_inconnu">Unknown role</string>
+    <string name="admin_etat_actif">active</string>
+    <string name="admin_etat_invite">invited, not accepted yet</string>
+    <string name="admin_etat_revoque">revoked</string>
+    <string name="admin_etat_inconnu">unknown state</string>
+    <string name="admin_permission_lecture">Read</string>
+    <string name="admin_permission_ecriture">Write</string>
+    <string name="admin_permission_gestion">Manage</string>
+
+    <!-- ─── Who has access to a collection ─── -->
+    <string name="acces_lecture">Reading access…</string>
+    <string name="acces_titre">Access</string>
+    <string name="acces_note">The permission shown is the one that actually applies, all sources added up. Only a direct grant can be taken back here: an administrator role is changed, a group membership is undone in the group.</string>
+    <string name="acces_personne">Nobody has access to this collection.</string>
+    <string name="acces_retirer">Remove</string>
 </resources>

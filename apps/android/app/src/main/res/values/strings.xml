@@ -695,4 +695,78 @@
     <string name="export_echec_ecriture">Le fichier n\'a pas pu être écrit. S\'il a été créé, il est vide : effacez-le plutôt que de le garder — un CSV de zéro octet ressemble à un coffre vide.</string>
     <string name="modele_aucune_session">Aucune session enregistrée sur cet appareil.</string>
     <string name="modele_mot_de_passe_maitre_incorrect">Mot de passe maître incorrect.</string>
+
+    <!-- ─── L'administration d'équipe ───
+         L'écran dit deux manques plutôt que de les taire : le changement de rôle, que la
+         pile HTTP d'Android ne peut pas demander (un `PATCH`), et le fait qu'une rotation
+         de clé ne reprend pas ce qui a déjà été vu. -->
+    <string name="coffre_administrer">Administrer %1$s</string>
+    <string name="admin_termine">Terminé</string>
+    <string name="admin_annuler">Annuler</string>
+    <string name="admin_creer">Créer</string>
+    <string name="admin_lecture">Lecture de l\'équipe…</string>
+    <string name="admin_equipe_non_ouverte">Ouvrez d\'abord ce coffre d\'équipe : administrer demande sa clé, et aucune des opérations d\'ici ne peut s\'en passer.</string>
+
+    <string name="admin_membres_titre">Membres</string>
+    <string name="admin_membres_note">Le rôle s\'affiche mais ne se change pas depuis le téléphone : cette requête est un « PATCH », que la pile HTTP d\'Android refuse. Passez par le web.</string>
+    <string name="admin_aucun_membre">Aucun membre.</string>
+    <string name="admin_role_et_etat">%1$s · %2$s</string>
+    <string name="admin_revoquer">Révoquer</string>
+    <string name="admin_inviter">Inviter quelqu\'un</string>
+
+    <string name="admin_revoquer_titre">Révoquer ce membre ?</string>
+    <string name="admin_revoquer_corps">%1$s perdra l\'accès, et la clé de l\'équipe sera renouvelée : rien de ce qui s\'écrira ensuite ne lui sera lisible.</string>
+    <string name="admin_revoquer_deja_vu">En revanche, ce qu\'il a déjà vu reste connu de lui. Ces mots de passe-là doivent être changés, un par un — le renouvellement de la clé n\'y change rien.</string>
+    <string name="admin_revoquer_confirmer">Révoquer et renouveler la clé</string>
+
+    <string name="admin_collections_titre">Collections</string>
+    <string name="admin_aucune_collection">Aucune collection.</string>
+    <string name="admin_qui_a_acces">Qui a accès</string>
+    <string name="admin_nouvelle_collection">Nouvelle collection</string>
+    <string name="admin_nom_collection">Nom de la collection</string>
+
+    <string name="admin_groupes_titre">Groupes</string>
+    <string name="admin_groupes_note">Un groupe porte une permission sur une collection, et la donne à tous ses membres. C\'est le seul octroi que le téléphone sait demander.</string>
+    <string name="admin_aucun_groupe">Aucun groupe.</string>
+    <string name="admin_groupe_vide">Personne dedans.</string>
+    <string name="admin_nouveau_groupe">Nouveau groupe</string>
+    <string name="admin_nom_groupe">Nom du groupe</string>
+    <string name="admin_ajouter_un_membre">Ajouter quelqu\'un</string>
+    <string name="admin_accorder">Accorder sur une collection</string>
+    <string name="admin_ajouter_au_groupe">Ajouter au groupe %1$s</string>
+    <string name="admin_accorder_au_groupe">Accorder au groupe %1$s</string>
+    <string name="admin_tous_deja_dedans">Tous les membres de l\'équipe y sont déjà.</string>
+    <string name="admin_choisir_la_collection">Sur quelle collection ?</string>
+    <string name="admin_choisir_la_permission">Quelle permission sur %1$s ?</string>
+
+    <string name="admin_inviter_titre">Inviter</string>
+    <string name="admin_email">Adresse</string>
+    <string name="admin_role_a_donner">Quel rôle ?</string>
+    <string name="admin_role_choix">%1$s %2$s</string>
+    <string name="admin_chercher">Chercher cette adresse</string>
+    <string name="admin_sans_compte">Aucun compte GhostPass pour %1$s sur ce serveur. Il n\'y a rien à réessayer : cette personne doit d\'abord créer son compte.</string>
+    <string name="admin_confirmer_la_cle_titre">Confirmer la clé</string>
+    <string name="admin_confirmer_la_cle_note">Rien n\'authentifie cette clé publique : c\'est celle que le serveur annonce pour cette adresse. La sceller sans regarder laisserait le serveur désigner qui reçoit la clé de l\'équipe. Comparez-la avec la personne par un autre canal.</string>
+    <string name="admin_cle_annoncee">Clé annoncée</string>
+    <string name="admin_sceller_et_inviter">Sceller et inviter</string>
+    <string name="admin_renoncer">Renoncer</string>
+
+    <string name="admin_role_admin">Administrateur</string>
+    <string name="admin_role_membre">Membre</string>
+    <string name="admin_role_lecture">Lecture seule</string>
+    <string name="admin_role_inconnu">Rôle inconnu</string>
+    <string name="admin_etat_actif">actif</string>
+    <string name="admin_etat_invite">invité, pas encore accepté</string>
+    <string name="admin_etat_revoque">révoqué</string>
+    <string name="admin_etat_inconnu">état inconnu</string>
+    <string name="admin_permission_lecture">Lecture</string>
+    <string name="admin_permission_ecriture">Écriture</string>
+    <string name="admin_permission_gestion">Gestion</string>
+
+    <!-- ─── Qui a accès à une collection ─── -->
+    <string name="acces_lecture">Lecture des accès…</string>
+    <string name="acces_titre">Accès</string>
+    <string name="acces_note">La permission est celle qui s\'applique vraiment, toutes provenances additionnées. Seul un accès direct se reprend ici : un rôle d\'administrateur se change, une appartenance à un groupe se défait dans le groupe.</string>
+    <string name="acces_personne">Personne n\'a accès à cette collection.</string>
+    <string name="acces_retirer">Retirer</string>
 </resources>
