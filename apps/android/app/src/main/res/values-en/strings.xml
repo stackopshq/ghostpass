@@ -578,4 +578,22 @@
     <string name="element_aucune_equipe">You have write access to no team vault.</string>
     <string name="element_equipes_illisibles">Some team vaults could not be opened: the list above may be incomplete.</string>
     <string name="deverrouillage_code_verification">Verification code</string>
+
+    <!-- ─── Export ─── -->
+    <string name="coffre_export_csv">Export a CSV</string>
+    <string name="export_titre">Export</string>
+    <string name="export_annuler">Cancel</string>
+    <string name="export_termine">Done</string>
+    <plurals name="export_presentation">
+        <item quantity="one">The file will contain %d entry, password included, in the clear. Any password manager can read it back — and so can anyone.</item>
+        <item quantity="other">The file will contain %d entries, passwords included, in the clear. Any password manager can read it back — and so can anyone.</item>
+    </plurals>
+    <string name="export_mot_de_passe_maitre">Master password</string>
+    <string name="export_mot_de_passe_invite">Your password</string>
+    <string name="export_preparer">Prepare the file</string>
+    <string name="export_enregistre">✓ File saved.</string>
+    <string name="export_penser_a_effacer">Put it somewhere safe, then erase it: as long as it exists, your passwords are readable by whoever gets hold of it.</string>
+    <string name="export_echec_ecriture">The file could not be written. If it was created, it is empty: erase it rather than keep it — a zero-byte CSV looks like an empty vault.</string>
+    <string name="modele_aucune_session">No session saved on this device.</string>
+    <string name="modele_mot_de_passe_maitre_incorrect">Incorrect master password.</string>
 </resources>

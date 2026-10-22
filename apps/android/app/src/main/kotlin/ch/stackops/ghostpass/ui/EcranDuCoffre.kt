@@ -82,6 +82,7 @@ fun EcranDuCoffre(
     surSante: () -> Unit = {},
     surReglages: () -> Unit = {},
     surImport: () -> Unit = {},
+    surExport: () -> Unit = {},
     surSecondFacteur: () -> Unit = {},
     surJournal: () -> Unit = {},
     surCleDeRecuperation: () -> Unit = {},
@@ -110,8 +111,8 @@ fun EcranDuCoffre(
 
             if (reglagesOuverts) {
                 MenuDeReglages(
-                    modele, surCorbeille, surSante, surReglages, surImport, surSecondFacteur,
-                    surJournal, surCleDeRecuperation, surUrgence,
+                    modele, surCorbeille, surSante, surReglages, surImport, surExport,
+                    surSecondFacteur, surJournal, surCleDeRecuperation, surUrgence,
                 ) {
                     reglagesOuverts = false
                 }
@@ -308,6 +309,7 @@ private fun MenuDeReglages(
     surSante: () -> Unit,
     surReglages: () -> Unit,
     surImport: () -> Unit,
+    surExport: () -> Unit,
     surSecondFacteur: () -> Unit,
     surJournal: () -> Unit,
     surCleDeRecuperation: () -> Unit,
@@ -371,10 +373,20 @@ private fun MenuDeReglages(
 
         // L'import écrit dans le coffre **personnel** : le proposer depuis une collection
         // d'équipe laisserait croire qu'il y déposera. On ne l'offre donc qu'à l'accueil.
+        //
+        // L'export est réservé au même endroit, pour la raison **symétrique** et plus
+        // sérieuse : il ne sort que le coffre personnel (`ModeleDuCoffre.exportables`).
+        // L'offrir depuis une collection d'équipe laisserait croire qu'il en sort le
+        // contenu — et le fichier obtenu, qui ne le contient pas, passerait pour une perte
+        // de données plutôt que pour une limite voulue.
         if (modele.collectionOuverte == null) {
             LienDiscret(stringResource(R.string.coffre_import_csv), identifiant = "button.import") {
                 surFermer()
                 surImport()
+            }
+            LienDiscret(stringResource(R.string.coffre_export_csv), identifiant = "button.export") {
+                surFermer()
+                surExport()
             }
         }
 

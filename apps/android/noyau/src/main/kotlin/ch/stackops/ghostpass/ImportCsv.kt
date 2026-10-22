@@ -100,7 +100,9 @@ object ImportCsv {
         //   KeePass    Group, Title, Username, Password, URL, Notes
         val dossier = premier(ligne, "folder", "vault", "group", "grouping", "category", "tags")
         val totp = premier(ligne, "totp", "login_totp", "otpauth", "otpsecret", "otp")
-        val adresse = premier(ligne, "url", "login_uri", "website", "uri", "urls")
+        val adresses = decouperAdresses(
+            premier(ligne, "url", "login_uri", "website", "uri", "urls"),
+        )
         // `extra` chez LastPass, `note` au singulier chez Dashlane et Chrome. Les omettre
         // perdait les notes de tout coffre migré — **silencieusement**, puisqu'un élément
         // sans note a exactement l'air d'un élément qui n'en avait pas.
@@ -114,12 +116,31 @@ object ImportCsv {
                 Identifiants(
                     username = premier(ligne, "username", "login_username", "login", "user"),
                     password = premier(ligne, "password", "login_password"),
-                    uris = if (adresse.isEmpty()) emptyList() else listOf(adresse),
+                    uris = adresses,
                     totp = totp.ifEmpty { null },
                 ),
             ),
         )
     }
+
+    /**
+     * Découpe la cellule d'adresses en adresses.
+     *
+     * Une entrée porte plusieurs adresses — `connect.ulys.com` et `user.ulys.com` valent
+     * pour le même compte — et le CSV n'a qu'une colonne pour les loger. Notre propre export
+     * les y met à la ligne ([ExportCsv]), ce qui est légal dans une cellule entre guillemets
+     * et que [lignes] relit déjà : **le tour complet export → import est donc éprouvé plutôt
+     * que supposé.** Sans ce découpage, une entrée à deux adresses revenait d'un
+     * aller-retour avec une seule adresse portant un saut de ligne au milieu.
+     *
+     * Ce qu'il ne fait **pas** : deviner le séparateur d'un autre gestionnaire. Un export
+     * tiers qui logerait deux adresses dans une cellule autrement qu'à la ligne entre ici
+     * comme UNE adresse — exactement comme avant, donc sans régression, mais sans progrès.
+     *
+     * Transposition de `decouperAdresses` d'`apps/web-next/src/lib/export.ts`.
+     */
+    fun decouperAdresses(cellule: String): List<String> =
+        cellule.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
 
     /**
      * Ce qu'on accepte comme nom d'élément importé.
@@ -166,7 +187,21 @@ object ImportCsv {
         return false
     }
 
-    private val AMORCES = charArrayOf('=', '+', '-', '@')
+    /**
+     * Les caractères qui font d'une cellule une formule, pour les tableurs courants.
+     *
+     * **La même liste qu'iOS** (`CsvExport.amorcesDeFormule`), tabulation et retour chariot
+     * compris. Ils y étaient et manquaient ici, et ce n'était sans conséquence que tant
+     * qu'Android n'exportait pas : depuis qu'[ExportCsv] neutralise en s'appuyant sur cette
+     * fonction, un jeu plus pauvre à la lecture qu'à l'écriture ferait grossir d'une
+     * apostrophe, à chaque aller-retour, les seules valeurs commençant par l'un des deux.
+     *
+     * Le retour chariot est inatteignable après notre propre analyse — [lignes] ramène
+     * `\r\n` et `\r` au saut simple avant tout découpage. Il est gardé parce que la liste
+     * doit se lire comme celle d'iOS, et qu'un lecteur qui compare les deux ne doit pas
+     * avoir à retrouver ce raisonnement pour conclure qu'elles s'accordent.
+     */
+    private val AMORCES = charArrayOf('=', '+', '-', '@', '\t', '\r')
 
     /** La première colonne renseignée parmi celles qui désignent la même chose. */
     private fun premier(ligne: Map<String, String>, vararg noms: String): String {

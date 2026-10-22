@@ -671,4 +671,28 @@
     <string name="element_aucune_equipe">Vous n\'avez de droit d\'écriture sur aucun coffre d\'équipe.</string>
     <string name="element_equipes_illisibles">Certains coffres d\'équipe n\'ont pas pu être ouverts : la liste ci-dessus est peut-être incomplète.</string>
     <string name="deverrouillage_code_verification">Code de vérification</string>
+
+    <!-- ─── L'export ───
+         Le pendant de l'import, et le seul écran qui écrit des secrets hors du chiffré.
+         Les phrases disent deux fois que le fichier est en clair : une fois avant de le
+         produire, une fois après. Ce n'est pas une redondance — la première décide, la
+         seconde rappelle qu'il reste quelque chose à faire. -->
+    <string name="coffre_export_csv">Exporter un CSV</string>
+    <string name="export_titre">Exporter</string>
+    <string name="export_annuler">Annuler</string>
+    <string name="export_termine">Terminé</string>
+    <!-- Le %d figure dans les deux formes, zéro compris : en français « one » couvre aussi
+         le zéro, et « votre entrée » serait faux pour un coffre vide. -->
+    <plurals name="export_presentation">
+        <item quantity="one">Le fichier contiendra %d entrée, mot de passe compris, en clair. Il se relit dans n\'importe quel gestionnaire — et par n\'importe qui.</item>
+        <item quantity="other">Le fichier contiendra %d entrées, mots de passe compris, en clair. Il se relit dans n\'importe quel gestionnaire — et par n\'importe qui.</item>
+    </plurals>
+    <string name="export_mot_de_passe_maitre">Mot de passe maître</string>
+    <string name="export_mot_de_passe_invite">Votre mot de passe</string>
+    <string name="export_preparer">Préparer le fichier</string>
+    <string name="export_enregistre">✓ Fichier enregistré.</string>
+    <string name="export_penser_a_effacer">Mettez-le à l\'abri, puis effacez-le : tant qu\'il existe, vos mots de passe sont lisibles par qui met la main dessus.</string>
+    <string name="export_echec_ecriture">Le fichier n\'a pas pu être écrit. S\'il a été créé, il est vide : effacez-le plutôt que de le garder — un CSV de zéro octet ressemble à un coffre vide.</string>
+    <string name="modele_aucune_session">Aucune session enregistrée sur cet appareil.</string>
+    <string name="modele_mot_de_passe_maitre_incorrect">Mot de passe maître incorrect.</string>
 </resources>

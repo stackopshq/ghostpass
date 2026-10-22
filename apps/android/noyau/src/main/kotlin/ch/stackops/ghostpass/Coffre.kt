@@ -143,6 +143,34 @@ class Coffre {
     }
 
     /**
+     * Le mot de passe maître est-il celui de cette session ?
+     *
+     * **Une dérivation Argon2id dans le cœur, pas une comparaison de chaînes** : rien ici ne
+     * détient le mot de passe pour le confronter. On redéroule l'ouverture du compte et on
+     * jette ce qu'elle rend ; seule l'absence d'exception répond.
+     *
+     * Pourquoi une fonction à part plutôt que [rouvrirHorsLigne], qui fait déjà cette
+     * dérivation : celle-là **réassigne** `client` et `jeton`, et reposerait le jeton tel
+     * qu'il dormait dans le stockage — plus ancien, parfois, que celui qu'une session en
+     * cours a rafraîchi. Un contrôle ne doit rien changer à ce qu'il contrôle. Ici rien
+     * n'est touché, dans aucun des deux cas.
+     *
+     * Appelée depuis l'écran d'export : un téléphone déverrouillé posé sur une table ne doit
+     * pas suffire à sortir tout le coffre en clair. C'est le pendant de
+     * `VaultStore.verifyMasterPassword` d'iOS.
+     */
+    fun verifierLeMotDePasseMaitre(session: Session, motDePasse: String): Boolean =
+        runCatching {
+            Account.unlock(
+                motDePasse,
+                session.email,
+                session.kdfParams,
+                session.encryptedUserKey,
+                session.encryptedPrivateKey,
+            )
+        }.isSuccess
+
+    /**
      * Ouvre une **session** par SSO — et laisse le coffre fermé.
      *
      * C'est la distinction que `docs/sso-mobile.md` répète et qu'il faut tenir : **le SSO

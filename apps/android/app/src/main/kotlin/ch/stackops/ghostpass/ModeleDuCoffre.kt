@@ -1506,6 +1506,70 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ─── L'export ───
+
+    /**
+     * Ce qui sortira du coffre, et **rien d'autre**.
+     *
+     * Deux restrictions, et chacune ferme une fuite :
+     *
+     *  - **[lecture] et non [lectureAffichee].** La seconde fusionne le coffre personnel et
+     *    les collections d'équipe pour l'affichage. Exporter depuis elle laisserait un
+     *    membre déposer les secrets de toute son organisation en clair dans un fichier, sur
+     *    son téléphone, sans que l'équipe l'apprenne. Sortir un secret partagé du coffre est
+     *    une décision qui appartient à l'équipe. La web app porte la cicatrice de ce
+     *    défaut-là (`export.ts`), relevé en août par la session iOS ;
+     *  - **[LectureDuCoffre.lisibles].** Une ligne qui ne s'est pas ouverte n'a pas de
+     *    contenu à écrire : elle n'a même pas de nom, qui vit dans le chiffré. Elle
+     *    n'apparaît donc pas dans le fichier, et c'est pourquoi l'écran compte ce qui
+     *    sortira plutôt que ce que la liste affiche.
+     *
+     * Les registres internes, eux, sont déjà écartés en amont : [Coffre.relire] ne les range
+     * pas dans `entrees`.
+     */
+    val exportables: List<EntreeDuCoffre.Lisible>
+        get() = lecture.lisibles
+
+    /**
+     * Vérifie le mot de passe maître, puis rend le CSV — ou `null`.
+     *
+     * Les deux gestes sont liés **dans le modèle** plutôt qu'à l'écran, pour qu'il n'existe
+     * aucun chemin qui fabrique le fichier sans avoir demandé le mot de passe. Un écran est
+     * un endroit où l'on oublie une condition ; une fonction qui ne rend rien sans elle ne
+     * l'oublie pas.
+     *
+     * Pourquoi le redemander alors que le coffre est ouvert : un téléphone déverrouillé posé
+     * sur une table ne doit pas suffire à en sortir tous les mots de passe en clair. C'est
+     * le seul écran du produit où ce raisonnement s'applique, parce que c'est le seul qui
+     * écrit des secrets hors du chiffré.
+     *
+     * La vérification est une dérivation Argon2id dans le cœur — quelques centaines de
+     * millisecondes sur un téléphone d'entrée de gamme —, d'où le passage par
+     * [Dispatchers.IO] : la faire sur le fil principal figerait l'écran juste après l'appui.
+     */
+    fun preparerLExport(motDePasse: String, surFin: (String?) -> Unit) {
+        val session = stockage.session()
+        if (session == null) {
+            message = texte(R.string.modele_aucune_session)
+            surFin(null)
+            return
+        }
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val juste = withContext(Dispatchers.IO) {
+                coffre.verifierLeMotDePasseMaitre(session, motDePasse)
+            }
+            occupe = false
+            if (!juste) {
+                message = texte(R.string.modele_mot_de_passe_maitre_incorrect)
+                surFin(null)
+                return@launch
+            }
+            surFin(ExportCsv.texte(exportables))
+        }
+    }
+
     fun importerDesElements(
         elements: List<ElementDuCoffre>,
         surFin: (Int) -> Unit = {},

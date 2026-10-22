@@ -118,6 +118,79 @@ data class UtilisateurDto(val userId: String, val publicKey: String)
 @Serializable
 data class GroupeDto(val id: String, val name: String = "")
 
+/** Un groupe tel que le **listing** le rend : avec ses membres et ses collections. */
+@Serializable
+data class GroupeDetailleDto(
+    val id: String,
+    val name: String = "",
+    val members: List<MembreDeGroupeDto> = emptyList(),
+    val collections: List<AccesDeGroupeDto> = emptyList(),
+)
+
+@Serializable
+data class MembreDeGroupeDto(val userId: String, val email: String? = null)
+
+@Serializable
+data class AccesDeGroupeDto(val collectionId: String, val permission: String = "")
+
+@Serializable
+internal data class EnveloppeDeGroupes(val groups: List<GroupeDetailleDto> = emptyList())
+
+/**
+ * Qui a accès à une collection, **effectivement**.
+ *
+ * Le serveur n'énumère pas la table des octrois directs, et le commentaire de la route dit
+ * pourquoi : cette table ne porte qu'une des trois sources d'accès. Un administrateur
+ * d'organisation a `manage` sans aucune ligne, et un groupe donne l'accès à tous ses
+ * membres sans ligne non plus. Une liste bâtie sur la table affichait « personne » là où
+ * deux personnes entraient — mesuré le 2026-08-29 sur la collection `providers` de l'org
+ * `stackops`. Ce n'est pas une erreur anodine : elle invite à donner un accès déjà donné,
+ * et fait croire qu'une révocation ferme une porte restée ouverte.
+ *
+ * D'où [sources], qui dit **d'où** vient l'accès, et [revocable], qui dit si ce client peut
+ * le reprendre. Retirer un admin d'une collection se fait en changeant son rôle ; le sortir
+ * d'un groupe, en le sortant du groupe. Ni l'un ni l'autre n'est un retrait d'accès.
+ */
+@Serializable
+data class AccesDto(
+    val userId: String,
+    val email: String? = null,
+    val permission: String = "",
+    val sources: List<SourceDAccesDto> = emptyList(),
+    val revocable: Boolean = false,
+)
+
+@Serializable
+data class SourceDAccesDto(
+    val kind: String = "",
+    val label: String = "",
+    val permission: String = "",
+)
+
+@Serializable
+internal data class EnveloppeDAcces(val access: List<AccesDto> = emptyList())
+
+/**
+ * Le corps de `POST /api/orgs/:id/rotate` — **une seule requête, appliquée en transaction**.
+ *
+ * Tout y est calculé par le client : la nouvelle Org Key scellée pour chaque membre
+ * restant, et chaque élément ré-enveloppé sous elle. Le découper en plusieurs appels
+ * laisserait, à la première coupure, un coffre dont une part serait illisible pour tout le
+ * monde — administrateur compris.
+ */
+@Serializable
+data class CorpsDeRotation(
+    val revokeUserId: String? = null,
+    val members: List<MembreScelleDto> = emptyList(),
+    val items: List<ElementReenveloppeDto> = emptyList(),
+)
+
+@Serializable
+data class MembreScelleDto(val userId: String, val encryptedOrgKey: String)
+
+@Serializable
+data class ElementReenveloppeDto(val id: String, val encryptedKey: String)
+
 // ─── Ce que l'application en fait ───
 
 /** Le rôle du membre dans l'organisation. */

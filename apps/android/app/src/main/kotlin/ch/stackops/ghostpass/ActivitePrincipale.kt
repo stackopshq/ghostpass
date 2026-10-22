@@ -21,6 +21,7 @@ import ch.stackops.ghostpass.ui.EcranDeDeverrouillage
 import ch.stackops.ghostpass.ui.BoitesDePartage
 import ch.stackops.ghostpass.ui.EcranDeLElement
 import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
+import ch.stackops.ghostpass.ui.EcranDExport
 import ch.stackops.ghostpass.ui.EcranDImport
 import ch.stackops.ghostpass.ui.EcranDeLaSante
 import ch.stackops.ghostpass.ui.EcranDeLUrgence
@@ -122,6 +123,7 @@ class ActivitePrincipale : AppCompatActivity() {
                 // en vigueur — après une mort du processus, le coffre est fermé.
                 var reglagesOuverts by rememberSaveable { mutableStateOf(false) }
                 var importOuvert by remember { mutableStateOf(false) }
+                var exportOuvert by remember { mutableStateOf(false) }
                 var secondFacteurOuvert by remember { mutableStateOf(false) }
                 var journalOuvert by remember { mutableStateOf(false) }
                 var cleDeRecuperationOuverte by remember { mutableStateOf(false) }
@@ -150,8 +152,8 @@ class ActivitePrincipale : AppCompatActivity() {
                 BackHandler(
                     enabled = edition != null || modele.corbeilleOuverte ||
                         modele.santeOuverte || reglagesOuverts || importOuvert ||
-                        secondFacteurOuvert || journalOuvert || cleDeRecuperationOuverte ||
-                        urgenceOuverte,
+                        exportOuvert || secondFacteurOuvert || journalOuvert ||
+                        cleDeRecuperationOuverte || urgenceOuverte,
                 ) {
                     when {
                         edition != null -> edition = null
@@ -164,6 +166,7 @@ class ActivitePrincipale : AppCompatActivity() {
                         journalOuvert -> journalOuvert = false
                         secondFacteurOuvert -> secondFacteurOuvert = false
                         importOuvert -> importOuvert = false
+                        exportOuvert -> exportOuvert = false
                         reglagesOuverts -> reglagesOuverts = false
                         modele.santeOuverte -> modele.santeOuverte = false
                         else -> modele.fermerLaCorbeille()
@@ -177,6 +180,10 @@ class ActivitePrincipale : AppCompatActivity() {
                 // L'import, lui, porte à l'écran le contenu d'un fichier de mots de passe
                 // en clair : il ne survit pas au verrouillage.
                 if (!modele.deverrouille && importOuvert) importOuvert = false
+                // L'export, encore moins : il tient le coffre entier en clair dans la
+                // composition entre « Préparer » et le choix du fichier. Le refermer jette
+                // ce texte avec l'écran.
+                if (!modele.deverrouille && exportOuvert) exportOuvert = false
                 // Le second facteur montre un secret TOTP en clair : il ne survit pas non
                 // plus au verrouillage.
                 if (!modele.deverrouille && secondFacteurOuvert) secondFacteurOuvert = false
@@ -201,6 +208,7 @@ class ActivitePrincipale : AppCompatActivity() {
                         reglagesOuverts = false
                     }
                     importOuvert -> EcranDImport(modele) { importOuvert = false }
+                    exportOuvert -> EcranDExport(modele) { exportOuvert = false }
                     secondFacteurOuvert -> EcranDuSecondFacteur(modele) {
                         secondFacteurOuvert = false
                     }
@@ -253,6 +261,7 @@ class ActivitePrincipale : AppCompatActivity() {
                         surSante = { modele.santeOuverte = true },
                         surReglages = { reglagesOuverts = true },
                         surImport = { modele.message = null; importOuvert = true },
+                        surExport = { modele.message = null; exportOuvert = true },
                         surSecondFacteur = {
                             modele.message = null
                             secondFacteurOuvert = true
