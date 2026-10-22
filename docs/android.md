@@ -292,6 +292,14 @@ Trois règles, apprises en le câblant :
 Les vecteurs sont dans `apps/ios/Tests/ContractTests.swift`, classe `EtiquetteOtpauthTests`.
 À porter tels quels.
 
+**Et le scan par la caméra existe depuis le 2026-10-23** (`EcranDeScanDeTotp`). Jusque-là,
+Android recevait un lien `otpauth:` d'une *autre* application de scan, ou le faisait taper :
+la fiche des deux magasins promettait pourtant « scannez le QR code affiché par le site ».
+Le décodeur est **ZXing** et non ML Kit — la variante légère de ML Kit télécharge son modèle
+par les services Play, la groupée les réclame à l'exécution, et cette application n'en
+dépend pas. Le champ de saisie reste à côté du bouton : un service peut donner sa clé en
+texte, sans QR code, et la caméra peut être absente ou refusée.
+
 ## 10. L'apparence — l'application est le petit frère, pas un cousin
 
 Deux règles, toutes deux issues d'un retour de Clara sur le portage Flutter de GhostCal
@@ -375,24 +383,44 @@ de poser deux réglages sur trois sans le dire.
 - **La corbeille des collections d'équipe n'existe pas côté serveur** : `DELETE` y efface.
   L'écran le dit — « Supprimer définitivement » — mais un membre qui se trompe n'a aucun
   recours.
-- **Le reste des réglages d'iOS** : import et export, santé du coffre, clé de récupération,
-  accès d'urgence, MFA, activité. Rien n'en est grisé — un réglage qui promet une fonction
-  inexistante déplace l'échec du moment où l'on configure à celui où quelqu'un essaie.
-- **L'administration d'organisation est partielle.** Inviter un membre et lui accorder une
-  permission sur une collection (par groupe) existent et sont éprouvés. Manquent : retirer un
-  membre — c'est le flux de rotation, que le client ne mène pas — et **changer le rôle d'un
-  membre**, qui est hors d'atteinte : la route est un `PATCH`, et `HttpURLConnection` refuse
-  ce verbe (`ProtocolException: Invalid HTTP method: PATCH`, mesuré). Le détour par réflexion
-  casse selon la version, et l'en-tête de substitution suppose un greffon que le serveur n'a
-  pas. C'est donc l'octroi par groupe qui est exposé, et non le rôle.
+- **Le reste des réglages d'iOS** : santé du coffre, clé de récupération, accès d'urgence,
+  MFA, activité — tous posés. L'**export** a été le dernier à venir, le 2026-10-23 : les
+  deux fiches de magasin promettaient « export de vos données, à tout moment, en clair et
+  sans condition », et il n'existait aucun code d'export sur Android. Un gestionnaire dont
+  on ne peut pas partir n'est pas un coffre.
+- **L'administration d'organisation a son écran depuis le 2026-10-23**
+  (`EcranDAdministration`, `EcranDesAcces`). Les opérations existaient dans `:noyau` et un
+  témoin les éprouvait contre un vrai serveur ; il n'y avait **aucun écran** pour s'en
+  servir, ce qui est la pire forme d'un manque — le code a l'air fait.
+
+  Y sont : les membres avec rôle et état, l'invitation en deux temps, la **révocation avec
+  rotation de l'Org Key**, la création de collections et de groupes, l'octroi par groupe, et
+  **qui a accès à chaque collection**.
+
+  Reste hors d'atteinte : **changer le rôle d'un membre**. La route est un `PATCH`, et
+  `HttpURLConnection` refuse ce verbe (`ProtocolException: Invalid HTTP method: PATCH`,
+  mesuré). Le détour par réflexion casse selon la version, et l'en-tête de substitution
+  suppose un greffon que le serveur n'a pas. L'écran l'écrit plutôt que de proposer un
+  bouton qui échouerait à l'usage.
+
+  Deux règles que la rotation impose, et qui ne se devinent pas : **un membre dont la clé
+  publique ne se résout pas annule la rotation entière** — le sauter l'exclurait en silence,
+  puisqu'il ne recevrait pas la clé neuve ; et **tout part en une requête**, que le serveur
+  applique en transaction, parce qu'une rotation à moitié appliquée rend une part du coffre
+  illisible pour tout le monde, administrateur compris.
 - **Rien n'authentifie la clé publique vers laquelle on scelle.** `/api/users/lookup` rend
   une clé que le serveur choisit ; sceller l'Org Key vers elle sans contrôle laisse le
   serveur désigner qui reçoit la clé de l'équipe — la faute du §4, côté émetteur. Le cœur
   protège le destinataire (`openOrg` vérifie la provenance) ; l'émetteur n'a rien.
   `preparerUneInvitation` sépare donc la recherche du scellement pour qu'une confirmation
-  humaine puisse s'y glisser, mais **aucune empreinte n'est affichée** : il n'en existe sur
+  humaine puisse s'y glisser, et l'écran d'invitation **montre la clé annoncée** avant de
+  sceller, en invitant à la comparer par un autre canal.
+
+  Ce qu'il **n'affiche pas**, et c'est délibéré : une **empreinte**. Il n'en existe sur
   aucune plateforme, et en inventer une du seul côté Android donnerait deux empreintes
-  différentes pour la même clé. Cela demande une primitive du cœur et un accord commun.
+  différentes pour la même clé — donc une comparaison qui échoue entre deux clients honnêtes.
+  Montrer la valeur brute est moins commode et ne ment pas. Une empreinte commune demande
+  une primitive du cœur et un accord entre les trois clients.
 
 ## 13. Les outils, et ce que chacun prouve
 

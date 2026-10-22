@@ -84,6 +84,11 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    // `LocalLifecycleOwner`. Celui d'`androidx.compose.ui.platform` existe encore mais
+    // est déprécié, et le compilateur nomme lui-même son remplaçant : il a déménagé ici.
+    // La dépendance est explicite plutôt que transitive — ce qu'on obtient par ricochet
+    // disparaît à la prochaine montée de version de ce qui le tirait.
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     // Le mot de passe maître et le jeton ne vont pas dans un fichier de préférences en
     // clair. `EncryptedSharedPreferences` s'appuie sur le KeyStore matériel.
