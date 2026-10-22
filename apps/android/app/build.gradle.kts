@@ -1,3 +1,5 @@
+import java.util.Properties
+
 // AGP 9 embarque le support Kotlin : appliquer `org.jetbrains.kotlin.android` en plus
 // est désormais une erreur de configuration, pas une redondance inoffensive.
 plugins {
@@ -14,6 +16,25 @@ plugins {
 // tools/android/build-jni.sh, jamais écrits à la main.
 val genere = rootProject.file("generated")
 
+/**
+ * La signature de diffusion, lue dans `android/key.properties` — **hors du dépôt**, à côté
+ * de la clé elle-même. Voir `key.properties.example`.
+ *
+ * Sans ce fichier, la variante `release` sort **non signée**, donc ininstallable. C'est le
+ * comportement voulu : un paquet signé par la clé de débogage s'installe, se lance, et ne
+ * se distingue d'un vrai que par son empreinte. Mieux vaut un artefact qui refuse de
+ * s'installer qu'un artefact qui se distribue par erreur.
+ *
+ * Même motif que `apps/mobile/android/app/build.gradle.kts` de GhostCal : la clé d'envoi y
+ * vit chez Clara, et la signature est ce qui lie toutes les mises à jour d'une application
+ * à la précédente. Google refuse un dépôt dont l'empreinte de certificat ne correspond pas
+ * à celle de la version déjà en ligne.
+ */
+val proprietesDeLaCle = Properties().apply {
+    val fichier = rootProject.file("key.properties")
+    if (fichier.exists()) fichier.inputStream().use { load(it) }
+}
+
 android {
     namespace = "ch.stackops.ghostpass"
     compileSdk = 36
@@ -25,8 +46,16 @@ android {
         // une libc plus ancienne que celle qu'on déclare accepter.
         minSdk = 24
         targetSdk = 36
+        // **Les mêmes numéros que l'envoi iOS.** `MARKETING_VERSION` y vaut 1.0 et
+        // `CURRENT_PROJECT_VERSION` 1 : les deux plateformes sortent la même application au
+        // même numéro, ce qui est le seul moyen qu'un rapport de bogue désigne quelque
+        // chose. Le `0.1` d'avant datait d'un portage qui n'avait rien à publier.
+        //
+        // `versionCode` doit monter à **chaque** dépôt sur la Play Console : elle refuse
+        // deux fois le même, et c'est lui qui ordonne les mises à jour — pas `versionName`,
+        // qui n'est qu'un texte affiché.
         versionCode = 1
-        versionName = "0.1"
+        versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Les témoins qu'un script pilote sont exclus de l'exécution ordinaire : lancés
         // d'affilée, ils seraient rouges pour une raison qui n'est pas le produit. Voir
@@ -61,6 +90,27 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        if (proprietesDeLaCle.isNotEmpty()) {
+            create("release") {
+                storeFile = rootProject.file(proprietesDeLaCle.getProperty("storeFile"))
+                storePassword = proprietesDeLaCle.getProperty("storePassword")
+                keyAlias = proprietesDeLaCle.getProperty("keyAlias")
+                keyPassword = proprietesDeLaCle.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // `findByName` et non `getByName` : sans `key.properties`, la configuration
+            // n'existe pas et `null` laisse la variante non signée. `getByName` ferait
+            // échouer la **configuration** du projet, donc tout — y compris un
+            // `assembleDebug` qui n'a aucun besoin de la clé de production.
+            signingConfig = signingConfigs.findByName("release")
+        }
     }
 
     buildFeatures {

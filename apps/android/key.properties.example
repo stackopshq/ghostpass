@@ -1,0 +1,30 @@
+# Copier en `key.properties` (hors dépôt), à côté du magasin de clés. Ne versionner ni l'un
+# ni l'autre : `.gitignore` les écarte tous les deux, et la ligne n'est pas là par principe.
+#
+# ─── Ce que cette clé est ───
+#
+# **L'identité de l'application chez Google.** Toutes les mises à jour d'une application
+# doivent être signées par la même clé que la première : la Play Console refuse un dépôt dont
+# l'empreinte de certificat ne correspond pas à celle de la version en ligne. Perdre cette
+# clé ne se répare pas en la régénérant — il faut demander une réinitialisation à Google, et
+# en attendant, l'application ne reçoit plus de mise à jour.
+#
+# La publier est l'accident symétrique : quiconque l'a peut signer un paquet que les
+# appareils déjà équipés accepteront comme une mise à jour légitime.
+#
+# ─── La fabriquer ───
+#
+#   keytool -genkeypair -v -keystore ghostpass-release.jks \
+#     -alias ghostpass -keyalg RSA -keysize 4096 -validity 10000
+#
+# `-validity 10000` — vingt-sept ans : Google exige une validité qui dépasse 2033, et une
+# clé expirée ne se renouvelle pas plus qu'elle ne se remplace.
+#
+# Sans `key.properties`, la variante `release` sort **non signée**, donc ininstallable. C'est
+# voulu : un paquet signé par la clé de débogage s'installerait et ne se distinguerait d'un
+# vrai que par son empreinte.
+
+storeFile=ghostpass-release.jks
+storePassword=
+keyAlias=ghostpass
+keyPassword=

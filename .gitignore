@@ -51,5 +51,13 @@ apps/android/*/build/
 # Le chemin du SDK est propre à chaque poste.
 apps/android/local.properties
 
+# La clé de signature de production et le fichier qui porte ses mots de passe. Ni l'un ni
+# l'autre ne va dans le dépôt : le premier **est** l'identité de l'application chez Google
+# — le perdre ou le publier sont deux accidents dont on ne revient pas de la même façon,
+# mais dont on ne revient ni l'un ni l'autre tout seul. Voir `key.properties.example`.
+apps/android/key.properties
+apps/android/*.jks
+apps/android/*.keystore
+
 # Produits de compilation de tools/ios/appareil.sh — jamais versionnés.
 apps/ios/.build-appareil/
