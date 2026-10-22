@@ -133,6 +133,32 @@ dependencies {
     // `FragmentActivity`, donc `BiometricPrompt` continue de l'accepter.
     implementation("androidx.appcompat:appcompat:1.7.0")
 
+    // ─── La caméra et le décodeur de QR code, pour le second facteur ───
+    //
+    // Recopier une clé base32 à la main est le moment où l'on se trompe : trente-deux
+    // caractères sans séparateur, dans une police où le 0 et le O se ressemblent. Le QR code
+    // porte la même clé, **plus** l'émetteur, le nombre de chiffres et la période — que la
+    // saisie manuelle laisse forcément aux valeurs par défaut.
+    //
+    // **ZXing et non ML Kit**, et ce n'est pas une question de poids. `barcode-scanning` de
+    // ML Kit est la voie que Google documente, mais sa variante légère télécharge son modèle
+    // par les services Play, et la variante groupée les réclame quand même à l'exécution.
+    //
+    // Or **cette liste de dépendances ne contient aucun service Play**, et c'est une
+    // propriété du produit plutôt qu'un hasard : une fiche de magasin qui promet « aucun
+    // traceur » ne peut pas faire passer par Google le QR code d'un second facteur. Que
+    // `tools/android/verifier-l-autonomie.sh` scanne l'APK livré ne couvre pas ce cas — il
+    // y cherche la facturation de Google, pas ses services — donc rien d'automatique ne
+    // rattraperait l'erreur : la raison est ici, et nulle part ailleurs.
+    //
+    // `zxing:core` est du Java pur, hors ligne, sans service ni réseau : il reçoit un tableau
+    // de luminance et rend une chaîne. CameraX ne fournit que les images.
+    implementation("androidx.camera:camera-core:1.4.1")
+    implementation("androidx.camera:camera-camera2:1.4.1")
+    implementation("androidx.camera:camera-lifecycle:1.4.1")
+    implementation("androidx.camera:camera-view:1.4.1")
+    implementation("com.google.zxing:core:3.5.3")
+
     // Les onglets personnalisés, pour le SSO. **Jamais une WebView** : elle donnerait à
     // l'application l'accès au mot de passe saisi chez le fournisseur d'identité, ce qui
     // annule l'intérêt du SSO (§8). Voir OngletSecurise.

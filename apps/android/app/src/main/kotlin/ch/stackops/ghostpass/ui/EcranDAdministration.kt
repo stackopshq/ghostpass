@@ -95,10 +95,10 @@ fun EcranDAdministration(
 
         when (val etat = modele.administration) {
             is ModeleDuCoffre.EtatDeLAdministration.EnLecture ->
-                AttenteDAdmin(stringResource(R.string.admin_lecture))
+                Attente(stringResource(R.string.admin_lecture))
 
             is ModeleDuCoffre.EtatDeLAdministration.Indisponible ->
-                IndisponibleDAdmin(etat.cause)
+                Indisponible(etat.cause)
 
             is ModeleDuCoffre.EtatDeLAdministration.Lu -> {
                 SectionMembres(
@@ -126,7 +126,7 @@ fun EcranDAdministration(
                         modele.accorderAuGroupe(groupe, collection, permission)
                     },
                 )
-                modele.message?.let { ErreurDAdmin(it) }
+                modele.message?.let { Erreur(it) }
             }
         }
     }
@@ -188,7 +188,7 @@ private fun SectionMembres(
         note = stringResource(R.string.admin_membres_note),
     ) {
         if (membres.isEmpty()) {
-            VideDAdmin(stringResource(R.string.admin_aucun_membre), "text.noMembers")
+            Vide(stringResource(R.string.admin_aucun_membre), "text.noMembers")
         } else {
             Column {
                 membres.forEachIndexed { rang, membre ->
@@ -311,7 +311,7 @@ private fun SectionCollections(
     val couleurs = LocalCouleurs.current
     SectionGhost(titre = stringResource(R.string.admin_collections_titre)) {
         if (collections.isEmpty()) {
-            VideDAdmin(stringResource(R.string.admin_aucune_collection), "text.noCollections")
+            Vide(stringResource(R.string.admin_aucune_collection), "text.noCollections")
         } else {
             Column {
                 collections.forEachIndexed { rang, collection ->
@@ -378,7 +378,7 @@ private fun SectionGroupes(
         note = stringResource(R.string.admin_groupes_note),
     ) {
         if (groupes.isEmpty()) {
-            VideDAdmin(stringResource(R.string.admin_aucun_groupe), "text.noGroups")
+            Vide(stringResource(R.string.admin_aucun_groupe), "text.noGroups")
         } else {
             Column {
                 groupes.forEachIndexed { rang, groupe ->
@@ -706,9 +706,9 @@ private fun EcranDInvitation(modele: ModeleDuCoffre, surFermer: () -> Unit) {
                 note = stringResource(R.string.admin_confirmer_la_cle_note),
             ) {
                 Column {
-                    LigneDAdmin(stringResource(R.string.admin_email), aConfirmer.email)
+                    LigneDeValeur(stringResource(R.string.admin_email), aConfirmer.email)
                     FiletDeSection()
-                    LigneDAdmin(
+                    LigneDeValeur(
                         stringResource(R.string.admin_cle_annoncee),
                         aConfirmer.clePubliqueAnnoncee,
                     )
@@ -755,16 +755,21 @@ private fun intituleDeLEtat(brut: String): Int = when (brut.lowercase()) {
     else -> R.string.admin_etat_inconnu
 }
 
-internal fun intituleDeLaPermission(permission: PermissionDeCollection): Int = when (permission) {
+private fun intituleDeLaPermission(permission: PermissionDeCollection): Int = when (permission) {
     PermissionDeCollection.Lecture -> R.string.admin_permission_lecture
     PermissionDeCollection.Ecriture -> R.string.admin_permission_ecriture
     PermissionDeCollection.Gestion -> R.string.admin_permission_gestion
 }
 
-// ─── Les petites briques partagées avec l'écran des accès ───
+// ─── Les petites briques ───
+//
+// `private`, donc propres à ce fichier, et volontairement jumelles de celles
+// d'`EcranDeLUrgence.kt` et d'`EcranDImport.kt`. C'est l'usage du dépôt : quatre lignes
+// recopiées coûtent moins qu'une brique partagée qu'il faudrait faire voyager entre des
+// écrans dont les marges ne s'accordent pas.
 
 @Composable
-internal fun LigneDAdmin(intitule: String, valeur: String) {
+private fun LigneDeValeur(intitule: String, valeur: String) {
     val couleurs = LocalCouleurs.current
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
@@ -777,7 +782,7 @@ internal fun LigneDAdmin(intitule: String, valeur: String) {
 }
 
 @Composable
-internal fun AttenteDAdmin(texte: String) {
+private fun Attente(texte: String) {
     val couleurs = LocalCouleurs.current
     Text(
         texte,
@@ -788,7 +793,7 @@ internal fun AttenteDAdmin(texte: String) {
 }
 
 @Composable
-internal fun IndisponibleDAdmin(cause: String) {
+private fun Indisponible(cause: String) {
     val couleurs = LocalCouleurs.current
     Column(
         Modifier.fillMaxWidth().carteDeVerre(),
@@ -804,7 +809,7 @@ internal fun IndisponibleDAdmin(cause: String) {
 }
 
 @Composable
-internal fun VideDAdmin(texte: String, identifiant: String) {
+private fun Vide(texte: String, identifiant: String) {
     val couleurs = LocalCouleurs.current
     Text(
         texte,
@@ -815,7 +820,7 @@ internal fun VideDAdmin(texte: String, identifiant: String) {
 }
 
 @Composable
-internal fun ErreurDAdmin(message: String) {
+private fun Erreur(message: String) {
     val couleurs = LocalCouleurs.current
     Text(
         message,

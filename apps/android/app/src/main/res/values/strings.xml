@@ -769,4 +769,20 @@
     <string name="acces_note">La permission est celle qui s\'applique vraiment, toutes provenances additionnées. Seul un accès direct se reprend ici : un rôle d\'administrateur se change, une appartenance à un groupe se défait dans le groupe.</string>
     <string name="acces_personne">Personne n\'a accès à cette collection.</string>
     <string name="acces_retirer">Retirer</string>
+
+    <!-- ─── Le scan du QR code d'un second facteur ───
+         La phrase d'aide et le refus occupent la **même** place à l'écran : viser le mauvais
+         code est fréquent, et faire grandir la page à chaque erreur déplacerait le viseur
+         sous les doigts. -->
+    <string name="element_scanner_le_qr_code">Scanner le QR code</string>
+    <string name="scan_titre">Scanner le QR code</string>
+    <string name="scan_fermer">Fermer</string>
+    <string name="scan_visez">Visez le QR code affiché par le site.</string>
+    <string name="scan_demande_en_cours">Autorisation de la caméra…</string>
+    <string name="scan_sans_camera">Cet appareil n\'a pas de caméra utilisable.</string>
+    <string name="scan_refusee">L\'accès à la caméra est refusé pour GhostPass. Il s\'autorise dans les réglages du système.</string>
+    <string name="scan_coller_a_la_main">La clé peut toujours être collée dans le champ.</string>
+    <string name="scan_ouvrir_les_reglages">Ouvrir les réglages</string>
+    <string name="scan_export_multiple">Ce code exporte plusieurs comptes depuis une application d\'authentification. Affichez le QR code d\'un seul compte, depuis le site.</string>
+    <string name="scan_pas_un_totp">Ce QR code ne contient pas de second facteur.</string>
 </resources>

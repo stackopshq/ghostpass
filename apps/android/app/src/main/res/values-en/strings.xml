@@ -667,4 +667,17 @@
     <string name="acces_note">The permission shown is the one that actually applies, all sources added up. Only a direct grant can be taken back here: an administrator role is changed, a group membership is undone in the group.</string>
     <string name="acces_personne">Nobody has access to this collection.</string>
     <string name="acces_retirer">Remove</string>
+
+    <!-- ─── Scanning a second-factor QR code ─── -->
+    <string name="element_scanner_le_qr_code">Scan the QR code</string>
+    <string name="scan_titre">Scan the QR code</string>
+    <string name="scan_fermer">Close</string>
+    <string name="scan_visez">Point at the QR code the site shows.</string>
+    <string name="scan_demande_en_cours">Asking for the camera…</string>
+    <string name="scan_sans_camera">This device has no usable camera.</string>
+    <string name="scan_refusee">Camera access is denied for GhostPass. It can be granted in the system settings.</string>
+    <string name="scan_coller_a_la_main">The key can always be pasted into the field.</string>
+    <string name="scan_ouvrir_les_reglages">Open settings</string>
+    <string name="scan_export_multiple">This code exports several accounts from an authenticator app. Show the QR code for a single account, from the site.</string>
+    <string name="scan_pas_un_totp">This QR code holds no second factor.</string>
 </resources>

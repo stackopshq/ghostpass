@@ -151,6 +151,20 @@ private fun CorpsDeLElement(
         return
     }
 
+    // Le scan se pose de la même façon, et pour la même raison : il recouvre l'écran le
+    // temps de viser, puis rend la main avec le lien. `rememberSaveable` ici est sans
+    // danger — un booléen n'est pas un secret, contrairement à ce que porte l'export.
+    var scanneLeQrCode by rememberSaveable { mutableStateOf(false) }
+    if (scanneLeQrCode) {
+        BackHandler { scanneLeQrCode = false }
+        EcranDeScanDeTotp(
+            modele = modele,
+            surLien = { lu -> totp = lu },
+            surFermer = { scanneLeQrCode = false },
+        )
+        return
+    }
+
     Box(Modifier.fillMaxSize()) {
         FondGhost()
         Column(
@@ -263,6 +277,15 @@ private fun CorpsDeLElement(
                                 identifiant = "field.totp",
                                 onChange = { totp = it },
                             )
+                            // Le champ **reste**, et ce n'est pas une redondance : le scan
+                            // ne marche pas sans caméra, ni si on l'a refusée, ni sur une
+                            // clé qu'un service donne en texte sans QR code. Un écran qui
+                            // n'offrirait que la caméra laisserait ces trois cas sans
+                            // issue. Celui-ci propose le raccourci et garde la saisie.
+                            LienDiscret(
+                                texte = stringResource(R.string.element_scanner_le_qr_code),
+                                identifiant = "button.scanTotp",
+                            ) { scanneLeQrCode = true }
                         }
                         "note" -> ChampGhost(
                             intitule = stringResource(R.string.element_contenu),

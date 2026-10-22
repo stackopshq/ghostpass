@@ -60,10 +60,10 @@ fun EcranDesAcces(
 
         when (val etat = modele.acces) {
             is ModeleDuCoffre.EtatDesAcces.EnLecture ->
-                AttenteDAdmin(stringResource(R.string.acces_lecture))
+                Attente(stringResource(R.string.acces_lecture))
 
             is ModeleDuCoffre.EtatDesAcces.Indisponible ->
-                IndisponibleDAdmin(etat.cause)
+                Indisponible(etat.cause)
 
             is ModeleDuCoffre.EtatDesAcces.Lu -> {
                 SectionGhost(
@@ -71,7 +71,7 @@ fun EcranDesAcces(
                     note = stringResource(R.string.acces_note),
                 ) {
                     if (etat.acces.isEmpty()) {
-                        VideDAdmin(stringResource(R.string.acces_personne), "text.noAccess")
+                        Vide(stringResource(R.string.acces_personne), "text.noAccess")
                     } else {
                         Column {
                             etat.acces.forEachIndexed { rang, acces ->
@@ -83,7 +83,7 @@ fun EcranDesAcces(
                         }
                     }
                 }
-                modele.message?.let { ErreurDAdmin(it) }
+                modele.message?.let { Erreur(it) }
             }
         }
     }
@@ -138,4 +138,57 @@ private fun LigneDAcces(acces: AccesDto, occupe: Boolean, surRetirer: () -> Unit
             ) { surRetirer() }
         }
     }
+}
+
+// ─── Les mêmes petites briques, privées à ce fichier ───
+//
+// Voir la note d'`EcranDAdministration.kt` : le dépôt recopie ces quatre lignes plutôt que
+// de les partager, et une fonction de premier niveau privée n'entre en conflit avec aucune
+// de ses jumelles.
+
+@Composable
+private fun Attente(texte: String) {
+    val couleurs = LocalCouleurs.current
+    Text(
+        texte,
+        color = couleurs.attenue,
+        fontSize = 13.sp,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+    )
+}
+
+@Composable
+private fun Indisponible(cause: String) {
+    val couleurs = LocalCouleurs.current
+    Text(
+        cause,
+        color = couleurs.danger,
+        fontSize = 13.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+            .reperes("text.accessUnavailable"),
+    )
+}
+
+@Composable
+private fun Vide(texte: String, identifiant: String) {
+    val couleurs = LocalCouleurs.current
+    Text(
+        texte,
+        color = couleurs.attenue,
+        fontSize = 13.sp,
+        modifier = Modifier.padding(14.dp).reperes(identifiant),
+    )
+}
+
+@Composable
+private fun Erreur(message: String) {
+    val couleurs = LocalCouleurs.current
+    Text(
+        message,
+        color = couleurs.danger,
+        fontSize = 12.sp,
+        modifier = Modifier.padding(horizontal = 20.dp).reperes("text.accessError"),
+    )
 }
