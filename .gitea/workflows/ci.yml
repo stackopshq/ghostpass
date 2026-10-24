@@ -19,10 +19,31 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# ─── Pourquoi `devcontainer` et non `ubuntu-latest` ───
+#
+# `ubuntu-latest` ne désigne rien par soi-même sur une forge auto-hébergée : c'est une
+# étiquette que portait l'exécuteur `core-run-01-runner-1`, et cette machine est hors ligne
+# (son hôte `core-run-01-host-1` aussi). Aucun exécuteur en ligne ne la porte, donc ces
+# travaux ne pouvaient pas être pris : relancés le 2026-10-24, ils sont restés en file une
+# demi-heure sur la mention « Waiting to run ».
+#
+# Ce que ça donnait à lire est le vrai piège : les dix contrôles de trois pull requests
+# étaient **rouges**, mention `Canceled after 0s`. Une annulation s'affiche comme un échec,
+# et on lit « le code est cassé » là où il faut lire « rien n'a tourné ». Pourquoi ces
+# exécutions-là ont fini annulées plutôt que simplement en attente n'est pas établi — la
+# garde de concurrence n'explique pas le cas `push` contre `pull_request`, qui tombent dans
+# deux groupes distincts, comme le dit le job iOS plus bas.
+#
+# `devcontainer` est l'étiquette de `core-run-02-runner-1`, le seul exécuteur en ligne.
+# C'est déjà celle de ghostcal, pour la même raison.
+#
+# Les travaux posent eux-mêmes leur outillage (`dtolnay/rust-toolchain`, `actions/setup-node`),
+# donc ils ne dépendent pas de ce que l'image porte d'avance. Le job `image` garde
+# `[self-hosted, linux, x64]` : il lui faut un podman réel, non imbriqué — c'est dit sur place.
 jobs:
   crypto:
     name: Cœur crypto (Rust)
-    runs-on: ubuntu-latest
+    runs-on: devcontainer
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -38,7 +59,7 @@ jobs:
 
   server:
     name: Backend (Fastify)
-    runs-on: ubuntu-latest
+    runs-on: devcontainer
     defaults:
       run:
         working-directory: apps/server
@@ -57,7 +78,7 @@ jobs:
 
   web:
     name: Web app (Next + WASM)
-    runs-on: ubuntu-latest
+    runs-on: devcontainer
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -98,7 +119,7 @@ jobs:
   # seulement disponible sur cette forge (il demande Gitea 1.20).
   ios-gate:
     name: Tests iOS — activés ?
-    runs-on: ubuntu-latest
+    runs-on: devcontainer
     steps:
       - name: État du garde
         run: |
