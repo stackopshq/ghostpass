@@ -83,14 +83,33 @@ jobs:
     # l'image standard du runner.
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      # ─── `uv` et non `actions/setup-python` ───
+      #
+      # `setup-python` ne configure pas un Python : il **télécharge** une version
+      # préfabriquée depuis `actions/python-versions`, et il n'en existe pas pour
+      # l'image de cet exécuteur. L'erreur le dit sans le dire : « The version '3.12'
+      # with architecture 'x64' was not found for this operating system ».
+      #
+      # `uv` apporte son propre interpréteur et c'est déjà l'outil de la suite — c'est
+      # ainsi que ghostcal installe le sien sur ce même exécuteur. La version est
+      # épinglée et non « latest » : sans jeton GitHub, `setup-uv` interroge l'API
+      # anonymement pour connaître la dernière release, et cette requête a déjà rendu
+      # `API rate limit exceeded` sur une IP publique partagée.
+      - name: Installation d'uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-      - name: Installation de Semgrep
-        run: pip install --disable-pip-version-check semgrep==1.174.0
+          version: "0.11.8"
+          enable-cache: true
+
+      # `uv tool run` et non `uv tool install` puis `semgrep` : l'installation pose le
+      # binaire dans `~/.local/bin`, dont la présence dans le `PATH` dépend de la version
+      # de `setup-uv`. Un job qui échoue sur « command not found » après une installation
+      # réussie coûte une demi-heure à comprendre.
       - name: Analyse statique (règles sécurité + secrets + JS/TS)
         # Les `p/...` sont téléchargés depuis le registre semgrep.dev : le runner doit y accéder.
         run: >
+          uv tool run --from semgrep==1.174.0
           semgrep scan --error --skip-unknown-extensions
           --config p/security-audit
           --config p/secrets
