@@ -1,0 +1,523 @@
+# La CI de ghostpass : le cœur crypto, le serveur et l'interface se vérifient,
+# l'historique ne porte aucun secret, les dépendances n'ont pas d'advisory
+# connue, et `main` publie ses deux images.
+#
+# Reprise de `.gitea/workflows/` (ci.yml, security.yml, publish-wasm.yml,
+# renovate.yml) au passage sur GitLab. Les raisons écrites là-bas sont recopiées
+# ici avec les étapes qu'elles justifient : un contrôle dont on a perdu le
+# pourquoi est le premier qu'on retire.
+#
+# Trois choses restent inertes tant qu'on ne les branche pas, et chacune le dit
+# dans son journal plutôt que de disparaître :
+#   - les tests iOS, tant que `MACOS_RUNNER` ne vaut pas `true` ;
+#   - la publication sur ghcr.io, tant que `GHCR_USERNAME` / `GHCR_TOKEN` manquent ;
+#   - Renovate, tant que `RENOVATE_TOKEN` manque.
+#
+# Deux planifications (CI/CD > Schedules), distinguées par `SCHEDULE_TASK` :
+#   - `securite`, le lundi à 6h UTC : les nouvelles advisories sur des
+#     dépendances figées n'arrivent pas avec un commit ;
+#   - `renovate`, le lundi à 5h UTC, avant la fenêtre `before 6am on monday`
+#     de renovate.json (Europe/Zurich).
+
+workflow:
+  rules:
+    # Les propositions, `main` après fusion, et les étiquettes de version. Une
+    # branche qui porte une MR ouverte n'a pas de pipeline de branche en plus :
+    # deux pipelines pour le même commit, c'est deux fois le runner pour une
+    # seule réponse.
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_TAG =~ /^v/
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+stages:
+  - verifier
+  - securite
+  - publier
+
+default:
+  # Équivalent du `concurrency: cancel-in-progress` de Gitea : un nouveau
+  # commit annule le pipeline précédent de la même référence.
+  interruptible: true
+
+variables:
+  RUST_IMAGE: docker.io/library/rust:1.90-bookworm
+  NODE_IMAGE: docker.io/library/node:24-bookworm
+  # Épinglé, avec sa somme : un wasm-pack « latest » a déjà cassé la
+  # construction, et une somme juste sur la mauvaise architecture est une
+  # vérification qui rassure sans rien prouver. Mêmes valeurs que
+  # `apps/web-next/Containerfile`.
+  WASM_PACK_VERSION: "0.13.1"
+  WASM_PACK_SHA256: c539d91ccab2591a7e975bcf82c82e1911b03335c80aa83d67ad25ed2ad06539
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+  npm_config_cache: $CI_PROJECT_DIR/.npm
+
+# ─── Quand chaque famille de jobs tourne ───────────────────────────────────
+
+# Les contrôles du code : à chaque proposition, sur `main`, sur une étiquette,
+# et sur un pipeline lancé à la main. Pas sur les planifications : un lundi
+# sans commit n'a rien de neuf à compiler.
+.quand-code:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - when: on_success
+
+# La sécurité : comme le code, plus la planification hebdomadaire.
+.quand-securite:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TASK != "securite"
+      when: never
+    - when: on_success
+
+.cache-cargo:
+  cache:
+    key:
+      prefix: $CI_JOB_NAME
+      files: [Cargo.lock]
+    paths:
+      - .cargo/registry/
+      - .cargo/git/
+      - target/
+
+# ─── Vérifier ──────────────────────────────────────────────────────────────
+
+crypto:
+  stage: verifier
+  image: $RUST_IMAGE
+  extends: [.quand-code, .cache-cargo]
+  needs: []
+  script:
+    - rustup component add rustfmt clippy
+    - cargo fmt --all --check
+    # Zéro warning.
+    - cargo clippy --all-targets -- -D warnings
+    - cargo test --all
+
+server:
+  stage: verifier
+  image: $NODE_IMAGE
+  extends: [.quand-code]
+  needs: []
+  cache:
+    key:
+      prefix: server
+      files: [apps/server/package-lock.json]
+    paths: [.npm/]
+  script:
+    - cd apps/server
+    - npm ci
+    - npm run typecheck
+    - npm test
+
+# `package.json` de l'interface déclare le cœur en `file:../../crates/...
+# /pkg`, un répertoire qui n'existe que s'il a été construit. Il passe donc
+# d'un job à l'autre en artefact, et `publier-wasm` publie les mêmes octets
+# que ceux que l'interface a testés.
+wasm:
+  stage: verifier
+  image: $RUST_IMAGE
+  extends: [.quand-code, .cache-cargo]
+  needs: []
+  script:
+    - rustup target add wasm32-unknown-unknown
+    - |
+      set -eu
+      f="wasm-pack-v${WASM_PACK_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+      curl -sSfL -o /tmp/wp.tgz "https://github.com/rustwasm/wasm-pack/releases/download/v${WASM_PACK_VERSION}/${f}"
+      echo "${WASM_PACK_SHA256}  /tmp/wp.tgz" | sha256sum -c -
+      tar -xzf /tmp/wp.tgz -C /tmp --strip-components=1
+      install -m 0755 /tmp/wasm-pack /usr/local/bin/wasm-pack
+    - cd crates/ghostpass-crypto-wasm
+    - wasm-pack build --target web
+  artifacts:
+    paths:
+      - crates/ghostpass-crypto-wasm/pkg/
+    expire_in: 1 week
+
+web:
+  stage: verifier
+  image: $NODE_IMAGE
+  extends: [.quand-code]
+  needs:
+    - job: wasm
+      artifacts: true
+  cache:
+    key:
+      prefix: web
+      files: [apps/web-next/package-lock.json]
+    paths: [.npm/]
+  script:
+    - cd apps/web-next
+    - npm ci
+    - npm run typecheck
+    # Ces tests existaient et n'étaient LANCÉS NULLE PART. `apps/web-next`
+    # portait un script `test` et deux fichiers depuis le 2026-08-30 ; ce job
+    # ne faisait que compiler et construire. Une suite qu'aucune CI n'exécute
+    # ne protège de rien : elle passe pour un filet, et n'en est pas un.
+    - npm test
+    - npm run build
+
+# Un job écarté par `rules:` disparaît sans un mot du pipeline : personne ne
+# remarque que les tests iOS n'ont pas tourné. Celui-ci tourne toujours, sur
+# un runner Linux, et dit à voix haute ce que le garde a décidé.
+ios-gate:
+  stage: verifier
+  image: docker.io/library/alpine:3.22
+  extends: [.quand-code]
+  needs: []
+  script:
+    - |
+      echo "MACOS_RUNNER = « ${MACOS_RUNNER:-} »"
+      if [ "${MACOS_RUNNER:-}" = "true" ]; then
+        echo "Le job iOS est activé et part vers un runner étiqueté « macos »."
+      else
+        echo "Les tests iOS ne tournent PAS dans ce pipeline : aucun runner macOS n'est branché."
+        echo "Pour les activer : CI/CD > Variables, MACOS_RUNNER = true (voir tools/ci/README.md)."
+        echo "D'ici là, ./tools/ios/run-ios-tests.sh se lance à la main avant toute MR touchant à l'app."
+      fi
+
+ios:
+  stage: verifier
+  # Xcode et le simulateur n'existent que sur macOS : ce job réclame un runner
+  # étiqueté `macos` (voir tools/ci/README.md pour en brancher un).
+  #
+  # L'interrupteur est à l'arrêt par défaut, à l'inverse de Gitea. Là-bas, un
+  # job sans runner restait en file et se voyait ; ici, il laisserait le
+  # pipeline en attente indéfiniment, et la MR sans verdict. `ios-gate` porte
+  # donc la visibilité que la file d'attente donnait.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $MACOS_RUNNER == "true"
+  tags: [macos]
+  # Un Mac, un port 3111, donc un job iOS à la fois. `run-ios-tests.sh` fige
+  # `PORT=3111` parce que les tests Swift portent la même constante : un
+  # second run trouve le port pris, refuse de démarrer le serveur de banc et
+  # rend 1, ce qui ressemble à un job qui échoue *après* des tests verts. Le
+  # `resource_group` met en file, il n'annule pas : annuler produirait un
+  # statut qui ressemble à un verdict sans en être un.
+  resource_group: ios-runner-macos
+  # Le cœur crypto doit déjà être vert : sans lui, l'app n'a rien à lier, et
+  # un échec ici ne dirait pas où le problème se trouve.
+  needs: [crypto]
+  variables:
+    # `GHOSTSUITE` dit au script où trouver le cœur : à côté du produit sur un
+    # poste, dans l'espace de travail en intégration continue.
+    GHOSTSUITE: $CI_PROJECT_DIR/ghostsuite
+  script:
+    # Pas d'installation ici : sur une machine dédiée, Xcode, rustup, xcodegen
+    # et Node sont ceux du poste. On vérifie qu'ils répondent, et l'absence de
+    # l'un doit se lire d'un coup d'œil, pas se deviner trente lignes plus bas.
+    - |
+      for outil in git xcodebuild xcrun xcodegen cargo node npm; do
+        command -v "$outil" >/dev/null || { echo "$outil introuvable sur ce runner"; exit 1; }
+      done
+    # `| head -1` ferait sortir xcodebuild en 141 (SIGPIPE) dès qu'il écrit la
+    # deuxième ligne. `sed -n 1p` lit tout le flux, lui.
+    - xcodebuild -version | sed -n 1p
+    # Le cœur cryptographique vit dans le dépôt de la suite, pas ici : un seul
+    # cœur pour tous les produits (ghostsuite, ADR 0001). Le jeton du job y a
+    # accès par la liste d'autorisation de ghostsuite. Un refus se lit comme
+    # « dépôt introuvable » : le message le dit, pour ne pas envoyer chercher
+    # au mauvais endroit.
+    - |
+      git clone --depth 1 \
+        "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/stackopsplatform/products/ghostsuite/ghostsuite.git" \
+        "$GHOSTSUITE" || {
+        echo "Clone de ghostsuite refusé. Si GitLab répond « not found », le dépôt existe :"
+        echo "c'est le jeton du job qui n'y a pas accès. Ajoutez ghostpass à la liste"
+        echo "d'autorisation (Settings > CI/CD > Job token permissions) de ghostsuite."
+        exit 1
+      }
+    # Le pendant de `cargo fmt --check` pour Swift. `--strict` fait de chaque
+    # avertissement une erreur : la base est à zéro, toute sortie est donc une
+    # régression. Placé avant toute construction, il échoue en quelques
+    # secondes plutôt qu'après un quart d'heure de build et de simulateur.
+    - >-
+      "$(xcrun --find swift-format)" lint --strict -r
+      --configuration apps/ios/.swift-format
+      apps/ios/Ghostpass apps/ios/GhostpassAutoFill apps/ios/UITests apps/ios/Tests
+    - rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+    - (cd apps/server && npm ci)
+    # Construit l'XCFramework et les bindings, monte un serveur GhostPass local,
+    # amorce un coffre de test, déroule les suites, coupe le serveur pour
+    # éprouver le hors-ligne, puis remplit un formulaire dans Safari.
+    - ./tools/ios/run-ios-tests.sh
+    # L'application est gratuite. Cette qualification ne protège de rien si le
+    # paquet soumis contient une vitrine : le relecteur juge sur ce que contient
+    # l'application. On le mesure sur le paquet construit juste au-dessus.
+    - ./tools/ios/verifier-l-autonomie.sh
+  artifacts:
+    # Un échec ne laisse qu'un nom de test : les rapports portent les captures
+    # d'écran et le journal du serveur, seuls moyens de comprendre sans
+    # reproduire localement.
+    when: on_failure
+    paths:
+      - apps/ios/TestResults/
+    expire_in: 7 days
+
+# ─── Sécurité ──────────────────────────────────────────────────────────────
+
+secrets:
+  stage: securite
+  image:
+    name: ghcr.io/gitleaks/gitleaks:v8.30.0
+    # L'image a `gitleaks` pour point d'entrée ; le runner a besoin d'un shell.
+    entrypoint: [""]
+  extends: [.quand-securite]
+  needs: []
+  variables:
+    # `gitleaks detect` lit l'HISTORIQUE, pas l'arbre de travail. Sans cette
+    # ligne, le runner ne clone que les derniers commits.
+    GIT_DEPTH: 0
+  script:
+    # --redact : sans lui, un vrai secret trouvé serait recopié en clair dans
+    # le journal du job.
+    - gitleaks detect --source . --config .gitleaks.toml --no-banner --redact --verbose
+
+deps:
+  stage: securite
+  image:
+    name: ghcr.io/google/osv-scanner:v1.9.2
+    entrypoint: [""]
+  extends: [.quand-securite]
+  needs: []
+  script:
+    # Cargo.lock et les package-lock.json.
+    - /osv-scanner --recursive --skip-git .
+
+cargo-audit:
+  stage: securite
+  image: $RUST_IMAGE
+  extends: [.quand-securite, .cache-cargo]
+  needs: []
+  script:
+    - cargo install cargo-audit --locked
+    - cargo audit
+
+sast:
+  stage: securite
+  # Semgrep installé par pip dans une image Python, à la version que la CI
+  # Gitea épinglait : changer d'outil et de version en même temps rendrait
+  # illisible la première différence de résultat.
+  image: docker.io/library/python:3.12-slim
+  extends: [.quand-securite]
+  needs: []
+  script:
+    - pip install --disable-pip-version-check -q semgrep==1.174.0
+    # Les `p/...` sont téléchargés depuis le registre semgrep.dev.
+    - >-
+      semgrep scan --error --skip-unknown-extensions
+      --config p/security-audit
+      --config p/secrets
+      --config p/javascript
+      --config p/typescript
+
+# ─── Publier ───────────────────────────────────────────────────────────────
+
+# Publier ce qui a passé les contrôles, et seulement depuis `main` ou une
+# étiquette de version. Balisé par SHA de commit : une balise immuable est ce
+# qui permet de dire quelle construction est déployée, et d'y revenir. `main`
+# bouge : c'est une commodité, et ce que suit `compose.selfhost.yml`.
+#
+# Deux registres :
+#   - celui du projet ($CI_REGISTRY_IMAGE), depuis `main` seulement ;
+#   - ghcr.io/stackopshq/ghostpass, public, depuis `main` et les étiquettes
+#     `v*`. Sur une étiquette, `:main` ne bouge pas (l'étiquette peut viser un
+#     commit plus ancien que `main`) : elle publie `sha-…` et son propre nom.
+images:
+  stage: publier
+  image: quay.io/buildah/stable:v1.43.4
+  # Runner Podman rootless du groupe ; les runners partagés ne savent pas
+  # construire d'image sans démon.
+  tags: [linux]
+  needs: [crypto, server, web]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    # Après fusion, ou relancé à la main depuis l'interface sur `main`.
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /^v/
+  # Une publication commencée va jusqu'au bout : l'annuler entre deux `push`
+  # laisserait `:main` sur une autre construction que `sha-…`.
+  interruptible: false
+  variables:
+    # buildah en espace utilisateur : `vfs` et `chroot` évitent les espaces de
+    # noms utilisateur imbriqués, que le conteneur du job ne peut pas créer.
+    STORAGE_DRIVER: vfs
+    BUILDAH_ISOLATION: chroot
+    # Format docker et non OCI : le format OCI ignore HEALTHCHECK, avec un
+    # simple avertissement qu'on ne lit pas (voir apps/server/Containerfile).
+    BUILDAH_FORMAT: docker
+    GHCR_IMAGE: ghcr.io/stackopshq/ghostpass
+  script:
+    # La déconnexion est armée AVANT la connexion : écrite en dernière ligne,
+    # elle n'est jamais atteinte quand un `push` échoue.
+    - trap 'buildah logout --all >/dev/null 2>&1 || true' EXIT
+    # Sans `| head` : sous `pipefail`, `head` qui ferme le tuyau tue `buildah`
+    # par SIGPIPE (sortie 141) selon le moment où il écrit.
+    - buildah version
+    # Sept caractères, comme les balises déjà publiées depuis Gitea : un
+    # épinglage `sha-…` existant doit continuer de désigner la même forme.
+    - SHORT="${CI_COMMIT_SHA:0:7}"
+    # Les deux constructions EN SÉQUENCE : menées en parallèle elles se
+    # corrompent le cache. Contexte = racine du dépôt, les deux Containerfile
+    # y puisent (`crates/` pour le WASM de l'interface).
+    - >-
+      buildah build
+      --label org.opencontainers.image.source=https://github.com/stackopshq/ghostpass
+      --label org.opencontainers.image.revision="$CI_COMMIT_SHA"
+      -f apps/server/Containerfile -t "ghostpass:sha-$SHORT" .
+    - >-
+      buildah build
+      --label org.opencontainers.image.source=https://github.com/stackopshq/ghostpass
+      --label org.opencontainers.image.revision="$CI_COMMIT_SHA"
+      -f apps/web-next/Containerfile -t "ghostpass:sha-$SHORT-web" .
+    # Le frontend part dans LE MÊME paquet, sous une balise suffixée. Les deux
+    # dérivent du même SHORT : elles ne peuvent pas diverger, et un seul
+    # épinglage côté déploiement décrit les deux.
+    - |
+      set -eu
+      publier() { # <dépôt d'images> <balise>...
+        depot="$1"; shift
+        for balise in "$@"; do
+          buildah tag "ghostpass:sha-$SHORT" "$depot:$balise"
+          buildah tag "ghostpass:sha-$SHORT-web" "$depot:$balise-web"
+          buildah push "$depot:$balise"
+          buildah push "$depot:$balise-web"
+          echo "publié $depot:$balise et $depot:$balise-web"
+        done
+      }
+      if [ -n "${CI_COMMIT_TAG:-}" ]; then
+        balises="sha-$SHORT $CI_COMMIT_TAG"
+      else
+        balises="sha-$SHORT main"
+        printf '%s' "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+        publier "$CI_REGISTRY_IMAGE" $balises
+      fi
+      # Les identifiants ghcr sont des variables protégées : absentes, la
+      # publication publique est sautée, et le dit, sans faire échouer le job
+      # qui a déjà publié sur le registre du projet.
+      if [ -z "${GHCR_USERNAME:-}" ] || [ -z "${GHCR_TOKEN:-}" ]; then
+        echo "GHCR_USERNAME / GHCR_TOKEN absents : rien n'est publié sur ghcr.io."
+        exit 0
+      fi
+      printf '%s' "$GHCR_TOKEN" | buildah login -u "$GHCR_USERNAME" --password-stdin ghcr.io
+      publier "$GHCR_IMAGE" $balises
+
+# Publie le cœur crypto compilé sous `@stackops/ghostpass-crypto-wasm` sur le
+# registre npm de ce projet, pour que l'extension (et autres clients) en
+# dépendent par version plutôt qu'en `file:` entre dépôts. Lancement manuel,
+# depuis `main`.
+#
+# Consommation côté client (.npmrc du dépôt qui dépend du paquet) :
+#   @stackops:registry=https://gitlab.com/api/v4/projects/88079410/packages/npm/
+#   //gitlab.com/api/v4/projects/88079410/packages/npm/:_authToken=${NODE_AUTH_TOKEN}
+#
+# LA VERSION NE SE SAISIT PAS ICI. Elle est lue dans
+# `crates/ghostpass-crypto-wasm/Cargo.toml`, que `wasm-pack` recopie dans le
+# `pkg/package.json` qu'on publie. Tant qu'elle était demandée en entrée
+# manuelle, le numéro en ligne n'était écrit nulle part dans l'arbre : `0.0.1` a
+# été publiée depuis un crate qui affichait `0.0.0`.
+#
+# Pour publier : incrémenter `version` dans le Cargo.toml du crate, faire
+# relire la MR, puis lancer ce job sur le pipeline de `main`.
+publier-wasm:
+  stage: publier
+  image: $NODE_IMAGE
+  needs:
+    - job: wasm
+      artifacts: true
+    - job: web
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+      when: manual
+  allow_failure: true
+  interruptible: false
+  variables:
+    NPM_REGISTRY: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/
+  script:
+    - cd crates/ghostpass-crypto-wasm/pkg
+    - |
+      set -eu
+      # Le jeton du job, jamais en argument : sur un exécutant partagé, `ps`
+      # montre l'argv de tous les processus.
+      {
+        echo "@stackops:registry=${NPM_REGISTRY}"
+        echo "${NPM_REGISTRY#https:}:_authToken=\${CI_JOB_TOKEN}"
+      } > .npmrc
+      npm pkg set name="@stackops/ghostpass-crypto-wasm"
+      npm pkg set publishConfig.registry="${NPM_REGISTRY}"
+      # `wasm-pack` a déjà écrit `version` en recopiant le Cargo.toml : on ne
+      # fait que la lire. Aucun `npm version` ici.
+      version="$(npm pkg get version | tr -d '"')"
+      if [ -z "$version" ] || [ "$version" = "undefined" ]; then
+        echo "Version absente du pkg/package.json généré par wasm-pack."; exit 1
+      fi
+      if [ "$version" = "0.0.0" ]; then
+        echo "Le crate est encore en 0.0.0 : donner une vraie version dans crates/ghostpass-crypto-wasm/Cargo.toml."; exit 1
+      fi
+      # Le registre refuserait une version déjà publiée, mais à la toute fin et
+      # avec un message qui ressemble à un problème de droits. Autant le dire
+      # ici, et nommer le geste qui débloque.
+      if npm view "@stackops/ghostpass-crypto-wasm@${version}" version >/dev/null 2>&1; then
+        echo "La version ${version} est déjà publiée. Incrémenter version dans crates/ghostpass-crypto-wasm/Cargo.toml."; exit 1
+      fi
+      echo "version à publier (lue dans le crate) : ${version}"
+      npm publish --loglevel=error
+
+# Remplace Dependabot. Renovate tourne dans un job planifié et ouvre ses MR sur
+# ce projet, avec le jeton d'un compte bot (scopes `api` et `write_repository`) :
+# le jeton du job ne peut ni pousser de branche ni ouvrir de MR.
+#
+# Configuration des mises à jour : `renovate.json` à la racine.
+renovate:
+  stage: verifier
+  image: $NODE_IMAGE
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TASK == "renovate"
+    # Lancé à la main : Run pipeline, SCHEDULE_TASK = renovate (et
+    # RENOVATE_DRY_RUN = full pour un passage à blanc).
+    - if: $CI_PIPELINE_SOURCE == "web" && $SCHEDULE_TASK == "renovate"
+  interruptible: false
+  resource_group: renovate
+  variables:
+    RENOVATE_PLATFORM: gitlab
+    RENOVATE_ENDPOINT: $CI_API_V4_URL
+    RENOVATE_REPOSITORIES: $CI_PROJECT_PATH
+    RENOVATE_GIT_AUTHOR: "Renovate Bot <renovate@stackops.ch>"
+    RENOVATE_ONBOARDING: "false"
+    RENOVATE_REQUIRE_CONFIG: "required"
+    LOG_LEVEL: info
+  script:
+    - |
+      if [ -z "${RENOVATE_TOKEN:-}" ]; then
+        echo "RENOVATE_TOKEN absent : Renovate ne tourne pas. Posez le jeton du compte bot"
+        echo "(CI/CD > Variables, protégée et masquée) pour l'activer."
+        exit 0
+      fi
+      # Lookups et changelogs des dépendances github.com. Sans ce jeton,
+      # Renovate tape l'API en anonyme et se fait limiter : 41 des 83
+      # dépendances du dépôt sont concernées.
+      if [ -n "${GH_COM_TOKEN:-}" ]; then
+        export GITHUB_COM_TOKEN="$GH_COM_TOKEN"
+      else
+        echo "GH_COM_TOKEN absent : les dépendances hébergées sur github.com seront"
+        echo "limitées par le rate-limit anonyme, et leurs mises à jour non détectées."
+      fi
+      # Un dry-run manuel doit montrer ce qui serait proposé même hors de la
+      # fenêtre hebdomadaire de renovate.json, sinon il ne renvoie rien 6 jours
+      # sur 7.
+      if [ -n "${RENOVATE_DRY_RUN:-}" ]; then
+        export RENOVATE_FORCE='{"schedule":null}'
+        echo "Dry-run : fenêtre de planification ignorée."
+      fi
+      # Renovate met à jour Cargo.lock en appelant `cargo update` : sans
+      # toolchain Rust, chaque dépendance cargo part en `spawn cargo ENOENT` et
+      # fait échouer le job (22 rejets au premier essai sur Gitea).
+      curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+      export PATH="$CARGO_HOME/bin:$PATH"
+      npx --yes renovate@44.45.0

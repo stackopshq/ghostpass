@@ -4,15 +4,15 @@ Thank you for looking. A few things will save you time.
 
 ## Where to open a pull request
 
-**The source of truth is `git.stackops.ch/stackops/ghostpass`.** GitHub is a
-mirror, force-pushed every eight hours.
+**GitHub is a mirror.** Development happens on GitLab, and every push to `main`
+there overwrites `main` here.
 
-A pull request merged on GitHub **will be silently overwritten** at the next
+A pull request merged on GitHub **would be silently overwritten** at the next
 push. This is not a preference — it is a mechanical fact of how the mirror
 works, and it has already cost someone their work elsewhere in this estate.
 
-Open an account on the forge and open your pull request there. If that is a real
-obstacle for you, say so in a GitHub issue and we will find a way.
+So nothing is merged on GitHub. Open your pull request there anyway: we review
+it, carry it over, and keep you as the author of your commits.
 
 ## Before you write code
 
