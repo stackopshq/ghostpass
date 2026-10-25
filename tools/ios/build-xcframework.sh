@@ -22,7 +22,7 @@ PRODUIT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ROOT="${GHOSTSUITE:-$(cd "$PRODUIT/.." && pwd)/suite}"
 if [[ ! -d "$ROOT/crates/$CRATE" ]]; then
   echo "Cœur commun introuvable : $ROOT/crates/$CRATE" >&2
-  echo "Clonez git@git.stackops.ch:stackops/ghostsuite.git à côté de ce dépôt," >&2
+  echo "Clonez git@gitlab.com:stackopsplatform/products/ghostsuite/ghostsuite.git à côté de ce dépôt," >&2
   echo "ou indiquez son chemin :  GHOSTSUITE=/chemin/vers/ghostsuite $0" >&2
   exit 1
 fi

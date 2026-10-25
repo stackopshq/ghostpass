@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://git.stackops.ch/stackops/ghostpass/actions"><img alt="CI" src="https://img.shields.io/badge/CI-8%20checks-4c8bf5?style=flat-square"></a>
+  <img alt="CI" src="https://img.shields.io/badge/CI-8%20checks-4c8bf5?style=flat-square">
   <img alt="Crypto core" src="https://img.shields.io/badge/crypto-Rust%20%2B%20WASM-000000?style=flat-square&logo=rust&logoColor=white">
   <img alt="Backend" src="https://img.shields.io/badge/backend-Fastify%20%2F%20TypeScript-black?style=flat-square&logo=fastify&logoColor=white">
   <img alt="Web" src="https://img.shields.io/badge/web-Next%2016-black?style=flat-square&logo=nextdotjs&logoColor=white">
@@ -177,9 +177,9 @@ through a pull request with the checks green — including on us.
 
 Two things worth knowing before you write code:
 
-- **The source of truth is `git.stackops.ch/stackops/ghostpass`.** GitHub is a
-  mirror, force-pushed every eight hours. A pull request merged on GitHub will
-  be silently overwritten — open it on the forge.
+- **GitHub is a mirror.** Development happens on GitLab, and every push to
+  `main` there overwrites `main` here. A pull request merged on GitHub would be
+  silently overwritten — open it, and we will carry it over.
 - **Comments explain *why*, not *what*.** The codebase is written for whoever
   reads it in two years, which usually means recording the measurement or the
   incident that produced a decision. When you change a value, check the comment

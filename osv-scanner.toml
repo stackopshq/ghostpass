@@ -1,0 +1,13 @@
+# Exceptions d'osv-scanner. Chacune porte sa raison et sa date d'expiration :
+# une exception sans échéance devient un angle mort permanent.
+
+# `basic-toml` n'est plus maintenu (avis d'abandon, pas une faille). Il n'entre
+# que par `askama_derive`, une macro de `uniffi_bindgen` 0.29 : il lit des
+# fichiers de configuration au moment de générer les bindings, et n'est pas
+# lié dans les binaires livrés. cargo-audit le classe d'ailleurs en
+# avertissement. Il disparaîtra avec la montée d'uniffi, qui touche les bindings
+# iOS et Android et mérite sa propre MR.
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0374"
+ignoreUntil = 2027-01-31T00:00:00Z
+reason = "basic-toml : abandon, outil de génération uniffi seulement ; à retirer avec la montée d'uniffi"
