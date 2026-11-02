@@ -139,13 +139,23 @@ export function AccesDUrgence() {
   async function ouvrir(entree: EntreeDUrgence) {
     await agir(async () => {
       const acces = await api.emergencyAccess(token!, entree.id);
-      const poignee = openEmergency(account!, acces.grantorPublicKey, acces.sealedUserKey);
+      const poignee = openEmergency(
+        account!,
+        acces.grantorPublicKey,
+        acces.sealedUserKey,
+      );
       setCoffre({
         entree,
         poignee,
         grantorEmail: acces.grantorEmail,
         grantorKdfParams: acces.grantorKdfParams,
-        items: acces.items.map((i) => decryptEmergencyItem(poignee, i.encryptedKey, i.encryptedData)),
+        // `filter` avant `map` serait tentant, mais on ne sait qu'APRÈS déchiffrement si un
+        // item est de service : son nom réservé est chiffré comme le reste.
+        items: acces.items
+          .map((i) =>
+            decryptEmergencyItem(poignee, i.encryptedKey, i.encryptedData),
+          )
+          .filter((i): i is EmergencyItem => i !== null),
       });
     });
   }
@@ -172,7 +182,8 @@ export function AccesDUrgence() {
   function executer(entree: EntreeDUrgence, action: string) {
     switch (action) {
       case "retirer":
-        if (!confirm(t("app.emConfirmRemove", { email: entree.contactEmail }))) return;
+        if (!confirm(t("app.emConfirmRemove", { email: entree.contactEmail })))
+          return;
         void agir(() => api.removeEmergency(token!, entree.id));
         return;
       case "ouvrir":
@@ -185,23 +196,42 @@ export function AccesDUrgence() {
         else void ouvrir(entree);
         return;
       default: {
-        const verbes = { accepter: "accept", demander: "request", approuver: "approve", refuser: "reject" } as const;
+        const verbes = {
+          accepter: "accept",
+          demander: "request",
+          approuver: "approve",
+          refuser: "reject",
+        } as const;
         const verbe = verbes[action as keyof typeof verbes];
-        if (verbe) void agir(() => api.emergencyAction(token!, entree.id, verbe));
+        if (verbe)
+          void agir(() => api.emergencyAction(token!, entree.id, verbe));
       }
     }
   }
 
-  function Ligne({ entree, actions }: { entree: EntreeDUrgence; actions: string[] }) {
+  function Ligne({
+    entree,
+    actions,
+  }: {
+    entree: EntreeDUrgence;
+    actions: string[];
+  }) {
     const restants = joursRestants(entree, Date.now());
     return (
       <li className="flex flex-wrap items-center gap-2 border-b border-border py-2 last:border-0">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm text-foreground">{entree.contactEmail}</p>
+          <p className="truncate text-sm text-foreground">
+            {entree.contactEmail}
+          </p>
           <p className="text-2xs text-muted">
-            {t(entree.role === "takeover" ? "app.emRoleTakeover" : "app.emRoleView")} ·{" "}
-            {t(`app.emStatus.${entree.status}`)}
-            {entree.status === "requested" && ` · ${t("app.emDaysLeft", { n: restants })}`}
+            {t(
+              entree.role === "takeover"
+                ? "app.emRoleTakeover"
+                : "app.emRoleView",
+            )}{" "}
+            · {t(`app.emStatus.${entree.status}`)}
+            {entree.status === "requested" &&
+              ` · ${t("app.emDaysLeft", { n: restants })}`}
           </p>
         </div>
         {actions.map((a) => (
@@ -297,10 +327,17 @@ export function AccesDUrgence() {
           <div className="mt-4 rounded-lg border border-border p-3">
             <div className="mb-2 flex items-center gap-2">
               <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                {t("app.emOpened", { email: coffre.grantorEmail, n: coffre.items.length })}
+                {t("app.emOpened", {
+                  email: coffre.grantorEmail,
+                  n: coffre.items.length,
+                })}
               </p>
               {coffre.entree.role === "takeover" && (
-                <Bouton variante="danger" disabled={occupe} onClick={() => void reprendre(coffre)}>
+                <Bouton
+                  variante="danger"
+                  disabled={occupe}
+                  onClick={() => void reprendre(coffre)}
+                >
                   {t("app.em_reprendre")}
                 </Bouton>
               )}
@@ -314,7 +351,9 @@ export function AccesDUrgence() {
             <ul className="space-y-2">
               {coffre.items.map((i, n) => (
                 <li key={n} className="rounded bg-surface-2 px-3 py-2">
-                  <p className="text-sm text-foreground">{i.name || t("app.emUnnamed")}</p>
+                  <p className="text-sm text-foreground">
+                    {i.name || t("app.emUnnamed")}
+                  </p>
                   {/* Le séparateur n'apparaît QUE s'il sépare deux choses. Un item sans
                       identifiant — une note sécurisée, typiquement — affichait « · » tout seul
                       sur une ligne vide, ce qui se lit comme un défaut d'affichage plutôt que
@@ -322,6 +361,46 @@ export function AccesDUrgence() {
                   {(i.username || i.password) && (
                     <p className="font-mono text-xs break-all text-muted">
                       {[i.username, i.password].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                  {/* Le second facteur : on rend le SECRET et non un code, parce que
+                      l'application web ne calcule pas de codes — l'export CSV expose déjà
+                      ce même secret. Un contact le pose dans son authentificateur. Sans
+                      lui, un compte à 2FA restait inaccessible malgré le mot de passe. */}
+                  {i.totp && (
+                    <p className="mt-1 text-xs text-muted">
+                      <span className="text-muted">{t("app.emTotp")} : </span>
+                      <span className="font-mono break-all text-foreground">
+                        {i.totp}
+                      </span>
+                      <span className="block text-muted">
+                        {t("app.emTotpHint")}
+                      </span>
+                    </p>
+                  )}
+                  {/* Une carte : quatre champs, dont aucun ne passait par `username` ou
+                      `password`. Elle n'affichait donc QUE son nom — un proche voyait
+                      « Carte Visa » et rien d'autre. */}
+                  {i.kind === "card" &&
+                    (i.cardNumber ||
+                      i.cardholder ||
+                      i.cardExp ||
+                      i.cardCode) && (
+                      <p className="font-mono text-xs break-all text-muted">
+                        {[i.cardholder, i.cardNumber, i.cardExp, i.cardCode]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  {/* La note, enfin lue. `whitespace-pre-wrap` parce qu'une note porte ses
+                      retours à la ligne, et qu'une adresse ou une consigne écrasée sur une
+                      seule ligne se lit mal au moment où on en a le plus besoin. */}
+                  {i.note && (
+                    <p className="mt-1 text-xs whitespace-pre-wrap break-words text-foreground">
+                      <span className="block text-muted">
+                        {t("app.emNote")}
+                      </span>
+                      {i.note}
                     </p>
                   )}
                 </li>
@@ -332,7 +411,10 @@ export function AccesDUrgence() {
       </Carte>
 
       {erreur && (
-        <p role="alert" className="rounded border border-border-strong px-3 py-2 text-sm text-muted">
+        <p
+          role="alert"
+          className="rounded border border-border-strong px-3 py-2 text-sm text-muted"
+        >
           {erreur}
         </p>
       )}
