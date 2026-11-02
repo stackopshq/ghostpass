@@ -804,6 +804,87 @@ class ClientApi(baseUrl: String) {
         )
     }
 
+    /**
+     * **Tous** les éléments de l'organisation, collections confondues.
+     *
+     * Sert à la rotation, et à rien d'autre : il faut ré-envelopper chaque élément sous la
+     * nouvelle Org Key, y compris ceux des collections où l'administrateur n'entre jamais.
+     * Les parcourir collection par collection en oublierait — et un élément oublié devient
+     * illisible pour toute l'équipe, sans message, au moment où la clé change.
+     */
+    fun itemsDOrganisation(jeton: String, org: String): List<ElementChiffre> =
+        json.decodeFromString(
+            EnveloppeDElements.serializer(),
+            requete("GET", "/api/orgs/$org/items", jeton = jeton),
+        ).items
+
+    /**
+     * Fait tourner l'Org Key, et retire un membre dans le même mouvement.
+     *
+     * `POST`, et c'est ce qui rend cette route atteignable là où le changement de rôle ne
+     * l'est pas : voir [Coffre.accorderSurUneCollection] pour le refus du `PATCH` par
+     * `HttpURLConnection`.
+     */
+    fun faireTournerLaCle(jeton: String, org: String, corps: CorpsDeRotation) {
+        requete(
+            "POST", "/api/orgs/$org/rotate", jeton = jeton,
+            corps = json.encodeToString(CorpsDeRotation.serializer(), corps),
+        )
+    }
+
+    /** Crée une collection dans l'organisation. */
+    fun creerUneCollection(jeton: String, org: String, nom: String): CollectionDto =
+        json.decodeFromString(
+            CollectionDto.serializer(),
+            requete(
+                "POST", "/api/orgs/$org/collections", jeton = jeton,
+                corps = json.encodeToString(CHAMPS, mapOf("name" to nom)),
+            ),
+        )
+
+    /** Les groupes de l'organisation, avec leurs membres et leurs accès. Réservé à l'admin. */
+    fun groupesDOrganisation(jeton: String, org: String): List<GroupeDetailleDto> =
+        json.decodeFromString(
+            EnveloppeDeGroupes.serializer(),
+            requete("GET", "/api/orgs/$org/groups", jeton = jeton),
+        ).groups
+
+    /**
+     * Qui a accès à cette collection, **effectivement** — voir [AccesDto] pour ce que
+     * « effectivement » corrige.
+     */
+    fun accesDeCollection(jeton: String, org: String, collection: String): List<AccesDto> =
+        json.decodeFromString(
+            EnveloppeDAcces.serializer(),
+            requete("GET", "/api/orgs/$org/collections/$collection/access", jeton = jeton),
+        ).access
+
+    /** Accorde à une personne une permission directe sur une collection. */
+    fun accorderUnAcces(
+        jeton: String,
+        org: String,
+        collection: String,
+        utilisateur: String,
+        permission: String,
+    ) {
+        requete(
+            "POST", "/api/orgs/$org/collections/$collection/access", jeton = jeton,
+            corps = json.encodeToString(CHAMPS, mapOf(
+                "userId" to utilisateur, "permission" to permission)),
+        )
+    }
+
+    /**
+     * Retire un accès **direct**. Idempotent côté serveur : un second appel rend `204` lui
+     * aussi, pour qu'un deuxième appui ne ressemble pas à une panne.
+     */
+    fun retirerLAcces(jeton: String, org: String, collection: String, utilisateur: String) {
+        requete(
+            "DELETE", "/api/orgs/$org/collections/$collection/access/$utilisateur",
+            jeton = jeton,
+        )
+    }
+
     /** Accepte une invitation. Le serveur rend `{ status: "active" }`, qu'on ne lit pas. */
     fun accepterLOrganisation(jeton: String, org: String) {
         requete("POST", "/api/orgs/$org/accept", jeton = jeton)

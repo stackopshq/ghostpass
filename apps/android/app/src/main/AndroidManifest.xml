@@ -6,6 +6,16 @@
          en demanderait devrait s'en expliquer. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- La caméra, **pour le seul scan du QR code d'un second facteur**, et jamais au
+         démarrage : elle se demande au moment où l'on appuie sur « Scanner », ce qui est
+         aussi le seul moment où la demande s'explique d'elle-même.
+
+         `camera.any` en `required="false"` : un appareil sans caméra — une tablette
+         d'entrée de gamme, un émulateur — doit pouvoir installer GhostPass. Le scan est un
+         raccourci de saisie, pas une condition de fonctionnement, et l'écran le dit quand
+         il n'y a pas de caméra au lieu d'afficher un cadre noir. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
         android:label="@string/app_name"

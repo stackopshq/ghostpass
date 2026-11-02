@@ -21,6 +21,8 @@ import ch.stackops.ghostpass.ui.EcranDeDeverrouillage
 import ch.stackops.ghostpass.ui.BoitesDePartage
 import ch.stackops.ghostpass.ui.EcranDeLElement
 import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
+import ch.stackops.ghostpass.ui.EcranDAdministration
+import ch.stackops.ghostpass.ui.EcranDExport
 import ch.stackops.ghostpass.ui.EcranDImport
 import ch.stackops.ghostpass.ui.EcranDeLaSante
 import ch.stackops.ghostpass.ui.EcranDeLUrgence
@@ -122,6 +124,7 @@ class ActivitePrincipale : AppCompatActivity() {
                 // en vigueur — après une mort du processus, le coffre est fermé.
                 var reglagesOuverts by rememberSaveable { mutableStateOf(false) }
                 var importOuvert by remember { mutableStateOf(false) }
+                var exportOuvert by remember { mutableStateOf(false) }
                 var secondFacteurOuvert by remember { mutableStateOf(false) }
                 var journalOuvert by remember { mutableStateOf(false) }
                 var cleDeRecuperationOuverte by remember { mutableStateOf(false) }
@@ -150,11 +153,17 @@ class ActivitePrincipale : AppCompatActivity() {
                 BackHandler(
                     enabled = edition != null || modele.corbeilleOuverte ||
                         modele.santeOuverte || reglagesOuverts || importOuvert ||
-                        secondFacteurOuvert || journalOuvert || cleDeRecuperationOuverte ||
-                        urgenceOuverte,
+                        exportOuvert || secondFacteurOuvert || journalOuvert ||
+                        cleDeRecuperationOuverte || urgenceOuverte ||
+                        modele.administrationDe != null,
                 ) {
                     when {
                         edition != null -> edition = null
+                        // Les accès d'une collection se referment avant l'écran qui y mène,
+                        // comme le coffre d'un donneur : un retour arrière qui sauterait les
+                        // deux ferait perdre de vue de quelle collection on parlait.
+                        modele.accesDe != null -> modele.fermerLesAcces()
+                        modele.administrationDe != null -> modele.fermerLAdministration()
                         // Le coffre d'un donneur se referme avant l'écran qui y mène : un
                         // retour arrière qui sauterait les deux ferait perdre de vue qu'on
                         // lisait le coffre de quelqu'un d'autre.
@@ -164,6 +173,7 @@ class ActivitePrincipale : AppCompatActivity() {
                         journalOuvert -> journalOuvert = false
                         secondFacteurOuvert -> secondFacteurOuvert = false
                         importOuvert -> importOuvert = false
+                        exportOuvert -> exportOuvert = false
                         reglagesOuverts -> reglagesOuverts = false
                         modele.santeOuverte -> modele.santeOuverte = false
                         else -> modele.fermerLaCorbeille()
@@ -177,6 +187,16 @@ class ActivitePrincipale : AppCompatActivity() {
                 // L'import, lui, porte à l'écran le contenu d'un fichier de mots de passe
                 // en clair : il ne survit pas au verrouillage.
                 if (!modele.deverrouille && importOuvert) importOuvert = false
+                // L'export, encore moins : il tient le coffre entier en clair dans la
+                // composition entre « Préparer » et le choix du fichier. Le refermer jette
+                // ce texte avec l'écran.
+                if (!modele.deverrouille && exportOuvert) exportOuvert = false
+                // L'administration ne porte pas de secret du coffre, mais elle porte la
+                // liste nominative d'une équipe et ses groupes. Ce n'est pas un mot de
+                // passe ; ce n'est pas rien non plus.
+                if (!modele.deverrouille && modele.administrationDe != null) {
+                    modele.fermerLAdministration()
+                }
                 // Le second facteur montre un secret TOTP en clair : il ne survit pas non
                 // plus au verrouillage.
                 if (!modele.deverrouille && secondFacteurOuvert) secondFacteurOuvert = false
@@ -201,6 +221,10 @@ class ActivitePrincipale : AppCompatActivity() {
                         reglagesOuverts = false
                     }
                     importOuvert -> EcranDImport(modele) { importOuvert = false }
+                    exportOuvert -> EcranDExport(modele) { exportOuvert = false }
+                    modele.administrationDe != null -> EcranDAdministration(modele) {
+                        modele.fermerLAdministration()
+                    }
                     secondFacteurOuvert -> EcranDuSecondFacteur(modele) {
                         secondFacteurOuvert = false
                     }
@@ -253,6 +277,7 @@ class ActivitePrincipale : AppCompatActivity() {
                         surSante = { modele.santeOuverte = true },
                         surReglages = { reglagesOuverts = true },
                         surImport = { modele.message = null; importOuvert = true },
+                        surExport = { modele.message = null; exportOuvert = true },
                         surSecondFacteur = {
                             modele.message = null
                             secondFacteurOuvert = true

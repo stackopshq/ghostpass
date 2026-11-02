@@ -47,6 +47,7 @@ import ch.stackops.ghostpass.Organisation
 import ch.stackops.ghostpass.OrigineDuCoffre
 import ch.stackops.ghostpass.R
 import ch.stackops.ghostpass.RaisonDIllisibilite
+import ch.stackops.ghostpass.RoleDOrganisation
 import ch.stackops.ghostpass.theme.BoutonSecondaire
 import ch.stackops.ghostpass.theme.ChampGhost
 import ch.stackops.ghostpass.theme.FondGhost
@@ -82,6 +83,7 @@ fun EcranDuCoffre(
     surSante: () -> Unit = {},
     surReglages: () -> Unit = {},
     surImport: () -> Unit = {},
+    surExport: () -> Unit = {},
     surSecondFacteur: () -> Unit = {},
     surJournal: () -> Unit = {},
     surCleDeRecuperation: () -> Unit = {},
@@ -110,8 +112,8 @@ fun EcranDuCoffre(
 
             if (reglagesOuverts) {
                 MenuDeReglages(
-                    modele, surCorbeille, surSante, surReglages, surImport, surSecondFacteur,
-                    surJournal, surCleDeRecuperation, surUrgence,
+                    modele, surCorbeille, surSante, surReglages, surImport, surExport,
+                    surSecondFacteur, surJournal, surCleDeRecuperation, surUrgence,
                 ) {
                     reglagesOuverts = false
                 }
@@ -308,6 +310,7 @@ private fun MenuDeReglages(
     surSante: () -> Unit,
     surReglages: () -> Unit,
     surImport: () -> Unit,
+    surExport: () -> Unit,
     surSecondFacteur: () -> Unit,
     surJournal: () -> Unit,
     surCleDeRecuperation: () -> Unit,
@@ -371,10 +374,20 @@ private fun MenuDeReglages(
 
         // L'import écrit dans le coffre **personnel** : le proposer depuis une collection
         // d'équipe laisserait croire qu'il y déposera. On ne l'offre donc qu'à l'accueil.
+        //
+        // L'export est réservé au même endroit, pour la raison **symétrique** et plus
+        // sérieuse : il ne sort que le coffre personnel (`ModeleDuCoffre.exportables`).
+        // L'offrir depuis une collection d'équipe laisserait croire qu'il en sort le
+        // contenu — et le fichier obtenu, qui ne le contient pas, passerait pour une perte
+        // de données plutôt que pour une limite voulue.
         if (modele.collectionOuverte == null) {
             LienDiscret(stringResource(R.string.coffre_import_csv), identifiant = "button.import") {
                 surFermer()
                 surImport()
+            }
+            LienDiscret(stringResource(R.string.coffre_export_csv), identifiant = "button.export") {
+                surFermer()
+                surExport()
             }
         }
 
@@ -518,6 +531,25 @@ private fun ChoixDuCoffre(modele: ModeleDuCoffre) {
                     fontSize = 12.sp,
                 )
             }
+        }
+
+        // ─── L'entrée de l'administration ───
+        //
+        // Elle vit **ici** et non dans le menu, parce qu'elle a besoin de savoir *quelle*
+        // équipe on administre. Le menu est global : un compte membre de trois
+        // organisations y verrait « Administrer l'équipe » sans que rien ne dise laquelle,
+        // et le choix se ferait au hasard de ce qui était ouvert.
+        //
+        // Elle ne paraît qu'au rôle d'administrateur, et le reste de l'écran ne s'y fie
+        // pas : le serveur rend `403` sur la liste des membres à qui n'en est pas un, et
+        // l'écran d'administration l'affiche tel quel. Cacher le bouton est une commodité,
+        // pas la règle d'accès.
+        val equipe = modele.organisationOuverte?.organisation
+        if (equipe != null && equipe.role == RoleDOrganisation.Admin) {
+            LienDiscret(
+                texte = stringResource(R.string.coffre_administrer, equipe.nom),
+                identifiant = "button.orgAdmin",
+            ) { modele.ouvrirLAdministration(equipe) }
         }
 
         // Les collections de l'organisation ouverte.

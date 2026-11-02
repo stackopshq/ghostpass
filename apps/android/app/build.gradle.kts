@@ -1,3 +1,5 @@
+import java.util.Properties
+
 // AGP 9 embarque le support Kotlin : appliquer `org.jetbrains.kotlin.android` en plus
 // est désormais une erreur de configuration, pas une redondance inoffensive.
 plugins {
@@ -14,6 +16,25 @@ plugins {
 // tools/android/build-jni.sh, jamais écrits à la main.
 val genere = rootProject.file("generated")
 
+/**
+ * La signature de diffusion, lue dans `android/key.properties` — **hors du dépôt**, à côté
+ * de la clé elle-même. Voir `key.properties.example`.
+ *
+ * Sans ce fichier, la variante `release` sort **non signée**, donc ininstallable. C'est le
+ * comportement voulu : un paquet signé par la clé de débogage s'installe, se lance, et ne
+ * se distingue d'un vrai que par son empreinte. Mieux vaut un artefact qui refuse de
+ * s'installer qu'un artefact qui se distribue par erreur.
+ *
+ * Même motif que `apps/mobile/android/app/build.gradle.kts` de GhostCal : la clé d'envoi y
+ * vit chez Clara, et la signature est ce qui lie toutes les mises à jour d'une application
+ * à la précédente. Google refuse un dépôt dont l'empreinte de certificat ne correspond pas
+ * à celle de la version déjà en ligne.
+ */
+val proprietesDeLaCle = Properties().apply {
+    val fichier = rootProject.file("key.properties")
+    if (fichier.exists()) fichier.inputStream().use { load(it) }
+}
+
 android {
     namespace = "ch.stackops.ghostpass"
     compileSdk = 36
@@ -25,8 +46,16 @@ android {
         // une libc plus ancienne que celle qu'on déclare accepter.
         minSdk = 24
         targetSdk = 36
+        // **Les mêmes numéros que l'envoi iOS.** `MARKETING_VERSION` y vaut 1.0 et
+        // `CURRENT_PROJECT_VERSION` 1 : les deux plateformes sortent la même application au
+        // même numéro, ce qui est le seul moyen qu'un rapport de bogue désigne quelque
+        // chose. Le `0.1` d'avant datait d'un portage qui n'avait rien à publier.
+        //
+        // `versionCode` doit monter à **chaque** dépôt sur la Play Console : elle refuse
+        // deux fois le même, et c'est lui qui ordonne les mises à jour — pas `versionName`,
+        // qui n'est qu'un texte affiché.
         versionCode = 1
-        versionName = "0.1"
+        versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Les témoins qu'un script pilote sont exclus de l'exécution ordinaire : lancés
         // d'affilée, ils seraient rouges pour une raison qui n'est pas le produit. Voir
@@ -63,6 +92,27 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    signingConfigs {
+        if (proprietesDeLaCle.isNotEmpty()) {
+            create("release") {
+                storeFile = rootProject.file(proprietesDeLaCle.getProperty("storeFile"))
+                storePassword = proprietesDeLaCle.getProperty("storePassword")
+                keyAlias = proprietesDeLaCle.getProperty("keyAlias")
+                keyPassword = proprietesDeLaCle.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // `findByName` et non `getByName` : sans `key.properties`, la configuration
+            // n'existe pas et `null` laisse la variante non signée. `getByName` ferait
+            // échouer la **configuration** du projet, donc tout — y compris un
+            // `assembleDebug` qui n'a aucun besoin de la clé de production.
+            signingConfig = signingConfigs.findByName("release")
+        }
+    }
+
     buildFeatures {
         compose = true
     }
@@ -84,6 +134,11 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    // `LocalLifecycleOwner`. Celui d'`androidx.compose.ui.platform` existe encore mais
+    // est déprécié, et le compilateur nomme lui-même son remplaçant : il a déménagé ici.
+    // La dépendance est explicite plutôt que transitive — ce qu'on obtient par ricochet
+    // disparaît à la prochaine montée de version de ce qui le tirait.
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     // Le mot de passe maître et le jeton ne vont pas dans un fichier de préférences en
     // clair. `EncryptedSharedPreferences` s'appuie sur le KeyStore matériel.
@@ -132,6 +187,32 @@ dependencies {
     // fenêtre descend d'`Theme.AppCompat`. `AppCompatActivity` **est** une
     // `FragmentActivity`, donc `BiometricPrompt` continue de l'accepter.
     implementation("androidx.appcompat:appcompat:1.7.0")
+
+    // ─── La caméra et le décodeur de QR code, pour le second facteur ───
+    //
+    // Recopier une clé base32 à la main est le moment où l'on se trompe : trente-deux
+    // caractères sans séparateur, dans une police où le 0 et le O se ressemblent. Le QR code
+    // porte la même clé, **plus** l'émetteur, le nombre de chiffres et la période — que la
+    // saisie manuelle laisse forcément aux valeurs par défaut.
+    //
+    // **ZXing et non ML Kit**, et ce n'est pas une question de poids. `barcode-scanning` de
+    // ML Kit est la voie que Google documente, mais sa variante légère télécharge son modèle
+    // par les services Play, et la variante groupée les réclame quand même à l'exécution.
+    //
+    // Or **cette liste de dépendances ne contient aucun service Play**, et c'est une
+    // propriété du produit plutôt qu'un hasard : une fiche de magasin qui promet « aucun
+    // traceur » ne peut pas faire passer par Google le QR code d'un second facteur. Que
+    // `tools/android/verifier-l-autonomie.sh` scanne l'APK livré ne couvre pas ce cas — il
+    // y cherche la facturation de Google, pas ses services — donc rien d'automatique ne
+    // rattraperait l'erreur : la raison est ici, et nulle part ailleurs.
+    //
+    // `zxing:core` est du Java pur, hors ligne, sans service ni réseau : il reçoit un tableau
+    // de luminance et rend une chaîne. CameraX ne fournit que les images.
+    implementation("androidx.camera:camera-core:1.4.1")
+    implementation("androidx.camera:camera-camera2:1.4.1")
+    implementation("androidx.camera:camera-lifecycle:1.4.1")
+    implementation("androidx.camera:camera-view:1.4.1")
+    implementation("com.google.zxing:core:3.5.3")
 
     // Les onglets personnalisés, pour le SSO. **Jamais une WebView** : elle donnerait à
     // l'application l'accès au mot de passe saisi chez le fournisseur d'identité, ce qui
