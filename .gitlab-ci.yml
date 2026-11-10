@@ -13,11 +13,13 @@
 #   - la publication sur ghcr.io, tant que `GHCR_USERNAME` / `GHCR_TOKEN` manquent ;
 #   - Renovate, tant que `RENOVATE_TOKEN` manque.
 #
-# Deux planifications (CI/CD > Schedules), distinguées par `SCHEDULE_TASK` :
-#   - `securite`, le lundi à 6h UTC : les nouvelles advisories sur des
+# Deux planifications, gérées dans gitlab-admin et distinguées par leur
+# description (le projet refuse toute variable de pipeline, planification
+# comprise) :
+#   - « Weekly security », le lundi à 6h UTC : les nouvelles advisories sur des
 #     dépendances figées n'arrivent pas avec un commit ;
-#   - `renovate`, le lundi à 5h UTC, avant la fenêtre `before 6am on monday`
-#     de renovate.json (Europe/Zurich).
+#   - « Weekly renovate », le lundi à 5h UTC, avant la fenêtre `before 6am on
+#     monday` de renovate.json (Europe/Zurich).
 
 workflow:
   rules:
@@ -67,7 +69,7 @@ variables:
 # La sécurité : comme le code, plus la planification hebdomadaire.
 .quand-securite:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TASK != "securite"
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_PIPELINE_SCHEDULE_DESCRIPTION != "Weekly security"
       when: never
     - when: on_success
 
@@ -478,10 +480,8 @@ renovate:
   image: $NODE_IMAGE
   needs: []
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TASK == "renovate"
-    # Lancé à la main : Run pipeline, SCHEDULE_TASK = renovate (et
-    # RENOVATE_DRY_RUN = full pour un passage à blanc).
-    - if: $CI_PIPELINE_SOURCE == "web" && $SCHEDULE_TASK == "renovate"
+    # Lancé à la main : « Run » sur la planification « Weekly renovate ».
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_PIPELINE_SCHEDULE_DESCRIPTION == "Weekly renovate"
   interruptible: false
   resource_group: renovate
   variables:
