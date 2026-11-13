@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Le second écran d'une connexion en deux temps : **un seul champ**, celui du code. Le
+     formulaire identifiant/mot de passe est à côté, dans `essai_de_connexion.xml`. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="connexion.example.com — code de vérification"
+        android:textSize="20sp" />
+    <EditText
+        android:id="@+id/essai_code"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Code à six chiffres"
+        android:importantForAutofill="yes"
+        android:autofillHints="smsOTPCode"
+        android:inputType="number" />
+</LinearLayout>

@@ -140,13 +140,38 @@ fun EcranDuCoffre(
             }
 
             if (modele.horsLigne && lecture.entrees.isNotEmpty()) {
+                // ─── Et on réessaie, au lieu d'attendre le prochain déverrouillage ───
+                //
+                // Relevé le 2026-11-13 sur un appareil : réseau coupé puis rendu, le bandeau
+                // restait et la liste aussi, parce que rien ne redemandait le coffre. Il
+                // fallait verrouiller et rouvrir pour revoir l'état réel — un geste que
+                // personne ne devine, pour un défaut qui ressemble à « l'application ne sait
+                // plus se connecter ».
+                //
+                // Une tentative toutes les trente secondes, **et seulement tant que le
+                // bandeau est là** : l'effet meurt avec lui, donc rien ne tourne quand tout
+                // va bien. Le toucher réessaie tout de suite, pour qui n'a pas envie
+                // d'attendre.
+                //
+                // Trente et non quinze : `ClientApi` laisse quinze secondes à la connexion,
+                // et sur un réseau qui ne répond pas — plutôt qu'un refus net — une tentative
+                // occupe tout ce délai. Deux tentatives se chevaucheraient, pour la même
+                // réponse.
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        delay(30_000)
+                        modele.rafraichir()
+                    }
+                }
                 // Dire d'où vient ce qu'on montre. Une liste du dernier passage présentée
                 // comme à jour ferait croire qu'un élément ajouté ailleurs n'existe pas.
                 Text(
                     stringResource(R.string.coffre_hors_ligne),
                     color = couleurs.attenue,
                     fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
+                    modifier = Modifier
+                        .clickable { modele.rafraichir() }
+                        .padding(horizontal = 20.dp, vertical = 2.dp),
                 )
             }
 

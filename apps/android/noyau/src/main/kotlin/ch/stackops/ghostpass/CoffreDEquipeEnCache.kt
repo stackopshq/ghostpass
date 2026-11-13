@@ -22,6 +22,19 @@ data class CoffreDEquipeEnCache(
     val adminPublicKey: String,
     val encryptedOrgKey: String,
     val collections: List<CollectionEnCache>,
+    // ─── Le rôle et l'état, pour que l'équipe garde sa pastille hors ligne ───
+    //
+    // Relevé le 2026-11-13 sur un Redmi, serveur coupé : les éléments d'équipe restaient
+    // bien dans la liste, mais les pastilles de choix de coffre disparaissaient — le choix
+    // « Tous les éléments / telle équipe » n'existait plus, alors que son contenu, lui,
+    // était là. Une pastille demande une `Organisation`, donc un rôle et un état, et la
+    // copie n'en gardait aucun.
+    //
+    // Ce sont les noms des valeurs de `RoleDOrganisation` et `EtatDAppartenance`, pas ceux
+    // du serveur : la copie est relue par la même version qui l'a écrite. Les deux ont une
+    // valeur par défaut, pour qu'une copie écrite avant ce champ se relise sans être jetée.
+    val role: String = "",
+    val etat: String = "",
 )
 
 @Serializable
