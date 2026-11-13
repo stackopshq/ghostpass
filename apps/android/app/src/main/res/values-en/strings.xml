@@ -745,4 +745,7 @@
     <string name="remplissage_aucun_code">No account in your vault has a one-time code.</string>
     <string name="admin_changer_le_role">Role</string>
     <string name="modele_role_serveur_ancien">This server cannot change a role from Android yet: it predates this feature. Use the web app, or update the server.</string>
+    <string name="admin_pas_soi_meme">You cannot remove yourself from the team. Another admin can do it.</string>
+    <string name="modele_rotation_element_illisible">A team item does not open with the current key: the key is not renewed, so as not to make it unreadable for everyone. Delete or recreate that item, then try again.</string>
+    <string name="modele_rotation_membre_introuvable">The public key of %1$s cannot be found: the key is not renewed, rather than remove their access without anyone deciding to.</string>
 </resources>

@@ -1085,11 +1085,16 @@ class Coffre {
         // nécessaire est le genre de détail que ce produit n'a pas le droit de laisser.
         compteOuvert.createOrg().use { creation ->
             creation.org().use { neuve ->
+                // Un élément que l'ancienne clé n'ouvre pas ne peut pas être ré-enveloppé.
+                // On annonce lequel plutôt que de laisser remonter l'erreur brute du cœur,
+                // que l'écran traduisait en « mot de passe incorrect ».
                 val reenveloppes = anciens.map { chiffre ->
-                    ElementReenveloppeDto(
-                        chiffre.id,
-                        reenvelopperSousOrg(chiffre, ouvert.org, neuve),
-                    )
+                    val refait = try {
+                        reenvelopperSousOrg(chiffre, ouvert.org, neuve)
+                    } catch (e: Exception) {
+                        throw ElementNonReenveloppable(chiffre.id)
+                    }
+                    ElementReenveloppeDto(chiffre.id, refait)
                 }
 
                 val scelles = restants.map { membre ->
@@ -1114,6 +1119,14 @@ class Coffre {
             }
         }
     }
+
+    /**
+     * Un élément de l'équipe que l'ancienne Org Key n'ouvre pas : la rotation est annulée.
+     * Le passer le rendrait illisible pour tous, et la rotation se veut tout ou rien.
+     */
+    class ElementNonReenveloppable(val element: String) : Exception(
+        "L'élément $element n'a pas pu être ré-enveloppé : la rotation est annulée.",
+    )
 
     /**
      * Un membre dont la clé publique n'a pas pu être résolue, et la rotation qu'on refuse
