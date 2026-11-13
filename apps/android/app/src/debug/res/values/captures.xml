@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Variante `debug` seulement : la prise de vue de la fiche Play a besoin d'écrans
+         qui ne soient pas noirs. Rien de ce fichier n'entre dans l'AAB publié — Gradle ne
+         compile `src/debug` que pour la variante du même nom. -->
+    <bool name="captures_de_fiche_permises">true</bool>
+</resources>

@@ -70,6 +70,25 @@ class ActivitePrincipale : AppCompatActivity() {
      */
     private val reglages: Preferences by lazy { Preferences(this) }
 
+    /**
+     * La protection des captures est-elle levée pour produire les images de la fiche Play ?
+     *
+     * Deux clés, et il faut les deux. La ressource `captures_de_fiche_permises` vaut
+     * `false` dans `src/main` — donc dans l'AAB publié — et `true` dans `src/debug`
+     * seulement : aucune intention ne peut désarmer la protection d'une application
+     * installée depuis le magasin. L'extra `captures-de-fiche` est la seconde, pour qu'un
+     * build de développement ordinaire reste protégé tant qu'on ne demande pas la prise
+     * de vue :
+     *
+     *     adb shell am start -n ch.stackops.ghostpass/.ActivitePrincipale \
+     *         --ez captures-de-fiche true
+     *
+     * C'est l'équivalent exact du `-captures-de-fiche` d'iOS, compilé là-bas sous `DEBUG`.
+     */
+    private fun capturesDeFicheDemandees(): Boolean =
+        resources.getBoolean(R.bool.captures_de_fiche_permises) &&
+            intent?.getBooleanExtra("captures-de-fiche", false) == true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -86,7 +105,13 @@ class ActivitePrincipale : AppCompatActivity() {
         //
         // Posé une fois pour toutes plutôt qu'au déverrouillage : une fenêtre qui gagne et
         // perd ce drapeau au fil des écrans finit par le perdre au mauvais moment.
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        //
+        // Une seule exception, et elle demande deux clés à la fois : voir
+        // [capturesDeFicheDemandees]. Google Play réclame des captures d'écran pour
+        // publier, et sous ce drapeau toute capture sort noire.
+        if (!capturesDeFicheDemandees()) {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        }
 
         setContent {
             // Le thème suit le réglage, et « Système » suit l'appareil. La valeur est un

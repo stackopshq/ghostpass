@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- La protection des captures peut-elle être levée sur demande ?
+         Non, et cette valeur-ci est celle qui part en production : une protection qu'un
+         extra d'intention désarme n'en est pas une. La variante `debug` la remplace par
+         `true`, ce qui autorise alors l'extra `captures-de-fiche` au lancement
+         (voir ActivitePrincipale.capturesDeFicheDemandees). -->
+    <bool name="captures_de_fiche_permises">false</bool>
+</resources>
