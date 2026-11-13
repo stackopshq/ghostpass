@@ -65,7 +65,7 @@ class ServiceDeRemplissage : AutofillService() {
         }
 
         val champs = champsDeSaisie(structure)
-        if (champs.identifiant == null && champs.motDePasse == null) {
+        if (champs.identifiant == null && champs.motDePasse == null && champs.code == null) {
             // Aucun champ d'authentification : ce n'est pas un formulaire de connexion, et
             // rendre `null` est la bonne réponse — pas une réponse vide, qui ferait
             // apparaître une suggestion inerte.
@@ -100,7 +100,7 @@ class ServiceDeRemplissage : AutofillService() {
         // `setValue(id, null, presentation)` : la valeur est nulle **exprès**. C'est ainsi
         // qu'on déclare quels champs ce jeu couvre sans rien porter de secret ; les valeurs
         // n'arrivent qu'après le geste de l'utilisateur.
-        val cibles = listOfNotNull(champs.identifiant, champs.motDePasse)
+        val cibles = listOfNotNull(champs.identifiant, champs.motDePasse, champs.code)
         val jeu = Dataset.Builder(presentation)
         for (cible in cibles) {
             @Suppress("DEPRECATION")
@@ -136,6 +136,7 @@ class ServiceDeRemplissage : AutofillService() {
             putExtra(ActiviteDeRemplissage.EXTRA_DOMAINE, champs.domaine)
             putExtra(ActiviteDeRemplissage.EXTRA_ID_IDENTIFIANT, champs.identifiant)
             putExtra(ActiviteDeRemplissage.EXTRA_ID_MOT_DE_PASSE, champs.motDePasse)
+            putExtra(ActiviteDeRemplissage.EXTRA_ID_CODE, champs.code)
         }
         var drapeaux = PendingIntent.FLAG_CANCEL_CURRENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -163,6 +164,8 @@ class ServiceDeRemplissage : AutofillService() {
         val identifiant: AutofillId? = null,
         val motDePasse: AutofillId? = null,
         val domaine: String? = null,
+        /** Le champ d'un code à usage unique : l'écran du second facteur d'une connexion. */
+        val code: AutofillId? = null,
     )
 
     /**
@@ -176,6 +179,7 @@ class ServiceDeRemplissage : AutofillService() {
     private fun champsDeSaisie(structure: AssistStructure): ChampsDeSaisie {
         var identifiant: AutofillId? = null
         var motDePasse: AutofillId? = null
+        var code: AutofillId? = null
         var domaine: String? = null
 
         fun visiter(noeud: AssistStructure.ViewNode) {
@@ -188,7 +192,16 @@ class ServiceDeRemplissage : AutofillService() {
             if (estUnChamp && noeud.autofillId != null) {
                 val typeMotDePasse = (noeud.inputType and
                     android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0
+                // Le champ d'un code à usage unique, sous les noms qu'il porte en pratique :
+                // les indices d'AndroidX pour une application native, `one-time-code` pour
+                // une page web (Chrome le transmet par `htmlInfo`). Testé **avant** le mot
+                // de passe : bien des pages déclarent ce champ en type mot de passe.
+                val autocomplete = noeud.htmlInfo?.attributes
+                    ?.firstOrNull { it.first == "autocomplete" }?.second?.lowercase()
+                val estUnCode = indices.any { it in INDICES_DE_CODE } ||
+                    autocomplete == "one-time-code"
                 when {
+                    estUnCode -> if (code == null) code = noeud.autofillId
                     indices.any { it == View.AUTOFILL_HINT_PASSWORD } || typeMotDePasse ->
                         if (motDePasse == null) motDePasse = noeud.autofillId
                     indices.any {
@@ -208,11 +221,16 @@ class ServiceDeRemplissage : AutofillService() {
         // Le nom du paquet sert de domaine quand la vue n'en déclare aucun — cas d'une
         // application native plutôt qu'une page web.
         val hote = domaine?.let { RapprochementDeSite.hote(it) }
-        return ChampsDeSaisie(identifiant, motDePasse, hote?.ifEmpty { null })
+        return ChampsDeSaisie(identifiant, motDePasse, hote?.ifEmpty { null }, code)
     }
 
     private companion object {
         /** Voir [intentionDAuthentification] : c'est ce qui rend chaque intention distincte. */
         val codeDeRequete = AtomicInteger(0)
+
+        /** Les indices d'un champ de code, en minuscules comme on les compare. */
+        val INDICES_DE_CODE = setOf(
+            "smsotpcode", "2faappotpcode", "one-time-code", "onetimecode", "otp",
+        )
     }
 }

@@ -708,7 +708,7 @@
     <string name="admin_equipe_non_ouverte">Ouvrez d\'abord ce coffre d\'équipe : administrer demande sa clé, et aucune des opérations d\'ici ne peut s\'en passer.</string>
 
     <string name="admin_membres_titre">Membres</string>
-    <string name="admin_membres_note">Le rôle s\'affiche mais ne se change pas depuis le téléphone : cette requête est un « PATCH », que la pile HTTP d\'Android refuse. Passez par le web.</string>
+    <string name="admin_membres_note">Retirer quelqu\'un fait tourner la clé de l\'équipe ; changer son rôle ne la change pas.</string>
     <string name="admin_aucun_membre">Aucun membre.</string>
     <string name="admin_role_et_etat">%1$s · %2$s</string>
     <string name="admin_revoquer">Révoquer</string>
@@ -785,4 +785,69 @@
     <string name="scan_ouvrir_les_reglages">Ouvrir les réglages</string>
     <string name="scan_export_multiple">Ce code exporte plusieurs comptes depuis une application d\'authentification. Affichez le QR code d\'un seul compte, depuis le site.</string>
     <string name="scan_pas_un_totp">Ce QR code ne contient pas de second facteur.</string>
+    <!-- Parité avec iOS (2026-11-13) : la fiche de lecture, la copie depuis la liste,
+         le partage d'un secret libre et la création d'équipe. Textes repris du
+         catalogue iOS, apps/ios/Ghostpass/Resources/Localizable.xcstrings. -->
+    <string name="fiche_fermer">Fermer</string>
+    <string name="fiche_modifier">Modifier</string>
+    <string name="fiche_identifiants">Identifiants</string>
+    <string name="fiche_nom_utilisateur">Nom d\'utilisateur</string>
+    <string name="fiche_mot_de_passe">Mot de passe</string>
+    <string name="fiche_afficher">Afficher</string>
+    <string name="fiche_masquer">Masquer</string>
+    <string name="fiche_copier">Copier</string>
+    <string name="fiche_code">Code à usage unique</string>
+    <string name="fiche_code_restant">Renouvelé dans %1$d s</string>
+    <string name="fiche_code_illisible">Clé de vérification illisible.</string>
+    <string name="fiche_adresses">Adresses</string>
+    <string name="fiche_note">Note</string>
+    <string name="fiche_notes">Notes</string>
+    <string name="fiche_carte">Carte</string>
+    <string name="fiche_titulaire">Titulaire</string>
+    <string name="fiche_numero">Numéro</string>
+    <string name="fiche_expiration">Expiration</string>
+    <string name="fiche_cryptogramme">Cryptogramme</string>
+    <string name="fiche_dossier">Dossier</string>
+    <string name="fiche_copie">%1$s — effacé dans %2$d s</string>
+    <string name="fiche_copie_nom">Nom d\'utilisateur copié</string>
+    <string name="fiche_copie_mot_de_passe">Mot de passe copié</string>
+    <string name="fiche_copie_code">Code copié</string>
+    <string name="fiche_copie_adresse">Adresse copiée</string>
+    <string name="fiche_copie_titulaire">Titulaire copié</string>
+    <string name="fiche_copie_numero">Numéro copié</string>
+    <string name="fiche_copie_ancien">Ancien mot de passe copié</string>
+    <string name="coffre_copier_nom">Copier le nom d\'utilisateur</string>
+    <string name="coffre_copier_mot_de_passe">Copier le mot de passe</string>
+    <string name="coffre_copier_code">Copier le code</string>
+    <string name="coffre_partager_un_secret">Partager un secret</string>
+    <string name="coffre_nouvelle_equipe">Nouvelle équipe</string>
+    <string name="equipe_nom">Nom de l\'équipe</string>
+    <string name="equipe_creer">Créer</string>
+    <string name="equipe_annuler">Annuler</string>
+    <string name="equipe_creation_note">La clé du coffre est créée sur cet appareil et scellée pour vous seul. Le serveur n\'en connaîtra jamais le contenu.</string>
+    <string name="equipe_creee">Équipe « %1$s » créée.</string>
+    <string name="secret_titre">Partager un secret</string>
+    <string name="secret_annuler">Annuler</string>
+    <string name="secret_le_secret">Le secret</string>
+    <string name="secret_le_secret_note">Il est chiffré sur cet appareil. Le serveur n\'en reçoit que le chiffre, jamais la clé.</string>
+    <string name="secret_duree">Durée de vie</string>
+    <string name="secret_1_heure">1 heure</string>
+    <string name="secret_1_jour">1 jour</string>
+    <string name="secret_1_semaine">1 semaine</string>
+    <string name="secret_30_jours">30 jours</string>
+    <string name="secret_consultations">Consultations</string>
+    <string name="secret_consultations_note">Le lien s\'efface une fois ce nombre atteint. Une seule consultation vous dit aussi que quelqu\'un d\'autre l\'a lu avant vous.</string>
+    <string name="secret_creer_le_lien">Créer le lien</string>
+    <string name="secret_nom_au_registre">Secret partagé</string>
+    <plurals name="fiche_anciens">
+        <item quantity="one">Ancien mot de passe (%1$d)</item>
+        <item quantity="other">Anciens mots de passe (%1$d)</item>
+    </plurals>
+    <plurals name="secret_n_consultations">
+        <item quantity="one">%1$d consultation</item>
+        <item quantity="other">%1$d consultations</item>
+    </plurals>
+    <string name="remplissage_aucun_code">Aucun compte du coffre n\'a de code à usage unique.</string>
+    <string name="admin_changer_le_role">Rôle</string>
+    <string name="modele_role_serveur_ancien">Ce serveur ne permet pas encore de changer un rôle depuis Android : il précède cette fonction. Passez par le web, ou mettez le serveur à jour.</string>
 </resources>

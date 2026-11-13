@@ -606,7 +606,7 @@
     <string name="admin_equipe_non_ouverte">Open this team vault first: managing it needs its key, and nothing here can do without it.</string>
 
     <string name="admin_membres_titre">Members</string>
-    <string name="admin_membres_note">The role is shown but cannot be changed from the phone: that request is a PATCH, which Android\'s HTTP stack refuses. Use the web app.</string>
+    <string name="admin_membres_note">Removing someone rotates the team key; changing their role does not.</string>
     <string name="admin_aucun_membre">No members.</string>
     <string name="admin_role_et_etat">%1$s · %2$s</string>
     <string name="admin_revoquer">Revoke</string>
@@ -680,4 +680,69 @@
     <string name="scan_ouvrir_les_reglages">Open settings</string>
     <string name="scan_export_multiple">This code exports several accounts from an authenticator app. Show the QR code for a single account, from the site.</string>
     <string name="scan_pas_un_totp">This QR code holds no second factor.</string>
+    <!-- Parité avec iOS (2026-11-13) : la fiche de lecture, la copie depuis la liste,
+         le partage d'un secret libre et la création d'équipe. Textes repris du
+         catalogue iOS, apps/ios/Ghostpass/Resources/Localizable.xcstrings. -->
+    <string name="fiche_fermer">Close</string>
+    <string name="fiche_modifier">Edit</string>
+    <string name="fiche_identifiants">Credentials</string>
+    <string name="fiche_nom_utilisateur">Username</string>
+    <string name="fiche_mot_de_passe">Password</string>
+    <string name="fiche_afficher">Show</string>
+    <string name="fiche_masquer">Hide</string>
+    <string name="fiche_copier">Copy</string>
+    <string name="fiche_code">One-time code</string>
+    <string name="fiche_code_restant">Renews in %1$d s</string>
+    <string name="fiche_code_illisible">Unreadable verification key.</string>
+    <string name="fiche_adresses">Addresses</string>
+    <string name="fiche_note">Note</string>
+    <string name="fiche_notes">Notes</string>
+    <string name="fiche_carte">Card</string>
+    <string name="fiche_titulaire">Cardholder</string>
+    <string name="fiche_numero">Number</string>
+    <string name="fiche_expiration">Expiry</string>
+    <string name="fiche_cryptogramme">Security code</string>
+    <string name="fiche_dossier">Folder</string>
+    <string name="fiche_copie">%1$s — cleared in %2$d s</string>
+    <string name="fiche_copie_nom">Username copied</string>
+    <string name="fiche_copie_mot_de_passe">Password copied</string>
+    <string name="fiche_copie_code">Code copied</string>
+    <string name="fiche_copie_adresse">Address copied</string>
+    <string name="fiche_copie_titulaire">Cardholder copied</string>
+    <string name="fiche_copie_numero">Number copied</string>
+    <string name="fiche_copie_ancien">Previous password copied</string>
+    <string name="coffre_copier_nom">Copy username</string>
+    <string name="coffre_copier_mot_de_passe">Copy password</string>
+    <string name="coffre_copier_code">Copy code</string>
+    <string name="coffre_partager_un_secret">Share a secret</string>
+    <string name="coffre_nouvelle_equipe">New team</string>
+    <string name="equipe_nom">Team name</string>
+    <string name="equipe_creer">Create</string>
+    <string name="equipe_annuler">Cancel</string>
+    <string name="equipe_creation_note">The vault key is created on this device and sealed for you alone. The server will never know its contents.</string>
+    <string name="equipe_creee">Team “%1$s” created.</string>
+    <string name="secret_titre">Share a secret</string>
+    <string name="secret_annuler">Cancel</string>
+    <string name="secret_le_secret">The secret</string>
+    <string name="secret_le_secret_note">It is encrypted on this device. The server only receives the ciphertext, never the key.</string>
+    <string name="secret_duree">Lifetime</string>
+    <string name="secret_1_heure">1 hour</string>
+    <string name="secret_1_jour">1 day</string>
+    <string name="secret_1_semaine">1 week</string>
+    <string name="secret_30_jours">30 days</string>
+    <string name="secret_consultations">Views</string>
+    <string name="secret_consultations_note">The link is erased once this count is reached. A single view also tells you if someone else read it before you.</string>
+    <string name="secret_creer_le_lien">Create the link</string>
+    <string name="secret_nom_au_registre">Shared secret</string>
+    <plurals name="fiche_anciens">
+        <item quantity="one">Previous password (%1$d)</item>
+        <item quantity="other">Previous passwords (%1$d)</item>
+    </plurals>
+    <plurals name="secret_n_consultations">
+        <item quantity="one">%1$d view</item>
+        <item quantity="other">%1$d views</item>
+    </plurals>
+    <string name="remplissage_aucun_code">No account in your vault has a one-time code.</string>
+    <string name="admin_changer_le_role">Role</string>
+    <string name="modele_role_serveur_ancien">This server cannot change a role from Android yet: it predates this feature. Use the web app, or update the server.</string>
 </resources>

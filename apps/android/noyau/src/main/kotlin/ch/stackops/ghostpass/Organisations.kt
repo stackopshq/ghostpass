@@ -212,6 +212,14 @@ enum class RoleDOrganisation {
      */
     Inconnu;
 
+    /** Le nom que le serveur attend. `null` pour un rôle que cette version ne connaît pas. */
+    fun versLeServeur(): String? = when (this) {
+        Admin -> "admin"
+        Membre -> "member"
+        LectureSeule -> "readonly"
+        Inconnu -> null
+    }
+
     companion object {
         fun depuis(brut: String): RoleDOrganisation = when (brut.lowercase()) {
             "admin" -> Admin

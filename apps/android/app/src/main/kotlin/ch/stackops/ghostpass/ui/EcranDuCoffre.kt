@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,6 +57,9 @@ import ch.stackops.ghostpass.theme.GP
 import ch.stackops.ghostpass.theme.LienDiscret
 import ch.stackops.ghostpass.theme.LocalCouleurs
 import ch.stackops.ghostpass.theme.reperes
+import ch.stackops.ghostpass.PressePapiers
+import ch.stackops.ghostpass.Totp
+import kotlinx.coroutines.delay
 
 /**
  * La liste du coffre — personnel ou d'équipe.
@@ -88,6 +93,7 @@ fun EcranDuCoffre(
     surJournal: () -> Unit = {},
     surCleDeRecuperation: () -> Unit = {},
     surUrgence: () -> Unit = {},
+    surPartageLibre: () -> Unit = {},
 ) {
     val couleurs = LocalCouleurs.current
     val contexte = LocalContext.current
@@ -114,6 +120,7 @@ fun EcranDuCoffre(
                 MenuDeReglages(
                     modele, surCorbeille, surSante, surReglages, surImport, surExport,
                     surSecondFacteur, surJournal, surCleDeRecuperation, surUrgence,
+                    surPartageLibre,
                 ) {
                     reglagesOuverts = false
                 }
@@ -315,10 +322,13 @@ private fun MenuDeReglages(
     surJournal: () -> Unit,
     surCleDeRecuperation: () -> Unit,
     surUrgence: () -> Unit,
+    surPartageLibre: () -> Unit,
     surFermer: () -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
     val activite = LocalContext.current as FragmentActivity
+    var creationDEquipe by remember { mutableStateOf(false) }
+    var nomDEquipe by remember { mutableStateOf("") }
     val forme = RoundedCornerShape(GP.rayonCarte)
 
     Column(
@@ -370,6 +380,62 @@ private fun MenuDeReglages(
         LienDiscret(stringResource(R.string.coffre_sante), identifiant = "button.health") {
             surFermer()
             surSante()
+        }
+
+        LienDiscret(
+            stringResource(R.string.coffre_partager_un_secret),
+            identifiant = "button.send",
+        ) {
+            surFermer()
+            surPartageLibre()
+        }
+
+        // ─── Nouvelle équipe ───
+        //
+        // Dans le menu et non dans le choix du coffre : ce choix n'existe pas pour qui n'a
+        // encore aucune équipe, c'est-à-dire précisément pour qui voudrait en créer une.
+        LienDiscret(
+            stringResource(R.string.coffre_nouvelle_equipe),
+            identifiant = "button.newOrg",
+        ) { creationDEquipe = !creationDEquipe }
+        if (creationDEquipe) {
+            ChampGhost(
+                intitule = stringResource(R.string.equipe_nom),
+                valeur = nomDEquipe,
+                invite = "",
+                identifiant = "field.orgName",
+            ) { nomDEquipe = it }
+            Text(
+                stringResource(R.string.equipe_creation_note),
+                color = couleurs.attenue,
+                fontSize = 11.sp,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f)) {
+                    BoutonSecondaire(
+                        stringResource(R.string.equipe_annuler),
+                        identifiant = "button.cancelOrg",
+                    ) {
+                        creationDEquipe = false
+                        nomDEquipe = ""
+                    }
+                }
+                Box(Modifier.weight(1f)) {
+                    BoutonSecondaire(
+                        stringResource(R.string.equipe_creer),
+                        actif = nomDEquipe.isNotBlank() && !modele.occupe,
+                        identifiant = "button.createOrg",
+                    ) {
+                        modele.creerUneEquipe(nomDEquipe) { fait ->
+                            if (fait) {
+                                creationDEquipe = false
+                                nomDEquipe = ""
+                                surFermer()
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // L'import écrit dans le coffre **personnel** : le proposer depuis une collection
@@ -578,7 +644,7 @@ private fun ChoixDuCoffre(modele: ModeleDuCoffre) {
 }
 
 @Composable
-private fun Pastilledechoix(
+internal fun Pastilledechoix(
     texte: String,
     choisie: Boolean,
     identifiant: String,
@@ -662,13 +728,20 @@ private fun LigneLisible(
     val couleurs = LocalCouleurs.current
     val element = entree.element
     val forme = RoundedCornerShape(GP.rayonCarte)
+    var copies by remember { mutableStateOf(false) }
 
-    Row(
+    Column(
         Modifier
             .fillMaxWidth()
             .background(couleurs.surface.copy(alpha = 0.7f), forme)
-            .border(1.dp, couleurs.bordure, forme)
-            .clickable(onClick = surClic)
+            .border(1.dp, couleurs.bordure, forme),
+    ) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            // Un appui long ouvre la copie rapide, comme le menu contextuel d'iOS : copier
+            // un mot de passe ne doit pas demander d'ouvrir la fiche.
+            .combinedClickable(onClick = surClic, onLongClick = { copies = !copies })
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -721,6 +794,72 @@ private fun LigneLisible(
                     )
                     .padding(6.dp),
             )
+        }
+    }
+    if (copies) CopieRapide(entree) { copies = false }
+    }
+}
+
+/**
+ * La copie rapide d'une ligne : nom d'utilisateur, mot de passe, code TOTP.
+ *
+ * Seulement ce que l'élément porte : un élément sans code n'offre pas « Copier le code ».
+ * Le code est calculé au moment du toucher, pas à l'ouverture du menu — un menu resté
+ * ouvert trente secondes ne doit pas copier un code périmé.
+ */
+@Composable
+private fun CopieRapide(entree: EntreeDuCoffre.Lisible, surFin: () -> Unit) {
+    val couleurs = LocalCouleurs.current
+    val contexte = LocalContext.current
+    val identifiants = (entree.element.data as? ContenuDElement.Connexion)?.valeur ?: return
+    var copie by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(copie) {
+        if (copie != null) {
+            delay(2_500)
+            copie = null
+            surFin()
+        }
+    }
+    val copier: (String, String) -> Unit = { valeur, libelle ->
+        PressePapiers.copier(contexte, valeur)
+        copie = libelle
+    }
+    val copieNom = stringResource(R.string.fiche_copie_nom)
+    val copieMotDePasse = stringResource(R.string.fiche_copie_mot_de_passe)
+    val copieCode = stringResource(R.string.fiche_copie_code)
+
+    Column(
+        Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (copie != null) {
+            Text(
+                stringResource(R.string.fiche_copie, copie!!, PressePapiers.DUREE_S),
+                color = couleurs.accentTexte,
+                fontSize = 12.sp,
+                modifier = Modifier.reperes("text.copied"),
+            )
+            return@Column
+        }
+        if (identifiants.username.isNotEmpty()) {
+            LienDiscret(
+                stringResource(R.string.coffre_copier_nom),
+                identifiant = "button.quickCopyUsername.${entree.id}",
+            ) { copier(identifiants.username, copieNom) }
+        }
+        if (identifiants.password.isNotEmpty()) {
+            LienDiscret(
+                stringResource(R.string.coffre_copier_mot_de_passe),
+                identifiant = "button.quickCopyPassword.${entree.id}",
+            ) { copier(identifiants.password, copieMotDePasse) }
+        }
+        if (Totp.lire(identifiants.totp) != null) {
+            LienDiscret(
+                stringResource(R.string.coffre_copier_code),
+                identifiant = "button.quickCopyTotp.${entree.id}",
+            ) {
+                Totp.codeCourant(identifiants.totp)?.let { copier(it.code, copieCode) }
+            }
         }
     }
 }

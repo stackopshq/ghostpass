@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import ch.stackops.ghostpass.ContenuDElement
 import ch.stackops.ghostpass.EntreeDuCoffre
 import ch.stackops.ghostpass.Identifiants
+import ch.stackops.ghostpass.Totp
 import ch.stackops.ghostpass.ModeleDuCoffre
 import androidx.compose.ui.res.stringResource
 import ch.stackops.ghostpass.R
@@ -103,6 +104,7 @@ class ActiviteDeRemplissage : AppCompatActivity() {
         const val EXTRA_DOMAINE = "ch.stackops.ghostpass.DOMAINE"
         const val EXTRA_ID_IDENTIFIANT = "ch.stackops.ghostpass.ID_IDENTIFIANT"
         const val EXTRA_ID_MOT_DE_PASSE = "ch.stackops.ghostpass.ID_MOT_DE_PASSE"
+        const val EXTRA_ID_CODE = "ch.stackops.ghostpass.ID_CODE"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,6 +118,10 @@ class ActiviteDeRemplissage : AppCompatActivity() {
         val domaine = intent.getStringExtra(EXTRA_DOMAINE)
         val idIdentifiant = extraAutofillId(EXTRA_ID_IDENTIFIANT)
         val idMotDePasse = extraAutofillId(EXTRA_ID_MOT_DE_PASSE)
+        val idCode = extraAutofillId(EXTRA_ID_CODE)
+        // Une page qui ne demande **que** le code : celle du second facteur. On n'y propose
+        // que les comptes qui en ont un, comme l'extension iOS.
+        val seulementLeCode = idCode != null && idIdentifiant == null && idMotDePasse == null
 
         // Un refus, une sortie par le bouton du système, un plantage : le résultat par
         // défaut doit être « rien ». `RESULT_OK` sans charge ferait croire au système que
@@ -128,7 +134,10 @@ class ActiviteDeRemplissage : AppCompatActivity() {
                 EcranDeRemplissage(
                     modele = modele,
                     domaine = domaine,
-                    surChoix = { identifiants -> rendre(identifiants, idIdentifiant, idMotDePasse) },
+                    seulementLeCode = seulementLeCode,
+                    surChoix = { identifiants ->
+                        rendre(identifiants, idIdentifiant, idMotDePasse, idCode)
+                    },
                     surAbandon = { finish() },
                 )
             }
@@ -160,7 +169,11 @@ class ActiviteDeRemplissage : AppCompatActivity() {
         identifiants: Identifiants,
         idIdentifiant: AutofillId?,
         idMotDePasse: AutofillId?,
+        idCode: AutofillId?,
     ) {
+        // Calculé au moment du choix, pas à l'affichage : la liste a pu rester ouverte
+        // assez longtemps pour que le code affiché soit périmé.
+        val code = Totp.codeCourant(identifiants.totp)?.code
         val presentation = RemoteViews(packageName, R.layout.ligne_de_remplissage).apply {
             setTextViewText(R.id.titre, identifiants.username.ifEmpty { getString(R.string.app_name) })
             setTextViewText(R.id.sous_titre, getString(R.string.app_name))
@@ -173,6 +186,9 @@ class ActiviteDeRemplissage : AppCompatActivity() {
             }
             idMotDePasse?.let {
                 setValue(it, AutofillValue.forText(identifiants.password), presentation)
+            }
+            if (idCode != null && code != null) {
+                setValue(idCode, AutofillValue.forText(code), presentation)
             }
         }.build()
 
@@ -194,6 +210,7 @@ class ActiviteDeRemplissage : AppCompatActivity() {
 private fun EcranDeRemplissage(
     modele: ModeleDuCoffre,
     domaine: String?,
+    seulementLeCode: Boolean,
     surChoix: (Identifiants) -> Unit,
     surAbandon: () -> Unit,
 ) {
@@ -278,7 +295,7 @@ private fun EcranDeRemplissage(
                         ) { surAbandon() }
                     }
                 } else {
-                    Proposition(modele, domaine, surChoix)
+                    Proposition(modele, domaine, seulementLeCode, surChoix)
                 }
             }
         }
@@ -311,13 +328,15 @@ private fun EcranDeRemplissage(
 private fun Proposition(
     modele: ModeleDuCoffre,
     domaine: String?,
+    seulementLeCode: Boolean,
     surChoix: (Identifiants) -> Unit,
 ) {
     val couleurs = LocalCouleurs.current
     val lecture = modele.coffreComplet
 
     val avecIdentifiants = lecture.lisibles.filter {
-        it.element.data is ContenuDElement.Connexion
+        val connexion = it.element.data as? ContenuDElement.Connexion
+        connexion != null && (!seulementLeCode || Totp.lire(connexion.valeur.totp) != null)
     }
     // Sans domaine déclaré — le cas d'une application native — on ne devine pas. Proposer
     // tout et le dire vaut mieux que rapprocher un nom de paquet d'un nom d'hôte par une
@@ -339,7 +358,9 @@ private fun Proposition(
         if (proposes.isEmpty()) {
             Text(
                 stringResource(
-                    if (avecIdentifiants.isEmpty()) {
+                    if (avecIdentifiants.isEmpty() && seulementLeCode) {
+                        R.string.remplissage_aucun_code
+                    } else if (avecIdentifiants.isEmpty()) {
                         R.string.remplissage_coffre_sans_identifiant
                     } else {
                         R.string.remplissage_aucun_pour_ce_site
@@ -354,7 +375,7 @@ private fun Proposition(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(proposes, key = { it.id }) { entree ->
-                    LigneProposee(entree) {
+                    LigneProposee(entree, montrerLeCode = seulementLeCode) {
                         (entree.element.data as ContenuDElement.Connexion).valeur.let(surChoix)
                     }
                 }
@@ -384,7 +405,11 @@ private fun Proposition(
 private fun Modifier.heightAdaptative(): Modifier = this.heightIn(max = 420.dp)
 
 @Composable
-private fun LigneProposee(entree: EntreeDuCoffre.Lisible, surClic: () -> Unit) {
+private fun LigneProposee(
+    entree: EntreeDuCoffre.Lisible,
+    montrerLeCode: Boolean,
+    surClic: () -> Unit,
+) {
     val couleurs = LocalCouleurs.current
     val forme = RoundedCornerShape(GP.rayonCarte)
     val identifiants = (entree.element.data as ContenuDElement.Connexion).valeur
@@ -404,6 +429,18 @@ private fun LigneProposee(entree: EntreeDuCoffre.Lisible, surClic: () -> Unit) {
                 color = couleurs.attenue,
                 fontSize = 13.sp,
             )
+            // Le code visible, comme sur iOS : il se recopie à la main si le remplissage
+            // échoue, ce qui arrive sur les pages qui découpent le code en six cases.
+            if (montrerLeCode) {
+                Totp.codeCourant(identifiants.totp)?.let {
+                    Text(
+                        it.code,
+                        color = couleurs.accentTexte,
+                        fontSize = 15.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    )
+                }
+            }
         }
     }
 }

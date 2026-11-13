@@ -109,6 +109,27 @@ class StockageDeSession(contexte: Context) {
         prefs.edit().putString(CACHE, texte).apply()
     }
 
+    /**
+     * La copie chiffrée des coffres d'équipe — voir [CoffreDEquipeEnCache].
+     *
+     * Même nature que [elementsEnCache] : des octets que le serveur détient déjà, et
+     * l'Org Key scellée pour ce compte. Une déconnexion l'efface avec le reste.
+     */
+    fun equipesEnCache(): List<CoffreDEquipeEnCache> {
+        val texte = prefs.getString(CACHE_EQUIPES, null) ?: return emptyList()
+        return try {
+            Json { ignoreUnknownKeys = true }
+                .decodeFromString(ListSerializer(CoffreDEquipeEnCache.serializer()), texte)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    fun mettreLesEquipesEnCache(equipes: List<CoffreDEquipeEnCache>) {
+        val texte = Json.encodeToString(ListSerializer(CoffreDEquipeEnCache.serializer()), equipes)
+        prefs.edit().putString(CACHE_EQUIPES, texte).apply()
+    }
+
     /** Oublie tout. Une déconnexion ne laisse rien derrière elle. */
     fun oublier() {
         prefs.edit().clear().apply()
@@ -123,5 +144,6 @@ class StockageDeSession(contexte: Context) {
         const val JETON = "jeton"
         const val DOMAINES = "domainesApprouves:"
         const val CACHE = "elementsChiffres"
+        const val CACHE_EQUIPES = "equipesChiffrees"
     }
 }
