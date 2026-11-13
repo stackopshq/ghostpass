@@ -438,4 +438,99 @@ de poser deux réglages sur trois sans le dire.
 | `tools/android/temoin-des-vecteurs.sh` | Chaque vecteur de `contrat.json` est réellement lu par un test |
 | `tools/android/verifier-l-autonomie.sh` | L'APK livré ne vend rien et ne nomme aucun serveur de l'éditeur |
 | `tools/android/temoin-de-l-autonomie.sh` | Le contrôle ci-dessus sait rougir |
+| `tools/android/construire-en-ci.sh` | Le job `android` de la CI, rejouable dans `podman run` : cœur, tests de contrat, APK et AAB non signés, autonomie, traductions |
 | `tools/verifier-avant-de-pousser.sh` | Les contrôles rapides de la CI, avant de pousser |
+
+## 14. Publier sur Google Play
+
+**État au 2026-11-13** : la fiche `ch.stackops.ghostpass` existe dans la Play Console, en
+brouillon ; aucun AAB n'y a encore été déposé. Le **premier** dépôt fixe pour toujours
+la clé d'envoi que Google attend : vérifier son empreinte avant de déposer.
+
+### Ce que fait la CI, et ce qu'elle ne fait pas
+
+Le job `android` (`tools/android/construire-en-ci.sh`) construit le cœur pour trois ABI,
+passe les tests de contrat sur la JVM, produit un APK et un AAB de diffusion, puis lance
+`verifier-l-autonomie.sh` sur l'APK et `temoin-des-traductions.sh`. **L'AAB sort non
+signé** : la clé ne quitte pas le poste qui la garde. La CI ne dépose rien.
+
+Rejouer le job sur un poste, à l'identique :
+
+```sh
+podman run --rm -v "$PWD":/src:z -v /chemin/vers/ghostsuite:/ghostsuite:z \
+  -e GHOSTSUITE=/ghostsuite -w /src docker.io/library/rust:1.90-trixie \
+  ./tools/android/construire-en-ci.sh
+```
+
+### La clé d'envoi
+
+Avec Play App Signing, Google garde la clé qui signe ce que reçoivent les appareils ; la
+nôtre est la **clé d'envoi**, qui prouve à Google que le dépôt vient de nous. La perdre se
+répare par une demande de réinitialisation dans la console, pas en en fabriquant une autre.
+La publier laisse quiconque déposer à notre place.
+
+Elle existe (`ghostpass-release.jks`, 2026-10-27) avec son `key.properties`, sur le poste
+dev-loutre, hors dépôt, et dans OpenBao sous `apollo/ghostpass/android-signing`
+(`keystore_b64`, `key_properties`, identiques au poste, vérifié le 2026-11-13).
+**Ne pas en fabriquer une seconde** : la ligne `keytool` de
+`apps/android/key.properties.example` ne sert qu'à une première fois, déjà faite.
+
+Lire son empreinte (JDK 21) :
+
+```sh
+keytool -list -v -keystore ghostpass-release.jks -alias ghostpass | grep SHA256
+```
+
+### Construire signé
+
+```sh
+cp /chemin/vers/key.properties apps/android/key.properties   # storeFile en chemin absolu
+cd apps/android && ./gradlew --no-daemon :app:bundleRelease
+keytool -printcert -jarfile app/build/outputs/bundle/release/app-release.aab | grep SHA256
+rm key.properties
+```
+
+L'empreinte imprimée doit être celle de la clé. `versionCode` doit monter à **chaque**
+dépôt : la console refuse deux fois le même.
+
+### Déposer
+
+Par l'API Android Publisher, avec le compte de service
+`ghostcal-play-publisher@stackops-504008.iam.gserviceaccount.com`, emprunté depuis la
+session gcloud de Clara — **il n'a aucune clé JSON**, une règle d'organisation l'interdit.
+Il doit avoir les droits sur la fiche GhostPass (« Utilisateurs et autorisations »).
+
+```sh
+SA=ghostcal-play-publisher@stackops-504008.iam.gserviceaccount.com
+API=https://androidpublisher.googleapis.com
+PKG=ch.stackops.ghostpass
+AAB=apps/android/app/build/outputs/bundle/release/app-release.aab
+TOKEN=$(gcloud auth print-access-token --impersonate-service-account=$SA \
+  --scopes=https://www.googleapis.com/auth/androidpublisher)
+EDIT=$(curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
+  "$API/androidpublisher/v3/applications/$PKG/edits" | jq -r .id)
+curl -fsS -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/octet-stream' \
+  --data-binary @"$AAB" \
+  "$API/upload/androidpublisher/v3/applications/$PKG/edits/$EDIT/bundles?uploadType=media"
+curl -fsS -X PUT -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"track":"internal","releases":[{"versionCodes":["1"],"status":"draft"}]}' \
+  "$API/androidpublisher/v3/applications/$PKG/edits/$EDIT/tracks/internal"
+curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
+  "$API/androidpublisher/v3/applications/$PKG/edits/$EDIT:commit"
+unset TOKEN
+```
+
+`status: draft` est imposé tant que la fiche est en brouillon : l'API refuse toute autre
+version sur une application jamais publiée. La version se déploie ensuite depuis la
+console, qui exige d'abord la classification, la section Data safety et la fiche
+magasin. L'API ne crée pas d'application et ne remplit aucun de ces formulaires.
+
+Un 403 sur `edits` : le compte de service n'a pas de droits sur cette fiche, pas un
+jeton expiré.
+
+### Après le dépôt
+
+- la ligne Android de la table « Télécharger » de `https://ghostsuite.cloud/ghostpass/`
+  et sa section « Sur Android » — MR sur `ghostsuite/ghostsuite` ;
+- les limites du §12 restent celles de la 1.0 ; iOS est sorti avec les mêmes, sauf le
+  changement de rôle d'un membre.

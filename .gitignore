@@ -61,3 +61,7 @@ apps/android/*.keystore
 
 # Produits de compilation de tools/ios/appareil.sh — jamais versionnés.
 apps/ios/.build-appareil/
+# Android : SDK, NDK et cache Gradle que tools/android/construire-en-ci.sh installe dans
+# le dépôt quand ANDROID_HOME / GRADLE_USER_HOME ne disent pas ailleurs (cas de la CI).
+.android-sdk/
+.gradle-home/

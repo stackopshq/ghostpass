@@ -148,6 +148,18 @@ lister_le_visible() {
     -print0
 }
 
+# Le texte d'un fichier du paquet. Pour un `.dex`, **la table des chaînes, pas `strings`** :
+# `strings` lit aussi le bytecode, dont certaines suites d'octets ressemblent à du texte.
+# Sur le premier APK de diffusion construit en CI, il a lu un prix, `$57.57`, qu'aucune
+# chaîne de l'application ne contient (voir `chaines-du-dex.py`). Les ressources et le
+# manifeste compilés n'ont pas de table équivalente simple à lire ; ils restent à `strings`.
+texte_de() {
+  case "$1" in
+    *.dex) python3 "$ROOT/tools/android/chaines-du-dex.py" "$1" ;;
+    *)     strings -a "$1" 2>/dev/null ;;
+  esac
+}
+
 fautes=0
 controler() {
   local nom="$1" motif="$2" casse="${3:-insensible}" perimetre="${4:-tout}" trouve=""
@@ -155,7 +167,14 @@ controler() {
   [[ "$casse" == insensible ]] && drapeaux='-aioE'
   while IFS= read -r -d '' fichier; do
     local lignes
-    lignes="$(strings -a "$fichier" 2>/dev/null | grep $drapeaux "$motif" | sort -u | head -5 || true)"
+    # Lu à part, et un échec de lecture arrête tout : dans le tuyau ci-dessous, le
+    # `|| true` du grep transformerait un fichier illisible en contrôle vert.
+    local texte
+    texte="$(texte_de "$fichier")" || {
+      echo "Lecture impossible : ${fichier#"$DEBALLE"/}" >&2
+      exit 2
+    }
+    lignes="$(printf '%s\n' "$texte" | grep $drapeaux "$motif" | sort -u | head -5 || true)"
     if [[ -n "$lignes" ]]; then
       trouve+=$'\n'"  ${fichier#"$DEBALLE"/} :"$'\n'"$(echo "$lignes" | sed 's/^/    /')"
     fi

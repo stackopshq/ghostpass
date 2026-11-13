@@ -7,6 +7,9 @@
 # ici avec les étapes qu'elles justifient : un contrôle dont on a perdu le
 # pourquoi est le premier qu'on retire.
 #
+# Android se construit et se vérifie à chaque MR ; l'AAB sort non signé, le dépôt sur
+# Play reste manuel (docs/android.md §14).
+#
 # Trois choses restent inertes tant qu'on ne les branche pas, et chacune le dit
 # dans son journal plutôt que de disparaître :
 #   - les tests iOS, tant que `MACOS_RUNNER` ne vaut pas `true` ;
@@ -46,6 +49,9 @@ default:
 variables:
   RUST_IMAGE: docker.io/library/rust:1.90-bookworm
   NODE_IMAGE: docker.io/library/node:24-bookworm
+  # Trixie et non bookworm : bookworm n'a pas de JDK 21, que l'outillage Android exige
+  # (voir apps/android/gradle.properties).
+  ANDROID_IMAGE: docker.io/library/rust:1.90-trixie
   # Épinglé, avec sa somme : un wasm-pack « latest » a déjà cassé la
   # construction, et une somme juste sur la mauvaise architecture est une
   # vérification qui rassure sans rien prouver. Mêmes valeurs que
@@ -258,6 +264,60 @@ ios:
     when: on_failure
     paths:
       - apps/ios/TestResults/
+    expire_in: 7 days
+
+# L'application Android, construite de bout en bout : le cœur Rust pour trois ABI, les
+# tests de contrat sur la JVM, un APK et un AAB de diffusion, et le contrôle d'autonomie
+# sur le paquet construit. Jusqu'ici rien ne compilait Android en CI : une régression ne
+# se voyait qu'au prochain build fait à la main, sur un poste.
+#
+# **L'AAB sort non signé, et c'est voulu.** La clé d'envoi ne quitte pas le poste qui la
+# garde ; un pipeline qui saurait signer saurait aussi publier une fausse mise à jour. Le
+# dépôt sur Play reste un geste manuel, décrit au §14 de `docs/android.md`.
+#
+# Toutes les étapes sont dans `tools/android/construire-en-ci.sh`, pour qu'elles tournent
+# à l'identique dans un `podman run` sur un poste.
+android:
+  stage: verifier
+  image: $ANDROID_IMAGE
+  extends: [.quand-code]
+  # Ne dépend pas de `crypto` : le cœur compilé ici est celui de ghostsuite, pas celui de
+  # ce dépôt, et attendre `crypto` retarderait le verdict sans rien garantir de plus.
+  needs: []
+  variables:
+    GHOSTSUITE: $CI_PROJECT_DIR/ghostsuite
+    ANDROID_HOME: $CI_PROJECT_DIR/.android-sdk
+    GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle-home
+  cache:
+    # Le SDK et le NDK pèsent plusieurs gigaoctets ; les retélécharger à chaque MR coûte
+    # plus que le build. La clé change avec ce qui les épingle.
+    - key:
+        prefix: android-sdk
+        files: [tools/android/construire-en-ci.sh]
+      paths: [.android-sdk/]
+    - key:
+        prefix: android-gradle
+        files: [apps/android/gradle/wrapper/gradle-wrapper.properties]
+      paths: [.gradle-home/caches/, .gradle-home/wrapper/]
+  script:
+    # Même clone et même message que le job `ios` : un refus se lit « dépôt introuvable ».
+    - |
+      git clone --depth 1 \
+        "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/stackopsplatform/products/ghostsuite/ghostsuite.git" \
+        "$GHOSTSUITE" || {
+        echo "Clone de ghostsuite refusé. Si GitLab répond « not found », le dépôt existe :"
+        echo "c'est le jeton du job qui n'y a pas accès. Ajoutez ghostpass à la liste"
+        echo "d'autorisation (Settings > CI/CD > Job token permissions) de ghostsuite."
+        exit 1
+      }
+    - ./tools/android/construire-en-ci.sh
+  artifacts:
+    # L'AAB non signé, pour vérifier qu'il se construit et le relire ; il ne se dépose pas
+    # tel quel. Les rapports de test, pour comprendre un échec sans le reproduire.
+    when: always
+    paths:
+      - apps/android/app/build/outputs/bundle/release/app-release.aab
+      - apps/android/coeur-hote/build/reports/tests/
     expire_in: 7 days
 
 # ─── Sécurité ──────────────────────────────────────────────────────────────
