@@ -205,6 +205,37 @@ test("changement de rôle + refus de rétrograder le dernier admin", async () =>
   );
 });
 
+test("le rôle se change aussi par POST …/role, avec les mêmes règles (client Android)", async () => {
+  const { app, adminToken, memberToken, orgId, memberId } = await setup();
+  const adminId = (
+    await app.inject({ method: "GET", url: `/api/orgs/${orgId}/members`, headers: auth(adminToken) })
+  )
+    .json()
+    .members.find((m: { email: string }) => m.email === "admin@stackops.ch").userId;
+  const changer = (token: string, userId: string, role: string) =>
+    app.inject({
+      method: "POST",
+      url: `/api/orgs/${orgId}/members/${userId}/role`,
+      headers: auth(token),
+      payload: { role },
+    });
+
+  // Le dernier admin ne se rétrograde pas, par ce chemin non plus.
+  assert.equal((await changer(adminToken, adminId, "member")).statusCode, 400);
+  // Un membre n'administre pas.
+  assert.equal((await changer(memberToken, adminId, "member")).statusCode, 403);
+  // Un rôle inconnu est refusé.
+  assert.equal((await changer(adminToken, memberId, "owner")).statusCode, 400);
+  // Promouvoir passe, et se lit dans la liste des membres.
+  assert.equal((await changer(adminToken, memberId, "admin")).statusCode, 200);
+  const promu = (
+    await app.inject({ method: "GET", url: `/api/orgs/${orgId}/members`, headers: auth(adminToken) })
+  )
+    .json()
+    .members.find((m: { userId: string }) => m.userId === memberId);
+  assert.equal(promu.role, "admin");
+});
+
 test("les endpoints admin refusent les non-admins et l'inter-org", async () => {
   const { app, memberToken, adminToken, orgId } = await setup();
   // Non-admin (membre) → 403.
