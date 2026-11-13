@@ -28,13 +28,26 @@ serveur = None  # Popen du serveur GhostPass, ou None.
 
 
 def repond(port):
-    """Le serveur GhostPass répond-il sur ce port ?"""
+    """Le serveur GhostPass répond-il sur ce port ?
+
+    L'adresse se construit ici et nulle part ailleurs : un numéro de port, converti en
+    entier et borné, glissé dans un littéral qui vise la boucle locale. Rien de ce qui
+    arrive par HTTP ne l'atteint — le portier n'accepte que trois chemins fixes et ne lit
+    aucun paramètre. La conversion et la borne ne sont pas décoratives : elles rendent la
+    chose vraie dans le code, et non seulement dans ce commentaire.
+    """
+    port = int(port)
+    if not 1 <= port <= 65535:
+        raise ValueError(f"port hors plage : {port}")
     requete = urllib.request.Request(
         f"http://127.0.0.1:{port}/api/auth/prelogin",
         data=json.dumps({"email": "sonde@example.com"}).encode(),
         headers={"Content-Type": "application/json"},
     )
     try:
+        # L'identifiant porte son dernier segment en double, comme dans tools/fonts/vendor.py :
+        # c'est la forme que Semgrep rend, et une version tronquée ne supprime rien.
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
         urllib.request.urlopen(requete, timeout=2)
         return True
     except urllib.error.HTTPError:
