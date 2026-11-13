@@ -850,4 +850,7 @@
     <string name="remplissage_aucun_code">Aucun compte du coffre n\'a de code à usage unique.</string>
     <string name="admin_changer_le_role">Rôle</string>
     <string name="modele_role_serveur_ancien">Ce serveur ne permet pas encore de changer un rôle depuis Android : il précède cette fonction. Passez par le web, ou mettez le serveur à jour.</string>
+    <string name="admin_pas_soi_meme">Vous ne pouvez pas vous retirer vous-même de l\'équipe. Un autre administrateur peut le faire.</string>
+    <string name="modele_rotation_element_illisible">Un élément de l\'équipe ne s\'ouvre pas avec la clé actuelle : la clé n\'est pas renouvelée, pour ne pas le rendre illisible à tous. Supprimez ou recréez cet élément, puis recommencez.</string>
+    <string name="modele_rotation_membre_introuvable">La clé publique de %1$s est introuvable : la clé n\'est pas renouvelée, plutôt que de lui retirer l\'accès sans que personne l\'ait décidé.</string>
 </resources>

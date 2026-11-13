@@ -82,6 +82,14 @@ fun EcranDAdministration(
     }
 
     var aRevoquer by remember { mutableStateOf<MembreDto?>(null) }
+    // Le refus d'un geste sur un membre — rôle ou révocation —, **et le membre qu'il
+    // concerne**. Il s'affiche sous
+    // la ligne du membre, là où le geste a été fait. Relevé le 2026-11-13 sur un vrai
+    // téléphone : posé en bas de l'écran comme les autres messages, le 400 « l'organisation
+    // doit garder au moins un admin » n'était lisible qu'après trois défilements, et depuis
+    // la ligne le geste avait l'air inerte. C'est la forme exacte du 415 que `ClientApi`
+    // raconte déjà : un message juste, au mauvais endroit, ne se lit pas.
+    var refusDeMembre by remember { mutableStateOf<Pair<String, String>?>(null) }
     var nouvelleCollection by remember { mutableStateOf(false) }
     var nouveauGroupe by remember { mutableStateOf(false) }
 
@@ -106,7 +114,15 @@ fun EcranDAdministration(
                     occupe = modele.occupe,
                     surInviter = { invitationOuverte = true },
                     surRevoquer = { aRevoquer = it },
-                    surChangerLeRole = { membre, role -> modele.changerLeRole(membre, role) },
+                    refusDeMembre = refusDeMembre,
+                    surChangerLeRole = { membre, role ->
+                        refusDeMembre = null
+                        modele.changerLeRole(membre, role) { fait ->
+                            if (!fait) {
+                                refusDeMembre = membre.userId to (modele.message ?: "")
+                            }
+                        }
+                    },
                 )
                 SectionCollections(
                     collections = etat.collections,
@@ -127,7 +143,8 @@ fun EcranDAdministration(
                         modele.accorderAuGroupe(groupe, collection, permission)
                     },
                 )
-                modele.message?.let { Erreur(it) }
+                // Pas deux fois : un refus se lit déjà sous son membre.
+                if (refusDeMembre == null) modele.message?.let { Erreur(it) }
             }
         }
     }
@@ -138,9 +155,13 @@ fun EcranDAdministration(
             surAnnuler = { aRevoquer = null },
             surConfirmer = {
                 aRevoquer = null
+                refusDeMembre = null
                 // L'écran se referme de lui-même en cas de succès : le modèle rend toutes
                 // les Org Keys, celle-ci comprise, parce que la clé de l'équipe a changé.
-                modele.revoquerEtFaireTourner(membre)
+                // Un échec, lui, se dit sous la ligne du membre, comme un refus de rôle.
+                modele.revoquerEtFaireTourner(membre) { fait ->
+                    if (!fait) refusDeMembre = membre.userId to (modele.message ?: "")
+                }
             },
         )
     }
@@ -182,6 +203,7 @@ private fun SectionMembres(
     occupe: Boolean,
     surInviter: () -> Unit,
     surRevoquer: (MembreDto) -> Unit,
+    refusDeMembre: Pair<String, String>?,
     surChangerLeRole: (MembreDto, RoleDOrganisation) -> Unit,
 ) {
     SectionGhost(
@@ -198,6 +220,7 @@ private fun SectionMembres(
                     LigneMembre(
                         membre,
                         occupe,
+                        refus = refusDeMembre?.takeIf { it.first == membre.userId }?.second,
                         surChangerLeRole = { role -> surChangerLeRole(membre, role) },
                     ) { surRevoquer(membre) }
                 }
@@ -216,6 +239,7 @@ private fun SectionMembres(
 private fun LigneMembre(
     membre: MembreDto,
     occupe: Boolean,
+    refus: String?,
     surChangerLeRole: (RoleDOrganisation) -> Unit,
     surRevoquer: () -> Unit,
 ) {
@@ -260,6 +284,16 @@ private fun LigneMembre(
             actif = !occupe,
             identifiant = "button.revoke.${membre.userId}",
         ) { surRevoquer() }
+    }
+    if (refus != null) {
+        Text(
+            refus,
+            color = couleurs.danger,
+            fontSize = 12.sp,
+            modifier = Modifier
+                .padding(start = 14.dp, end = 14.dp, bottom = 11.dp)
+                .reperes("text.roleRefused.${membre.userId}"),
+        )
     }
     if (choixDuRole) {
         Row(

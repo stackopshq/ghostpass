@@ -1030,6 +1030,13 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
      * encore l'ancienne Org Key, et tout ce qu'ils afficheraient désormais serait illisible.
      */
     fun revoquerEtFaireTourner(membre: MembreDto, surFin: (Boolean) -> Unit = {}) {
+        // Se retirer soi-même : le serveur le refuse (400), et ce client ne l'atteignait même
+        // pas — la rotation échouait avant. On le dit d'emblée, sans rien préparer.
+        if (membre.email != null && membre.email.equals(emailEnregistre, ignoreCase = true)) {
+            message = texte(R.string.admin_pas_soi_meme)
+            surFin(false)
+            return
+        }
         val organisation = administrationDe ?: return
         val ouvert = coffresOuverts[organisation.id] ?: return
         val lu = administration as? EtatDeLAdministration.Lu ?: return
@@ -2283,6 +2290,8 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         is ErreurApi.Reseau -> texte(R.string.modele_serveur_injoignable)
         is Coffre.CleDOrganisationPerimee -> texte(R.string.modele_cle_equipe_perimee)
         is Coffre.ServeurSansChangementDeRole -> texte(R.string.modele_role_serveur_ancien)
+        is Coffre.ElementNonReenveloppable -> texte(R.string.modele_rotation_element_illisible)
+        is Coffre.RotationImpossible -> texte(R.string.modele_rotation_membre_introuvable, e.membre)
         is ErreurApi.CoffreVerrouille -> texte(R.string.modele_coffre_verrouille)
         is ErreurApi.ReponseIllisible -> texte(R.string.modele_reponse_illisible)
         is ErreurApi.SecondFacteurRequis -> texte(R.string.modele_second_facteur_requis)
