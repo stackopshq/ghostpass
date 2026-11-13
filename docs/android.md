@@ -397,11 +397,11 @@ de poser deux réglages sur trois sans le dire.
   rotation de l'Org Key**, la création de collections et de groupes, l'octroi par groupe, et
   **qui a accès à chaque collection**.
 
-  Reste hors d'atteinte : **changer le rôle d'un membre**. La route est un `PATCH`, et
-  `HttpURLConnection` refuse ce verbe (`ProtocolException: Invalid HTTP method: PATCH`,
-  mesuré). Le détour par réflexion casse selon la version, et l'en-tête de substitution
-  suppose un greffon que le serveur n'a pas. L'écran l'écrit plutôt que de proposer un
-  bouton qui échouerait à l'usage.
+  **Le changement de rôle d'un membre s'y fait depuis le 2026-11-13.** La route d'iOS est
+  un `PATCH`, que `HttpURLConnection` refuse (`ProtocolException: Invalid HTTP method:
+  PATCH`, mesuré). Le serveur porte désormais le même traitement sur
+  `POST /api/orgs/:id/members/:userId/role`, et Android l'emprunte. Contre un serveur
+  antérieur, l'écran dit que le serveur est trop ancien au lieu d'échouer sans un mot.
 
   Deux règles que la rotation impose, et qui ne se devinent pas : **un membre dont la clé
   publique ne se résout pas annule la rotation entière** — le sauter l'exclurait en silence,
@@ -422,13 +422,37 @@ de poser deux réglages sur trois sans le dire.
   Montrer la valeur brute est moins commode et ne ment pas. Une empreinte commune demande
   une primitive du cœur et un accord entre les trois clients.
 
+### La parité avec iOS 1.0 — rattrapée le 2026-11-13
+
+Une comparaison écran par écran avec iOS 1.0, avant la première publication Android, a
+trouvé sept écarts. Ils sont comblés :
+
+| Écart | Ce qui existe désormais |
+|---|---|
+| Aucun code TOTP calculé, nulle part | `Totp` (RFC 6238, vecteurs de la RFC en test), fiche et remplissage |
+| Pas de fiche en lecture, rien ne se copiait | `EcranDeLaFiche` : copie de chaque champ, code en direct, « Modifier » |
+| Presse-papiers jamais vidé | `PressePapiers` : copie sensible, effacée après 30 s comme sur iOS |
+| Copie rapide depuis la liste | appui long sur une ligne : nom, mot de passe, code |
+| Partager un texte libre | `EcranDuPartageDUnSecret`, mêmes durées et consultations qu'iOS |
+| Créer une équipe | « Nouvelle équipe » dans le menu ; l'Org Key naît et se scelle sur l'appareil |
+| Coffres d'équipe hors ligne | `CoffreDEquipeEnCache` : chiffré, relu par le compte, remplissage compris |
+| Changer le rôle d'un membre | `POST …/role` côté serveur, voir plus haut |
+
+Le remplissage reconnaît aussi le champ d'un code à usage unique (indices AndroidX,
+`autocomplete="one-time-code"`) et n'y propose que les comptes qui en ont un.
+
+**Ce qui n'a pas été vu sur un appareil depuis ce poste**, faute de virtualisation : les
+écrans eux-mêmes. Les chemins réseau et cryptographiques sont éprouvés sur la JVM contre un
+vrai serveur (`temoin-de-l-administration.sh`, étapes 8 à 10) ; l'interface demande un
+passage sur émulateur ou téléphone avant la publication.
+
 ## 13. Les outils, et ce que chacun prouve
 
 | Outil | Ce qu'il établit |
 |---|---|
 | `tools/android/parcours-de-bout-en-bout.sh` | Onze étapes sur appareil, **résolution de noms coupée** : connexion, coffre personnel, coffre d'équipe **en lecture et en écriture**, registres, partage traversé jusqu'à WebCrypto, corbeille, verrouillage à l'arrière-plan, lien `otpauth` reçu coffre fermé, remplissage |
 | `tools/android/temoin-du-parcours.sh` | Le parcours sait rougir : mot de passe faux, remplissage désactivé |
-| `tools/android/temoin-de-l-administration.sh` | **Inviter et octroyer** : l'invité ouvre l'organisation avec sa propre clé privée et lit — seule preuve que le scellement visait la bonne clé publique — puis se voit refuser l'écriture, puis l'obtient |
+| `tools/android/temoin-de-l-administration.sh` | **Inviter et octroyer** : l'invité ouvre l'organisation avec sa propre clé privée et lit — seule preuve que le scellement visait la bonne clé publique — puis se voit refuser l'écriture, puis l'obtient. Puis **changer un rôle** (le dernier admin reste admin), **créer une équipe** et la rouvrir, et **relire une équipe depuis sa copie hors ligne** |
 | `tools/android/temoin-de-la-rotation.sh` | **La rotation provoquée** : l'Org Key tourne sous une session ouverte, l'écriture est refusée, et le chemin sans rotation écrit toujours |
 | `tools/android/temoin-de-la-destination.sh` | **Le §4** : domaine étranger confirmé et jamais remis en silence, refus qui **révoque** chez ghostbit, approbations par serveur et non globales |
 | `tools/android/temoin-du-sso-a-l-ecran.sh` | Le SSO du bouton au coffre, navigateur compris ; rougit si le schéma de retour ne suit pas l'identifiant du paquet |
