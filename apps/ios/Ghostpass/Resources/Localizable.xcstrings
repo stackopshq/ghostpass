@@ -2255,12 +2255,12 @@
         }
       }
     },
-    "Hors ligne — coffre affiché depuis cet appareil": {
+    "Hors ligne — coffre affiché depuis cet appareil. Touchez pour réessayer.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Offline — vault shown from this device"
+            "value": "Offline — vault shown from this device. Tap to try again."
           }
         }
       }

@@ -564,14 +564,37 @@ struct VaultListView: View {
         .accessibilityIdentifier("button.folderFilter")
     }
 
+    /// Le bandeau hors ligne — **et ce qui en sort**.
+    ///
+    /// Relevé le 2026-11-13 sur l'Android jumeau, et vrai ici pour la même raison :
+    /// `isOffline` ne retombe que sur un `refresh` qui aboutit, et rien ne le redemandait.
+    /// Réseau coupé puis rendu, le bandeau restait donc, et la liste avec lui, jusqu'au
+    /// prochain verrouillage — un geste que personne ne devine, pour quelque chose qui se
+    /// lit « l'application ne sait plus se connecter ».
+    ///
+    /// Une tentative toutes les trente secondes **tant que le bandeau est là** : la tâche
+    /// meurt avec la vue, donc rien ne tourne quand tout va bien. Le toucher réessaie tout
+    /// de suite.
     private var bandeauHorsLigne: some View {
-        Label("Hors ligne — coffre affiché depuis cet appareil", systemImage: "wifi.slash")
+        Label(
+            "Hors ligne — coffre affiché depuis cet appareil. Touchez pour réessayer.",
+            systemImage: "wifi.slash",
+        )
             .font(.footnote)
             .foregroundStyle(Color.gpMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(Color.gpSurface2, in: RoundedRectangle(cornerRadius: GP.radius))
+            .contentShape(Rectangle())
+            .onTapGesture { Task { await store.refresh() } }
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(30))
+                    if Task.isCancelled { return }
+                    await store.refresh()
+                }
+            }
             .accessibilityIdentifier("banner.offline")
     }
 
