@@ -172,7 +172,7 @@
     <string name="deverrouillage_coffre_chiffre">End-to-end encrypted vault</string>
 
     <!-- ═══ LOT1 · EcranDuCoffre.kt ═══ -->
-    <string name="coffre_hors_ligne">Offline — last known state.</string>
+    <string name="coffre_hors_ligne">Offline — last known state. Tap to try again.</string>
     <string name="coffre_rechercher">Search</string>
     <string name="coffre_invite_recherche">Name, login, folder</string>
     <string name="coffre_titre">Vault</string>

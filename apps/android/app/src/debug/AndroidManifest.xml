@@ -9,5 +9,11 @@
             android:name=".essai.ActiviteDEssaiDeConnexion"
             android:exported="true"
             android:label="Essai de remplissage" />
+        <!-- Le second temps d'une connexion : un écran qui ne demande qu'un code. Le
+             service ne doit alors proposer que les comptes qui portent un second facteur. -->
+        <activity
+            android:name=".essai.ActiviteDEssaiDeCodeUnique"
+            android:exported="true"
+            android:label="Essai de remplissage — code" />
     </application>
 </manifest>

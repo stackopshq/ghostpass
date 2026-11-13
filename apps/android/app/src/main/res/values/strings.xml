@@ -249,7 +249,7 @@
     <string name="deverrouillage_coffre_chiffre">Coffre chiffré de bout en bout</string>
 
     <!-- ═══ LOT1 · EcranDuCoffre.kt ═══ -->
-    <string name="coffre_hors_ligne">Hors ligne — dernier état connu.</string>
+    <string name="coffre_hors_ligne">Hors ligne — dernier état connu. Touchez pour réessayer.</string>
     <string name="coffre_rechercher">Rechercher</string>
     <string name="coffre_invite_recherche">Nom, identifiant, dossier</string>
     <string name="coffre_titre">Coffre</string>

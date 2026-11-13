@@ -671,7 +671,11 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             val liste = try {
                 withContext(Dispatchers.IO) { coffre.organisations() }
             } catch (_: Exception) {
-                organisations = emptyList()
+                // **On garde la liste précédente.** La vider sur une panne de réseau efface
+                // les pastilles de choix de coffre d'un écran dont les éléments d'équipe,
+                // eux, restent affichés depuis la copie locale — l'équipe est là, mais plus
+                // moyen de ne voir qu'elle. C'est la même règle que [partagesDEquipe] juste
+                // au-dessus : on ne vide pas ce qu'on ne sait plus relire.
                 return@launch
             }
             organisations = liste
@@ -742,6 +746,25 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         val copie = withContext(Dispatchers.IO) { stockage.equipesEnCache() }
         if (copie.isEmpty()) return
         partagesDEquipe = withContext(Dispatchers.IO) { coffre.relireLesEquipesEnCache(copie) }
+        // ─── Les pastilles aussi, et pas seulement leur contenu ───
+        //
+        // Sans cela, un démarrage hors ligne montrait les éléments d'équipe dans la liste
+        // sans la pastille qui permet de n'en voir qu'une : le choix de coffre disparaissait
+        // alors que son contenu était là. [organisations] ne se remplit qu'en ligne, par
+        // [chargerLesCoffresDEquipe] ; on la reconstruit ici depuis la copie, et le passage
+        // en ligne la remplacera par ce que le serveur rend.
+        if (organisations.isEmpty()) {
+            organisations = copie.map { equipe ->
+                Organisation(
+                    id = equipe.organisation,
+                    nom = equipe.nom,
+                    role = runCatching { RoleDOrganisation.valueOf(equipe.role) }
+                        .getOrDefault(RoleDOrganisation.Inconnu),
+                    etat = runCatching { EtatDAppartenance.valueOf(equipe.etat) }
+                        .getOrDefault(EtatDAppartenance.Actif),
+                )
+            }
+        }
     }
 
     /** Entre dans une organisation pour n'en voir qu'elle, et ouvre sa première collection. */

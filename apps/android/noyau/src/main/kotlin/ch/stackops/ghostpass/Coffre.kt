@@ -736,6 +736,8 @@ class Coffre {
             adminPublicKey = ouvert.clePubliqueDeLAdmin,
             encryptedOrgKey = ouvert.cleALOuverture,
             collections = collections,
+            role = ouvert.organisation.role.name,
+            etat = ouvert.organisation.etat.name,
         )
     }
 
