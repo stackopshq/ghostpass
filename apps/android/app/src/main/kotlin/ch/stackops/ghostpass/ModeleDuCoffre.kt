@@ -165,6 +165,10 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                     horsLigne = true
                 }
             }
+            // Les coffres d'équipe de la même façon : la copie d'abord, le serveur ensuite.
+            // Sans elle, hors ligne, un compte dont tout vit en équipe ne voit rien, et le
+            // remplissage ne propose rien.
+            if (partagesDEquipe.isEmpty()) relireLesEquipesEnCache()
             try {
                 val elements = withContext(Dispatchers.IO) { coffre.elementsDistants() }
                 withContext(Dispatchers.IO) { stockage.mettreEnCache(elements) }
@@ -675,6 +679,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             val ouverts = coffresOuverts.toMutableMap()
             val echecs = echecsDOrganisation.toMutableMap()
             val lectures = mutableListOf<LectureDuCoffre>()
+            val copieFraiche = mutableMapOf<String, CoffreDEquipeEnCache>()
 
             for (organisation in liste) {
                 val ouvert = ouverts[organisation.id] ?: withContext(Dispatchers.IO) {
@@ -691,25 +696,52 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
                 ouverts[organisation.id] = ouvert
                 echecs -= organisation.id
 
+                val collectionsCopiees = mutableListOf<CollectionEnCache>()
+                var complete = true
                 for (collection in ouvert.collections) {
                     try {
-                        val brute = withContext(Dispatchers.IO) {
-                            coffre.elementsDeCollection(ouvert, collection.id)
+                        val (chiffres, brute) = withContext(Dispatchers.IO) {
+                            coffre.lireUneCollection(ouvert, collection.id)
                         }
                         lectures += Coffre.marquerCommeDEquipe(
                             brute,
                             appartenanceDe(ouvert, collection),
                         )
+                        collectionsCopiees += CollectionEnCache(collection.id, collection.nom, chiffres)
                     } catch (e: Exception) {
+                        complete = false
                         echecs[organisation.id] =
                             EchecDOrganisation.Reseau(e.message ?: "collection illisible")
+                    }
+                }
+                // Seule une équipe relue **en entier** remplace sa copie : une copie à
+                // moitié fraîche ferait disparaître hors ligne la collection manquée.
+                if (complete) {
+                    coffre.copieHorsLigne(ouvert, collectionsCopiees)?.let {
+                        copieFraiche[organisation.id] = it
                     }
                 }
             }
             coffresOuverts = ouverts
             echecsDOrganisation = echecs
             partagesDEquipe = lectures
+
+            // La copie hors ligne. Une équipe qu'on n'a pas pu relire cette fois garde sa
+            // copie précédente : un aller-retour raté ne doit pas effacer ce qu'on avait.
+            val precedente = withContext(Dispatchers.IO) { stockage.equipesEnCache() }
+                .associateBy { it.organisation }
+            val copie = liste.mapNotNull { organisation ->
+                copieFraiche[organisation.id] ?: precedente[organisation.id]
+            }
+            withContext(Dispatchers.IO) { stockage.mettreLesEquipesEnCache(copie) }
         }
+    }
+
+    /** Montre les coffres d'équipe depuis la copie locale, sans réseau. */
+    private suspend fun relireLesEquipesEnCache() {
+        val copie = withContext(Dispatchers.IO) { stockage.equipesEnCache() }
+        if (copie.isEmpty()) return
+        partagesDEquipe = withContext(Dispatchers.IO) { coffre.relireLesEquipesEnCache(copie) }
     }
 
     /** Entre dans une organisation pour n'en voir qu'elle, et ouvre sa première collection. */
@@ -1001,6 +1033,40 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Crée une équipe, dont ce compte devient l'administrateur.
+     *
+     * L'Org Key naît ici, dans le cœur Rust, et le créateur se la scelle à lui-même : le
+     * serveur reçoit un blob qu'il ne peut pas ouvrir. Puis les coffres d'équipe se
+     * relisent, pour que la nouvelle paraisse dans le choix du coffre sans autre geste.
+     */
+    fun creerUneEquipe(nom: String, surFin: (Boolean) -> Unit = {}) {
+        val propre = nom.trim()
+        if (propre.isEmpty()) {
+            surFin(false)
+            return
+        }
+        viewModelScope.launch {
+            occupe = true
+            message = null
+            val fait = try {
+                withContext(Dispatchers.IO) { coffre.creerUneOrganisation(propre) }
+                true
+            } catch (e: Exception) {
+                message = messageLisible(e)
+                false
+            } finally {
+                occupe = false
+            }
+            if (fait) chargerLesCoffresDEquipe()
+            surFin(fait)
+        }
+    }
+
+    fun changerLeRole(membre: MembreDto, role: RoleDOrganisation, surFin: (Boolean) -> Unit = {}) {
+        agirSurLEquipe(surFin) { ouvert -> coffre.changerLeRole(ouvert, membre.userId, role) }
+    }
+
     fun creerUneCollectionDEquipe(nom: String, surFin: (Boolean) -> Unit = {}) {
         agirSurLEquipe(surFin) { ouvert -> coffre.creerUneCollection(ouvert, nom.trim()) }
     }
@@ -1158,13 +1224,33 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
             message = texte(R.string.modele_pas_de_secret_a_partager)
             return
         }
+        partagerUnSecret(secret, entree.element.name, heures, consultations)
+    }
+
+    /**
+     * Partage un texte libre, saisi plutôt que tiré d'un élément — l'entrée « Partager un
+     * secret » d'iOS.
+     *
+     * Un texte libre n'a pas de nom ; le registre en a besoin d'un pour être lisible
+     * ailleurs. iOS l'appelle « Secret partagé », et la date de création, que le registre
+     * retient aussi, distingue les lignes entre elles.
+     */
+    fun partagerUnTexte(secret: String, heures: Int, consultations: Int) {
+        if (secret.isBlank()) {
+            message = texte(R.string.modele_pas_de_secret_a_partager)
+            return
+        }
+        partagerUnSecret(secret, texte(R.string.secret_nom_au_registre), heures, consultations)
+    }
+
+    private fun partagerUnSecret(secret: String, nom: String, heures: Int, consultations: Int) {
         viewModelScope.launch {
             occupe = true
             message = null
             try {
                 val approuves = stockage.domainesApprouves(serveurEnregistre)
                 val resultat = withContext(Dispatchers.IO) {
-                    coffre.partager(secret, heures, consultations, entree.element.name, approuves)
+                    coffre.partager(secret, heures, consultations, nom, approuves)
                 }
                 when (resultat) {
                     is Coffre.Partage.Pret -> terminerLePartage(resultat.lien, resultat.inscription)
@@ -2173,6 +2259,7 @@ class ModeleDuCoffre(application: Application) : AndroidViewModel(application) {
         is ErreurApi.AdresseInvalide -> texte(R.string.modele_adresse_invalide)
         is ErreurApi.Reseau -> texte(R.string.modele_serveur_injoignable)
         is Coffre.CleDOrganisationPerimee -> texte(R.string.modele_cle_equipe_perimee)
+        is Coffre.ServeurSansChangementDeRole -> texte(R.string.modele_role_serveur_ancien)
         is ErreurApi.CoffreVerrouille -> texte(R.string.modele_coffre_verrouille)
         is ErreurApi.ReponseIllisible -> texte(R.string.modele_reponse_illisible)
         is ErreurApi.SecondFacteurRequis -> texte(R.string.modele_second_facteur_requis)

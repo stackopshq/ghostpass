@@ -45,6 +45,9 @@ object AdministrationDOrg {
             "lire" -> lire(args[1], args[2], args[3])
             "ecrire" -> ecrire(args[1], args[2], args[3])
             "accorder" -> accorder(args[1], args[2], args[3], args[4], args[5])
+            "role" -> role(args[1], args[2], args[3], args[4], args[5])
+            "creerEquipe" -> creerEquipe(args[1], args[2], args[3], args[4])
+            "horsLigne" -> horsLigne(args[1], args[2], args[3])
             else -> {
                 System.err.println("usage : voir la documentation de AdministrationDOrg")
                 kotlin.system.exitProcess(2)
@@ -186,6 +189,62 @@ object AdministrationDOrg {
             },
         )
         println("ACCORDE $groupe")
+    }
+
+    /**
+     * Change le rôle d'un membre par `POST …/role`, puis relit le rôle **chez le serveur**.
+     *
+     * Rapporte le refus plutôt que de le laisser tomber : rétrograder le dernier
+     * administrateur doit rendre 400.
+     */
+    private fun role(serveur: String, admin: String, motDePasse: String, email: String, role: String) {
+        val coffre = session(serveur, admin, motDePasse)
+        val ouvert = ouvrirLOrg(coffre)
+        val membre = coffre.membresDe(ouvert).firstOrNull { it.email == email }
+            ?: error("$email n'est pas membre de l'organisation")
+        try {
+            coffre.changerLeRole(ouvert, membre.userId, RoleDOrganisation.depuis(role))
+        } catch (e: ErreurApi.Http) {
+            println("REFUSE ${e.statut}")
+            return
+        }
+        val relu = coffre.membresDe(ouvert).first { it.userId == membre.userId }.role
+        println("ROLE $relu")
+    }
+
+    /**
+     * Crée une équipe, puis la **rouvre** avec la clé du compte : seule preuve que l'Org Key
+     * a été scellée pour lui, et non pour personne.
+     */
+    private fun creerEquipe(serveur: String, email: String, motDePasse: String, nom: String) {
+        val coffre = session(serveur, email, motDePasse)
+        coffre.creerUneOrganisation(nom)
+        val creee = coffre.organisations().firstOrNull { it.nom == nom }
+            ?: error("l'équipe créée n'apparaît pas")
+        coffre.ouvrirLOrganisation(creee).getOrElse { error("l'équipe créée ne s'ouvre pas : $it") }
+            .use { println("CREEE ${creee.role} OUVERTE ${it.collections.size} COLLECTION(S)") }
+    }
+
+    /**
+     * Relit la première équipe **depuis sa copie hors ligne**, la session refermée sur le
+     * réseau : la copie doit se rouvrir avec le seul compte.
+     */
+    private fun horsLigne(serveur: String, email: String, motDePasse: String) {
+        val coffre = session(serveur, email, motDePasse)
+        val ouvert = ouvrirLOrg(coffre)
+        val collections = ouvert.collections.map { collection ->
+            val (chiffres, _) = coffre.lireUneCollection(ouvert, collection.id)
+            CollectionEnCache(collection.id, collection.nom, chiffres)
+        }
+        val copie = coffre.copieHorsLigne(ouvert, collections) ?: error("aucune copie possible")
+        // Aller-retour par le format stocké : c'est lui que lira l'application.
+        val texte = Json.encodeToString(CoffreDEquipeEnCache.serializer(), copie)
+        val relue = Json.decodeFromString(CoffreDEquipeEnCache.serializer(), texte)
+        val lectures = coffre.relireLesEquipesEnCache(listOf(relue))
+        val lisibles = lectures.sumOf { it.lisibles.size }
+        val illisibles = lectures.sumOf { it.nombreDIllisibles }
+        val dEquipe = lectures.all { l -> l.entrees.all { it.origine.estDEquipe } }
+        println("HORS LIGNE LISIBLES $lisibles ILLISIBLES $illisibles EQUIPE $dEquipe")
     }
 
     private fun ouvrirLOrg(coffre: Coffre): Coffre.CoffreDOrganisation {

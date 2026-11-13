@@ -143,6 +143,30 @@ verifier "LISIBLES 2 ILLISIBLES 1 PERMISSION Ecriture" "$RETOUR" \
   "la permission effective n'a pas suivi l'octroi, ou l'élément écrit à l'étape 6 n'est pas relisible"
 
 echo
+# Le serveur limite les connexions à dix par minute et par adresse, et chaque étape en
+# ouvre une. Le témoin attend que la fenêtre se vide plutôt que de désactiver la
+# protection : un banc qui contourne la limite ne dit plus rien du serveur réel.
+echo "  · pause d'une minute : la limite de connexions du serveur"
+sleep 61
+echo "== 8. Le rôle se change par POST …/role, et le dernier admin reste admin =="
+RETOUR="$(client role "$ADRESSE" "$ADMIN" "$MDP_ADMIN" "$ADMIN" member 2>/dev/null || true)"
+verifier "REFUSE 400" "$RETOUR" "le dernier administrateur a pu se rétrograder"
+RETOUR="$(client role "$ADRESSE" "$ADMIN" "$MDP_ADMIN" "$INVITE" admin 2>"$BASE/e8")"
+verifier "ROLE admin" "$RETOUR" "le rôle n'a pas changé côté serveur"
+RETOUR="$(client lire "$ADRESSE" "$INVITE" "$MDP_INVITE" 2>/dev/null)"
+verifier "LISIBLES 2 ILLISIBLES 1 PERMISSION Gestion" "$RETOUR" \
+  "le nouveau rôle ne se traduit pas en permission effective"
+echo
+echo "== 9. Un compte crée sa propre équipe, et la rouvre avec sa clé =="
+RETOUR="$(client creerEquipe "$ADRESSE" "$INVITE" "$MDP_INVITE" "Équipe de Kevin" 2>"$BASE/e9")"
+verifier "CREEE Admin OUVERTE*" "$RETOUR" \
+  "l'Org Key n'a pas été scellée pour son créateur, ou l'équipe n'est pas à lui"
+echo
+echo "== 10. La copie hors ligne d'une équipe se relit avec le seul compte =="
+RETOUR="$(client horsLigne "$ADRESSE" "$ADMIN" "$MDP_ADMIN" 2>"$BASE/e10")"
+verifier "HORS LIGNE LISIBLES 2 ILLISIBLES 1 EQUIPE true" "$RETOUR" \
+  "la copie ne rend pas ce que le réseau rendait, ou ses lignes ont perdu leur origine d'équipe"
+echo
 if (( echec )); then
   echo "Témoin en échec : l'administration d'organisation ne tient pas ses promesses." >&2
   exit 1

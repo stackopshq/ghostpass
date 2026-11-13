@@ -49,13 +49,13 @@ import ch.stackops.ghostpass.theme.reperes
  * éprouvait contre un vrai serveur. Les fonctions existaient, et personne ne pouvait s'en
  * servir.
  *
- * ## Ce que cet écran ne propose pas, et pourquoi il le dit
+ * ## Le changement de rôle
  *
- * **Le changement de rôle d'un membre.** La route est un `PATCH`, et
- * `HttpURLConnection` — la pile HTTP d'Android — le refuse par un `ProtocolException`,
- * mesuré et non déduit (voir `Coffre.accorderSurUneCollection`). Plutôt qu'un bouton qui
- * échouerait au moment de s'en servir, l'écran affiche le rôle et dit où le changer. Un
- * manque énoncé coûte moins qu'une promesse qui casse.
+ * Longtemps absent : la route est un `PATCH`, et `HttpURLConnection` — la pile HTTP
+ * d'Android — le refuse par un `ProtocolException`. Depuis le 2026-11-13, le serveur porte
+ * le même traitement sur `POST …/members/:userId/role`, et c'est ce chemin qu'Android
+ * emprunte. Contre un serveur plus ancien, l'échec se dit en clair
+ * (`Coffre.ServeurSansChangementDeRole`).
  */
 @Composable
 fun EcranDAdministration(
@@ -106,6 +106,7 @@ fun EcranDAdministration(
                     occupe = modele.occupe,
                     surInviter = { invitationOuverte = true },
                     surRevoquer = { aRevoquer = it },
+                    surChangerLeRole = { membre, role -> modele.changerLeRole(membre, role) },
                 )
                 SectionCollections(
                     collections = etat.collections,
@@ -181,6 +182,7 @@ private fun SectionMembres(
     occupe: Boolean,
     surInviter: () -> Unit,
     surRevoquer: (MembreDto) -> Unit,
+    surChangerLeRole: (MembreDto, RoleDOrganisation) -> Unit,
 ) {
     SectionGhost(
         titre = stringResource(R.string.admin_membres_titre),
@@ -193,7 +195,11 @@ private fun SectionMembres(
             Column {
                 membres.forEachIndexed { rang, membre ->
                     if (rang > 0) FiletDeSection()
-                    LigneMembre(membre, occupe) { surRevoquer(membre) }
+                    LigneMembre(
+                        membre,
+                        occupe,
+                        surChangerLeRole = { role -> surChangerLeRole(membre, role) },
+                    ) { surRevoquer(membre) }
                 }
             }
         }
@@ -207,8 +213,16 @@ private fun SectionMembres(
 }
 
 @Composable
-private fun LigneMembre(membre: MembreDto, occupe: Boolean, surRevoquer: () -> Unit) {
+private fun LigneMembre(
+    membre: MembreDto,
+    occupe: Boolean,
+    surChangerLeRole: (RoleDOrganisation) -> Unit,
+    surRevoquer: () -> Unit,
+) {
     val couleurs = LocalCouleurs.current
+    var choixDuRole by remember { mutableStateOf(false) }
+    val actuel = RoleDOrganisation.depuis(membre.role)
+    Column {
     Row(
         Modifier
             .fillMaxWidth()
@@ -237,10 +251,42 @@ private fun LigneMembre(membre: MembreDto, occupe: Boolean, surRevoquer: () -> U
             )
         }
         LienDiscret(
+            texte = stringResource(R.string.admin_changer_le_role),
+            actif = !occupe,
+            identifiant = "button.changeRole.${membre.userId}",
+        ) { choixDuRole = !choixDuRole }
+        LienDiscret(
             texte = stringResource(R.string.admin_revoquer),
             actif = !occupe,
             identifiant = "button.revoke.${membre.userId}",
         ) { surRevoquer() }
+    }
+    if (choixDuRole) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 11.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            for (candidat in listOf(
+                RoleDOrganisation.Admin,
+                RoleDOrganisation.Membre,
+                RoleDOrganisation.LectureSeule,
+            )) {
+                LienDiscret(
+                    texte = stringResource(
+                        R.string.admin_role_choix,
+                        if (actuel == candidat) "☑" else "☐",
+                        stringResource(intituleDuRole2(candidat)),
+                    ),
+                    // Choisir le rôle qu'il a déjà n'envoie rien.
+                    actif = !occupe && actuel != candidat,
+                    identifiant = "button.setRole.${membre.userId}.${candidat.name}",
+                ) {
+                    choixDuRole = false
+                    surChangerLeRole(candidat)
+                }
+            }
+        }
+    }
     }
 }
 

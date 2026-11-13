@@ -622,6 +622,11 @@ class Coffre {
          * que cette session était ouverte. Voir [Coffre.exigerLaCleCourante].
          */
         internal val cleALOuverture: String,
+        /**
+         * La clé publique de qui a scellé l'Org Key pour ce compte. Gardée pour la copie
+         * hors ligne : avec elle et [cleALOuverture], le compte rouvre l'Org Key sans réseau.
+         */
+        internal val clePubliqueDeLAdmin: String = "",
     ) : AutoCloseable {
         override fun close() = org.close()
     }
@@ -686,7 +691,11 @@ class Coffre {
                 EchecDOuverture(EchecDOrganisation.Reseau(e.message ?: "serveur injoignable")))
         }
         return Result.success(
-            CoffreDOrganisation(organisation, collections, org, cleALOuverture = scellee))
+            CoffreDOrganisation(
+                organisation, collections, org,
+                cleALOuverture = scellee,
+                clePubliqueDeLAdmin = clePubliqueDeLAdmin,
+            ))
     }
 
     /**
@@ -695,11 +704,84 @@ class Coffre {
      * La même [lectureSous] que le coffre personnel : une ligne qu'on ne sait pas ouvrir
      * garde sa place et dit pourquoi.
      */
-    fun elementsDeCollection(ouvert: CoffreDOrganisation, collection: String): LectureDuCoffre {
+    fun elementsDeCollection(ouvert: CoffreDOrganisation, collection: String): LectureDuCoffre =
+        lireUneCollection(ouvert, collection).second
+
+    /**
+     * Une collection, **chiffrée et lue** : le chiffré part dans la copie hors ligne, la
+     * lecture à l'écran. Une seule requête pour les deux.
+     */
+    fun lireUneCollection(
+        ouvert: CoffreDOrganisation,
+        collection: String,
+    ): Pair<List<ElementChiffre>, LectureDuCoffre> {
         val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
         val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
         val elements = api.elementsDeCollection(j, ouvert.organisation.id, collection)
-        return lectureSous(elements) { chiffre -> ouvrirSousOrg(chiffre, ouvert.org) }
+        return elements to lectureSous(elements) { chiffre -> ouvrirSousOrg(chiffre, ouvert.org) }
+    }
+
+    /**
+     * La copie hors ligne d'une équipe ouverte, ou `null` si l'on ne sait pas qui a scellé
+     * sa clé — sans cette clé publique, la copie ne se rouvrirait pas.
+     */
+    fun copieHorsLigne(
+        ouvert: CoffreDOrganisation,
+        collections: List<CollectionEnCache>,
+    ): CoffreDEquipeEnCache? {
+        if (ouvert.clePubliqueDeLAdmin.isEmpty()) return null
+        return CoffreDEquipeEnCache(
+            organisation = ouvert.organisation.id,
+            nom = ouvert.organisation.nom,
+            adminPublicKey = ouvert.clePubliqueDeLAdmin,
+            encryptedOrgKey = ouvert.cleALOuverture,
+            collections = collections,
+        )
+    }
+
+    /**
+     * Relit les coffres d'équipe **depuis la copie locale**, sans réseau.
+     *
+     * Chaque Org Key se rouvre par le compte, exactement comme en ligne, puis se referme
+     * aussitôt la lecture faite : ces coffres ne servent qu'à **montrer** et à **remplir**.
+     * Ils n'entrent pas dans les coffres ouverts du modèle, parce qu'une écriture doit
+     * vérifier la clé courante auprès du serveur — ce qu'une copie ne sait pas dire.
+     *
+     * Une équipe dont la clé ne se rouvre plus est écartée **en le comptant** : ses lignes
+     * deviennent illisibles plutôt que de disparaître (§5).
+     */
+    fun relireLesEquipesEnCache(copie: List<CoffreDEquipeEnCache>): List<LectureDuCoffre> {
+        val compteOuvert = compte ?: return emptyList()
+        val lectures = mutableListOf<LectureDuCoffre>()
+        for (equipe in copie) {
+            val org = try {
+                compteOuvert.openOrg(equipe.adminPublicKey, equipe.encryptedOrgKey)
+            } catch (_: Exception) {
+                null
+            }
+            try {
+                for (collection in equipe.collections) {
+                    val lue = lectureSous(collection.items, org?.let { o ->
+                        { chiffre: ElementChiffre -> ouvrirSousOrg(chiffre, o) }
+                    })
+                    lectures += marquerCommeDEquipe(
+                        lue,
+                        Appartenance(
+                            organisation = equipe.organisation,
+                            collection = collection.id,
+                            nomEquipe = equipe.nom,
+                            nomCollection = collection.nom,
+                            // Hors ligne, rien ne s'écrit : la permission vaut pour
+                            // l'affichage, pas pour un enregistrement qui échouerait.
+                            peutEcrire = false,
+                        ),
+                    )
+                }
+            } finally {
+                org?.close()
+            }
+        }
+        return lectures
     }
 
     /**
@@ -880,18 +962,9 @@ class Coffre {
     /**
      * Accorde à un groupe une permission sur une collection.
      *
-     * ─── Pourquoi un groupe, et pas le rôle du membre ───
-     *
-     * Le serveur expose aussi `PATCH /api/orgs/:id/members/:userId` pour changer un rôle.
-     * **Cette route est hors d'atteinte de ce client** : `HttpURLConnection` — la pile HTTP
-     * d'Android comme de la JVM — refuse le verbe `PATCH` par un
-     * `ProtocolException: Invalid HTTP method: PATCH`, mesuré et non déduit. Il n'y a pas de
-     * contournement honnête côté client : le détour classique par réflexion sur le champ
-     * privé `method` casse selon la version, et poser un en-tête de substitution suppose un
-     * greffon que le serveur n'a pas.
-     *
-     * On expose donc l'octroi qui existe réellement, plutôt qu'un changement de rôle qui
-     * échouerait au moment de s'en servir. Le manque est écrit dans `docs/android.md`.
+     * Le rôle d'un membre, lui, se change par [changerLeRole] : `HttpURLConnection` refuse
+     * le `PATCH` d'iOS (`ProtocolException: Invalid HTTP method: PATCH`, mesuré), et le
+     * serveur porte depuis le 2026-11-13 le même traitement sur un `POST`.
      */
     fun accorderSurUneCollection(
         ouvert: CoffreDOrganisation,
@@ -904,6 +977,32 @@ class Coffre {
         api.accorderAuGroupe(
             j, ouvert.organisation.id, groupe, collection, permission.versLeServeur())
     }
+
+    /**
+     * Change le rôle d'un membre.
+     *
+     * Sans rotation de clé : un membre rétrogradé garde l'Org Key, et c'est voulu — le rôle
+     * règle ce qu'il peut **faire**, la révocation ce qu'il peut **lire**. Le serveur
+     * refuse de rétrograder le dernier administrateur.
+     */
+    fun changerLeRole(ouvert: CoffreDOrganisation, utilisateur: String, role: RoleDOrganisation) {
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        val nom = role.versLeServeur() ?: throw IllegalArgumentException("rôle inconnu")
+        try {
+            api.changerLeRole(j, ouvert.organisation.id, utilisateur, nom)
+        } catch (e: ErreurApi.Http) {
+            // Un 404 sur cette route-là veut dire « serveur trop ancien » : le membre
+            // introuvable rend aussi 404, mais il vient d'être lu dans la liste.
+            if (e.statut == 404) throw ServeurSansChangementDeRole()
+            throw e
+        }
+    }
+
+    /** Le serveur ne connaît pas encore `POST …/role` : il précède le 2026-11-13. */
+    class ServeurSansChangementDeRole : ErreurApi(
+        "Ce serveur ne permet pas encore de changer un rôle depuis Android.",
+    )
 
     /** Crée un groupe, et rend son identifiant. */
     fun creerUnGroupe(ouvert: CoffreDOrganisation, nom: String): String {
@@ -1024,6 +1123,21 @@ class Coffre {
         "La clé publique de $membre n'a pas pu être trouvée : la rotation est annulée " +
             "plutôt que de lui faire perdre l'accès sans que personne l'ait décidé.",
     )
+
+    /**
+     * Crée une organisation : l'Org Key naît dans le cœur et se scelle pour ce seul compte.
+     *
+     * Le serveur reçoit le blob scellé, jamais la clé. C'est par ce blob que le créateur
+     * rouvrira le coffre à sa prochaine session, exactement comme un membre invité.
+     */
+    fun creerUneOrganisation(nom: String) {
+        val compteOuvert = compte ?: throw ErreurApi.CoffreVerrouille()
+        val api = client ?: throw ErreurApi.Reseau("Aucun serveur configuré.")
+        val j = jeton ?: throw ErreurApi.Reseau("Aucune session ouverte.")
+        compteOuvert.createOrg().use { creation ->
+            api.creerUneOrganisation(j, nom, creation.sealedForSelf())
+        }
+    }
 
     /** Crée une collection dans l'organisation. */
     fun creerUneCollection(ouvert: CoffreDOrganisation, nom: String): CollectionDto {

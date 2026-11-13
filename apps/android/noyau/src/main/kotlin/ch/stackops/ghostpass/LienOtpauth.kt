@@ -157,7 +157,7 @@ object LienOtpauth {
     }
 
     /** La valeur d'un paramètre de requête, déséchappée. */
-    private fun parametre(uri: String, nom: String): String? {
+    internal fun parametre(uri: String, nom: String): String? {
         val requete = uri.substringAfter('?', "")
         if (requete.isEmpty()) return null
         for (couple in requete.split('&')) {

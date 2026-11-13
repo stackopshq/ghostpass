@@ -20,6 +20,8 @@ import ch.stackops.ghostpass.theme.ThemeGhostPass
 import ch.stackops.ghostpass.ui.EcranDeDeverrouillage
 import ch.stackops.ghostpass.ui.BoitesDePartage
 import ch.stackops.ghostpass.ui.EcranDeLElement
+import ch.stackops.ghostpass.ui.EcranDeLaFiche
+import ch.stackops.ghostpass.ui.EcranDuPartageDUnSecret
 import ch.stackops.ghostpass.ui.EcranDeLaCorbeille
 import ch.stackops.ghostpass.ui.EcranDAdministration
 import ch.stackops.ghostpass.ui.EcranDExport
@@ -129,12 +131,20 @@ class ActivitePrincipale : AppCompatActivity() {
                 var journalOuvert by remember { mutableStateOf(false) }
                 var cleDeRecuperationOuverte by remember { mutableStateOf(false) }
                 var urgenceOuverte by remember { mutableStateOf(false) }
+                // La fiche de lecture d'un élément. Elle porte des secrets à l'écran — le
+                // mot de passe révélé, le code TOTP — et se referme donc au verrouillage,
+                // comme l'édition.
+                var fiche by remember { mutableStateOf<EntreeDuCoffre.Lisible?>(null) }
+                var partageLibreOuvert by remember { mutableStateOf(false) }
 
                 // Verrouiller pendant une édition ferme l'édition. Sans cela, l'écran
                 // resterait posé sur un coffre fermé : le formulaire garderait à l'écran des
                 // valeurs déchiffrées, et « Enregistrer » échouerait sans que rien
                 // n'explique pourquoi.
                 if (!modele.deverrouille && edition != null) edition = null
+                if (!modele.deverrouille && fiche != null) fiche = null
+                // Le texte en cours de saisie est un secret en clair.
+                if (!modele.deverrouille && partageLibreOuvert) partageLibreOuvert = false
                 // Et la santé de même : elle porte à l'écran la liste de ce qu'il faut
                 // attaquer en premier, ce qui est exactement ce qu'un coffre verrouillé ne
                 // doit plus montrer.
@@ -151,7 +161,8 @@ class ActivitePrincipale : AppCompatActivity() {
                 }
 
                 BackHandler(
-                    enabled = edition != null || modele.corbeilleOuverte ||
+                    enabled = edition != null || fiche != null || partageLibreOuvert ||
+                        modele.corbeilleOuverte ||
                         modele.santeOuverte || reglagesOuverts || importOuvert ||
                         exportOuvert || secondFacteurOuvert || journalOuvert ||
                         cleDeRecuperationOuverte || urgenceOuverte ||
@@ -159,6 +170,8 @@ class ActivitePrincipale : AppCompatActivity() {
                 ) {
                     when {
                         edition != null -> edition = null
+                        fiche != null -> fiche = null
+                        partageLibreOuvert -> partageLibreOuvert = false
                         // Les accès d'une collection se referment avant l'écran qui y mène,
                         // comme le coffre d'un donneur : un retour arrière qui sauterait les
                         // deux ferait perdre de vue de quelle collection on parlait.
@@ -233,6 +246,9 @@ class ActivitePrincipale : AppCompatActivity() {
                         cleDeRecuperationOuverte = false
                     }
                     urgenceOuverte -> EcranDeLUrgence(modele) { urgenceOuverte = false }
+                    partageLibreOuvert -> EcranDuPartageDUnSecret(modele) {
+                        partageLibreOuvert = false
+                    }
                     modele.corbeilleOuverte -> EcranDeLaCorbeille(modele) {
                         modele.fermerLaCorbeille()
                     }
@@ -266,13 +282,38 @@ class ActivitePrincipale : AppCompatActivity() {
                         // pour une collection en lecture seule.
                         lectureSeule = !modele.peutModifier(edition!!.entree),
                     ) { edition = null }
+                    // La fiche passe **après** l'édition : « Modifier » ouvre le formulaire
+                    // par-dessus, et l'enregistrer ou l'annuler ramène à la fiche.
+                    fiche != null -> {
+                        // Relue dans le coffre à chaque affichage : revenir d'une
+                        // modification doit montrer les nouvelles valeurs, et revenir d'une
+                        // suppression ne doit rien montrer du tout.
+                        val actuelle = modele.coffreComplet.lisibles
+                            .firstOrNull { it.id == fiche!!.id }
+                        if (actuelle == null) {
+                            fiche = null
+                        } else {
+                            EcranDeLaFiche(
+                                entree = actuelle,
+                                lectureSeule = !modele.peutModifier(actuelle),
+                                surModifier = {
+                                    modele.message = null
+                                    edition = Edition(actuelle)
+                                },
+                                surFermer = { fiche = null },
+                            )
+                        }
+                    }
                     else -> EcranDuCoffre(
                         modele,
                         surNouveau = { modele.message = null; edition = Edition(null) },
+                        // Toucher un élément ouvre sa **fiche**, comme sur iOS ; la
+                        // modification est à un geste de là.
                         surModifier = { entree ->
                             modele.message = null
-                            edition = Edition(entree)
+                            fiche = entree
                         },
+                        surPartageLibre = { modele.message = null; partageLibreOuvert = true },
                         surCorbeille = { modele.ouvrirLaCorbeille() },
                         surSante = { modele.santeOuverte = true },
                         surReglages = { reglagesOuverts = true },

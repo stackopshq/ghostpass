@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { DB } from "../db/database.js";
 import type { OrgMemberRow } from "../types.js";
@@ -202,31 +202,45 @@ export function registerOrgAdminRoutes(app: FastifyInstance, db: DB): void {
 
   // ─── Rôle d'un membre (sans rotation de clé ; la révocation reste le flux de rotation) ───
 
+  // Deux chemins, un seul traitement. `PATCH` est la route d'origine, celle d'iOS et du web.
+  // `POST …/role` existe pour Android : `HttpURLConnection` refuse le verbe `PATCH`
+  // (`ProtocolException: Invalid HTTP method: PATCH`), et le client Android s'interdit toute
+  // dépendance HTTP qui ne tournerait pas aussi sur la JVM de ses tests.
+  const changerLeRole = async (
+    req: FastifyRequest<{ Params: { id: string; userId: string } }>,
+    reply: FastifyReply,
+  ) => {
+    if (!(await admin(req.params.id, req.currentUser!.id)))
+      return reply.code(403).send({ error: "réservé à l'administrateur" });
+    const parsed = roleSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
+    const target = await orgMembers.findByOrgAndUser(db, req.params.id, req.params.userId);
+    if (!target) return reply.code(404).send({ error: "membre introuvable" });
+    // Garde-fou : l'org doit garder au moins un admin actif.
+    if (target.role === "admin" && parsed.data.role !== "admin") {
+      const members = await orgMembers.listByOrg(db, req.params.id);
+      const activeAdmins = members.filter((m) => m.status === "active" && m.role === "admin");
+      if (activeAdmins.length <= 1)
+        return reply.code(400).send({ error: "l'organisation doit garder au moins un admin" });
+    }
+    await orgMembers.setRole(db, { orgId: req.params.id, userId: req.params.userId, role: parsed.data.role });
+    const u = await users.findById(db, req.params.userId);
+    await recordAudit(db, req, "org.member.role", {
+      userId: req.currentUser!.id,
+      actorEmail: req.currentUser!.email,
+      target: `${u?.email ?? req.params.userId}:${parsed.data.role}`,
+    });
+    return { ok: true };
+  };
+
   app.patch<{ Params: { id: string; userId: string } }>(
     "/api/orgs/:id/members/:userId",
     { preHandler: authenticate },
-    async (req, reply) => {
-      if (!(await admin(req.params.id, req.currentUser!.id)))
-        return reply.code(403).send({ error: "réservé à l'administrateur" });
-      const parsed = roleSchema.safeParse(req.body);
-      if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
-      const target = await orgMembers.findByOrgAndUser(db, req.params.id, req.params.userId);
-      if (!target) return reply.code(404).send({ error: "membre introuvable" });
-      // Garde-fou : l'org doit garder au moins un admin actif.
-      if (target.role === "admin" && parsed.data.role !== "admin") {
-        const members = await orgMembers.listByOrg(db, req.params.id);
-        const activeAdmins = members.filter((m) => m.status === "active" && m.role === "admin");
-        if (activeAdmins.length <= 1)
-          return reply.code(400).send({ error: "l'organisation doit garder au moins un admin" });
-      }
-      await orgMembers.setRole(db, { orgId: req.params.id, userId: req.params.userId, role: parsed.data.role });
-      const u = await users.findById(db, req.params.userId);
-      await recordAudit(db, req, "org.member.role", {
-        userId: req.currentUser!.id,
-        actorEmail: req.currentUser!.email,
-        target: `${u?.email ?? req.params.userId}:${parsed.data.role}`,
-      });
-      return { ok: true };
-    },
+    changerLeRole,
+  );
+  app.post<{ Params: { id: string; userId: string } }>(
+    "/api/orgs/:id/members/:userId/role",
+    { preHandler: authenticate },
+    changerLeRole,
   );
 }

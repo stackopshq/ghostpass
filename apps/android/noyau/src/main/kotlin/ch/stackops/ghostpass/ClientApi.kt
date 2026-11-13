@@ -787,9 +787,7 @@ class ClientApi(baseUrl: String) {
     /**
      * Accorde à un groupe une permission sur une collection : `read`, `write` ou `manage`.
      *
-     * C'est **la** route d'octroi que ce client peut atteindre. Celle qui change le rôle
-     * d'un membre est un `PATCH`, et `HttpURLConnection` refuse ce verbe — voir
-     * [Coffre.accorderSurUneCollection].
+     * Le rôle d'un membre se change à part, par [changerLeRole].
      */
     fun accorderAuGroupe(
         jeton: String,
@@ -821,14 +819,40 @@ class ClientApi(baseUrl: String) {
     /**
      * Fait tourner l'Org Key, et retire un membre dans le même mouvement.
      *
-     * `POST`, et c'est ce qui rend cette route atteignable là où le changement de rôle ne
-     * l'est pas : voir [Coffre.accorderSurUneCollection] pour le refus du `PATCH` par
-     * `HttpURLConnection`.
+     * `POST`, comme toutes les routes que ce client emprunte : `HttpURLConnection` refuse
+     * le verbe `PATCH` (voir [changerLeRole]).
      */
     fun faireTournerLaCle(jeton: String, org: String, corps: CorpsDeRotation) {
         requete(
             "POST", "/api/orgs/$org/rotate", jeton = jeton,
             corps = json.encodeToString(CorpsDeRotation.serializer(), corps),
+        )
+    }
+
+    /**
+     * Crée une organisation. `encryptedOrgKey` est l'Org Key que le créateur s'est scellée à
+     * lui-même. Même corps qu'iOS (`APIClient.createOrg`).
+     */
+    fun creerUneOrganisation(jeton: String, nom: String, cleScellee: String) {
+        requete(
+            "POST", "/api/orgs", jeton = jeton,
+            corps = json.encodeToString(
+                CHAMPS, mapOf("name" to nom, "encryptedOrgKey" to cleScellee),
+            ),
+        )
+    }
+
+    /**
+     * Change le rôle d'un membre, par `POST …/members/:userId/role`.
+     *
+     * Le pendant du `PATCH` d'iOS, que `HttpURLConnection` refuse. Le serveur porte les
+     * deux chemins sur le même traitement depuis le 2026-11-13 ; un serveur plus ancien
+     * répond 404, que [Coffre.changerLeRole] traduit.
+     */
+    fun changerLeRole(jeton: String, org: String, utilisateur: String, role: String) {
+        requete(
+            "POST", "/api/orgs/$org/members/$utilisateur/role", jeton = jeton,
+            corps = json.encodeToString(CHAMPS, mapOf("role" to role)),
         )
     }
 
