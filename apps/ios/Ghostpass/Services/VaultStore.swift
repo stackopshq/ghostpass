@@ -479,6 +479,7 @@ final class VaultStore: ObservableObject {
         guard let account else { return }
         if entries.isEmpty, let caches = VaultCache.load() {
             appliquer(Self.lecture(caches, account))
+            ajouterLesCoffresDEquipeEnCache(account)
             isOffline = true
         }
         guard let api, let token else { return }
@@ -546,9 +547,51 @@ final class VaultStore: ObservableObject {
     /// remise, une collection devenue inaccessible : on passe. Le coffre personnel reste
     /// affiché — mieux vaut une liste incomplète qu'un écran vide.
     ///
-    /// Ces éléments ne sont **pas** mis en cache : `VaultCache` ne conserve que le coffre
-    /// personnel. Hors ligne, ils disparaissent donc de la liste, et c'est honnête —
-    /// prétendre les avoir sans pouvoir les déchiffrer serait pire.
+    /// Ce qui est lu ici est aussi **déposé** : `VaultCache` ne garde que le coffre
+    /// personnel, et `TeamCache` garde les équipes, pour l'extension comme pour la liste
+    /// hors ligne. Voir `coffresDEquipeEnCache()`.
+    /// Les coffres d'équipe **depuis la copie locale**, sans réseau.
+    ///
+    /// Jusqu'au 2026-11-13, cette application ne montrait hors ligne que le coffre
+    /// personnel : la copie des équipes existait, mais seule l'extension la lisait. Pour qui
+    /// range ses mots de passe en organisation — c'est le cas de la première utilisatrice —
+    /// le remplissage aboutissait donc dans le métro pendant que l'application, elle,
+    /// paraissait vide. Les deux lisent maintenant le même dépôt.
+    ///
+    /// **Tout y est en lecture seule**, `peutEcrire` à `false` sans regarder le rôle : une
+    /// écriture doit vérifier auprès du serveur que l'Org Key n'a pas tourné, et une copie
+    /// ne sait pas le dire. Proposer « Modifier » sur une ligne qu'on ne pourra pas
+    /// enregistrer serait un cul-de-sac, et l'écraser avec une clé périmée la rendrait
+    /// illisible pour toute l'équipe.
+    ///
+    /// Une organisation dont la clé ne se rouvre plus est passée. Le coffre personnel reste
+    /// affiché : mieux vaut une liste incomplète qu'un écran vide.
+    private func ajouterLesCoffresDEquipeEnCache(_ account: Account) {
+        guard let coffres = TeamCache.load(), !coffres.isEmpty else { return }
+        var partages: [VaultEntry] = []
+        for coffre in coffres {
+            guard
+                let org = try? account.openOrg(
+                    adminPublicKey: coffre.adminPublicKey, sealed: coffre.encryptedOrgKey)
+            else { continue }
+            for collection in coffre.collections {
+                partages += Self.lectureDEquipe(collection.items, org).map { entree in
+                    var marquee = entree
+                    marquee.origine = .equipe(
+                        Appartenance(
+                            organisation: coffre.organisation, collection: collection.id,
+                            nomEquipe: coffre.nom, nomCollection: collection.nom,
+                            peutEcrire: false))
+                    return marquee
+                }
+            }
+        }
+        guard !partages.isEmpty else { return }
+        entries = (entries + partages).sorted {
+            $0.item.name.localizedCaseInsensitiveCompare($1.item.name) == .orderedAscending
+        }
+    }
+
     private func chargerLesCoffresDEquipe() async {
         // La sauvegarde englobe *aussi* la liste des organisations. Placée après, elle
         // laissait passer l'erreur de `organisations()` : une panne du listing des équipes
@@ -568,10 +611,11 @@ final class VaultStore: ObservableObject {
         var aDeposer: [CoffreDEquipeEnCache] = []
         for equipe in equipes where equipe.etat == .active {
             guard let ouvert = await ouvrirLOrganisation(equipe) else { continue }
-            var dtosDeLEquipe: [EncryptedItemDTO] = []
+            var collectionsDeLEquipe: [CollectionEnCache] = []
             for collection in ouvert.collections {
                 let dtos = await dtosPartages(ouvert, collection: collection.id)
-                dtosDeLEquipe += dtos
+                collectionsDeLEquipe.append(
+                    CollectionEnCache(id: collection.id, nom: collection.name, items: dtos))
                 let entrees = Self.lectureDEquipe(dtos, ouvert.org)
                 partages += entrees.map { entree in
                     var marquee = entree
@@ -588,7 +632,7 @@ final class VaultStore: ObservableObject {
                     organisation: equipe.id, nom: equipe.nom,
                     adminPublicKey: ouvert.adminPublicKey,
                     encryptedOrgKey: ouvert.encryptedOrgKey,
-                    items: dtosDeLEquipe))
+                    collections: collectionsDeLEquipe))
         }
 
         // Déposé **avant** le garde sur `partages` : une organisation active dont toutes

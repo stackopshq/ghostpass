@@ -35,6 +35,71 @@ struct CoffreDEquipeEnCache: Codable {
     let adminPublicKey: String
     /// L'Org Key, scellée pour ce compte.
     let encryptedOrgKey: String
+    /// Les collections, **avec leur nom**.
+    ///
+    /// Le dépôt ne gardait qu'une liste d'éléments à plat : assez pour l'extension, qui ne
+    /// cherche qu'un identifiant à remplir, et pas assez pour l'application, dont chaque
+    /// ligne annonce « équipe · collection ». Hors ligne, les mêmes éléments s'affichaient
+    /// donc sans dire d'où ils venaient — ou, avant le 2026-11-13, ne s'affichaient pas.
+    let collections: [CollectionEnCache]
+
+    /// Tous les éléments de l'équipe, à plat — ce que lit l'extension, qui n'a que faire
+    /// des collections. Calculé, donc jamais écrit deux fois dans le fichier.
+    var items: [EncryptedItemDTO] { collections.flatMap(\.items) }
+
+    init(
+        organisation: String, nom: String, adminPublicKey: String, encryptedOrgKey: String,
+        collections: [CollectionEnCache],
+    ) {
+        self.organisation = organisation
+        self.nom = nom
+        self.adminPublicKey = adminPublicKey
+        self.encryptedOrgKey = encryptedOrgKey
+        self.collections = collections
+    }
+
+    /// Relit aussi un dépôt écrit **avant** les collections : ses éléments à plat
+    /// deviennent une collection sans nom. Sans ce repli, le fichier d'hier ne se décoderait
+    /// pas du tout, et le remplissage annoncerait « Aucun identifiant » jusqu'au prochain
+    /// passage en ligne — une panne que personne ne relierait à une mise à jour.
+    init(from decodeur: Decoder) throws {
+        let conteneur = try decodeur.container(keyedBy: CodingKeys.self)
+        organisation = try conteneur.decode(String.self, forKey: .organisation)
+        nom = try conteneur.decode(String.self, forKey: .nom)
+        adminPublicKey = try conteneur.decode(String.self, forKey: .adminPublicKey)
+        encryptedOrgKey = try conteneur.decode(String.self, forKey: .encryptedOrgKey)
+        if let collections = try conteneur.decodeIfPresent(
+            [CollectionEnCache].self, forKey: .collections)
+        {
+            self.collections = collections
+        } else {
+            let plats = try conteneur.decodeIfPresent(
+                [EncryptedItemDTO].self, forKey: .items) ?? []
+            collections = [CollectionEnCache(id: "", nom: "", items: plats)]
+        }
+    }
+
+    /// Écrit sans `items` : le champ n'existe plus que pour relire un dépôt d'hier.
+    func encode(to encodeur: Encoder) throws {
+        var conteneur = encodeur.container(keyedBy: CodingKeys.self)
+        try conteneur.encode(organisation, forKey: .organisation)
+        try conteneur.encode(nom, forKey: .nom)
+        try conteneur.encode(adminPublicKey, forKey: .adminPublicKey)
+        try conteneur.encode(encryptedOrgKey, forKey: .encryptedOrgKey)
+        try conteneur.encode(collections, forKey: .collections)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case organisation, nom, adminPublicKey, encryptedOrgKey, collections
+        /// L'ancien champ, lu et jamais réécrit.
+        case items
+    }
+}
+
+/// Une collection d'équipe telle que la copie locale la garde.
+struct CollectionEnCache: Codable {
+    let id: String
+    let nom: String
     let items: [EncryptedItemDTO]
 }
 

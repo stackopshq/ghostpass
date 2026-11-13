@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Le coffre d'une équipe : ses collections, et leurs identifiants.
 ///
-/// Rien n'est mis en cache, contrairement au coffre personnel qui s'ouvre hors ligne. Un
-/// accès partagé se révoque, et la révocation passe par une rotation d'Org Key : garder une
-/// copie locale déchiffrable après un départ viderait cette rotation de son sens.
+/// Cet écran-ci demande le serveur : il écrit, et une écriture doit vérifier que l'Org Key
+/// n'a pas tourné. La liste principale, elle, montre les mêmes éléments hors ligne depuis
+/// `TeamCache`, en lecture seule — voir `VaultStore.ajouterLesCoffresDEquipeEnCache`.
 struct OrgVaultView: View {
     @EnvironmentObject private var store: VaultStore
     @Environment(\.dismiss) private var dismiss
