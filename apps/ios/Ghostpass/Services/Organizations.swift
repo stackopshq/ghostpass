@@ -59,9 +59,13 @@ struct Organisation: Identifiable {
 
 /// Un coffre partagé ouvert : ses collections, et l'`Org` du cœur Rust qui détient l'Org Key.
 ///
-/// Rien n'est mis en cache hors ligne, contrairement au coffre personnel. Un coffre partagé
-/// se révoque — garder une copie locale déchiffrable après un départ irait contre la
-/// rotation d'Org Key, qui est justement la façon de reprendre ses clés à quelqu'un.
+/// Ce que la copie locale garde, et la limite qu'elle porte : `TeamCache` dépose les
+/// éléments de l'équipe tels que le serveur les détient, plus l'Org Key scellée pour ce
+/// compte. Une révocation fait tourner l'Org Key côté serveur, mais ne va pas effacer ce
+/// qui est déjà sur l'appareil : un membre retiré garde, hors ligne, ce qu'il avait déjà
+/// pu lire — ce que la confirmation de révocation dit déjà en toutes lettres. Le premier
+/// passage en ligne réécrit le dépôt avec ce que le serveur rend, c'est-à-dire plus rien
+/// pour lui.
 struct CoffrePartageOuvert {
     let organisation: Organisation
     let collections: [OrgCollectionDTO]
