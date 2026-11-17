@@ -194,9 +194,9 @@ test("effacer : l'adresse recopiée est exigée, puis le compte disparaît", asy
       .select(["action", "actor_email", "target"])
       .where("action", "=", "admin.user.delete")
       .execute();
-    assert.equal(lignes.length, 1);
-    assert.equal(lignes[0].actor_email, ADMIN);
-    assert.equal(lignes[0].target, "(compte supprimé)");
+    assert.deepEqual(lignes, [
+      { action: "admin.user.delete", actor_email: ADMIN, target: "(compte supprimé)" },
+    ]);
     const restes = await db
       .selectFrom("audit_log")
       .selectAll()
