@@ -36,6 +36,13 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
 
+# En cas d'échec, un job `diagnostic` (stage .post, sans runner, sans variable
+# transmise) déclenche l'analyse des jobs en échec par pipeline-doctor.
+include:
+  - project: stackopsplatform/ci-components
+    ref: v1.2.0
+    file: diagnostic/pipeline-doctor.yml
+
 stages:
   - verifier
   - securite
