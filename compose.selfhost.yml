@@ -52,6 +52,8 @@ services:
       MFA_SECRET_KEY: ${MFA_SECRET_KEY:-}
       # `closed` ferme l'inscription : seuls les comptes déjà créés se connectent.
       GHOSTPASS_REGISTRATION: ${GHOSTPASS_REGISTRATION:-open}
+      # Adresses des administrateurs de l'instance (vue « Administration »).
+      GHOSTPASS_ADMIN_EMAILS: ${GHOSTPASS_ADMIN_EMAILS:-}
     depends_on:
       postgres:
         condition: service_healthy

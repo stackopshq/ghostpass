@@ -23,6 +23,7 @@ import {
   takeState,
   verifyIdToken,
 } from "../services/oidc.js";
+import { COMPTE_SUSPENDU } from "../services/administration.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
 const callbackSchema = z.object({ code: z.string().min(1), state: z.string().min(1) });
@@ -107,6 +108,7 @@ export function registerSsoRoutes(app: FastifyInstance, db: DB): void {
       const user = await users.findByEmail(db, normalizeEmail(email));
       // Pas de provisioning JIT : le coffre est chiffré sous le mot de passe maître de l'utilisateur.
       if (!user) return reply.code(403).send({ error: "SSO: compte non provisionné" });
+      if (user.suspended_at) return reply.code(403).send(COMPTE_SUSPENDU);
 
       const ua = String(req.headers["user-agent"] ?? "inconnu").slice(0, 300);
       await loginEvents.record(db, { id: newId(), userId: user.id, ip: req.ip, userAgent: ua });
@@ -257,6 +259,7 @@ export function registerSsoRoutes(app: FastifyInstance, db: DB): void {
 
       const user = await users.findById(db, rec.userId);
       if (!user) return reply.code(403).send({ error: "SSO: compte non provisionné" });
+      if (user.suspended_at) return reply.code(403).send(COMPTE_SUSPENDU);
 
       const ua = String(req.headers["user-agent"] ?? "inconnu").slice(0, 300);
       await loginEvents.record(db, { id: newId(), userId: user.id, ip: req.ip, userAgent: ua });

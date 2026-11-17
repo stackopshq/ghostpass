@@ -4,6 +4,7 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import type { DB } from "./db/database.js";
 import { registerAccountRoutes } from "./routes/account.js";
+import { registerAdminRoutes } from "./routes/admin.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerEmergencyRoutes } from "./routes/emergency.js";
@@ -155,6 +156,7 @@ function registerAllRoutes(app: FastifyInstance, db: DB): void {
   registerOrgRoutes(app, db);
   registerOrgVaultRoutes(app, db);
   registerOrgAdminRoutes(app, db);
+  registerAdminRoutes(app, db);
   registerIconRoutes(app, db);
   registerSendRoutes(app, db);
   registerWebAuthnRoutes(app, db);

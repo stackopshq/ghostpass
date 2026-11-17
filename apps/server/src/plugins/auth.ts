@@ -3,6 +3,7 @@ import type { DB } from "../db/database.js";
 import type { UserRow } from "../types.js";
 import { sessions } from "../db/repositories.js";
 import { hashSessionToken } from "../services/security.js";
+import { COMPTE_SUSPENDU } from "../services/administration.js";
 
 // L'utilisateur authentifié est attaché à la requête.
 declare module "fastify" {
@@ -27,6 +28,12 @@ export function makeAuthenticate(db: DB): preHandlerHookHandler {
     const user = await sessions.findValidUser(db, hashSessionToken(token));
     if (!user) {
       return reply.code(401).send({ error: "session invalide ou expirée" });
+    }
+    // Suspendu par un administrateur de l'instance. Les sessions sont révoquées au moment
+    // de la suspension ; ce contrôle couvre celles qui s'ouvriraient malgré tout, par un
+    // chemin de connexion qui l'aurait oublié.
+    if (user.suspended_at) {
+      return reply.code(403).send(COMPTE_SUSPENDU);
     }
     req.currentUser = user;
   };

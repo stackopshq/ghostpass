@@ -36,9 +36,10 @@ import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Organisation, Partage, Plus } from "@/components/Icones";
+import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Organisation, Partage, Plus, Reglages as IconeReglages } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
 import { Securite } from "@/components/Securite";
+import { Administration } from "@/components/Administration";
 import { Partages } from "@/components/Partages";
 import { ImportExport } from "@/components/ImportExport";
 import { ListeOrgs } from "@/components/orgs/ListeOrgs";
@@ -106,7 +107,25 @@ export function VaultScreen() {
   // Les sections portées à ce jour. Les organisations et la sécurité
   // arrivent ensuite : tant qu'elles ne sont pas là, elles ne figurent pas
   // dans le rail — un onglet qui mène à « bientôt » est pire que son absence.
-  const [section, setSection] = useState<"coffre" | "orgs" | "partages" | "securite" | "corbeille">("coffre");
+  const [section, setSection] = useState<
+    "coffre" | "orgs" | "partages" | "securite" | "corbeille" | "admin"
+  >("coffre");
+  // L'entrée « Administration » n'existe que pour les adresses de `GHOSTPASS_ADMIN_EMAILS`.
+  // Indicatif : les routes `/api/admin/*` vérifient le rôle elles-mêmes.
+  const [adminDeLInstance, setAdminDeLInstance] = useState(false);
+  useEffect(() => {
+    if (!token) return;
+    let vivant = true;
+    api
+      .accountInfo(token)
+      .then((c) => vivant && setAdminDeLInstance(c.isInstanceAdmin === true))
+      .catch(() => {
+        /* Sans l'information, l'entrée reste absente : rien n'est perdu. */
+      });
+    return () => {
+      vivant = false;
+    };
+  }, [token]);
   // L'organisation ouverte. Nulle = la liste. La clé d'org vit dans le
   // composant de détail, pas ici : quitter l'écran doit la laisser partir.
   const [orgOuverte, setOrgOuverte] = useState<OrgSummary | null>(null);
@@ -747,6 +766,7 @@ export function VaultScreen() {
               ["partages", "app.shares", Partage],
               ["securite", "app.security", Bouclier],
               ["corbeille", "app.trash", IconeCorbeille],
+              ...(adminDeLInstance ? ([["admin", "app.admin", IconeReglages]] as const) : []),
             ] as const).map(([cle, libelle, Icone]) => (
               <button
                 key={cle}
@@ -837,6 +857,8 @@ export function VaultScreen() {
                 onCouleur={changerCouleurOrg}
               />
             )
+          ) : section === "admin" ? (
+            <Administration />
           ) : section === "corbeille" ? (
             <Corbeille onRestaure={() => void charger().then(() => setChoisi(null))} />
           ) : chargement ? (

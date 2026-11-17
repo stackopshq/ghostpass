@@ -145,6 +145,18 @@ async function http<T>(
   return JSON.parse(await lireCorpsBorne(res, () => controle.abort())) as T;
 }
 
+/// Un compte, tel que la vue d'administration de l'instance le voit.
+export interface CompteDeLInstance {
+  id: string;
+  email: string;
+  createdAt: number;
+  /// Null si aucune connexion n'est connue : la rétention purge l'historique.
+  lastLoginAt: number | null;
+  mfaEnabled: boolean;
+  suspendedAt: number | null;
+  isAdmin: boolean;
+}
+
 export const api = {
   /// Le jeton que les balises `<img>` accrochent à l'URL du proxy de favicons.
   /// Une image ne porte pas d'en-tête d'autorisation, et la route ne peut plus
@@ -156,10 +168,34 @@ export const api = {
   /// Ce que le client doit savoir du compte ouvert : l'adresse et les
   /// paramètres KDF lui servent à recalculer la preuve d'authentification.
   accountInfo(token: string) {
-    return http<{ email: string; kdfParams: string; mfaEnabled: boolean; createdAt: number }>(
-      "/api/account",
+    return http<{
+      email: string;
+      kdfParams: string;
+      mfaEnabled: boolean;
+      createdAt: number;
+      // Absent d'un serveur antérieur à l'administration de l'instance.
+      isInstanceAdmin?: boolean;
+    }>("/api/account", { token });
+  },
+  /// Administration de l'instance (`GHOSTPASS_ADMIN_EMAILS`). Des métadonnées seulement :
+  /// le serveur ne peut pas lire un coffre, l'administrateur pas davantage.
+  adminUsers(token: string) {
+    return http<{ registration: "open" | "closed"; users: CompteDeLInstance[] }>(
+      "/api/admin/users",
       { token },
     );
+  },
+  adminSuspend(token: string, id: string) {
+    return http<{ ok: boolean }>(`/api/admin/users/${encodeURIComponent(id)}/suspend`, {
+      method: "POST",
+      token,
+    });
+  },
+  adminReactivate(token: string, id: string) {
+    return http<{ ok: boolean }>(`/api/admin/users/${encodeURIComponent(id)}/reactivate`, {
+      method: "POST",
+      token,
+    });
   },
   /// Tout ce que le serveur détient sur vous, chiffré tel qu'il le détient.
   /// Nous ne pouvons pas déchiffrer, donc nous n'exportons pas en clair : c'est

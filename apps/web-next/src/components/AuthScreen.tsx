@@ -127,6 +127,8 @@ export function AuthScreen() {
         setInscriptionFermee(true);
         setMode("login");
         setErreur(t("auth.registrationClosed"));
+      } else if (err instanceof Error && err.message === "compte suspendu") {
+        setErreur(t("auth.accountSuspended"));
       } else {
         setErreur(msg(err));
       }

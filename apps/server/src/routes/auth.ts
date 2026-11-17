@@ -20,6 +20,7 @@ import {
   verifyServerSecret,
 } from "../services/security.js";
 import { verifierLeSecondFacteur } from "../services/mfa.js";
+import { COMPTE_SUSPENDU } from "../services/administration.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
 const DEFAULT_KDF_PARAMS = JSON.stringify({
@@ -206,6 +207,9 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
       }
     }
 
+    // Après la preuve du mot de passe et du second facteur, jamais avant : répondre
+    // « suspendu » à qui ne connaît que l'adresse lui dirait que le compte existe.
+    if (user.suspended_at) return reply.code(403).send(COMPTE_SUSPENDU);
     await recordLogin(req, user.id);
     const { token, tokenHash } = createSessionToken();
     await sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });

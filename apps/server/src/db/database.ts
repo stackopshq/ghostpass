@@ -77,6 +77,9 @@ CREATE TABLE IF NOT EXISTS users (
   encrypted_user_key_recovery TEXT,
   recovery_auth_hash     TEXT,
   recovery_salt          TEXT,
+  -- Suspendu par un administrateur de l'instance (epoch-ms), ou NULL. Un compte suspendu
+  -- garde ses données mais n'ouvre plus de session, et celles qu'il avait sont révoquées.
+  suspended_at           INTEGER,
   created_at             INTEGER NOT NULL
 );
 
@@ -331,6 +334,7 @@ async function migratePostgres(db: DB): Promise<void> {
     .raw("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_failed_attempts BIGINT NOT NULL DEFAULT 0")
     .execute(db);
   await sql.raw("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_locked_until BIGINT").execute(db);
+  await sql.raw("ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at BIGINT").execute(db);
 }
 
 /// Migrations idempotentes SQLite (bases créées avant l'ajout d'une colonne).
@@ -339,6 +343,7 @@ function migrateSqlite(handle: BetterSqlite3.Database): void {
   ensureColumn(handle, "collections", "is_default", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(handle, "users", "mfa_failed_attempts", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(handle, "users", "mfa_locked_until", "INTEGER");
+  ensureColumn(handle, "users", "suspended_at", "INTEGER");
 }
 
 function ensureColumn(

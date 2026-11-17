@@ -31,6 +31,7 @@ import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
 import { verifierLeSecondFacteur } from "../services/mfa.js";
 import { verifyServerSecret } from "../services/security.js";
+import { estAdminDeLInstance } from "../services/administration.js";
 
 const suppressionSchema = z.object({
   /// Le même secret dérivé que celui de la connexion : la preuve que la
@@ -65,6 +66,9 @@ export function registerAccountRoutes(app: FastifyInstance, db: DB): void {
       kdfParams: u.kdf_params,
       mfaEnabled: u.mfa_enabled === 1,
       createdAt: u.created_at,
+      // Pour que le client propose la vue d'administration de l'instance. Indicatif : les
+      // routes `/api/admin/*` vérifient le rôle elles-mêmes.
+      isInstanceAdmin: estAdminDeLInstance(u.email),
     };
   });
 
