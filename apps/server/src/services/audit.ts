@@ -36,7 +36,8 @@ export type AuditAction =
   | "account.export"
   | "account.delete"
   | "admin.user.suspend"
-  | "admin.user.reactivate";
+  | "admin.user.reactivate"
+  | "admin.user.delete";
 
 /// Enregistre un événement d'audit. Best-effort : une erreur d'audit ne casse jamais l'action métier.
 export async function recordAudit(

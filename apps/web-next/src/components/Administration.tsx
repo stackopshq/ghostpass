@@ -4,7 +4,7 @@
 //
 // N'apparaît que pour les adresses listées dans `GHOSTPASS_ADMIN_EMAILS`, posé au lancement
 // du serveur. Elle ne montre que des métadonnées : le serveur ne peut pas lire un coffre, et
-// cette vue n'y change rien.
+// cette vue n'y change rien. Elle peut suspendre un compte, ou l'effacer avec son coffre.
 
 import { useCallback, useEffect, useState } from "react";
 import { api, type CompteDeLInstance } from "@/lib/api";
@@ -127,6 +127,26 @@ export function Administration() {
                   {t("admin.suspend")}
                 </Bouton>
               ))}
+            {!c.isAdmin && (
+              <Bouton
+                variante="danger"
+                disabled={occupe}
+                aria-label={`${t("admin.delete")} — ${c.email}`}
+                onClick={() => {
+                  // L'adresse retapée, et non un simple « OK » : c'est le seul geste de cette
+                  // vue qui ne se rattrape pas. Le serveur refait la comparaison.
+                  const saisie = prompt(t("admin.confirmDelete", { email: c.email }));
+                  if (saisie === null) return;
+                  if (saisie.trim().toLowerCase() !== c.email) {
+                    setErreur(t("admin.deleteMismatch"));
+                    return;
+                  }
+                  void agir(() => api.adminDelete(token!, c.id, saisie));
+                }}
+              >
+                {t("admin.delete")}
+              </Bouton>
+            )}
           </div>
         ))}
       </div>

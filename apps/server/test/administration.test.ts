@@ -33,7 +33,8 @@ async function avecAdmins<T>(valeur: string | undefined, f: () => Promise<T>): P
 }
 
 async function instance() {
-  const app = buildApp(openDatabase(":memory:"));
+  const db = openDatabase(":memory:");
+  const app = buildApp(db);
   const inscrire = async (email: string) => {
     const res = await app.inject({ method: "POST", url: "/api/auth/register", payload: reg(email) });
     assert.equal(res.statusCode, 201);
@@ -47,7 +48,14 @@ async function instance() {
     });
   const appeler = (method: "GET" | "POST", url: string, token: string) =>
     app.inject({ method, url, headers: { authorization: `Bearer ${token}` } });
-  return { app, inscrire, connecter, appeler };
+  const effacer = (id: string, token: string, confirmEmail?: string) =>
+    app.inject({
+      method: "DELETE",
+      url: `/api/admin/users/${id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: confirmEmail === undefined ? {} : { confirmEmail },
+    });
+  return { app, db, inscrire, connecter, appeler, effacer };
 }
 
 test("la liste des administrateurs : virgules ou espaces, casse et blancs ignorés", () => {
@@ -159,6 +167,74 @@ test("un compte ordinaire ne peut pas suspendre", async () => {
     const { token } = await inscrire("membre@example.com");
     const { userId: cible } = await inscrire("cible@example.com");
     assert.equal((await appeler("POST", `/api/admin/users/${cible}/suspend`, token)).statusCode, 404);
+    await app.close();
+  });
+});
+
+test("effacer : l'adresse recopiée est exigée, puis le compte disparaît", async () => {
+  await avecAdmins(ADMIN, async () => {
+    const { app, db, inscrire, connecter, appeler, effacer } = await instance();
+    const { token: admin } = await inscrire(ADMIN);
+    const { userId } = await inscrire("membre@example.com");
+
+    assert.equal((await effacer(userId, admin)).statusCode, 400);
+    assert.equal((await effacer(userId, admin, "autre@example.com")).statusCode, 400);
+    assert.equal((await effacer(userId, admin, " Membre@Example.com ")).statusCode, 204);
+
+    assert.equal((await connecter("membre@example.com")).statusCode, 401);
+    const liste = (await appeler("GET", "/api/admin/users", admin)).json();
+    assert.deepEqual(
+      liste.users.map((u: { email: string }) => u.email),
+      [ADMIN],
+    );
+
+    // Le journal garde que l'administrateur a effacé UN compte, sans dire lequel.
+    const lignes = await db
+      .selectFrom("audit_log")
+      .select(["action", "actor_email", "target"])
+      .where("action", "=", "admin.user.delete")
+      .execute();
+    assert.equal(lignes.length, 1);
+    assert.equal(lignes[0].actor_email, ADMIN);
+    assert.equal(lignes[0].target, "(compte supprimé)");
+    const restes = await db
+      .selectFrom("audit_log")
+      .selectAll()
+      .execute();
+    assert.ok(!JSON.stringify(restes).includes("membre@example.com"));
+    await app.close();
+  });
+});
+
+test("effacer : ni un administrateur, ni par un compte ordinaire", async () => {
+  await avecAdmins(`${ADMIN} second@example.com`, async () => {
+    const { app, inscrire, effacer } = await instance();
+    const { token: admin } = await inscrire(ADMIN);
+    const { userId: second } = await inscrire("second@example.com");
+    const { userId: membre, token: tokenMembre } = await inscrire("membre@example.com");
+    const { userId: cible } = await inscrire("cible@example.com");
+    assert.equal((await effacer(second, admin, "second@example.com")).statusCode, 409);
+    assert.equal((await effacer(cible, tokenMembre, "cible@example.com")).statusCode, 404);
+    assert.equal((await effacer(membre, admin, "membre@example.com")).statusCode, 204);
+    await app.close();
+  });
+});
+
+test("effacer : refusé pour le dernier administrateur d'une organisation", async () => {
+  await avecAdmins(ADMIN, async () => {
+    const { app, inscrire, effacer } = await instance();
+    const { token: admin } = await inscrire(ADMIN);
+    const { userId, token } = await inscrire("fondatrice@example.com");
+    const org = await app.inject({
+      method: "POST",
+      url: "/api/orgs",
+      headers: { authorization: `Bearer ${token}` },
+      payload: { name: "Équipe", encryptedOrgKey: "2.c2VsZg.c2VsZmN0" },
+    });
+    assert.equal(org.statusCode, 201);
+    const res = await effacer(userId, admin, "fondatrice@example.com");
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.json().organizationId, org.json().orgId);
     await app.close();
   });
 });

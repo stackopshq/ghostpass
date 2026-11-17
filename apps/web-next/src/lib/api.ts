@@ -191,6 +191,15 @@ export const api = {
       token,
     });
   },
+  /// Effacement définitif. `confirmEmail` est l'adresse du compte, retapée : le serveur la
+  /// compare et refuse sans elle.
+  adminDelete(token: string, id: string, confirmEmail: string) {
+    return http<void>(`/api/admin/users/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      body: { confirmEmail },
+      token,
+    });
+  },
   adminReactivate(token: string, id: string) {
     return http<{ ok: boolean }>(`/api/admin/users/${encodeURIComponent(id)}/reactivate`, {
       method: "POST",

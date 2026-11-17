@@ -4,7 +4,7 @@
 // vient de `GHOSTPASS_ADMIN_EMAILS`, posé au lancement (voir services/administration.ts).
 //
 // Ce que cette vue ne peut pas faire, par construction : lire un coffre. Elle ne manipule que
-// des métadonnées — adresse, dates, second facteur, suspension.
+// des métadonnées — adresse, dates, second facteur, suspension — et peut effacer un compte.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { DB } from "../db/database.js";
 import { sessions, users } from "../db/repositories.js";
@@ -12,6 +12,9 @@ import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
 import { adminsDeLInstance, estAdminDeLInstance } from "../services/administration.js";
 import { inscriptionOuverte } from "../services/inscription.js";
+import { dernierAdminDUneOrg, effacerLeCompte } from "../services/effacement.js";
+import { normalizeEmail } from "../services/security.js";
+import { z } from "zod";
 
 export function registerAdminRoutes(app: FastifyInstance, db: DB): void {
   const authenticate = makeAuthenticate(db);
@@ -83,4 +86,45 @@ export function registerAdminRoutes(app: FastifyInstance, db: DB): void {
       return reply.send({ ok: true });
     },
   );
+
+  // Effacer un compte : son coffre part avec lui, sans retour possible. Personne ne peut le
+  // restaurer, pas même l'hébergeur — le coffre n'était lisible que par son titulaire.
+  //
+  // L'adresse du compte doit être recopiée dans la requête. Ce n'est pas une politesse
+  // d'interface : un identifiant opaque se colle par erreur d'une ligne à l'autre, une
+  // adresse retapée dit qu'on a lu laquelle on efface.
+  const confirmationSchema = z.object({ confirmEmail: z.string().min(1) });
+
+  app.delete<{ Params: { id: string } }>("/api/admin/users/:id", garde, async (req, reply) => {
+    const cible = await users.findById(db, req.params.id);
+    if (!cible) return reply.code(404).send({ error: "compte introuvable" });
+    const parsed = confirmationSchema.safeParse(req.body);
+    if (!parsed.success || normalizeEmail(parsed.data.confirmEmail) !== cible.email) {
+      return reply.code(400).send({ error: "confirmation : recopier l'adresse du compte à effacer" });
+    }
+    // Même règle que pour la suspension : le rôle se retire dans l'environnement.
+    if (estAdminDeLInstance(cible.email)) {
+      return reply.code(409).send({
+        error: "compte administrateur : le retirer de GHOSTPASS_ADMIN_EMAILS avant de l'effacer",
+      });
+    }
+    // Même garde que l'effacement par la personne : une organisation sans administrateur ne
+    // peut plus être gérée par personne.
+    const org = await dernierAdminDUneOrg(db, cible.id);
+    if (org) {
+      return reply.code(409).send({
+        error:
+          "dernier administrateur d'au moins une organisation : nommer un autre " +
+          "administrateur, ou supprimer l'organisation, avant d'effacer ce compte",
+        organizationId: org,
+      });
+    }
+    await effacerLeCompte(db, req, cible, {
+      action: "admin.user.delete",
+      userId: req.currentUser!.id,
+      actorEmail: req.currentUser!.email,
+      target: cible.email,
+    });
+    return reply.code(204).send();
+  });
 }

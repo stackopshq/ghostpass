@@ -231,6 +231,10 @@ const en: Dict = {
   "admin.suspendedBadge": "suspended",
   "admin.suspend": "Suspend",
   "admin.reactivate": "Reactivate",
+  "admin.delete": "Delete",
+  "admin.confirmDelete":
+    "Delete {email} for good? The vault goes with it: nobody can restore it, not even you. Type the address to confirm.",
+  "admin.deleteMismatch": "The address typed does not match. Nothing was deleted.",
   "admin.confirmSuspend":
     "Suspend {email}? Open sessions end now and the account can no longer sign in. Its data is kept.",
   "app.allItems": "All items",
@@ -746,6 +750,10 @@ const fr: Dict = {
   "admin.suspendedBadge": "suspendu",
   "admin.suspend": "Suspendre",
   "admin.reactivate": "Réactiver",
+  "admin.delete": "Effacer",
+  "admin.confirmDelete":
+    "Effacer {email} définitivement ? Le coffre part avec le compte : personne ne pourra le restaurer, pas même vous. Recopiez l'adresse pour confirmer.",
+  "admin.deleteMismatch": "L'adresse saisie ne correspond pas. Rien n'a été effacé.",
   "admin.confirmSuspend":
     "Suspendre {email} ? Les sessions ouvertes se ferment tout de suite et le compte ne peut plus se connecter. Les données sont conservées.",
   "app.allItems": "Tous les éléments",
