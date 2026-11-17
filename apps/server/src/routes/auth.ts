@@ -6,6 +6,7 @@ import {
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
 import { loginEvents, sessions, users, webauthnCredentials } from "../db/repositories.js";
+import { inscriptionOuverte } from "../services/inscription.js";
 import { RP_ID, getAllowedOrigins, putChallenge, takeChallenge } from "../services/webauthn.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
@@ -58,6 +59,11 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     "/api/auth/register",
     { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
     async (req, reply) => {
+    // Fermée par l'hébergeur (`GHOSTPASS_REGISTRATION=closed`). Refusé ici même si le
+    // client masque déjà le bouton : un client n'est pas une frontière.
+    if (!inscriptionOuverte()) {
+      return reply.code(403).send({ error: "inscription fermée", code: "registration_closed" });
+    }
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: "requête invalide" });

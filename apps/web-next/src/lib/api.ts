@@ -243,7 +243,8 @@ export const api = {
   },
   /** Les faits propres au déploiement. Voir `routes/config.ts` côté serveur. */
   config() {
-    return http<{ privacyUrl: string }>("/api/config");
+    // `registration` manque sur un serveur antérieur au réglage : il était alors ouvert.
+    return http<{ privacyUrl: string; registration?: "open" | "closed" }>("/api/config");
   },
   ssoLogin() {
     return http<{ url: string }>("/api/auth/sso/login");

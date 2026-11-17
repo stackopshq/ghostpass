@@ -85,6 +85,8 @@ const en: Dict = {
   "auth.backToSignIn": "Back to sign in",
   "auth.haveAccount": "Already have an account?",
   "auth.haveAccountAction": "Sign in",
+  "auth.registrationClosed":
+    "This instance does not accept new accounts. Ask whoever hosts it to create yours.",
   "auth.privacy": "Privacy policy",
   "auth.privacyNotice":
     "By creating an account you accept our handling of your data — what we hold, and what we cannot read:",
@@ -579,6 +581,8 @@ const fr: Dict = {
   "auth.backToSignIn": "Revenir à la connexion",
   "auth.haveAccount": "Déjà un compte ?",
   "auth.haveAccountAction": "Se connecter",
+  "auth.registrationClosed":
+    "Cette instance n'accepte pas de nouveaux comptes. Demandez à qui l'héberge de créer le vôtre.",
   "auth.privacy": "Politique de confidentialité",
   "auth.privacyNotice":
     "En créant un compte, vous acceptez le traitement de vos données — ce que nous détenons, et ce que nous ne pouvons pas lire :",
