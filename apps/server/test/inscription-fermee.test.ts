@@ -76,8 +76,8 @@ test("fermée, la connexion des comptes existants fonctionne toujours", async ()
 test("la casse et les blancs ne changent rien ; vide vaut « non réglé »", () => {
   assert.equal(lireLInscription(" Closed "), "closed");
   assert.equal(lireLInscription("OPEN"), "open");
-  assert.equal(lireLInscription(""), "open");
-  assert.equal(lireLInscription("   "), "open");
+  assert.equal(lireLInscription(""), null);
+  assert.equal(lireLInscription("   "), null);
 });
 
 // Un `false` ou un `close` tapé de bonne foi ne doit pas retomber sur « ouverte » : l'hébergeur

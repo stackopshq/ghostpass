@@ -180,10 +180,19 @@ export const api = {
   /// Administration de l'instance (`GHOSTPASS_ADMIN_EMAILS`). Des métadonnées seulement :
   /// le serveur ne peut pas lire un coffre, l'administrateur pas davantage.
   adminUsers(token: string) {
-    return http<{ registration: "open" | "closed"; users: CompteDeLInstance[] }>(
-      "/api/admin/users",
-      { token },
-    );
+    return http<{
+      registration: "open" | "closed";
+      /// `environment` : fixée par GHOSTPASS_REGISTRATION, la vue ne peut pas la changer.
+      registrationSource: "environment" | "admin" | "default";
+      users: CompteDeLInstance[];
+    }>("/api/admin/users", { token });
+  },
+  adminSetRegistration(token: string, registration: "open" | "closed") {
+    return http<{ registration: "open" | "closed" }>("/api/admin/registration", {
+      method: "PUT",
+      token,
+      body: { registration },
+    });
   },
   adminSuspend(token: string, id: string) {
     return http<{ ok: boolean }>(`/api/admin/users/${encodeURIComponent(id)}/suspend`, {

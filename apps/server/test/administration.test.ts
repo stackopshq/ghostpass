@@ -238,3 +238,100 @@ test("effacer : refusé pour le dernier administrateur d'une organisation", asyn
     await app.close();
   });
 });
+
+async function avecInscription<T>(valeur: string | undefined, f: () => Promise<T>): Promise<T> {
+  const avant = process.env.GHOSTPASS_REGISTRATION;
+  if (valeur === undefined) delete process.env.GHOSTPASS_REGISTRATION;
+  else process.env.GHOSTPASS_REGISTRATION = valeur;
+  try {
+    return await f();
+  } finally {
+    if (avant === undefined) delete process.env.GHOSTPASS_REGISTRATION;
+    else process.env.GHOSTPASS_REGISTRATION = avant;
+  }
+}
+
+test("le bouton ferme puis rouvre l'inscription, et le choix reste en base", async () => {
+  await avecAdmins(ADMIN, () =>
+    avecInscription(undefined, async () => {
+      const { app, db, inscrire, appeler } = await instance();
+      const { token: admin } = await inscrire(ADMIN);
+      const { token: membre } = await inscrire("membre@example.com");
+      const regler = (token: string, registration: string) =>
+        app.inject({
+          method: "PUT",
+          url: "/api/admin/registration",
+          headers: { authorization: `Bearer ${token}` },
+          payload: { registration },
+        });
+
+      const avant = (await appeler("GET", "/api/admin/users", admin)).json();
+      assert.deepEqual([avant.registration, avant.registrationSource], ["open", "default"]);
+
+      // Un compte ordinaire ne voit pas la route ; une valeur inconnue est refusée.
+      assert.equal((await regler(membre, "closed")).statusCode, 404);
+      assert.equal((await regler(admin, "false")).statusCode, 400);
+
+      assert.equal((await regler(admin, "closed")).statusCode, 200);
+      const refus = await app.inject({
+        method: "POST",
+        url: "/api/auth/register",
+        payload: reg("nouveau@example.com"),
+      });
+      assert.equal(refus.statusCode, 403);
+      assert.equal((await app.inject({ method: "GET", url: "/api/config" })).json().registration, "closed");
+
+      // Un redémarrage relit la base : même base, nouvelle application.
+      await app.close();
+      const relance = buildApp(db);
+      const config = await relance.inject({ method: "GET", url: "/api/config" });
+      assert.equal(config.json().registration, "closed");
+
+      const rouvrir = await relance.inject({
+        method: "PUT",
+        url: "/api/admin/registration",
+        headers: { authorization: `Bearer ${admin}` },
+        payload: { registration: "open" },
+      });
+      assert.equal(rouvrir.statusCode, 200);
+      const ok = await relance.inject({
+        method: "POST",
+        url: "/api/auth/register",
+        payload: reg("nouveau@example.com"),
+      });
+      assert.equal(ok.statusCode, 201);
+
+      const actions = await db
+        .selectFrom("audit_log")
+        .select("action")
+        .where("action", "like", "admin.registration.%")
+        .orderBy("created_at")
+        .execute();
+      assert.deepEqual(
+        actions.map((a) => a.action),
+        ["admin.registration.close", "admin.registration.open"],
+      );
+      await relance.close();
+    }),
+  );
+});
+
+test("posée dans l'environnement, l'inscription ne se change pas depuis la vue", async () => {
+  await avecAdmins(ADMIN, () =>
+    avecInscription("open", async () => {
+      const { app, inscrire, appeler } = await instance();
+      const { token } = await inscrire(ADMIN);
+      const vue = (await appeler("GET", "/api/admin/users", token)).json();
+      assert.deepEqual([vue.registration, vue.registrationSource], ["open", "environment"]);
+      const res = await app.inject({
+        method: "PUT",
+        url: "/api/admin/registration",
+        headers: { authorization: `Bearer ${token}` },
+        payload: { registration: "closed" },
+      });
+      assert.equal(res.statusCode, 409);
+      assert.equal(res.json().code, "registration_fixed");
+      await app.close();
+    }),
+  );
+});

@@ -149,7 +149,7 @@ function registerAllRoutes(app: FastifyInstance, db: DB): void {
   registerAccountRoutes(app, db);
   registerAuditRoutes(app, db);
   registerSsoRoutes(app, db);
-  registerConfigRoutes(app);
+  registerConfigRoutes(app, db);
   registerMfaRoutes(app, db);
   registerRecoveryRoutes(app, db);
   registerVaultRoutes(app, db);

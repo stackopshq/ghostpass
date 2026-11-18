@@ -11,7 +11,7 @@ import { sessions, users } from "../db/repositories.js";
 import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
 import { adminsDeLInstance, estAdminDeLInstance } from "../services/administration.js";
-import { inscriptionOuverte } from "../services/inscription.js";
+import { choisirLInscription, etatDeLInscription } from "../services/inscription.js";
 import { dernierAdminDUneOrg, effacerLeCompte } from "../services/effacement.js";
 import { normalizeEmail } from "../services/security.js";
 import { z } from "zod";
@@ -31,8 +31,11 @@ export function registerAdminRoutes(app: FastifyInstance, db: DB): void {
   app.get("/api/admin/users", garde, async () => {
     const admins = adminsDeLInstance();
     const lignes = await users.listForAdmin(db);
+    const inscription = await etatDeLInscription(db);
     return {
-      registration: inscriptionOuverte() ? "open" : "closed",
+      registration: inscription.registration,
+      // `environment` : la variable fixe l'état, la vue n'a pas de bouton.
+      registrationSource: inscription.source,
       users: lignes.map((u) => ({
         id: u.id,
         email: u.email,
@@ -43,6 +46,33 @@ export function registerAdminRoutes(app: FastifyInstance, db: DB): void {
         isAdmin: admins.has(u.email),
       })),
     };
+  });
+
+  // Ouvrir ou fermer l'inscription depuis la vue. Refusé quand `GHOSTPASS_REGISTRATION`
+  // est posée : le choix serait enregistré puis ignoré, et l'administrateur croirait avoir
+  // fermé une instance qui reste ouverte.
+  const inscriptionSchema = z.object({ registration: z.enum(["open", "closed"]) });
+
+  app.put("/api/admin/registration", garde, async (req, reply) => {
+    const parsed = inscriptionSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "requête invalide" });
+    const avant = await etatDeLInscription(db);
+    if (avant.source === "environment") {
+      return reply.code(409).send({
+        error: "inscription fixée par GHOSTPASS_REGISTRATION : la changer dans l'environnement du serveur",
+        code: "registration_fixed",
+      });
+    }
+    await choisirLInscription(db, parsed.data.registration);
+    if (avant.registration !== parsed.data.registration) {
+      await recordAudit(
+        db,
+        req,
+        parsed.data.registration === "open" ? "admin.registration.open" : "admin.registration.close",
+        { userId: req.currentUser!.id, actorEmail: req.currentUser!.email },
+      );
+    }
+    return { registration: parsed.data.registration, registrationSource: "admin" };
   });
 
   app.post<{ Params: { id: string } }>("/api/admin/users/:id/suspend", garde, async (req, reply) => {

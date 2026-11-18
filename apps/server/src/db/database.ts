@@ -47,6 +47,8 @@ export interface Database {
   auth_ephemeral: { key: string; value: string; expires_at: number };
   audit_log: AuditLogRow;
   mfa_recovery_codes: MfaRecoveryCodeRow;
+  // Réglages de l'instance posés depuis la vue d'administration (clé → valeur).
+  instance_settings: { key: string; value: string; updated_at: number };
 }
 
 export type DB = Kysely<Database>;
@@ -259,6 +261,14 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
+
+-- Réglages de l'instance choisis depuis la vue d'administration. Une variable
+-- d'environnement posée l'emporte toujours (voir services/inscription.ts).
+CREATE TABLE IF NOT EXISTS instance_settings (
+  key         TEXT PRIMARY KEY,
+  value       TEXT NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
 
 -- Groupes d'organisation (couche de contrôle d'accès, pas de crypto) : regroupent des membres et
 -- reçoivent des permissions sur des collections. La permission effective d'un membre = max de son

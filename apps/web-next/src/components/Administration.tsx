@@ -18,6 +18,7 @@ export function Administration() {
   const { token } = useSession();
   const [comptes, setComptes] = useState<CompteDeLInstance[]>([]);
   const [inscription, setInscription] = useState<"open" | "closed" | null>(null);
+  const [inscriptionFixee, setInscriptionFixee] = useState(false);
   const [occupe, setOccupe] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -27,6 +28,7 @@ export function Administration() {
       const r = await api.adminUsers(token);
       setComptes(r.users);
       setInscription(r.registration);
+      setInscriptionFixee(r.registrationSource === "environment");
       setErreur(null);
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e));
@@ -66,11 +68,32 @@ export function Administration() {
         {/* L'état de l'inscription d'abord : une instance ouverte à tous est la première
             chose qu'un hébergeur doit savoir, et il ne la voit nulle part ailleurs. */}
         {inscription && (
-          <div
-            className={`carte px-4 py-3 text-sm ${inscription === "open" ? "text-warn" : "text-foreground"}`}
-          >
-            <p>{inscription === "open" ? t("admin.registrationOpen") : t("admin.registrationClosed")}</p>
-            <p className="mt-1 text-2xs text-muted">{t("admin.registrationHow")}</p>
+          <div className="carte flex items-center gap-3 px-4 py-3 text-sm">
+            <div className="min-w-0 flex-1">
+              <p className={inscription === "open" ? "text-warn" : "text-foreground"}>
+                {inscription === "open" ? t("admin.registrationOpen") : t("admin.registrationClosed")}
+              </p>
+              {/* Fixée par l'environnement : pas de bouton. Le serveur refuserait le
+                  changement, qu'un fichier de déploiement contredirait au redémarrage. */}
+              {inscriptionFixee && (
+                <p className="mt-1 text-2xs text-muted">{t("admin.registrationFixed")}</p>
+              )}
+            </div>
+            {!inscriptionFixee && (
+              <Bouton
+                variante={inscription === "open" ? "principal" : "discret"}
+                disabled={occupe}
+                onClick={() => {
+                  // Ouvrir expose l'instance : on le demande. Fermer ne coûte rien.
+                  if (inscription === "closed" && !confirm(t("admin.confirmOpenRegistration"))) return;
+                  void agir(() =>
+                    api.adminSetRegistration(token!, inscription === "open" ? "closed" : "open"),
+                  );
+                }}
+              >
+                {inscription === "open" ? t("admin.closeRegistration") : t("admin.openRegistration")}
+              </Bouton>
+            )}
           </div>
         )}
 
