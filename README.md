@@ -116,7 +116,8 @@ GHOSTPASS_ADMIN_EMAILS=you@example.com      # these accounts get the Administrat
 
 The Administration view lists the accounts, suspends or deletes one. It shows
 metadata only: like the rest of the server, it cannot read a vault. Create your
-own account first, then close registration and restart.
+own account first, then close registration and run `up -d` again (a plain
+restart does not reread `.env`).
 
 To update: `git pull`, then `podman compose -f compose.selfhost.yml pull` and
 `up -d` again.
