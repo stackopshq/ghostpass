@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { inscriptionOuverte } from "../services/inscription.js";
 
 /**
  * L'adresse de la politique de confidentialité, telle que **ce déploiement** la sert.
@@ -30,5 +31,10 @@ function privacyUrl(): string {
  * construction.
  */
 export function registerConfigRoutes(app: FastifyInstance): void {
-  app.get("/api/config", async () => ({ privacyUrl: privacyUrl() }));
+  // `registration` : pour que les clients masquent l'inscription quand l'hébergeur l'a
+  // fermée, plutôt que de la proposer et de la refuser après la saisie.
+  app.get("/api/config", async () => ({
+    privacyUrl: privacyUrl(),
+    registration: inscriptionOuverte() ? "open" : "closed",
+  }));
 }

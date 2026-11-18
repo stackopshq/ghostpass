@@ -121,7 +121,15 @@ export function AuthScreen() {
       setCodeTotp("");
       setTotpDemande(false);
     } catch (err) {
-      setErreur(msg(err));
+      // Fermée entre l'affichage et l'envoi, ou `/api/config` injoignable : le serveur a
+      // refusé. On le dit dans la langue de l'écran, et on retire l'inscription.
+      if (mode === "register" && err instanceof Error && err.message === "inscription fermée") {
+        setInscriptionFermee(true);
+        setMode("login");
+        setErreur(t("auth.registrationClosed"));
+      } else {
+        setErreur(msg(err));
+      }
     } finally {
       setOccupe(false);
     }
@@ -209,11 +217,23 @@ export function AuthScreen() {
   // elle-même : un lien vers notre texte vaut mieux qu'aucun lien, et c'est de toute
   // façon la bonne réponse pour la grande majorité des instances.
   const [urlConfidentialite, setUrlConfidentialite] = useState(CONFIDENTIALITE_PAR_DEFAUT);
+  // L'hébergeur peut fermer l'inscription (`GHOSTPASS_REGISTRATION=closed`). Le lien
+  // « Créer un compte » disparaît alors, plutôt que de laisser saisir un mot de passe maître
+  // pour un refus. Tant que le déploiement n'a pas répondu, il reste : c'est le
+  // comportement de toutes les instances antérieures, et le serveur refuse de toute façon.
+  const [inscriptionFermee, setInscriptionFermee] = useState(false);
   useEffect(() => {
     let vivant = true;
     void api
       .config()
-      .then((c) => vivant && c.privacyUrl && setUrlConfidentialite(c.privacyUrl))
+      .then((c) => {
+        if (!vivant) return;
+        if (c.privacyUrl) setUrlConfidentialite(c.privacyUrl);
+        if (c.registration === "closed") {
+          setInscriptionFermee(true);
+          setMode((m) => (m === "register" ? "login" : m));
+        }
+      })
       .catch(() => {
         /* Sans conséquence visible : le repli est déjà en place. */
       });
@@ -481,6 +501,7 @@ export function AuthScreen() {
                     et son unique signal d'interactivité était `hover:` — un
                     état qu'un écran tactile n'atteint jamais. Sur téléphone,
                     rien ne distinguait donc « En créer un » d'un gris inerte. */}
+                {!(mode === "login" && inscriptionFermee) && (
                 <p className="text-xs text-muted">
                   {mode === "login" ? t("auth.needAccount") : t("auth.haveAccount")}{" "}
                   <button
@@ -491,6 +512,7 @@ export function AuthScreen() {
                     {mode === "login" ? t("auth.needAccountAction") : t("auth.haveAccountAction")}
                   </button>
                 </p>
+                )}
                 {/* Il n'y avait RIEN ici, et le kit de récupération était donc sans usage.
                     En mode inscription seulement il n'aurait pas de sens : on ne récupère
                     pas un compte qu'on n'a pas encore. */}

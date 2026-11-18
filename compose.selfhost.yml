@@ -50,6 +50,8 @@ services:
       # démarre quand même — casser une instance qui monte de version serait
       # pire — mais il l'écrit à chaque démarrage.
       MFA_SECRET_KEY: ${MFA_SECRET_KEY:-}
+      # `closed` ferme l'inscription : seuls les comptes déjà créés se connectent.
+      GHOSTPASS_REGISTRATION: ${GHOSTPASS_REGISTRATION:-open}
     depends_on:
       postgres:
         condition: service_healthy
