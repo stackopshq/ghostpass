@@ -318,6 +318,22 @@ android:
         exit 1
       }
     - ./tools/android/construire-en-ci.sh
+  # Ranger ses propres produits, pendant qu'on a encore les droits dessus.
+  #
+  # Depuis que les jobs sans étiquette atterrissent sur nos runners (Podman sans racine),
+  # `/builds` survit d'un job au suivant. Gradle y laisse ses intermédiaires, et le
+  # nettoyage du job suivant n'a plus les droits de les supprimer : son `git clean` échoue
+  # sur « failed to remove …/intermediary-bundle.aab: Permission denied ». Pourquoi ces
+  # droits manquent exactement, personne ne l'a encore établi — ce commentaire s'arrête
+  # donc à ce qui a été lu dans les journaux. Ce n'est pas le job android qui tombe alors,
+  # mais **tous** ceux qui passent ensuite par le même runner, quel que soit leur code —
+  # vu le 13 novembre 2026 sur `main` et sur deux demandes de fusion.
+  #
+  # Seuls les `intermediates` partent : les sorties, elles, sont des artefacts, et le
+  # moment où GitLab les ramasse par rapport à `after_script` n'est pas une chose dont ce
+  # fichier a envie de dépendre.
+  after_script:
+    - rm -rf apps/android/*/build/intermediates
   artifacts:
     # L'AAB non signé, pour vérifier qu'il se construit et le relire ; il ne se dépose pas
     # tel quel. Les rapports de test, pour comprendre un échec sans le reproduire.
