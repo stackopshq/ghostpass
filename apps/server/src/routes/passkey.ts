@@ -12,6 +12,7 @@ import { makeAuthenticate } from "../plugins/auth.js";
 import { recordAudit } from "../services/audit.js";
 import { RP_ID, RP_NAME, getAllowedOrigins, putChallenge, takeChallenge } from "../services/webauthn.js";
 import { createSessionToken, newId, normalizeEmail } from "../services/security.js";
+import { COMPTE_SUSPENDU } from "../services/administration.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const toB64Url = (u: Uint8Array): string => Buffer.from(u).toString("base64url");
@@ -186,6 +187,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, db: DB): void {
         return reply.code(401).send({ error: "authentification par passkey échouée" });
       }
 
+      if (user.suspended_at) return reply.code(403).send(COMPTE_SUSPENDU);
       const { token, tokenHash } = createSessionToken();
       await sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });
       await recordAudit(db, req, "login.passkey", { userId: user.id, actorEmail: user.email });

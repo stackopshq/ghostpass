@@ -19,6 +19,8 @@ export interface UserRow {
   encrypted_user_key_recovery: string | null;
   recovery_auth_hash: string | null;
   recovery_salt: string | null;
+  /// Epoch-ms de la suspension par un administrateur de l'instance, ou null.
+  suspended_at: number | null;
   created_at: number;
 }
 

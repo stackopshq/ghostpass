@@ -107,6 +107,26 @@ podman compose -f compose.selfhost.yml up -d
 
 Then open `http://localhost:8080`. The first account you create is yours.
 
+Who gets in is decided in the **Administration** view, open to the addresses
+listed in `.env`:
+
+```bash
+GHOSTPASS_ADMIN_EMAILS=you@example.com      # these accounts get the Administration view
+```
+
+From there, an administrator lists the accounts, suspends or deletes one, and
+opens or closes sign-up. The view shows metadata only: like the rest of the
+server, it cannot read a vault. Create your own account first, add its address
+to `GHOSTPASS_ADMIN_EMAILS`, run `up -d` again (a plain restart does not reread
+`.env`), then close sign-up from the view.
+
+To pin sign-up in your deployment files instead, set
+`GHOSTPASS_REGISTRATION=closed` (or `open`): the view then shows it and cannot
+change it.
+
+To update: `git pull`, then `podman compose -f compose.selfhost.yml pull` and
+`up -d` again.
+
 `docker-compose.yml` at the root is a **development** stack — it mounts the
 sources and does not serve the web app. `compose.selfhost.yml` is the one that
 runs the published images.

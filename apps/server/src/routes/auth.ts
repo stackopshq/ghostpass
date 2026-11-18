@@ -20,6 +20,7 @@ import {
   verifyServerSecret,
 } from "../services/security.js";
 import { verifierLeSecondFacteur } from "../services/mfa.js";
+import { COMPTE_SUSPENDU } from "../services/administration.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
 const DEFAULT_KDF_PARAMS = JSON.stringify({
@@ -59,9 +60,9 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
     "/api/auth/register",
     { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
     async (req, reply) => {
-    // Fermée par l'hébergeur (`GHOSTPASS_REGISTRATION=closed`). Refusé ici même si le
-    // client masque déjà le bouton : un client n'est pas une frontière.
-    if (!inscriptionOuverte()) {
+    // Fermée par l'hébergeur (environnement ou vue d'administration). Refusé ici même si
+    // le client masque déjà le bouton : un client n'est pas une frontière.
+    if (!(await inscriptionOuverte(db))) {
       return reply.code(403).send({ error: "inscription fermée", code: "registration_closed" });
     }
     const parsed = registerSchema.safeParse(req.body);
@@ -206,6 +207,9 @@ export function registerAuthRoutes(app: FastifyInstance, db: DB): void {
       }
     }
 
+    // Après la preuve du mot de passe et du second facteur, jamais avant : répondre
+    // « suspendu » à qui ne connaît que l'adresse lui dirait que le compte existe.
+    if (user.suspended_at) return reply.code(403).send(COMPTE_SUSPENDU);
     await recordLogin(req, user.id);
     const { token, tokenHash } = createSessionToken();
     await sessions.create(db, { id: newId(), userId: user.id, tokenHash, ttlMs: SESSION_TTL_MS });

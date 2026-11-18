@@ -36,6 +36,33 @@ export interface NewUser {
 }
 
 export const users = {
+  /// Ce que la vue d'administration de l'instance montre d'un compte : des métadonnées, rien
+  /// de chiffré. La dernière connexion vient de `login_events`, purgé par la rétention : un
+  /// compte inactif depuis plus longtemps que `RETENTION_LOGIN_EVENTS_DAYS` y apparaît sans
+  /// date, ce qui ne veut pas dire « jamais connecté ».
+  listForAdmin(db: DB) {
+    return db
+      .selectFrom("users as u")
+      .select((eb) => [
+        "u.id",
+        "u.email",
+        "u.created_at",
+        "u.mfa_enabled",
+        "u.suspended_at",
+        eb
+          .selectFrom("login_events as l")
+          .whereRef("l.user_id", "=", "u.id")
+          .select((e) => e.fn.max("l.created_at").as("m"))
+          .as("last_login_at"),
+      ])
+      .orderBy("u.created_at", "asc")
+      .execute();
+  },
+
+  async setSuspended(db: DB, id: string, at: number | null): Promise<void> {
+    await db.updateTable("users").set({ suspended_at: at }).where("id", "=", id).execute();
+  },
+
   /// Efface l'utilisateur. La cascade du schéma emporte coffre, sessions,
   /// clés d'accès, seconds facteurs, historique de connexion, appartenances
   /// et accès aux collections. `audit_log` est en `ON DELETE SET NULL` et doit

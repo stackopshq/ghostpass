@@ -4,7 +4,7 @@ import { ensureDefaultCollections } from "./services/defaultCollection.js";
 import { programmerLaPurge } from "./services/retention.js";
 import { chargerLaCle, definirLaCle } from "./services/secretAtRest.js";
 import { avertissementDOrigine } from "./services/webauthn.js";
-import { lireLInscription } from "./services/inscription.js";
+import { etatDeLInscription, lireLInscription } from "./services/inscription.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 
@@ -24,7 +24,7 @@ try {
   // qu'on cherche à éviter n'est pas l'absence de clé, c'est de croire que le
   // chiffrement s'applique alors qu'il ne s'applique pas.
   // Une valeur illisible arrête tout ici, avant d'écouter : voir services/inscription.ts.
-  const inscription = lireLInscription();
+  lireLInscription();
 
   const cle = chargerLaCle(process.env.MFA_SECRET_KEY);
   definirLaCle(cle);
@@ -49,10 +49,16 @@ try {
   if (oubli) {
     app.log.warn(oubli);
   }
+  const inscription = await etatDeLInscription(db);
+  const origine = {
+    environment: "fixée par GHOSTPASS_REGISTRATION",
+    admin: "choisie dans la vue d'administration",
+    default: "par défaut",
+  }[inscription.source];
   app.log.info(
-    inscription === "open"
-      ? "Inscription OUVERTE : n'importe qui peut créer un compte (GHOSTPASS_REGISTRATION=closed pour fermer)"
-      : "Inscription fermée (GHOSTPASS_REGISTRATION=closed)",
+    inscription.registration === "open"
+      ? `Inscription OUVERTE (${origine}) : n'importe qui peut créer un compte`
+      : `Inscription fermée (${origine})`,
   );
   if (backfilled > 0) {
     app.log.info(

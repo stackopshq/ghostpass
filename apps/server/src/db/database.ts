@@ -47,6 +47,8 @@ export interface Database {
   auth_ephemeral: { key: string; value: string; expires_at: number };
   audit_log: AuditLogRow;
   mfa_recovery_codes: MfaRecoveryCodeRow;
+  // Réglages de l'instance posés depuis la vue d'administration (clé → valeur).
+  instance_settings: { key: string; value: string; updated_at: number };
 }
 
 export type DB = Kysely<Database>;
@@ -77,6 +79,9 @@ CREATE TABLE IF NOT EXISTS users (
   encrypted_user_key_recovery TEXT,
   recovery_auth_hash     TEXT,
   recovery_salt          TEXT,
+  -- Suspendu par un administrateur de l'instance (epoch-ms), ou NULL. Un compte suspendu
+  -- garde ses données mais n'ouvre plus de session, et celles qu'il avait sont révoquées.
+  suspended_at           INTEGER,
   created_at             INTEGER NOT NULL
 );
 
@@ -257,6 +262,14 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
 
+-- Réglages de l'instance choisis depuis la vue d'administration. Une variable
+-- d'environnement posée l'emporte toujours (voir services/inscription.ts).
+CREATE TABLE IF NOT EXISTS instance_settings (
+  key         TEXT PRIMARY KEY,
+  value       TEXT NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
+
 -- Groupes d'organisation (couche de contrôle d'accès, pas de crypto) : regroupent des membres et
 -- reçoivent des permissions sur des collections. La permission effective d'un membre = max de son
 -- accès direct et des accès de ses groupes. La décryption reste via l'Org Key (tous les membres).
@@ -331,6 +344,7 @@ async function migratePostgres(db: DB): Promise<void> {
     .raw("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_failed_attempts BIGINT NOT NULL DEFAULT 0")
     .execute(db);
   await sql.raw("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_locked_until BIGINT").execute(db);
+  await sql.raw("ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at BIGINT").execute(db);
 }
 
 /// Migrations idempotentes SQLite (bases créées avant l'ajout d'une colonne).
@@ -339,6 +353,7 @@ function migrateSqlite(handle: BetterSqlite3.Database): void {
   ensureColumn(handle, "collections", "is_default", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(handle, "users", "mfa_failed_attempts", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(handle, "users", "mfa_locked_until", "INTEGER");
+  ensureColumn(handle, "users", "suspended_at", "INTEGER");
 }
 
 function ensureColumn(

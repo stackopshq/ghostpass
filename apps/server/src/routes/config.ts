@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { DB } from "../db/database.js";
 import { inscriptionOuverte } from "../services/inscription.js";
 
 /**
@@ -30,11 +31,11 @@ function privacyUrl(): string {
  * instances de cette image ? » Si non, c'est le déploiement qui répond, pas la
  * construction.
  */
-export function registerConfigRoutes(app: FastifyInstance): void {
+export function registerConfigRoutes(app: FastifyInstance, db: DB): void {
   // `registration` : pour que les clients masquent l'inscription quand l'hébergeur l'a
   // fermée, plutôt que de la proposer et de la refuser après la saisie.
   app.get("/api/config", async () => ({
     privacyUrl: privacyUrl(),
-    registration: inscriptionOuverte() ? "open" : "closed",
+    registration: (await inscriptionOuverte(db)) ? "open" : "closed",
   }));
 }
