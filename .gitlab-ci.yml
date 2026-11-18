@@ -472,9 +472,11 @@ images:
         balises="sha-$SHORT $CI_COMMIT_TAG"
       else
         balises="sha-$SHORT main"
-        printf '%s' "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-        publier "$CI_REGISTRY_IMAGE" $balises
       fi
+      # Le registre du projet reçoit les versions comme `main` : la connexion et
+      # la publication ne dépendent pas de la sorte de référence.
+      printf '%s' "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+      publier "$CI_REGISTRY_IMAGE" $balises
       # Les identifiants ghcr sont des variables protégées : absentes, la
       # publication publique est sautée, et le dit, sans faire échouer le job
       # qui a déjà publié sur le registre du projet.
