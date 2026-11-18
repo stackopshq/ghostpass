@@ -107,6 +107,20 @@ podman compose -f compose.selfhost.yml up -d
 
 Then open `http://localhost:8080`. The first account you create is yours.
 
+Two settings in `.env` decide who gets in, read when the server starts:
+
+```bash
+GHOSTPASS_REGISTRATION=closed               # nobody can sign up any more (default: open)
+GHOSTPASS_ADMIN_EMAILS=you@example.com      # these accounts get the Administration view
+```
+
+The Administration view lists the accounts, suspends or deletes one. It shows
+metadata only: like the rest of the server, it cannot read a vault. Create your
+own account first, then close registration and restart.
+
+To update: `git pull`, then `podman compose -f compose.selfhost.yml pull` and
+`up -d` again.
+
 `docker-compose.yml` at the root is a **development** stack — it mounts the
 sources and does not serve the web app. `compose.selfhost.yml` is the one that
 runs the published images.
