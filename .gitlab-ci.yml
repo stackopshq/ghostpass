@@ -554,3 +554,88 @@ publier-wasm:
       fi
       echo "version à publier (lue dans le crate) : ${version}"
       npm publish --loglevel=error
+
+# Crée la page Release sur GitHub pour chaque étiquette `v*`.
+#
+# Le dépôt GitLab est privé : GitHub est le seul endroit où le public voit une
+# version, et c'est sa page Release qui notifie ceux qui suivent le dépôt. Une
+# étiquette seule n'y montre rien.
+#
+# Les notes viennent de `docs/releases/<étiquette>.md`, écrit et relu dans la
+# même MR que le reste. Sans ce fichier, le job échoue : une Release sans notes
+# ne dit pas quoi changer dans son `.env`.
+#
+# Jeton : `GITHUB_RELEASE_TOKEN`, variable protégée et masquée, jeton
+# fine-grained limité à stackopshq/ghostpass avec Contents en écriture. Absent,
+# le job le dit et s'arrête sans échouer, comme la publication ghcr.
+release-github:
+  stage: publier
+  image: $NODE_IMAGE
+  needs: [images]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/
+  interruptible: false
+  variables:
+    GITHUB_REPO: stackopshq/ghostpass
+  script:
+    - |
+      set -eu
+      notes="docs/releases/${CI_COMMIT_TAG}.md"
+      if [ ! -f "$notes" ]; then
+        echo "Notes absentes : $notes. Les écrire dans une MR, puis reposer l'étiquette."
+        exit 1
+      fi
+      if [ -z "${GITHUB_RELEASE_TOKEN:-}" ]; then
+        echo "GITHUB_RELEASE_TOKEN absent : aucune Release créée sur GitHub."
+        exit 0
+      fi
+      # Le jeton dans un fichier d'en-têtes, jamais en argument : `ps` montre
+      # l'argv de tous les processus du runner.
+      umask 077
+      entetes="$(mktemp)"
+      trap 'rm -f "$entetes"' EXIT
+      printf 'Authorization: Bearer %s\nAccept: application/vnd.github+json\nX-GitHub-Api-Version: 2022-11-28\n' \
+        "$GITHUB_RELEASE_TOKEN" > "$entetes"
+      api="https://api.github.com/repos/${GITHUB_REPO}"
+
+      # Le miroir pousse l'étiquette de son côté, sans ordre garanti avec ce
+      # job. On l'attend : créée ici, l'étiquette pourrait viser un autre
+      # commit que celui de GitLab.
+      # Seul un 404 se résout en attendant ; un jeton refusé (401, 403) ne
+      # changera pas en dix minutes.
+      sha=""
+      for essai in $(seq 1 20); do
+        code="$(curl -sS -o commit.json -w '%{http_code}' -H @"$entetes" "${api}/commits/${CI_COMMIT_TAG}")"
+        if [ "$code" = 200 ]; then
+          sha="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("commit.json","utf8")).sha)')"
+          break
+        elif [ "$code" != 404 ] && [ "$code" != 422 ]; then
+          echo "GitHub a répondu ${code} en cherchant ${CI_COMMIT_TAG} :"; cat commit.json; exit 1
+        fi
+        echo "étiquette ${CI_COMMIT_TAG} pas encore sur GitHub (essai ${essai}/20), attente 30 s"
+        sleep 30
+      done
+      if [ "$sha" != "$CI_COMMIT_SHA" ]; then
+        echo "Sur GitHub, ${CI_COMMIT_TAG} vise « ${sha:-rien} », ici ${CI_COMMIT_SHA}. Rien n'est créé."
+        exit 1
+      fi
+
+      corps="$(TAG="$CI_COMMIT_TAG" NOTES="$notes" node -e '
+        const fs = require("fs");
+        process.stdout.write(JSON.stringify({
+          tag_name: process.env.TAG,
+          name: `GhostPass ${process.env.TAG}`,
+          body: fs.readFileSync(process.env.NOTES, "utf8"),
+          draft: false,
+          prerelease: false,
+        }));')"
+      code="$(curl -sS -o reponse.json -w '%{http_code}' -X POST -H @"$entetes" \
+        --data "$corps" "${api}/releases")"
+      if [ "$code" = 201 ]; then
+        echo "Release créée : https://github.com/${GITHUB_REPO}/releases/tag/${CI_COMMIT_TAG}"
+      elif [ "$code" = 422 ] && grep -q already_exists reponse.json; then
+        # Relancé, ou créée à la main : on ne l'écrase pas.
+        echo "La Release ${CI_COMMIT_TAG} existe déjà sur GitHub : laissée telle quelle."
+      else
+        echo "GitHub a répondu ${code} :"; cat reponse.json; exit 1
+      fi
