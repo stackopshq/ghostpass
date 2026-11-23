@@ -190,3 +190,11 @@ export const Archive = ({ className }: Props) => (
     <path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M10 12.5h4" />
   </svg>
 );
+
+/// La surveillance du coffre : un pouls, pour ne pas reprendre le bouclier de
+/// la sécurité du compte, qui est une autre chose.
+export const Pouls = ({ className }: Props) => (
+  <svg {...commun} strokeWidth={1.8} className={className} aria-hidden="true">
+    <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
+  </svg>
+);
