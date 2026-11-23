@@ -14,7 +14,7 @@ rien d'autre : les appels à `FileManager` créent et suppriment, ils ne lisent 
 horodatage, et l'application ne touche ni au temps de démarrage, ni à l'espace disque, ni
 aux claviers actifs. Ce relevé vient du code, pas d'une estimation.
 
-**Numéros de version** — `MARKETING_VERSION` 1.0, `CURRENT_PROJECT_VERSION` 1. Le second
+**Numéros de version** — `MARKETING_VERSION` 1.0.1, `CURRENT_PROJECT_VERSION` 2. Le second
 doit monter à chaque envoi : App Store Connect refuse deux fois le même.
 
 **Déclaration de chiffrement** — la clé `ITSAppUsesNonExemptEncryption` est
@@ -309,6 +309,59 @@ consommer un numéro de version : App Store Connect refuse deux fois le même
 
 Aucune clé n'est présente sur la machine de construction au 24 septembre, et Transporter
 n'y est pas installé.
+
+## La 1.0.1 (2) — 13 novembre 2026
+
+Deuxième envoi, et rien de ce qui avait servi en septembre n'était resté en place. Ce qui
+a bloqué, dans l'ordre, et comment chaque chose s'est débloquée.
+
+**Le numéro de l'extension.** L'archive l'a dit avant Apple : « The CFBundleVersion of an
+app extension ('1') must match that of its containing parent app ('2') ». Les deux numéros
+de `GhostpassAutoFill` étaient écrits en dur dans son `Info.plist`, et monter l'application
+les y laissait. Ils lisent désormais `$(MARKETING_VERSION)` et `$(CURRENT_PROJECT_VERSION)` :
+le piège ne se retend pas.
+
+**Le certificat de distribution n'existait plus.** Ni dans le trousseau, ni sur le compte —
+l'API n'en voyait qu'un de développement et un Developer ID. Celui qui avait signé le
+build 1 avait disparu entre-temps. La clé API ne peut pas en créer : elle n'a pas accès à
+la signature gérée par Apple (« You haven't been given access to cloud-managed distribution
+certificates »). Il a fallu l'ouvrir une fois dans Xcode, Réglages > Comptes > Manage
+Certificates > Apple Distribution.
+
+**Les profils de distribution, eux, se créent par l'API** — et c'est la voie à préférer,
+puisqu'elle ne demande rien à personne :
+
+    POST /v1/profiles  {name, profileType: IOS_APP_STORE,
+                        relationships: {bundleId, certificates}}
+
+Deux profils, `GhostPass App Store` et `GhostPass AutoFill App Store`, valables jusqu'au
+13 novembre 2027. **À vérifier après création**, parce qu'un profil muet sur ce point donne
+une application installée dont le remplissage ne voit rien : le groupe
+`group.ch.stackops.ghostpass.coffre` et l'habilitation
+`com.apple.developer.authentication-services.autofill-credential-provider` doivent être
+dans leurs `Entitlements`.
+
+**L'export ne passe qu'en signature explicite**, avec
+[`ExportOptions-manuel.plist`](../apps/ios/ExportOptions-manuel.plist) : l'automatique
+réclame les profils gérés dans le nuage, qui ne contiennent pas le certificat du poste.
+
+**La déclaration de chiffrement est en examen depuis le 24 septembre.** Elle porte le
+formulaire français, `exempt: false`, et son état n'a pas bougé en sept semaines. Tant
+qu'elle n'est pas approuvée, une version qui s'y rattache ne peut pas être soumise :
+
+    STATE_ERROR.ENTITY_STATE_INVALID — App encryption declaration was not approved.
+
+La 1.0 était partie autrement : son build porte `usesNonExemptEncryption: false` et aucune
+déclaration liée. La 1.0.1 est partie de la même façon, **sur décision de Clara**, qui a
+tranché en connaissant la contradiction : le tableau plus haut dans ce document répond
+« Non » à l'exemption, et cette réponse-ci dit l'inverse. Elle est notée ici pour qu'on la
+retrouve, pas pour qu'on l'oublie — la déclaration reste en examen, et le jour où Apple
+l'approuve, c'est elle qui devra servir.
+
+**Ce qui a fonctionné du premier coup** : `altool --validate-app` (« VERIFY SUCCEEDED with
+no errors »), puis `--upload-app`, tous deux avec `--apiKey` ; la version créée par l'API
+avec ses nouveautés dans les deux langues, qui héritent des captures de la 1.0 ; et la
+soumission, `WAITING_FOR_REVIEW` à 14 h 03.
 
 ## Le changement d'adresse publique, et ce qu'il entraîne
 

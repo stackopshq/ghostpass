@@ -139,6 +139,36 @@ revue, et déçoit celui qui installe pour ça.
 
 ## Nouveautés de cette version
 
+Un texte par langue, parce qu'App Store Connect en demande un par localisation —
+`fr-FR` et `en-US`. Ce sont les changements visibles depuis la 1.0 (1), pas la liste
+des commits : ce que l'on remarque en se servant de l'application.
+
+**1.0.1 (2) — français**
+
+```
+• Les coffres d'équipe s'affichent maintenant hors ligne, en lecture seule : vos mots de passe partagés restent lisibles sans réseau.
+• Quand le réseau revient, l'application s'en aperçoit toute seule — plus besoin de verrouiller puis rouvrir le coffre.
+• Remplissage automatique : la recherche trouve aussi par le nom de l'identifiant, et le rapprochement avec le site est plus sûr.
+• Un code de récupération se tape enfin sur mobile.
+• Un identifiant personnel peut être déplacé vers un coffre d'équipe.
+• L'invitation à une équipe dit ce qui est partagé, et ce qui ne l'est pas.
+• Interface anglaise complétée.
+```
+
+**1.0.1 (2) — anglais**
+
+```
+• Team vaults now appear offline, read-only: your shared passwords stay readable with no network.
+• When the network comes back, the app notices by itself — no more locking and reopening the vault.
+• AutoFill: search also matches an item's name, and site matching is stricter.
+• A recovery code can at last be typed on a phone.
+• A personal item can be moved into a team vault.
+• A team invitation says what is shared, and what is not.
+• The English interface is complete.
+```
+
+### La première version, pour mémoire
+
 ```
 Première version.
 ```
