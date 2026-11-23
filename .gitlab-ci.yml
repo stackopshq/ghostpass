@@ -30,9 +30,20 @@ workflow:
     # branche qui porte une MR ouverte n'a pas de pipeline de branche en plus :
     # deux pipelines pour le même commit, c'est deux fois le runner pour une
     # seule réponse.
+    #
+    # Une étiquette par produit, parce que les produits ne sortent pas ensemble :
+    # le serveur publie des images à chaque version, l'iOS et l'Android passent
+    # par leur boutique à leur rythme. Un `v0.1.0` nu ne disait pas lequel, et le
+    # jour où l'iOS en 1.0.2 aurait été étiqueté `v1.0.2`, le pipeline aurait
+    # publié des images serveur sous ce numéro.
+    #   - `server-vX.Y.Z` : vérifie, publie les images et la Release GitHub ;
+    #   - `ios-vX.Y.Z`, `android-vX.Y.Z` : vérifie seulement, pour garder la
+    #     trace CI de ce qui a été envoyé en boutique.
+    # `v0.1.0`, posée avant cette règle, reste dans l'historique ; un `v*` nu
+    # ne déclenche plus rien.
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_COMMIT_TAG =~ /^v/
+    - if: $CI_COMMIT_TAG =~ /^(server|ios|android)-v/
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
 
@@ -453,8 +464,10 @@ sast:
 # Deux registres :
 #   - celui du projet ($CI_REGISTRY_IMAGE), depuis `main` seulement ;
 #   - ghcr.io/stackopshq/ghostpass, public, depuis `main` et les étiquettes
-#     `v*`. Sur une étiquette, `:main` ne bouge pas (l'étiquette peut viser un
-#     commit plus ancien que `main`) : elle publie `sha-…` et son propre nom.
+#     `server-v*`. Sur une étiquette, `:main` ne bouge pas (l'étiquette peut
+#     viser un commit plus ancien que `main`) : elle publie `sha-…` et son
+#     numéro sans le préfixe, `server-v0.2.0` donnant `v0.2.0`, dans la
+#     continuité des images `v0.1.0` déjà épinglées.
 images:
   stage: publier
   image: quay.io/buildah/stable:v1.43.4
@@ -467,7 +480,7 @@ images:
       when: never
     # Après fusion, ou relancé à la main depuis l'interface sur `main`.
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_TAG =~ /^v/
+    - if: $CI_COMMIT_TAG =~ /^server-v/
   # Une publication commencée va jusqu'au bout : l'annuler entre deux `push`
   # laisserait `:main` sur une autre construction que `sha-…`.
   interruptible: false
@@ -519,7 +532,7 @@ images:
         done
       }
       if [ -n "${CI_COMMIT_TAG:-}" ]; then
-        balises="sha-$SHORT $CI_COMMIT_TAG"
+        balises="sha-$SHORT ${CI_COMMIT_TAG#server-}"
       else
         balises="sha-$SHORT main"
       fi
@@ -598,7 +611,7 @@ publier-wasm:
       echo "version à publier (lue dans le crate) : ${version}"
       npm publish --loglevel=error
 
-# Crée la page Release sur GitHub pour chaque étiquette `v*`.
+# Crée la page Release sur GitHub pour chaque étiquette `server-v*`.
 #
 # Le dépôt GitLab est privé : GitHub est le seul endroit où le public voit une
 # version, et c'est sa page Release qui notifie ceux qui suivent le dépôt. Une
@@ -616,7 +629,7 @@ release-github:
   image: $NODE_IMAGE
   needs: [images]
   rules:
-    - if: $CI_COMMIT_TAG =~ /^v/
+    - if: $CI_COMMIT_TAG =~ /^server-v/
   interruptible: false
   variables:
     GITHUB_REPO: stackopshq/ghostpass
@@ -663,11 +676,13 @@ release-github:
         exit 1
       fi
 
-      corps="$(TAG="$CI_COMMIT_TAG" NOTES="$notes" node -e '
+      # Le titre porte le numéro sans préfixe, comme les images : « GhostPass
+      # v0.2.0 », à côté de la Release « GhostPass v0.1.0 » déjà en ligne.
+      corps="$(TAG="$CI_COMMIT_TAG" VERSION="${CI_COMMIT_TAG#server-}" NOTES="$notes" node -e '
         const fs = require("fs");
         process.stdout.write(JSON.stringify({
           tag_name: process.env.TAG,
-          name: `GhostPass ${process.env.TAG}`,
+          name: `GhostPass ${process.env.VERSION}`,
           body: fs.readFileSync(process.env.NOTES, "utf8"),
           draft: false,
           prerelease: false,
