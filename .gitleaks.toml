@@ -14,6 +14,11 @@ paths = [
   # Lockfiles : hashes d'intégrité et noms de crates ⇒ faux positifs (jamais de secrets).
   '''(^|/)Cargo\.lock$''',
   '''(^|/)package-lock\.json$''',
+  # L'annuaire public des sites à 2FA et à clé d'accès (tools/annuaire/actualiser.py) :
+  # des noms de domaine et des liens de documentation sur une seule ligne, que la règle
+  # `generic-api-key` lit comme des clés. Un fichier GÉNÉRÉ depuis 2fa.directory, jamais
+  # édité à la main : aucun secret ne peut y arriver par accident.
+  '''^apps/web-next/public/annuaire-2fa\.json$''',
 ]
 # Le secret d'essai de la RFC 6238, autorisé PAR SA VALEUR et non par son
 # emplacement. `GEZDGNBVGY3TQOJQ` est le base32 de « 1234567890 » et sa forme
