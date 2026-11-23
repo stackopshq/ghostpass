@@ -175,3 +175,18 @@ export const Televerser = ({ className }: Props) => (
     <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
   </svg>
 );
+
+/// `plein` remplit l'étoile : un favori se reconnaît à sa forme pleine, pas
+/// seulement à sa couleur, qui ne dit rien à qui ne la distingue pas.
+export const Etoile = ({ className, plein }: Props & { plein?: boolean }) => (
+  <svg {...commun} strokeWidth={1.8} fill={plein ? "currentColor" : "none"} className={className} aria-hidden="true">
+    <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
+  </svg>
+);
+
+export const Archive = ({ className }: Props) => (
+  <svg {...commun} strokeWidth={1.8} className={className} aria-hidden="true">
+    <rect x="3" y="4" width="18" height="4.5" rx="1" />
+    <path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M10 12.5h4" />
+  </svg>
+);

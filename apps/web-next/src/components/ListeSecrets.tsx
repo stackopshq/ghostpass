@@ -6,7 +6,7 @@
 import { useI18n } from "@/lib/i18n";
 import type { VaultEntry } from "@/lib/vault";
 import { Avatar } from "@/components/Avatar";
-import { Coffre } from "@/components/Icones";
+import { Coffre, Etoile } from "@/components/Icones";
 
 function sousTitre(item: VaultEntry, t: (k: string) => string): string {
   if (item.kind === "note") return t("app.secureNote");
@@ -18,7 +18,9 @@ export function ListeSecrets({
   items,
   total,
   recherche,
-  dossier,
+  titre,
+  vide,
+  favoris,
   choisi,
   onChoisir,
   selection,
@@ -28,7 +30,12 @@ export function ListeSecrets({
   items: VaultEntry[];
   total: number;
   recherche: string;
-  dossier: string | null;
+  /// Le nom de ce que la barre latérale a choisi : dossier, coffre, favoris…
+  titre: string;
+  /// La phrase d'une liste vide quand le coffre, lui, ne l'est pas. Chaque vue
+  /// a la sienne : « aucun favori » n'est pas « aucun secret dans ce dossier ».
+  vide: string;
+  favoris: ReadonlySet<string>;
   choisi: VaultEntry | null;
   onChoisir: (item: VaultEntry) => void;
   selection: Set<string>;
@@ -38,12 +45,6 @@ export function ListeSecrets({
   const { t } = useI18n();
   const tousChoisis = items.length > 0 && items.every((i) => selection.has(i.id));
 
-  const titre = recherche.trim()
-    ? t("app.results")
-    : dossier === null
-      ? t("app.allItems")
-      : (dossier.split("/").pop() ?? "");
-
   return (
     <div className="flex min-h-0 flex-col">
       {/* Un vrai en-tête de page : un titre à sa taille, et le compte en
@@ -51,7 +52,9 @@ export function ListeSecrets({
           petit, ce qui ne hiérarchisait rien. */}
       <div className="flex items-start gap-3 px-4 pb-3 pt-5">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-semibold text-foreground">{titre}</h2>
+          <h2 className="truncate text-lg font-semibold text-foreground">
+            {recherche.trim() ? t("app.results") : titre}
+          </h2>
           <p className="text-xs text-muted">{t("app.itemCount", { n: items.length })}</p>
         </div>
         {items.length > 0 && (
@@ -83,7 +86,7 @@ export function ListeSecrets({
               ) : recherche.trim() ? (
                 t("app.noResult")
               ) : (
-                t("app.noneInFolder")
+                vide
               )}
             </p>
           </div>
@@ -129,7 +132,12 @@ export function ListeSecrets({
                       adresse : une pastille ne peut en porter qu'une. */}
                   <Avatar nom={item.name} url={item.urls[0]} />
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className={`truncate text-sm ${actif ? "text-accent" : "text-foreground"}`}>{item.name}</span>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className={`truncate text-sm ${actif ? "text-accent" : "text-foreground"}`}>{item.name}</span>
+                      {favoris.has(item.id) && (
+                        <Etoile plein className="size-3 shrink-0 text-warn" />
+                      )}
+                    </span>
                     {sous && <span className="truncate text-xs text-muted">{sous}</span>}
                   </span>
                   {/* D'OÙ VIENT CETTE ENTRÉE.
