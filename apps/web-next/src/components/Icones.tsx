@@ -198,3 +198,11 @@ export const Pouls = ({ className }: Props) => (
     <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
   </svg>
 );
+
+/// Le bouton qui masque ou montre la barre latérale : un cadre et sa colonne.
+export const PanneauLateral = ({ className }: Props) => (
+  <svg {...commun} strokeWidth={1.8} className={className} aria-hidden="true">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16" />
+  </svg>
+);

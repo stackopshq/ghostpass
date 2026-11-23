@@ -11,6 +11,7 @@ import type { ItemKind } from "@/lib/crypto";
 import { DEFAULT_GEN_OPTIONS, generatePassword, type GenOptions } from "@/lib/generator";
 import { useI18n } from "@/lib/i18n";
 import type { VaultEntry } from "@/lib/vault";
+import { ChoixDossier } from "@/components/ChoixDossier";
 import { Bouton, BoutonIcone, Champ, Saisie, Zone } from "@/components/champs";
 import { adressesPourSaisie, ChampsAdresses } from "@/components/ChampsAdresses";
 import { De, Oeil, OeilBarre, Reglages } from "@/components/Icones";
@@ -62,6 +63,7 @@ export function depuisEntree(e: VaultEntry): SaisieEntree {
 export function FormulaireEntree({
   initial,
   edition,
+  identifiantSeul = false,
   occupe,
   chemins,
   onValider,
@@ -69,6 +71,8 @@ export function FormulaireEntree({
 }: {
   initial?: SaisieEntree;
   edition: boolean;
+  /// Masque le choix du genre : un coffre d'équipe ne prend que des identifiants.
+  identifiantSeul?: boolean;
   occupe: boolean;
   chemins: string[];
   onValider: (v: SaisieEntree) => void;
@@ -106,6 +110,7 @@ export function FormulaireEntree({
         onValider(v);
       }}
     >
+      {!identifiantSeul && (
       <div className="mb-4 flex gap-1 rounded border border-border p-1" role="group">
         {genres.map(({ k, cle }) => (
           <button
@@ -119,23 +124,14 @@ export function FormulaireEntree({
           </button>
         ))}
       </div>
+      )}
 
       <Champ label={t("app.name")}>
         <Saisie value={v.name} onChange={(e) => maj("name", e.target.value)} placeholder="GitHub" required />
       </Champ>
 
-      <Champ label={`${t("app.folder")} ${t("app.folderHint")}`}>
-        <Saisie
-          value={v.folder}
-          onChange={(e) => maj("folder", e.target.value)}
-          placeholder={t("app.folderExample")}
-          list="gp-dossiers-form"
-        />
-        <datalist id="gp-dossiers-form">
-          {chemins.map((p) => (
-            <option key={p} value={p} />
-          ))}
-        </datalist>
+      <Champ label={t("app.folder")}>
+        <ChoixDossier valeur={v.folder} chemins={chemins} onChange={(c) => maj("folder", c)} />
       </Champ>
 
       {v.kind === "login" && (
