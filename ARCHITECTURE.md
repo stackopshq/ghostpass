@@ -149,7 +149,8 @@ restent chiffrées).
 3. ✅ **UI** (`apps/web`, `Organizations.svelte`) : onglet Organisations — créer une org,
    inviter (lookup clé publique + scellement), accepter, membres, collections, partage et
    lecture de secrets (déchiffrés côté client), **révocation** (rotation côté client) et
-   **octroi d'accès par collection**. svelte-check + build OK.
+   **octroi d'accès par collection**. svelte-check + build OK. *(Interface Svelte retirée le
+   2026-08-29 : ces écrans vivent désormais dans `apps/web-next`.)*
 
 ---
 
@@ -222,7 +223,7 @@ Secrets Manager / Infisical / Doppler.
 | Cache/Sessions | **Redis** | Sessions, rate-limiting |
 | SSO | `openid-client` (OIDC), `node-saml` (SAML) | Standards |
 | **Cœur crypto** | **Rust** (cœur unique partagé) | Compilable en WASM (web) + FFI (natif) — jamais réécrit |
-| Frontend web | **SvelteKit** + Vite | Consomme le cœur Rust via WASM |
+| Frontend web | **Next** (export statique) + Tailwind | Consomme le cœur Rust via WASM ; remplace la SPA Svelte depuis le 2026-08-29 |
 | Desktop **natif** Win/Mac | **Pas d'Electron** — voir décision ci-dessous | Exigence : applications natives |
 | Mobile (phase ultérieure) | iOS + Android natifs | Cœur Rust partagé via UniFFI |
 | Auth interne | Tokens courts + refresh, MFA (TOTP/WebAuthn) | |
@@ -270,7 +271,8 @@ Secrets Manager / Infisical / Doppler.
   cloisonnement par utilisateur. **12 tests verts**, 0 vuln, schéma prévoyant les *service
   accounts* (futur Secrets Manager).
 - ✅ **Web app** (`apps/web`, SPA Svelte + WASM) : créer un compte, se connecter, ajouter et
-  lister des secrets — tout le chiffrement côté client. svelte-check + build OK.
+  lister des secrets : tout le chiffrement côté client. svelte-check + build OK. *(Remplacée
+  le 2026-08-29 par `apps/web-next`.)*
 - ✅ **Parcours end-to-end validé** (`apps/server/scripts/e2e.ts`) : crypto WASM + backend +
   déchiffrement, y compris reconnexion sur un « nouvel appareil ».
 - ✅ **MFA TOTP** (RFC 6238, `node:crypto`, sans dépendance) : setup/activate/disable + code
@@ -346,7 +348,8 @@ Ordre de priorité (décidé) :
 ## Décisions arrêtées
 
 - [x] **Backend** : TypeScript + Fastify (un seul langage front/back, itération rapide).
-- [x] **Front** : SvelteKit (léger, WebCrypto natif).
+- [x] **Front** : SvelteKit (léger, WebCrypto natif). **Remplacé le 2026-08-29** par Next en
+  export statique (`apps/web-next`), servi par nginx ; `apps/web` n'existe plus.
 - [x] **1er IdP SSO** : Entra ID via **OIDC** (portable ensuite vers Google Workspace / Keycloak).
 - [x] **Différenciation** : architecture **zero-knowledge** + simplicité pour les
   PME. **Réécrite le 2026-08-27**, décision de Clara : tout l'hébergement passe en
