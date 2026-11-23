@@ -25,6 +25,7 @@
 //   - timeout, taille de réponse bornée EN STREAMING, content-type image obligatoire ;
 //   - cache positif et négatif pour limiter les appels sortants.
 import { lookup as dnsLookup, type LookupAddress } from "node:dns";
+import { readFileSync } from "node:fs";
 import { get as httpsGet } from "node:https";
 import type { IncomingMessage } from "node:http";
 import type { LookupFunction } from "node:net";
@@ -247,12 +248,78 @@ async function fetchOne(startUrl: string): Promise<FaviconResult> {
   return null;
 }
 
+// ─── Les logos de Dashboard Icons ───
+//
+// Un favicon est souvent un 16 × 16 flou, ou rien du tout sur un sous-domaine de
+// connexion. Dashboard Icons (https://dashboardicons.com, homarr-labs/dashboard-icons,
+// Apache-2.0) publie plus de 3 500 logos de marques en SVG : on les essaie d'abord.
+//
+// CE QUE ÇA RÉVÈLE, ET À QUI
+// Le logo vient du CDN jsDelivr, demandé par le SERVEUR, jamais par le navigateur.
+// jsDelivr voit donc le nom d'une marque (« github ») et l'adresse du serveur : ni
+// qui l'a dans son coffre, ni l'adresse exacte du site. C'est moins que le favicon,
+// qui part vers le site lui-même. L'exploitant peut l'éteindre seul
+// (`ICONS_DASHBOARD=false`) en gardant les favicons.
+//
+// L'index est une copie épinglée sur un commit (`tools/icones/actualiser.py`) :
+// aucun appel pour savoir si un logo existe, et l'URL servie désigne exactement le
+// fichier indexé, pas ce que le dépôt publiera demain.
+
+interface IndexDashboard {
+  icones: Record<string, "svg" | "png">;
+  alias: Record<string, string>;
+}
+
+const INDEX_DASHBOARD: IndexDashboard = JSON.parse(
+  readFileSync(new URL("./iconesDashboard.json", import.meta.url), "utf8"),
+);
+const COMMIT_DASHBOARD = readFileSync(new URL("./iconesDashboard.commit", import.meta.url), "utf8").trim();
+
+export const ICONS_DASHBOARD = process.env.ICONS_DASHBOARD !== "false";
+
+const cleAlias = (texte: string) => texte.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/// Le logo Dashboard Icons d'un domaine, ou null.
+///
+/// On ne devine qu'à partir du NOM DU SITE (`github` dans `gist.github.com`), et
+/// de sa combinaison avec le sous-domaine le plus proche (`drive.google.com` →
+/// `googledrive`) : un service hébergé sous la marque d'un autre a souvent son
+/// propre logo. Jamais un sous-domaine seul : `mail`, `app` ou `login` désignent
+/// le rôle d'une machine, pas une marque, et prendraient le logo de n'importe qui.
+export function logoDashboard(domain: string): string | null {
+  const labels = domain.split(".");
+  const suffixe = labels.length >= 3 && estUnSuffixePublic(labels.slice(-2).join(".")) ? 2 : 1;
+  const iSite = labels.length - suffixe - 1;
+  if (iSite < 0) return null;
+  const site = labels[iSite]!;
+  const candidats = iSite > 0 ? [site + labels[iSite - 1]!, site] : [site];
+  for (const c of candidats) {
+    const nom = INDEX_DASHBOARD.alias[cleAlias(c)];
+    const base = nom ? INDEX_DASHBOARD.icones[nom] : undefined;
+    if (nom && base) {
+      return `https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@${COMMIT_DASHBOARD}/${base}/${nom}.${base}`;
+    }
+  }
+  return null;
+}
+
 /// Essaie les candidats dans l'ordre et rend le premier qui donne une image.
 /// Le cache négatif de l'appelant ne s'applique donc qu'après épuisement de la
 /// liste — sinon un premier échec figerait l'absence pour une heure alors qu'un
 /// autre chemin aurait répondu.
 async function fetchFavicon(domain: string): Promise<FaviconResult> {
   const deadline = Date.now() + TOTAL_BUDGET_MS;
+  // Le logo de qualité d'abord ; le favicon du site s'il n'y en a pas, ou si le
+  // CDN ne répond pas. Même chemin de récupération, donc mêmes défenses.
+  const logo = ICONS_DASHBOARD ? logoDashboard(domain) : null;
+  if (logo) {
+    try {
+      const found = await fetchOne(logo);
+      if (found) return found;
+    } catch {
+      // Le CDN indisponible ne prive pas du favicon.
+    }
+  }
   for (const url of candidateUrls(domain)) {
     if (Date.now() >= deadline) break;
     try {

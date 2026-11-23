@@ -46,6 +46,12 @@ export function registerIconRoutes(app: FastifyInstance, db: DB): void {
         // `private` et non `public` : un cache partagé en amont réintroduirait
         // exactement l'oracle que le cloisonnement vient de fermer.
         .header("cache-control", "private, max-age=86400")
+        // Un logo peut être un SVG, servi depuis NOTRE origine. Dans une balise
+        // `<img>` il ne peut rien exécuter ; ouvert directement dans un onglet,
+        // si. Ces deux en-têtes le cantonnent à une image : pas de script, pas
+        // de requête, pas de type deviné.
+        .header("content-security-policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+        .header("x-content-type-options", "nosniff")
         .send(icon.data);
     },
   );

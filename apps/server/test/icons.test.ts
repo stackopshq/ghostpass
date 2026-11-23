@@ -112,3 +112,32 @@ test("candidateUrls garde les chemins de l'hôte exact avant de remonter au site
   ]);
   assert.equal(urls[4], "https://indy.fr/favicon.ico");
 });
+
+// ─── Les logos de Dashboard Icons ───
+
+import { logoDashboard } from "../src/services/icons.js";
+
+test("logoDashboard trouve la marque par le nom du site, sous-domaine compris", () => {
+  assert.match(logoDashboard("github.com") ?? "", /\/svg\/github\.svg$/);
+  assert.match(logoDashboard("gist.github.com") ?? "", /\/github\.svg$/);
+  // Épinglé sur un commit : l'URL désigne le fichier indexé, pas `@main`.
+  assert.match(logoDashboard("github.com") ?? "", /dashboard-icons@[0-9a-f]{40}\//);
+});
+
+test("logoDashboard passe le suffixe public d'un domaine britannique", () => {
+  assert.equal(logoDashboard("co.uk"), null);
+  assert.equal(logoDashboard("inconnu-xyz.co.uk"), null);
+});
+
+test("logoDashboard ne prend jamais le logo d'un sous-domaine seul", () => {
+  // `mail` ou `app` ne sont pas des marques : un site inconnu n'a pas de logo,
+  // même si l'un de ses sous-domaines porte un nom courant.
+  assert.equal(logoDashboard("mail.inconnu-xyz.test"), null);
+  assert.equal(logoDashboard("app.inconnu-xyz.test"), null);
+});
+
+test("logoDashboard ne vise que le CDN, en HTTPS", () => {
+  const url = new URL(logoDashboard("gitlab.com")!);
+  assert.equal(url.protocol, "https:");
+  assert.equal(url.hostname, "cdn.jsdelivr.net");
+});
