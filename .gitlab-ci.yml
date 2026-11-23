@@ -7,8 +7,8 @@
 # ici avec les étapes qu'elles justifient : un contrôle dont on a perdu le
 # pourquoi est le premier qu'on retire.
 #
-# Android se construit et se vérifie à chaque MR ; l'AAB sort non signé, le dépôt sur
-# Play reste manuel (docs/android.md §14).
+# Android se construit et se vérifie à chaque MR qui le touche, et sur `main` ;
+# l'AAB sort non signé, le dépôt sur Play reste manuel (docs/android.md §14).
 #
 # Trois choses restent inertes tant qu'on ne les branche pas, et chacune le dit
 # dans son journal plutôt que de disparaître :
@@ -83,6 +83,34 @@ variables:
 .quand-securite:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_PIPELINE_SCHEDULE_DESCRIPTION != "Weekly security"
+      when: never
+    - when: on_success
+
+# Les applications mobiles : sur une MR, seulement si elle touche ce qu'elles
+# construisent ou testent. Le job `android` dure une dizaine de minutes, et il
+# tournait sur chaque MR, correction de documentation comprise.
+#
+# Le filtre ne s'applique qu'aux MR. Sur `main`, sur une étiquette et sur un
+# pipeline lancé à la main, tout tourne : le cœur crypto vient de ghostsuite,
+# qu'aucun chemin de ce dépôt ne voit changer. Une régression venue de là-bas
+# se lit donc au plus tard sur `main`, à la fusion suivante, au lieu de ne se
+# lire nulle part.
+#
+# `.gitlab-ci.yml` est dans la liste : une MR qui modifie ces jobs doit les
+# voir tourner.
+.quand-android:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        # `assets/vecteurs` : les deux modules lisent les vecteurs de contrat
+        # depuis ce dossier (build.gradle.kts de `app` et de `coeur-hote`).
+        - apps/android/**/*
+        - tools/android/**/*
+        - assets/vecteurs/**/*
+        - .gitlab-ci.yml
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
     - when: on_success
 
@@ -192,6 +220,7 @@ ios-gate:
         echo "Pour les activer : CI/CD > Variables, MACOS_RUNNER = true (voir tools/ci/README.md)."
         echo "D'ici là, ./tools/ios/run-ios-tests.sh se lance à la main avant toute MR touchant à l'app."
       fi
+      echo "Sur une MR, le job iOS ne tourne que si elle touche apps/ios, tools/ios, apps/server ou la CI."
 
 ios:
   stage: verifier
@@ -202,10 +231,24 @@ ios:
   # job sans runner restait en file et se voyait ; ici, il laisserait le
   # pipeline en attente indéfiniment, et la MR sans verdict. `ios-gate` porte
   # donc la visibilité que la file d'attente donnait.
+  #
+  # Sur une MR, même filtre que `.quand-android`, avec `apps/server` en plus :
+  # `run-ios-tests.sh` lance le serveur depuis ses sources, donc un changement
+  # d'API peut casser le parcours iOS sans toucher une ligne de Swift.
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
       when: never
-    - if: $MACOS_RUNNER == "true"
+    - if: $MACOS_RUNNER != "true"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - apps/ios/**/*
+        - tools/ios/**/*
+        - apps/server/**/*
+        - .gitlab-ci.yml
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
+    - when: on_success
   tags: [macos]
   # Un Mac, un port 3111, donc un job iOS à la fois. `run-ios-tests.sh` fige
   # `PORT=3111` parce que les tests Swift portent la même constante : un
@@ -287,7 +330,7 @@ ios:
 android:
   stage: verifier
   image: $ANDROID_IMAGE
-  extends: [.quand-code]
+  extends: [.quand-android]
   # Ne dépend pas de `crypto` : le cœur compilé ici est celui de ghostsuite, pas celui de
   # ce dépôt, et attendre `crypto` retarderait le verdict sans rien garantir de plus.
   needs: []
