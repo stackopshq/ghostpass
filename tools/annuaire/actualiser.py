@@ -36,7 +36,7 @@ def lire(url: str):
     # l'écrire en dur dans l'appel ne suffit pas : sans `User-Agent`, les deux serveurs
     # répondent 403.
     requete = urllib.request.Request(url, headers={"User-Agent": "ghostpass-annuaire"})
-    with urllib.request.urlopen(requete, timeout=60) as r:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected
+    with urllib.request.urlopen(requete, timeout=60) as r:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
         return json.load(r)
 
 
