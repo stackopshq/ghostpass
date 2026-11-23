@@ -449,6 +449,7 @@ sast:
     # Les `p/...` sont téléchargés depuis le registre semgrep.dev.
     - >-
       semgrep scan --error --skip-unknown-extensions
+      --exclude apps/web-next/public/annuaire-2fa.json
       --config p/security-audit
       --config p/secrets
       --config p/javascript

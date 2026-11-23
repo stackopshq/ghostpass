@@ -41,9 +41,10 @@ import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Archive, Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Etoile, Organisation, Partage, Plus, Reglages as IconeReglages } from "@/components/Icones";
+import { Archive, Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Etoile, Organisation, Partage, Plus, Pouls, Reglages as IconeReglages } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
 import { Securite } from "@/components/Securite";
+import { Surveillance } from "@/components/Surveillance";
 import { Administration } from "@/components/Administration";
 import { Partages } from "@/components/Partages";
 import { ImportExport } from "@/components/ImportExport";
@@ -134,7 +135,7 @@ export function VaultScreen() {
   // arrivent ensuite : tant qu'elles ne sont pas là, elles ne figurent pas
   // dans le rail — un onglet qui mène à « bientôt » est pire que son absence.
   const [section, setSection] = useState<
-    "coffre" | "orgs" | "partages" | "securite" | "corbeille" | "admin"
+    "coffre" | "surveillance" | "orgs" | "partages" | "securite" | "corbeille" | "admin"
   >("coffre");
   // L'entrée « Administration » n'existe que pour les adresses de `GHOSTPASS_ADMIN_EMAILS`.
   // Indicatif : les routes `/api/admin/*` vérifient le rôle elles-mêmes.
@@ -753,7 +754,7 @@ export function VaultScreen() {
     setSelection(new Set());
   };
 
-  const ouvrirSection = (cle: "orgs" | "partages" | "securite" | "corbeille" | "admin") => {
+  const ouvrirSection = (cle: "surveillance" | "orgs" | "partages" | "securite" | "corbeille" | "admin") => {
     setSection(cle);
     if (cle !== "orgs") setOrgOuverte(null);
   };
@@ -888,10 +889,10 @@ export function VaultScreen() {
               onClick={() => choisirFiltre({ type: "favoris" })}
             />
             <EntreeDeNav
-              icone={Bouclier}
-              libelle={t("app.security")}
-              actif={section === "securite"}
-              onClick={() => ouvrirSection("securite")}
+              icone={Pouls}
+              libelle={t("app.watch")}
+              actif={section === "surveillance"}
+              onClick={() => ouvrirSection("surveillance")}
             />
           </div>
 
@@ -950,6 +951,15 @@ export function VaultScreen() {
           />
 
           <div className="mt-6 flex flex-col gap-1">
+            {/* La sécurité du COMPTE (second facteur, clés, connexions) vit en
+                pied : on la règle une fois. Celle du coffre, qu'on consulte,
+                est en haut sous le nom de « Surveillance ». */}
+            <EntreeDeNav
+              icone={Bouclier}
+              libelle={t("app.security")}
+              actif={section === "securite"}
+              onClick={() => ouvrirSection("securite")}
+            />
             <EntreeDeNav
               icone={Partage}
               libelle={t("app.shares")}
@@ -1024,6 +1034,14 @@ export function VaultScreen() {
             <Partages partages={partages} occupe={occupe} onRevoquer={revoquerPartage} />
           ) : section === "securite" ? (
             <Securite />
+          ) : section === "surveillance" ? (
+            <Surveillance
+              items={courants}
+              onOuvrir={(item) => {
+                choisirFiltre(TOUS);
+                setChoisi(item);
+              }}
+            />
           ) : section === "orgs" ? (
             orgOuverte ? (
               <DetailOrg org={orgOuverte} onRetour={() => setOrgOuverte(null)} />
