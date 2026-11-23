@@ -20,10 +20,14 @@
 	<string>GhostPass</string>
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<!-- Reprises des réglages de la cible, jamais réécrites ici : figées, elles sont
+	     restées à 1.0 (1) quand l'application est passée en 1.0.1 (2), et App Store
+	     Connect refuse une extension dont le numéro de build diffère de celui de son
+	     application. -->
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID déverrouille votre coffre pour remplir vos identifiants.</string>
 

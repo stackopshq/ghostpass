@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Export de diffusion en signature **explicite**.
+
+	     `ExportOptions.plist`, en `signingStyle: automatic`, réclame les profils que
+	     Xcode gère dans le nuage et que la clé API ne peut pas atteindre :
+
+	         error: exportArchive Cloud signing permission error
+	           You haven't been given access to cloud-managed distribution certificates.
+	         error: exportArchive Provisioning profile "iOS Team Store Provisioning
+	           Profile: ch.stackops.ghostpass" doesn't include signing certificate
+	           "Apple Distribution: <titulaire du certificat> (9WHCJ5W7S6)".
+
+	     Le second message est le vrai : les profils gérés dans le nuage ne contiennent
+	     pas le certificat de distribution du poste, et l'automatique n'en essaie pas
+	     d'autre. Nommer les profils ferme la question — ceux-ci sont créés par l'API,
+	     portent le groupe d'applications et l'habilitation de remplissage, et valent un
+	     an (voir docs/appstore.md). -->
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>teamID</key>
+	<string>9WHCJ5W7S6</string>
+	<key>destination</key>
+	<string>export</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>signingCertificate</key>
+	<string>Apple Distribution</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>ch.stackops.ghostpass</key>
+		<string>GhostPass App Store</string>
+		<key>ch.stackops.ghostpass.autofill</key>
+		<string>GhostPass AutoFill App Store</string>
+	</dict>
+</dict>
+</plist>

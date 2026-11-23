@@ -36,8 +36,8 @@ settings:
     SWIFT_EMIT_LOC_STRINGS: YES
     # Version affichée et numéro de build. Sans elles, l'envoi à App Store Connect échoue,
     # et deux envois du même numéro sont refusés — le build s'incrémente à chaque montée.
-    MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.0.1"
+    CURRENT_PROJECT_VERSION: "2"
     # iPhone seulement. Sans cette clef, Xcode retient iPhone *et* iPad — le binaire
     # sortait avec `UIDeviceFamily = [1, 2]` — et l'on vendait une plateforme que rien
     # n'avait éprouvée. Ouverte sur un iPad, l'application fonctionnait mais montrait
