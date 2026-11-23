@@ -1,31 +1,49 @@
-# GhostPass — interface Next + Tailwind
+# GhostPass : l'interface web
 
-Le portage de l'interface Svelte vers Next, avec Tailwind branché sur le thème
-généré de la suite. **`apps/web` reste en service tant que ce portage n'est pas
-complet** : rien ne casse, le Containerfile n'a pas bougé.
+L'interface de GhostPass : Next 16 en **export statique**, Tailwind branché sur le thème
+généré de la suite. Elle a remplacé l'interface Svelte (`apps/web`) le 2026-08-29 ; c'est
+elle que construit `Containerfile` et que sert l'image `…-web`.
 
-## Ce qui est fait
+## Construire et lancer
 
-| | |
-|---|---|
-| bibliothèques TypeScript (`api`, `crypto`, `totp`, `csv`, `send`, `webauthn`…) | déplacées **sans modification**, sauf une ligne |
-| `i18n` | porté des runes Svelte vers un contexte React, 444 entrées intactes |
-| WebAssembly | **prouvé au navigateur** — `init()` aboutit, zéro erreur de console |
-| Tailwind sur le thème généré | **prouvé au navigateur** — voir ci-dessous |
-| `LanguageSwitcher`, `SendView`, route `/s/[id]` | portés, rendus vérifiés |
+Le cœur crypto est une dépendance `file:` vers `crates/ghostpass-crypto-wasm/pkg`, qui
+n'existe qu'une fois construit. Sans lui, l'installation réussit et la compilation échoue
+sur des erreurs de type qui semblent sans rapport.
 
-## Ce qui reste
+```bash
+(cd ../../crates/ghostpass-crypto-wasm && wasm-pack build --target web)
+npm install
+npm run dev         # :5173, /api relayé vers le serveur (:3000)
+npm run typecheck   # tsc --noEmit
+npm test            # tests node:test (test/*.test.ts, test/*.test.tsx)
+npm run build       # export statique dans out/
+```
 
-`Organizations.svelte` (780 lignes) et `App.svelte` (2 230). C'est le gros du
-travail, et il n'est pas commencé.
+La CI (job `web`) lance `typecheck`, `test` et `build`, dans cet ordre.
 
-## La seule ligne changée dans les bibliothèques
+En dev, `next dev` tourne sur `:5173`, l'origine que le serveur accepte par défaut pour
+WebAuthn (`ORIGINE_DE_DEVELOPPEMENT`), et relaie les mêmes chemins que nginx en production
+(`/api`, `/health`, `/.well-known/webauthn`) vers `GHOSTPASS_API`, par défaut
+`http://localhost:3000`. Le relais n'existe qu'en dev : Next refuse `rewrites` avec
+`output: "export"`, d'où la configuration par phase de `next.config.ts`.
 
-Vite acceptait `import wasmUrl from "….wasm?url"` — un suffixe qui lui est
-propre. Webpack ne le connaît pas. Le module est donc servi depuis `public/` et
-récupéré par `fetch`, ce qui ne demande rien à l'empaqueteur. La copie est une
-étape `prebuild`, pas un geste d'opérateur : faite à la main elle serait périmée
-au premier `cargo build`.
+## Pourquoi un export statique
+
+Toute l'application est cliente : elle déchiffre avec une clé que le serveur n'a pas, donc
+aucun rendu serveur n'aurait rien à produire. En production, un nginx sert le lot et relaie
+`/api` depuis la **même origine**, ce dont dépendent les clés WebAuthn (voir `Containerfile`
+et `nginx.conf.template`).
+
+## Le module WebAssembly
+
+Il est copié dans `public/` par les scripts `predev` et `prebuild`, puis récupéré par `fetch`
+(`src/lib/crypto.ts`), ce qui ne demande rien à l'empaqueteur. La copie est une étape du
+script, pas un geste d'opérateur : faite à la main, elle serait périmée au premier
+`cargo build`.
+
+`next.config.ts` fixe `turbopack.root` à la racine du dépôt : `node_modules/ghostpass-crypto-wasm`
+est un lien symbolique vers `crates/…/pkg`, hors de la racine que Turbopack devine, et sans
+cette ligne la construction échoue sur « Can't resolve 'ghostpass-crypto-wasm' ».
 
 ## Pourquoi le thème n'est pas éditable ici
 
