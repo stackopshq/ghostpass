@@ -31,9 +31,13 @@ rsvg-convert -w 1024 -h 1024 -b white \
   "$BRAND/ghostpass-icon.svg" \
   -o "$ASSETS/AppIcon.appiconset/AppIcon-1024.png"
 
-# Web : le favicon et la marque de l'en-tête sont le même fichier, servi tel quel. Un SVG
-# tient à 16 px comme à 512, et évite d'entretenir six tailles de PNG.
-mkdir -p "$ROOT/apps/web/public"
-cp "$BRAND/ghostpass-icon.svg" "$ROOT/apps/web/public/favicon.svg"
+# Web : le favicon est la source, servie telle quelle. Un SVG tient à 16 px comme à 512,
+# et évite d'entretenir six tailles de PNG. La marque de l'en-tête (`logo.svg`) est un
+# fichier distinct, que ce script ne touche pas.
+#
+# Pas de `mkdir -p` : la destination existe dans le dépôt. La créer à la volée a fait
+# survivre ici `apps/web/public` après le retrait de l'interface Svelte le 2026-08-29 ; le
+# script recréait un dossier mort et laissait le vrai favicon sans mise à jour.
+cp "$BRAND/ghostpass-icon.svg" "$ROOT/apps/web-next/public/favicon.svg"
 
 echo "Assets rendus depuis tools/brand/ghostpass-icon.svg"

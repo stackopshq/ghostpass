@@ -6,7 +6,7 @@
  * chez un tiers avant même l'écran de déverrouillage. Les fichiers sont donc
  * servis par nginx, depuis la même origine que l'application.
  *
- * Fichiers déposés dans apps/web/public/fonts/, licences dans OFL.txt.
+ * Fichiers déposés dans apps/web-next/public/fonts/, licences dans OFL.txt.
  * Régénérer avec tools/fonts/vendor.py (voir son en-tête).
  *
  * Hanken Grotesk est une POLICE VARIABLE : un seul fichier par sous-ensemble

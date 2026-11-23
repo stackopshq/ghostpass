@@ -7,7 +7,8 @@ import java.security.MessageDigest
 /**
  * Vérification de fuite auprès de Have I Been Pwned, **en k-anonymat**.
  *
- * Transposition de `apps/web/src/lib/breach.ts` et de `apps/ios/Ghostpass/Services/Breach.swift`.
+ * Transposition de `apps/web-next/src/lib/breach.ts` et de
+ * `apps/ios/Ghostpass/Services/Breach.swift`.
  * Seuls les **cinq premiers caractères** du SHA-1 du mot de passe partent sur le réseau ; le
  * mot de passe — et même son empreinte complète — ne quitte jamais l'appareil. Le service
  * renvoie tous les suffixes connus pour ce préfixe, et la comparaison se fait ici.

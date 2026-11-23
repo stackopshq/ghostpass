@@ -10,7 +10,7 @@ Run it when a weight or a family changes in FAMILIES below:
 
     uv run --with 'fonttools[woff]==4.55.3' tools/fonts/vendor.py
 
-It rewrites apps/web/public/fonts/ and apps/web/src/fonts.css, then prints the
+It rewrites apps/web-next/public/fonts/ and apps/web-next/src/app/fonts.css, then prints the
 SHA256 of every file. Review the diff: a font that changes bytes without a
 declared reason is worth a question.
 
@@ -51,8 +51,8 @@ FAMILIES = {
 SUBSETS = {"latin", "latin-ext"}
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-FONT_DIR = ROOT / "apps/web/public/fonts"
-CSS_OUT = ROOT / "apps/web/src/fonts.css"
+FONT_DIR = ROOT / "apps/web-next/public/fonts"
+CSS_OUT = ROOT / "apps/web-next/src/app/fonts.css"
 
 HEADER = """/* Polices auto-hébergées — aucune requête ne sort de l'origine.
  *

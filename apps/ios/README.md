@@ -82,8 +82,8 @@ passe faux, et le fait qu'aucune session n'autorise l'activation.
 | `Ghostpass/Services/Keychain.swift` | Jeton de session et blobs chiffrés, non exportables |
 | `Ghostpass/Services/Biometrics.swift` | Disponibilité et nom de la biométrie (Face ID / Touch ID) |
 | `Ghostpass/Services/VaultCache.swift` | Copie locale du coffre, déjà chiffrée : le coffre s'ouvre sans réseau |
-| `Ghostpass/Services/PasswordGenerator.swift` | Générateur, transposition de `apps/web/src/lib/generator.ts` |
-| `Ghostpass/Services/Totp.swift` | Codes TOTP (RFC 6238), transposition de `apps/web/src/lib/totp.ts` |
+| `Ghostpass/Services/PasswordGenerator.swift` | Générateur, transposition de `apps/web-next/src/lib/generator.ts` |
+| `Ghostpass/Services/Totp.swift` | Codes TOTP (RFC 6238), transposition de `apps/web-next/src/lib/totp.ts` |
 | `Ghostpass/Services/Clipboard.swift` | Copie de secrets, toujours avec expiration |
 | `Ghostpass/Services/SharedStore.swift` | Ce que l'app dépose pour l'extension : session et blobs |
 | `Ghostpass/Services/SiteMatching.swift` | Rapprochement site ↔ adresses d'un item |

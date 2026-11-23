@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-/// Codes TOTP (RFC 6238), transposition de `apps/web/src/lib/totp.ts`.
+/// Codes TOTP (RFC 6238), transposition de `apps/web-next/src/lib/totp.ts`.
 ///
 /// Le secret vit dans l'item chiffré et ne quitte jamais l'appareil. Le HMAC vient de
 /// CryptoKit, la bibliothèque du système — exactement ce que fait la web app avec

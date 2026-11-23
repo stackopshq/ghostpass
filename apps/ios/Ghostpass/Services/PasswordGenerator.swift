@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Générateur de mots de passe, transposition fidèle de `apps/web/src/lib/generator.ts` :
+/// Générateur de mots de passe, transposition fidèle de `apps/web-next/src/lib/generator.ts` :
 /// mêmes jeux de caractères, mêmes valeurs par défaut, mêmes garanties. Deux appareils du
 /// même compte doivent produire des mots de passe de même nature.
 ///
