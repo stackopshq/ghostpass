@@ -58,14 +58,30 @@
       "folders": "\u0000gp:folders",
       "favorites": "\u0000gp:favorites",
       "shares": "\u0000gp:shares",
-      "org_colors": "\u0000gp:orgcolors"
+      "org_colors": "\u0000gp:orgcolors",
+      "archived": "\u0000gp:archived"
     },
     "shapes": {
       "folders": "tableau JSON de chemins — les dossiers vides seulement",
       "favorites": "tableau JSON d'identifiants d'éléments",
       "shares": "tableau JSON d'objets, champs dans sealed_contents.share_registry",
-      "org_colors": "objet JSON { identifiant d'organisation: \"#RRGGBB\" }"
-    }
+      "org_colors": "objet JSON { identifiant d'organisation: \"#RRGGBB\" }",
+      "archived": "tableau JSON d'identifiants d'éléments"
+    },
+    "archived": [
+      "Un élément archivé n'est ni supprimé ni modifié : il quitte les listes courantes",
+      "(tous les éléments, dossiers, favoris) et les suggestions de remplissage, et ne se",
+      "montre plus que dans la vue des archives. Comme les favoris, c'est un choix de la",
+      "personne, pas une propriété de l'élément : il vit dans son registre et non dans",
+      "l'élément chiffré, que partagent les membres d'une équipe.",
+      "",
+      "Un client qui ignore ce registre montre les éléments archivés comme les autres :",
+      "rien n'est perdu, ils ne sont simplement pas rangés à part.",
+      "",
+      "Un identifiant qui ne correspond plus à aucun élément peut être retiré à la",
+      "prochaine écriture. Seulement par un client qui a lu TOUTES les collections",
+      "d'équipe : celui qui en a manqué une effacerait des choix encore valables."
+    ]
   },
 
   "org_colors": {
@@ -219,7 +235,7 @@
     "digits": 10,
     "api_items": {
       "_": [
-        "Les horodatages des éléments rendus par le serveur — `updatedAt`, `deletedAt`.",
+        "Les horodatages des éléments rendus par le serveur : `updatedAt`, `deletedAt`.",
         "Millisecondes, treize chiffres. Les lire comme des secondes place tout en 1970 ;",
         "les écrire en secondes place tout dans un futur lointain. Ni l'un ni l'autre ne",
         "lève d'erreur : c'est un affichage cohérent et faux.",

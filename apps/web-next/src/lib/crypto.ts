@@ -10,6 +10,12 @@ import {
   ORG_COLORS_ITEM_NAME,
   type RegistreCouleurs,
 } from "./couleursOrg";
+import {
+  ARCHIVED_ITEM_NAME,
+  FAVORITES_ITEM_NAME,
+  lireListeDIdentifiants,
+  REGISTRY_PREFIX,
+} from "./registres";
 // Le module WASM est servi depuis `public/`, pas importé par le empaqueteur.
 //
 // Vite acceptait `import wasmUrl from "….wasm?url"` — un suffixe qui lui est
@@ -429,7 +435,12 @@ export type VaultDecryptResult =
   | { kind: "item"; item: DecryptedItem }
   | { kind: "shares"; shares: PartageEnCours[] }
   | { kind: "folders"; paths: string[] }
-  | { kind: "orgcolors"; couleurs: RegistreCouleurs };
+  | { kind: "orgcolors"; couleurs: RegistreCouleurs }
+  | { kind: "favorites"; ids: string[] }
+  | { kind: "archived"; ids: string[] }
+  /// Un registre qu'aucune règle d'ici ne lit : écrit par un autre client, ou par
+  /// une version plus récente. Masqué, jamais réécrit.
+  | { kind: "registreInconnu" };
 
 export function decryptVaultItem(
   account: Account,
@@ -507,6 +518,19 @@ function projeterItemDechiffre(raw: ItemChiffreLu): VaultDecryptResult {
       paths: Array.isArray(paths) ? (paths as string[]) : [],
     };
   }
+
+  if (nom === FAVORITES_ITEM_NAME && d.kind === "SecureNote") {
+    return { kind: "favorites", ids: lireListeDIdentifiants(d.data?.content) };
+  }
+  if (nom === ARCHIVED_ITEM_NAME && d.kind === "SecureNote") {
+    return { kind: "archived", ids: lireListeDIdentifiants(d.data?.content) };
+  }
+
+  // Le contrat le demande : masquer TOUT nom qui commence par le préfixe, pas
+  // seulement ceux qu'on connaît. Le web ne lisait que trois registres, et le
+  // registre des favoris, écrit par iOS et Android, s'affichait ici comme une
+  // note sécurisée au nom illisible.
+  if (nom.startsWith(REGISTRY_PREFIX)) return { kind: "registreInconnu" };
 
   if (d.kind === "SecureNote") {
     return {
@@ -637,6 +661,25 @@ export function encryptFolders(
     notes: null,
     folder: null,
     data: { kind: "SecureNote", data: { content: JSON.stringify(paths) } },
+  };
+  const enc = JSON.parse(account.encrypt_item(JSON.stringify(item)));
+  return { encryptedKey: enc.encrypted_key, encryptedData: enc.encrypted_data };
+}
+
+/// Chiffre un registre « liste d'identifiants » (favoris ou archives).
+///
+/// Même forme que les dossiers : un tableau JSON plat dans une note sécurisée.
+/// iOS et Android lisent les favoris exactement ainsi.
+export function encryptIdList(
+  account: Account,
+  name: typeof FAVORITES_ITEM_NAME | typeof ARCHIVED_ITEM_NAME,
+  ids: string[],
+): { encryptedKey: string; encryptedData: string } {
+  const item = {
+    name,
+    notes: null,
+    folder: null,
+    data: { kind: "SecureNote", data: { content: JSON.stringify(ids) } },
   };
   const enc = JSON.parse(account.encrypt_item(JSON.stringify(item)));
   return { encryptedKey: enc.encrypted_key, encryptedData: enc.encrypted_data };

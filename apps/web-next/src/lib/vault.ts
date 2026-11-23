@@ -70,21 +70,53 @@ export function countItems(node: TreeNode): number {
   return node.items.length + node.children.reduce((sum, c) => sum + countItems(c), 0);
 }
 
-/// Liste du milieu : le dossier choisi, ou les résultats de recherche.
+/// Ce que la barre latérale a choisi de montrer au milieu.
+export type Filtre =
+  | { type: "tous" }
+  | { type: "favoris" }
+  | { type: "archives" }
+  /// Un coffre : le personnel, ou celui d'une organisation.
+  | { type: "personnel" }
+  | { type: "organisation"; orgId: string; nom: string }
+  | { type: "dossier"; chemin: string };
+
+export const TOUS: Filtre = { type: "tous" };
+
+/// Liste du milieu : ce que le filtre retient, ou les résultats de recherche.
 ///
-/// La recherche est **globale et ignore le dossier courant** : on cherche parce
+/// La recherche est **globale et ignore le filtre courant** : on cherche parce
 /// qu'on ne sait plus où la chose est rangée. La restreindre au dossier ouvert
 /// rendrait zéro résultat exactement quand la recherche sert.
+///
+/// Une seule frontière que la recherche ne franchit pas : les archives. Archiver
+/// sert à sortir un élément du quotidien ; le voir revenir dans chaque recherche
+/// annulerait le geste. Dans la vue des archives, la recherche porte sur elles.
 export function filtrerVisibles(
   items: VaultEntry[],
   search: string,
-  selectedFolder: string | null,
+  filtre: Filtre,
+  favoris: ReadonlySet<string> = new Set(),
+  archives: ReadonlySet<string> = new Set(),
 ): VaultEntry[] {
   const q = search.trim().toLowerCase();
+  const dansLesArchives = filtre.type === "archives";
   return items
     .filter((it) => {
+      if (archives.has(it.id) !== dansLesArchives) return false;
       if (q) return it.name.toLowerCase().includes(q) || it.username.toLowerCase().includes(q);
-      return selectedFolder === null || it.folder === selectedFolder;
+      switch (filtre.type) {
+        case "tous":
+        case "archives":
+          return true;
+        case "favoris":
+          return favoris.has(it.id);
+        case "personnel":
+          return !it.shared;
+        case "organisation":
+          return it.shared?.orgId === filtre.orgId;
+        case "dossier":
+          return it.folder === filtre.chemin;
+      }
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 }

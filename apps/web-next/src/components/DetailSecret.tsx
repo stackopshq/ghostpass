@@ -14,7 +14,7 @@ import { formatDate, passwordStrength, type VaultEntry } from "@/lib/vault";
 import { useCopie } from "@/components/useCopie";
 import { Avatar } from "@/components/Avatar";
 import { Bouton } from "@/components/champs";
-import { Coche, Copier, Oeil, OeilBarre } from "@/components/Icones";
+import { Archive, Coche, Copier, Etoile, Oeil, OeilBarre } from "@/components/Icones";
 
 function Ligne({
   label,
@@ -82,6 +82,10 @@ export function DetailSecret({
   onModifier,
   onSupprimer,
   onPartager,
+  favori,
+  onFavori,
+  archive,
+  onArchive,
   occupe,
 }: {
   item: VaultEntry;
@@ -91,6 +95,10 @@ export function DetailSecret({
   onModifier: () => void;
   onSupprimer: () => void;
   onPartager: () => void;
+  favori: boolean;
+  onFavori: () => void;
+  archive: boolean;
+  onArchive: () => void;
   occupe: boolean;
 }) {
   const { t, locale } = useI18n();
@@ -117,6 +125,29 @@ export function DetailSecret({
           <p className="text-xs text-muted">{genre}</p>
         </div>
         <div className="flex shrink-0 gap-2">
+          {/* Deux bascules en icône : l'en-tête porte déjà quatre boutons à
+              intitulé, et un sixième les replierait sur deux lignes. Le libellé
+              reste dans `aria-label` et dans l'infobulle. */}
+          <button
+            type="button"
+            onClick={onFavori}
+            aria-pressed={favori}
+            aria-label={t(favori ? "app.removeFavorite" : "app.addFavorite")}
+            title={t(favori ? "app.removeFavorite" : "app.addFavorite")}
+            className={`cursor-pointer rounded-lg p-2 transition-colors hover:bg-surface ${favori ? "text-warn" : "text-muted hover:text-foreground"}`}
+          >
+            <Etoile plein={favori} className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onArchive}
+            aria-pressed={archive}
+            aria-label={t(archive ? "app.unarchive" : "app.archive")}
+            title={t(archive ? "app.unarchive" : "app.archive")}
+            className={`cursor-pointer rounded-lg p-2 transition-colors hover:bg-surface ${archive ? "text-accent" : "text-muted hover:text-foreground"}`}
+          >
+            <Archive className="size-4" />
+          </button>
           {/* Partager copie le lien dans le presse-papier et range le jeton de
               révocation dans le coffre : le secret, lui, n'y passe jamais. */}
           <Bouton variante="discret" onClick={onPartager} disabled={occupe}>
@@ -139,6 +170,13 @@ export function DetailSecret({
       {/* Les champs vivent dans une carte : une surface posée sur l'aurore, pas
           une suite de lignes séparées par des traits. */}
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
+        {archive && (
+          // Dit sur la fiche même : arrivé ici par la vue des archives, on
+          // pourrait sinon croire l'élément perdu de vue par erreur.
+          <p className="mb-3 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">
+            {t("app.archivedNote")}
+          </p>
+        )}
         <div className="carte overflow-hidden">
         {item.folder && <Ligne label={t("app.folder")} valeur={item.folder} />}
 

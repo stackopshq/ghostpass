@@ -10,7 +10,8 @@
 
 import { useI18n } from "@/lib/i18n";
 import { countItems, type TreeNode } from "@/lib/vault";
-import { Chevron, Coffre, Dossier } from "@/components/Icones";
+import { Chevron, Dossier } from "@/components/Icones";
+import { EnTeteDeSection } from "@/components/BarreLaterale";
 
 function Noeud({
   node,
@@ -93,7 +94,8 @@ function Noeud({
 
 export function ArbreDossiers({
   tree,
-  total,
+  ouvert,
+  onBasculerSection,
   choisi,
   recherche,
   replies,
@@ -104,12 +106,13 @@ export function ArbreDossiers({
   onSupprimer,
 }: {
   tree: TreeNode;
-  total: number;
+  ouvert: boolean;
+  onBasculerSection: () => void;
   choisi: string | null;
   recherche: string;
   replies: Set<string>;
   chemins: string[];
-  onChoisir: (path: string | null) => void;
+  onChoisir: (path: string) => void;
   onBasculer: (path: string) => void;
   onCreer: (path: string) => void;
   onSupprimer: (path: string) => void;
@@ -121,22 +124,14 @@ export function ArbreDossiers({
 
   return (
     <div className="flex flex-col gap-0.5">
-      <button
-        type="button"
-        onClick={() => onChoisir(null)}
-        className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${choisi === null ? "bg-accent/12 font-medium text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}
-      >
-        <Coffre className="size-4 shrink-0" />
-        <span className="flex-1 text-left">{t("app.allItems")}</span>
-        <span className="text-2xs tabular-nums">{total}</span>
-      </button>
+      <EnTeteDeSection
+        titre={t("app.folders")}
+        ouvert={ouvert}
+        onBasculer={onBasculerSection}
+        action={<NouveauDossier chemins={chemins} onCreer={onCreer} />}
+      />
 
-      <div className="mt-5 mb-1 flex items-center justify-between px-3">
-        <span className="text-2xs uppercase tracking-widest text-muted">{t("app.folders")}</span>
-        <NouveauDossier chemins={chemins} onCreer={onCreer} />
-      </div>
-
-      {tree.children.map((f) => (
+      {ouvert && tree.children.map((f) => (
         <Noeud
           key={f.path}
           node={f}

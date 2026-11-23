@@ -15,12 +15,14 @@ import {
   openOrg,
   decryptVaultItem,
   encryptFolders,
+  encryptIdList,
   encryptItem,
   encryptOrgColors,
   encryptShares,
   type PartageEnCours,
 } from "@/lib/crypto";
-import { definirCouleur, effacerCouleur, type RegistreCouleurs } from "@/lib/couleursOrg";
+import { couleurOrg, definirCouleur, effacerCouleur, type RegistreCouleurs } from "@/lib/couleursOrg";
+import { aEcrire, ARCHIVED_ITEM_NAME, basculer as basculerId, FAVORITES_ITEM_NAME } from "@/lib/registres";
 import { useI18n } from "@/lib/i18n";
 import { approuverLHote, examinerLienDePartage, hotesApprouves } from "@/lib/lienDePartage";
 import { useSession } from "@/lib/session";
@@ -29,14 +31,17 @@ import {
   filtrerVisibles,
   folderPaths,
   historiqueApresModification,
+  TOUS,
+  type Filtre,
   type VaultEntry,
 } from "@/lib/vault";
 import { ArbreDossiers } from "@/components/ArbreDossiers";
+import { EnTeteDeSection, EntreeDeNav } from "@/components/BarreLaterale";
 import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Organisation, Partage, Plus, Reglages as IconeReglages } from "@/components/Icones";
+import { Archive, Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Etoile, Organisation, Partage, Plus, Reglages as IconeReglages } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
 import { Securite } from "@/components/Securite";
 import { Administration } from "@/components/Administration";
@@ -45,6 +50,12 @@ import { ImportExport } from "@/components/ImportExport";
 import { ListeOrgs } from "@/components/orgs/ListeOrgs";
 import { DetailOrg } from "@/components/orgs/DetailOrg";
 import type { OrgSummary } from "@/lib/orgs";
+
+/// Une organisation dont on a pu lire le coffre, pour la section « Coffres ».
+interface CoffreDEquipe {
+  orgId: string;
+  nom: string;
+}
 
 /// Une collection d'équipe où l'utilisateur peut écrire.
 interface Destination {
@@ -71,7 +82,22 @@ export function VaultScreen() {
   const [registreCouleursId, setRegistreCouleursId] = useState<string | null>(null);
   const [couleursOrg, setCouleursOrg] = useState<RegistreCouleurs>({});
   const [choisi, setChoisi] = useState<VaultEntry | null>(null);
-  const [dossier, setDossier] = useState<string | null>(null);
+  const [filtre, setFiltre] = useState<Filtre>(TOUS);
+  const dossier = filtre.type === "dossier" ? filtre.chemin : null;
+  // Favoris et archives : deux registres du coffre, partagés avec iOS et
+  // Android (voir `lib/registres.ts`).
+  const [favoris, setFavoris] = useState<Set<string>>(new Set());
+  const [registreFavorisId, setRegistreFavorisId] = useState<string | null>(null);
+  const [archives, setArchives] = useState<Set<string>>(new Set());
+  const [registreArchivesId, setRegistreArchivesId] = useState<string | null>(null);
+  const [coffresDEquipe, setCoffresDEquipe] = useState<CoffreDEquipe[]>([]);
+  // Faux tant qu'une collection d'équipe a échoué à la lecture : élaguer les
+  // registres effacerait alors les choix portant sur ses éléments.
+  const [lectureComplete, setLectureComplete] = useState(false);
+  // Les sections repliées de la barre latérale. Ouvertes par défaut : une
+  // section fermée au premier lancement cache ce qu'elle contient à qui ne
+  // sait pas encore qu'elle existe.
+  const [sectionsRepliees, setSectionsRepliees] = useState<Set<string>>(new Set());
   const [recherche, setRecherche] = useState("");
   const [replies, setReplies] = useState<Set<string>>(new Set());
   const [erreur, setErreur] = useState<string | null>(null);
@@ -152,15 +178,19 @@ export function VaultScreen() {
   const chargerElementsDEquipe = useCallback(async (): Promise<{
     items: VaultEntry[];
     destinations: Destination[];
+    coffres: CoffreDEquipe[];
+    complet: boolean;
   }> => {
-    if (!token || !account) return { items: [], destinations: [] };
+    if (!token || !account) return { items: [], destinations: [], coffres: [], complet: false };
     const sortis: VaultEntry[] = [];
     const destinations: Destination[] = [];
+    const coffres: CoffreDEquipe[] = [];
+    let complet = true;
     let orgs: Awaited<ReturnType<typeof api.listOrgs>>["organizations"] = [];
     try {
       orgs = (await api.listOrgs(token)).organizations;
     } catch {
-      return { items: [], destinations: [] };
+      return { items: [], destinations: [], coffres: [], complet: false };
     }
     for (const org of orgs) {
       if (org.status !== "active") continue;
@@ -168,6 +198,7 @@ export function VaultScreen() {
         const m = await api.getMembership(token, org.orgId);
         if (!m.encryptedOrgKey || !m.sealedByPublicKey) continue;
         const handle = openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey);
+        coffres.push({ orgId: org.orgId, nom: org.name });
         const { collections } = await api.listCollections(token, org.orgId);
         for (const col of collections) {
           // Les destinations possibles d'un déplacement : seulement là où l'on peut
@@ -199,13 +230,15 @@ export function VaultScreen() {
             }
           } catch {
             // Collection inaccessible : les autres restent lisibles.
+            complet = false;
           }
         }
       } catch {
         // Organisation illisible : les autres restent lisibles.
+        complet = false;
       }
     }
-    return { items: sortis, destinations };
+    return { items: sortis, destinations, coffres, complet };
   }, [token, account]);
 
   const charger = useCallback(async (): Promise<VaultEntry[]> => {
@@ -220,6 +253,10 @@ export function VaultScreen() {
       let regPartages: PartageEnCours[] = [];
       let regCouleursId: string | null = null;
       let regCouleurs: RegistreCouleurs = {};
+      let regFavorisId: string | null = null;
+      let regFavoris: string[] = [];
+      let regArchivesId: string | null = null;
+      let regArchives: string[] = [];
       for (const d of dtos) {
         const r = decryptVaultItem(account, d.encryptedKey, d.encryptedData);
         if (r.kind === "folders") {
@@ -231,7 +268,13 @@ export function VaultScreen() {
         } else if (r.kind === "orgcolors") {
           regCouleursId = d.id;
           regCouleurs = r.couleurs;
-        } else {
+        } else if (r.kind === "favorites") {
+          regFavorisId = d.id;
+          regFavoris = r.ids;
+        } else if (r.kind === "archived") {
+          regArchivesId = d.id;
+          regArchives = r.ids;
+        } else if (r.kind === "item") {
           entrees.push({ ...r.item, id: d.id, updatedAt: d.updatedAt });
         }
       }
@@ -240,7 +283,13 @@ export function VaultScreen() {
       setItems(entrees);
       const equipe = await chargerElementsDEquipe();
       setDestinations(equipe.destinations);
+      setCoffresDEquipe(equipe.coffres);
+      setLectureComplete(equipe.complet);
       if (equipe.items.length > 0) setItems([...entrees, ...equipe.items]);
+      setRegistreFavorisId(regFavorisId);
+      setFavoris(new Set(regFavoris));
+      setRegistreArchivesId(regArchivesId);
+      setArchives(new Set(regArchives));
       setRegistreId(regId);
       setDossiersVides(regChemins);
       setRegistrePartagesId(regPartagesId);
@@ -261,10 +310,40 @@ export function VaultScreen() {
     void charger().then(() => setChoisi(null));
   }, [charger]);
 
-  const tree = useMemo(() => buildTree(items, dossiersVides), [items, dossiersVides]);
+  // Les archivés sortent aussi de l'arbre et de ses comptes : un dossier qui
+  // annonce trois éléments et en montre deux enverrait chercher le troisième.
+  const courants = useMemo(() => items.filter((i) => !archives.has(i.id)), [items, archives]);
+  const tree = useMemo(() => buildTree(courants, dossiersVides), [courants, dossiersVides]);
   const visibles = useMemo(
-    () => filtrerVisibles(items, recherche, dossier),
-    [items, recherche, dossier],
+    () => filtrerVisibles(items, recherche, filtre, favoris, archives),
+    [items, recherche, filtre, favoris, archives],
+  );
+
+  /// Bascule un élément dans un registre « liste d'identifiants ».
+  ///
+  /// Comme pour les couleurs d'organisation, l'écran change AVANT l'aller-retour
+  /// réseau : une étoile qui attend le serveur donne l'impression que le clic
+  /// n'a pas porté. Un échec remet l'état précédent et le dit.
+  const basculerDansLeRegistre = useCallback(
+    async (quel: "favoris" | "archives", id: string) => {
+      if (!token || !account) return;
+      const [courant, poser, registreId, poserId, nom] =
+        quel === "favoris"
+          ? ([favoris, setFavoris, registreFavorisId, setRegistreFavorisId, FAVORITES_ITEM_NAME] as const)
+          : ([archives, setArchives, registreArchivesId, setRegistreArchivesId, ARCHIVED_ITEM_NAME] as const);
+      const suivant = basculerId(courant, id);
+      poser(suivant);
+      try {
+        const vivants = new Set(items.map((i) => i.id));
+        const enc = encryptIdList(account, nom, aEcrire(suivant, vivants, lectureComplete));
+        if (registreId) await api.updateItem(token, registreId, enc);
+        else poserId((await api.createItem(token, enc)).id);
+      } catch {
+        poser(courant);
+        setErreur(t("app.registryFailed"));
+      }
+    },
+    [token, account, favoris, archives, registreFavorisId, registreArchivesId, items, lectureComplete, t],
   );
   const chemins = useMemo(() => folderPaths(items, dossiersVides), [items, dossiersVides]);
 
@@ -316,7 +395,7 @@ export function VaultScreen() {
   const supprimerDossier = async (path: string) => {
     const suivant = dossiersVides.filter((p) => p !== path && !p.startsWith(`${path}/`));
     setDossiersVides(suivant);
-    if (dossier === path) setDossier(null);
+    if (dossier === path) setFiltre(TOUS);
     try {
       await enregistrerDossiers(suivant);
     } catch (e) {
@@ -665,6 +744,41 @@ export function VaultScreen() {
     }
   };
 
+  /// Une vue du coffre : elle ramène toujours à l'écran du coffre, et vide la
+  /// sélection, qui ne porterait plus sur ce qu'on regarde.
+  const choisirFiltre = (f: Filtre) => {
+    setSection("coffre");
+    setOrgOuverte(null);
+    setFiltre(f);
+    setSelection(new Set());
+  };
+
+  const ouvrirSection = (cle: "orgs" | "partages" | "securite" | "corbeille" | "admin") => {
+    setSection(cle);
+    if (cle !== "orgs") setOrgOuverte(null);
+  };
+
+  const [titreDuFiltre, videDuFiltre] = ((): [string, string] => {
+    switch (filtre.type) {
+      case "tous":
+        return [t("app.allItems"), t("app.noneInVault")];
+      case "favoris":
+        return [t("app.favorites"), t("app.noFavorites")];
+      case "archives":
+        return [t("app.archives"), t("app.noArchived")];
+      case "personnel":
+        return [t("app.personalVault"), t("app.noneInVault")];
+      case "organisation":
+        return [filtre.nom, t("app.noneInVault")];
+      case "dossier":
+        return [filtre.chemin.split("/").pop() ?? "", t("app.noneInFolder")];
+    }
+  })();
+
+  const basculerSectionRepliee = (cle: string) => {
+    setSectionsRepliees((prec) => basculerId(prec, cle));
+  };
+
   const basculer = (path: string) => {
     setReplies((prec) => {
       const s = new Set(prec);
@@ -724,83 +838,146 @@ export function VaultScreen() {
             GhostPass
           </span>
 
-          {section === "coffre" && (
-            <>
-              <Bouton
-                className="mb-4 w-full"
-                onClick={() => {
-                  // Le dossier ouvert pré-remplit le champ : on ajoute presque
-                  // toujours là où l'on est en train de regarder.
-                  setChoisi(null);
-                  setEdition("");
-                }}
-              >
-                <span className="flex items-center justify-center gap-2">
-                  <Plus className="size-4" />
-                  {t("app.newItem")}
-                </span>
-              </Bouton>
-              <input
-                type="search"
-                value={recherche}
-                onChange={(e) => setRecherche(e.target.value)}
-                placeholder={t("app.searchVault")}
-                aria-label={t("app.searchVault")}
-                className="mb-6 w-full rounded border border-border bg-surface-2 px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
-              />
-            </>
-          )}
+          <Bouton
+            className="mb-4 w-full"
+            onClick={() => {
+              // Le dossier ouvert pré-remplit le champ : on ajoute presque
+              // toujours là où l'on est en train de regarder.
+              setSection("coffre");
+              setChoisi(null);
+              setEdition("");
+            }}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <Plus className="size-4" />
+              {t("app.newItem")}
+            </span>
+          </Bouton>
+          <input
+            type="search"
+            value={recherche}
+            onChange={(e) => {
+              setRecherche(e.target.value);
+              // Taper dans la recherche depuis la corbeille ou les partages
+              // ne doit pas chercher dans le vide : les résultats sont au coffre.
+              setSection("coffre");
+            }}
+            placeholder={t("app.searchVault")}
+            aria-label={t("app.searchVault")}
+            className="mb-6 w-full rounded border border-border bg-surface-2 px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+          />
 
-          {/* Les espacements du rail sont ceux de ghostcal, mesurés dans
-              `dashboard/layout.tsx` : 16 px sous le bouton principal, 24 px
-              avant la navigation, 4 px entre ses éléments. GhostPass en avait
-              12, 16 et 2 — chaque écart est petit, leur somme donne un rail
-              serré là où l'autre respire.
-
-              `gap-1` plutôt que `gap-0.5` : à 2 px, deux lignes de navigation
-              se touchent presque et la liste se lit comme un bloc. */}
-          <div className="mb-6 flex flex-col gap-1">
-            {([
-              ["coffre", "app.myVault", Coffre],
-              ["orgs", "app.orgs", Organisation],
-              ["partages", "app.shares", Partage],
-              ["securite", "app.security", Bouclier],
-              ["corbeille", "app.trash", IconeCorbeille],
-              ...(adminDeLInstance ? ([["admin", "app.admin", IconeReglages]] as const) : []),
-            ] as const).map(([cle, libelle, Icone]) => (
-              <button
-                key={cle}
-                type="button"
-                onClick={() => {
-                  setSection(cle);
-                  if (cle !== "orgs") setOrgOuverte(null);
-                }}
-                aria-current={section === cle ? "page" : undefined}
-                className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${section === cle ? "bg-accent/12 font-medium text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}
-              >
-                <Icone className="size-4 shrink-0" />
-                {t(libelle)}
-              </button>
-            ))}
+          {/* LA BARRE PAR SECTIONS
+              En haut, les vues qui traversent tout le coffre ; puis les coffres
+              (le personnel et ceux des organisations) ; puis les dossiers ; en
+              pied, ce qu'on visite rarement. Les espacements restent ceux de
+              ghostcal : 4 px entre deux entrées, 24 px avant la navigation. */}
+          <div className="flex flex-col gap-1">
+            <EntreeDeNav
+              icone={Coffre}
+              libelle={t("app.allItems")}
+              compte={courants.length}
+              actif={section === "coffre" && filtre.type === "tous"}
+              onClick={() => choisirFiltre(TOUS)}
+            />
+            <EntreeDeNav
+              icone={Etoile}
+              libelle={t("app.favorites")}
+              compte={courants.filter((i) => favoris.has(i.id)).length}
+              actif={section === "coffre" && filtre.type === "favoris"}
+              onClick={() => choisirFiltre({ type: "favoris" })}
+            />
+            <EntreeDeNav
+              icone={Bouclier}
+              libelle={t("app.security")}
+              actif={section === "securite"}
+              onClick={() => ouvrirSection("securite")}
+            />
           </div>
 
-          {section === "coffre" && (
+          <EnTeteDeSection
+            titre={t("app.vaults")}
+            ouvert={!sectionsRepliees.has("coffres")}
+            onBasculer={() => basculerSectionRepliee("coffres")}
+            action={
+              // Les organisations se gèrent (membres, collections, couleur)
+              // depuis leur écran ; la section ne fait que filtrer.
+              <button
+                type="button"
+                onClick={() => ouvrirSection("orgs")}
+                title={t("app.manageOrgs")}
+                aria-label={t("app.manageOrgs")}
+                className={`cursor-pointer rounded p-0.5 hover:text-foreground ${section === "orgs" ? "text-accent" : "text-muted"}`}
+              >
+                <Organisation className="size-4" />
+              </button>
+            }
+          />
+          {!sectionsRepliees.has("coffres") && (
+            <div className="flex flex-col gap-0.5">
+              <EntreeDeNav
+                icone={Cadenas}
+                libelle={t("app.personalVault")}
+                compte={courants.filter((i) => !i.shared).length}
+                actif={section === "coffre" && filtre.type === "personnel"}
+                onClick={() => choisirFiltre({ type: "personnel" })}
+              />
+              {coffresDEquipe.map((c) => (
+                <EntreeDeNav
+                  key={c.orgId}
+                  pastille={couleurOrg(couleursOrg, c.orgId)}
+                  libelle={c.nom}
+                  compte={courants.filter((i) => i.shared?.orgId === c.orgId).length}
+                  actif={section === "coffre" && filtre.type === "organisation" && filtre.orgId === c.orgId}
+                  onClick={() => choisirFiltre({ type: "organisation", orgId: c.orgId, nom: c.nom })}
+                />
+              ))}
+            </div>
+          )}
+
           <ArbreDossiers
             tree={tree}
-            total={items.length}
-            choisi={dossier}
+            ouvert={!sectionsRepliees.has("dossiers")}
+            onBasculerSection={() => basculerSectionRepliee("dossiers")}
+            choisi={section === "coffre" ? dossier : null}
             recherche={recherche}
             replies={replies}
             chemins={chemins}
-            onChoisir={(p) => {
-            setDossier(p);
-            setSelection(new Set());
-          }}
+            onChoisir={(p) => choisirFiltre({ type: "dossier", chemin: p })}
             onBasculer={basculer}
             onCreer={creerDossier}
             onSupprimer={supprimerDossier}
           />
-          )}
+
+          <div className="mt-6 flex flex-col gap-1">
+            <EntreeDeNav
+              icone={Partage}
+              libelle={t("app.shares")}
+              actif={section === "partages"}
+              onClick={() => ouvrirSection("partages")}
+            />
+            {adminDeLInstance && (
+              <EntreeDeNav
+                icone={IconeReglages}
+                libelle={t("app.admin")}
+                actif={section === "admin"}
+                onClick={() => ouvrirSection("admin")}
+              />
+            )}
+            <EntreeDeNav
+              icone={Archive}
+              libelle={t("app.archives")}
+              compte={items.filter((i) => archives.has(i.id)).length}
+              actif={section === "coffre" && filtre.type === "archives"}
+              onClick={() => choisirFiltre({ type: "archives" })}
+            />
+            <EntreeDeNav
+              icone={IconeCorbeille}
+              libelle={t("app.trash")}
+              actif={section === "corbeille"}
+              onClick={() => ouvrirSection("corbeille")}
+            />
+          </div>
           {section === "coffre" && (
             <ImportExport
               // `items` porte AUSSI les éléments d'équipe, ajoutés juste après
@@ -922,7 +1099,9 @@ export function VaultScreen() {
                 items={visibles}
                 total={items.length}
                 recherche={recherche}
-                dossier={dossier}
+                titre={titreDuFiltre}
+                vide={videDuFiltre}
+                favoris={favoris}
                 choisi={choisi}
                 onChoisir={setChoisi}
                 selection={selection}
@@ -1044,6 +1223,10 @@ export function VaultScreen() {
               onModifier={() => setEdition(choisi.id)}
               onSupprimer={supprimerEntree}
               onPartager={() => void partager(choisi)}
+              favori={favoris.has(choisi.id)}
+              onFavori={() => void basculerDansLeRegistre("favoris", choisi.id)}
+              archive={archives.has(choisi.id)}
+              onArchive={() => void basculerDansLeRegistre("archives", choisi.id)}
               occupe={occupe}
             />
           ) : (
