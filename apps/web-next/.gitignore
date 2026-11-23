@@ -22,3 +22,8 @@ out/
 # Copié à la construction depuis crates/ (voir le script `prebuild`), donc
 # jamais une source. Une copie versionnée serait périmée au premier cargo build.
 public/ghostpass_crypto_wasm_bg.wasm
+
+# Écrit par `next dev` à chaque lancement (consignes de Next pour les agents de
+# code), et réécrit s'il manque. C'est une sortie de l'outil, comme `next-env.d.ts` :
+# il reste lisible sur le poste, mais sa version suit celle de `next`, pas le dépôt.
+AGENTS.md
