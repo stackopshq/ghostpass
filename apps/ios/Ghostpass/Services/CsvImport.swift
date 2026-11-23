@@ -2,7 +2,7 @@ import Foundation
 
 /// Import d'un fichier CSV — celui qu'exporte un autre gestionnaire de mots de passe.
 ///
-/// Transposition de `apps/web/src/lib/csv.ts`, y compris la liste des colonnes reconnues :
+/// Transposition de `apps/web-next/src/lib/csv.ts`, y compris la liste des colonnes reconnues :
 /// Bitwarden, 1Password, LastPass et Chrome n'emploient pas les mêmes noms, et c'est
 /// précisément ce que cette table d'équivalences absorbe. Un même fichier doit produire le
 /// même coffre des deux côtés — sans quoi migrer depuis le téléphone et migrer depuis le

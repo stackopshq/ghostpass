@@ -3,7 +3,8 @@ package ch.stackops.ghostpass
 /**
  * Import d'un fichier CSV — celui qu'exporte un autre gestionnaire de mots de passe.
  *
- * Transposition de `apps/web/src/lib/csv.ts` et de `apps/ios/Ghostpass/Services/CsvImport.swift`,
+ * Transposition de `apps/web-next/src/lib/csv.ts` et de
+ * `apps/ios/Ghostpass/Services/CsvImport.swift`,
  * **y compris la liste des colonnes reconnues**. Bitwarden, Dashlane, 1Password, LastPass et
  * Chrome n'emploient pas les mêmes noms, et c'est précisément ce que cette table
  * d'équivalences absorbe. Un même fichier doit produire le même coffre des trois côtés —

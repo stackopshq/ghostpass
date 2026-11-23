@@ -37,10 +37,14 @@ cd apps/web-next && npm install && npm run dev   # :5173, /api proxied
 be green — for us as well:
 
 ```bash
-cd crates/ghostpass-crypto && cargo test && cargo clippy -- -D warnings
-cd apps/server   && npm test && npx tsc --noEmit
-cd apps/web-next && npx tsc --noEmit && npm run lint
+cargo fmt --all --check && cargo clippy --all-targets -- -D warnings && cargo test --all
+cd apps/server   && npm run typecheck && npm test
+cd apps/web-next && npm run typecheck && npm test && npm run build
 ```
+
+These are the `crypto`, `server` and `web` jobs of `.gitlab-ci.yml`, command for
+command. The web app has no lint script: type checking, its tests and the build
+are what the CI asks of it.
 
 Run them locally rather than discovering them in CI. A job stops at its first
 failure, so a green local run of one command says nothing about the next.
@@ -93,7 +97,16 @@ however convenient it is.
 This command must keep returning zero:
 
 ```bash
-grep -rniE "decrypt|chacha|aes|subtle" apps/server/src | wc -l
+grep -rni "chacha" apps/server/src | wc -l
 ```
+
+XChaCha20-Poly1305 seals every vault, and it lives only in the Rust core. The
+server holds exactly one decryption primitive, and it is named rather than
+hidden: `services/secretAtRest.ts` reads the second-factor seed back with
+AES-256-GCM, because checking a six-digit code requires that seed. It opens
+nothing else. That is why a wider search such as
+`grep -rniE "decrypt|chacha|aes|subtle" apps/server/src` does not return zero,
+and the README says so. Adding a second such primitive is the change that will
+be refused.
 
 It is the whole product. Everything else is negotiable.

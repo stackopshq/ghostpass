@@ -1,4 +1,4 @@
-// Client HTTP vers le backend. En dev, `/api` est relayé par le proxy Vite (voir vite.config.ts).
+// Client HTTP vers le backend. En dev, `/api` est relayé par `next dev` (voir next.config.ts).
 import type { RegistrationData } from "./crypto.js";
 
 /// Ce qu'une réponse a le droit de peser : 32 Mio, la borne du client iOS.

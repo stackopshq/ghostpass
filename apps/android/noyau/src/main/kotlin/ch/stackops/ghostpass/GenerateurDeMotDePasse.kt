@@ -21,7 +21,7 @@ data class ReglagesDuGenerateur(
 )
 
 /**
- * Générateur de mots de passe, transposition fidèle de `apps/web/src/lib/generator.ts` et de
+ * Générateur de mots de passe, transposition fidèle de `apps/web-next/src/lib/generator.ts` et de
  * `apps/ios/Ghostpass/Services/PasswordGenerator.swift` : mêmes jeux de caractères, mêmes
  * valeurs par défaut, mêmes garanties.
  *
