@@ -102,6 +102,23 @@ qu'il ne peut pas lire, et nous non plus.
 Si votre organisation dispose d'une instance dédiée, le partage passe par **son**
 ghostbit et non par le nôtre.
 
+### Les logos des sites passent par jsDelivr
+
+Quand le service d'icônes est activé, notre serveur va chercher le logo d'un site
+dans la collection libre Dashboard Icons, hébergée sur le CDN **jsDelivr**
+(exploité par Prospect One, en Pologne, et servi par des réseaux répartis dans le
+monde). S'il n'y trouve pas de logo, il demande l'icône au site lui-même.
+
+jsDelivr reçoit alors un nom de marque (par exemple « github ») et l'adresse de
+**notre serveur** : jamais la vôtre, ni votre compte, ni l'adresse exacte du site
+enregistré. Il n'apprend donc pas qui a quoi dans son coffre, et c'est pour cela
+qu'il ne figure pas dans le tableau des destinataires ci-dessus. Nous l'écrivons
+quand même, parce qu'une demande part réellement vers l'extérieur.
+
+Sur une instance auto-hébergée, l'hébergeur peut couper cette source seule
+(`ICONS_DASHBOARD=false`) et garder les icônes des sites, ou couper tout le
+service d'icônes.
+
 ### Ce que Cloudflare peut, et que nous préférons écrire
 
 Cloudflare achemine le trafic, donc il vous **sert le code JavaScript qui
