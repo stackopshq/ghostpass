@@ -12,6 +12,12 @@ import type { ComponentType, ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Chevron } from "@/components/Icones";
 
+/// La colonne de droite de la barre : les nombres des entrées, les gestes des
+/// en-têtes de section et ceux des dossiers s'y alignent tous. Chacun calait
+/// sa propre largeur, et la colonne se lisait en escalier (vu sur capture :
+/// « 11 », « + » et l'icône des coffres à trois abscisses différentes).
+export const COLONNE_DROITE = "flex w-6 shrink-0 items-center justify-end text-2xs tabular-nums";
+
 export function EntreeDeNav({
   icone: Icone,
   pastille,
@@ -43,7 +49,7 @@ export function EntreeDeNav({
         <Icone className="size-4 shrink-0" />
       ) : null}
       <span className="min-w-0 flex-1 truncate text-left">{libelle}</span>
-      {compte !== undefined && <span className="shrink-0 text-2xs tabular-nums">{compte}</span>}
+      {compte !== undefined && <span className={COLONNE_DROITE}>{compte}</span>}
     </button>
   );
 }
@@ -74,7 +80,9 @@ export function EnTeteDeSection({
         <Chevron className={`size-3 transition-transform ${ouvert ? "rotate-90" : ""}`} />
         {titre}
       </button>
-      {action}
+      {/* `-mr-0.5` reprend le `p-0.5` du bouton : c'est le bord de l'icône, pas
+          celui du bouton, qui s'aligne sur le bord des nombres. */}
+      {action && <span className={`${COLONNE_DROITE} -mr-0.5`}>{action}</span>}
     </div>
   );
 }

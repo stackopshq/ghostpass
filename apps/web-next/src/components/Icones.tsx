@@ -206,3 +206,58 @@ export const PanneauLateral = ({ className }: Props) => (
     <path d="M9 4v16" />
   </svg>
 );
+
+export const PointsDeSuite = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <circle cx="5" cy="12" r="1" />
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="19" cy="12" r="1" />
+  </svg>
+);
+
+export const Agrandir = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M15 3h6v6" />
+    <path d="M9 21H3v-6" />
+    <path d="M21 3l-7 7" />
+    <path d="M3 21l7-7" />
+  </svg>
+);
+
+export const LienSortant = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M14 4h6v6" />
+    <path d="M20 4l-9 9" />
+    <path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+  </svg>
+);
+
+export const Crayon = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+    <path d="M13.5 6.5l4 4" />
+  </svg>
+);
+
+export const Clavier = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <rect x="2.5" y="6" width="19" height="12" rx="2" />
+    <path d="M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01M7.5 14h9" />
+  </svg>
+);
+
+export const Loupe = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-4-4" />
+  </svg>
+);
+
+export const Tri = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M7 4v16" />
+    <path d="M3.5 16.5L7 20l3.5-3.5" />
+    <path d="M17 20V4" />
+    <path d="M13.5 7.5L17 4l3.5 3.5" />
+  </svg>
+);

@@ -9,7 +9,9 @@ import {
   constater,
   dansLAnnuaire,
   estNonSecurisee,
+  etatExpiration,
   hoteDe,
+  lireExpiration,
   score,
   type Annuaire,
 } from "../src/lib/surveillance";
@@ -137,4 +139,53 @@ test("l'annuaire embarqué a la forme attendue et cite ses licences", () => {
   assert.ok(Object.keys(a.cles).length > 100);
   assert.deepEqual(a.sources.map((s) => s.licence).sort(), ["CC BY 4.0", "MIT"]);
   assert.ok(a.tfa["github.com"]?.includes("totp"));
+});
+
+// Le 24 novembre 2026 à midi, heure locale : la date de ces tests.
+const AUJOURDHUI = new Date(2026, 10, 24, 12).getTime();
+
+test("la date d'une carte se lit en MM/AA comme en MM/AAAA, sinon pas du tout", () => {
+  assert.deepEqual(lireExpiration("12/30"), { annee: 2030, mois: 12 });
+  assert.deepEqual(lireExpiration("3/2027"), { annee: 2027, mois: 3 });
+  assert.deepEqual(lireExpiration(" 03 / 27 "), { annee: 2027, mois: 3 });
+  for (const brut of [undefined, "", "13/27", "00/27", "12", "décembre 2027", "12/2", "12/27/01"]) {
+    assert.equal(lireExpiration(brut), null, String(brut));
+  }
+});
+
+test("une carte vaut jusqu'au dernier jour de son mois", () => {
+  // Novembre 2026 : encore valable le 24, et jusqu'au 30 à minuit.
+  assert.equal(etatExpiration("11/26", AUJOURDHUI), "bientot");
+  assert.equal(etatExpiration("11/26", new Date(2026, 10, 30, 23, 59).getTime()), "bientot");
+  assert.equal(etatExpiration("11/26", new Date(2026, 11, 1).getTime()), "expiree");
+  assert.equal(etatExpiration("10/26", AUJOURDHUI), "expiree");
+});
+
+test("le préavis : signalée dans les deux mois, pas au-delà", () => {
+  assert.equal(etatExpiration("12/26", AUJOURDHUI), "bientot");
+  // Fin janvier 2027 : 68 jours, hors du préavis.
+  assert.equal(etatExpiration("01/27", AUJOURDHUI), null);
+  assert.equal(etatExpiration("12/30", AUJOURDHUI), null);
+  // Une date illisible ne fait jamais une carte expirée.
+  assert.equal(etatExpiration("bientôt", AUJOURDHUI), null);
+});
+
+test("les cartes à renouveler : expirées d'abord, sans peser sur le score", () => {
+  const carte = (id: string, cardExp: string) => e(id, { kind: "card", password: "", cardExp });
+  const c = constater(
+    [carte("valide", "12/30"), carte("bientot", "12/26"), carte("expiree", "01/25"), carte("illisible", "?"), e("login")],
+    null,
+    AUJOURDHUI,
+  );
+  assert.equal(c.aDesCartes, true);
+  assert.deepEqual(c.cartes.map((x) => [x.item.id, x.etat]), [["expiree", "expiree"], ["bientot", "bientot"]]);
+  // Seul l'identifiant est noté, et il est sans défaut.
+  assert.equal(c.examines, 1);
+  assert.equal(score(c), 100);
+});
+
+test("sans carte au coffre, la surveillance n'en parle pas", () => {
+  const c = constater([e("login"), e("note", { kind: "note", password: "" })], null, AUJOURDHUI);
+  assert.equal(c.aDesCartes, false);
+  assert.deepEqual(c.cartes, []);
 });

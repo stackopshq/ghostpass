@@ -65,6 +65,43 @@ export function estNonSecurisee(adresse: string): boolean {
   );
 }
 
+/// Le dernier mois de validité d'une carte, lu dans « MM/AA » ou « MM/AAAA ».
+///
+/// Les deux formes arrivent réellement : la saisie demande « 12/30 », un
+/// export Bitwarden importé donne l'année sur quatre chiffres. Une saisie
+/// qu'on ne sait pas lire rend `null` : la surveillance se tait plutôt que de
+/// déclarer expirée une carte dont elle ne comprend pas la date.
+export function lireExpiration(brut: string | undefined): { annee: number; mois: number } | null {
+  const m = /^\s*(\d{1,2})\s*[/.-]\s*(\d{2}|\d{4})\s*$/.exec(brut ?? "");
+  if (!m) return null;
+  const mois = Number(m[1]);
+  const annee = m[2]!.length === 2 ? 2000 + Number(m[2]) : Number(m[2]);
+  if (mois < 1 || mois > 12) return null;
+  return { annee, mois };
+}
+
+/// Le délai avant expiration à partir duquel une carte est signalée : le
+/// temps de recevoir la nouvelle et de la reporter partout où l'ancienne est
+/// enregistrée (abonnements, boutiques).
+export const PREAVIS_CARTE_JOURS = 60;
+
+/// « expiree », « bientot », ou `null` quand il n'y a rien à dire. Une carte
+/// est valable jusqu'au DERNIER jour de son mois : « 11/26 » sert encore le
+/// 30 novembre 2026, et n'expire qu'au premier décembre, heure locale.
+export function etatExpiration(
+  brut: string | undefined,
+  maintenant: number,
+): "expiree" | "bientot" | null {
+  const e = lireExpiration(brut);
+  if (!e) return null;
+  // `new Date(annee, mois, 1)` : le mois est compté de 0, c'est donc le
+  // premier jour du mois SUIVANT, premier instant où la carte ne vaut plus.
+  const fin = new Date(e.annee, e.mois, 1).getTime();
+  if (maintenant >= fin) return "expiree";
+  if (fin - maintenant <= PREAVIS_CARTE_JOURS * 86_400_000) return "bientot";
+  return null;
+}
+
 export interface Constat {
   reutilises: VaultEntry[];
   faibles: VaultEntry[];
@@ -73,6 +110,12 @@ export interface Constat {
   totpDisponible: VaultEntry[];
   /// Le site accepte une clé d'accès.
   clesDisponibles: VaultEntry[];
+  /// Les cartes expirées puis celles qui expirent bientôt, les plus urgentes
+  /// d'abord. Elles ne pèsent pas sur le score, qui note les mots de passe.
+  cartes: { item: VaultEntry; etat: "expiree" | "bientot" }[];
+  /// Le coffre contient au moins une carte : sinon la carte de surveillance
+  /// qui en parle n'a pas lieu d'être.
+  aDesCartes: boolean;
   /// Nombre de mots de passe par niveau de force, de 0 (très faible) à 4.
   repartition: [number, number, number, number, number];
   /// Les identifiants examinés : ceux qui portent un mot de passe.
@@ -83,7 +126,11 @@ export interface Constat {
 ///
 /// L'archive est exclue comme partout ailleurs : un élément qu'on a sorti du
 /// quotidien n'a pas à faire baisser le score de ce qu'on utilise.
-export function constater(items: VaultEntry[], annuaire: Annuaire | null): Constat {
+export function constater(
+  items: VaultEntry[],
+  annuaire: Annuaire | null,
+  maintenant: number = Date.now(),
+): Constat {
   const identifiants = items.filter((i) => i.kind === "login" && i.password);
   const occurrences = new Map<string, number>();
   for (const i of identifiants) occurrences.set(i.password, (occurrences.get(i.password) ?? 0) + 1);
@@ -95,9 +142,18 @@ export function constater(items: VaultEntry[], annuaire: Annuaire | null): Const
     nonSecurises: [],
     totpDisponible: [],
     clesDisponibles: [],
+    cartes: [],
+    aDesCartes: false,
     repartition,
     examines: identifiants.length,
   };
+  for (const i of items) {
+    if (i.kind !== "card") continue;
+    constat.aDesCartes = true;
+    const etat = etatExpiration(i.cardExp, maintenant);
+    if (etat) constat.cartes.push({ item: i, etat });
+  }
+  constat.cartes.sort((a, b) => (a.etat === b.etat ? 0 : a.etat === "expiree" ? -1 : 1));
   for (const i of identifiants) {
     const force = passwordStrength(i.password).niveau;
     repartition[force]++;
