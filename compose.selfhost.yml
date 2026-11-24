@@ -45,6 +45,9 @@ services:
       # apprend donc son domaine. `false` le désactive : c'est la seule façon de
       # supprimer cette requête, qui est inhérente au principe.
       ICONS_ENABLED: ${ICONS_ENABLED:-true}
+      # Les logos de Dashboard Icons (CDN jsDelivr) avant les favicons ; `false`
+      # garde les favicons seuls. Voir docs/confidentialite.md.
+      ICONS_DASHBOARD: ${ICONS_DASHBOARD:-true}
       ICON_TOKEN_SECRET: ${ICON_TOKEN_SECRET:-}
       # Sans elle, le secret du second facteur est en clair en base. Le serveur
       # démarre quand même — casser une instance qui monte de version serait

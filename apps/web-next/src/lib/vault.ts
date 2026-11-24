@@ -70,6 +70,21 @@ export function countItems(node: TreeNode): number {
   return node.items.length + node.children.reduce((sum, c) => sum + countItems(c), 0);
 }
 
+/// Le coffre dont la barre latérale montre l'arborescence : tous confondus,
+/// le personnel, ou celui d'une organisation.
+export type Portee =
+  | { type: "tous" }
+  | { type: "personnel" }
+  | { type: "organisation"; orgId: string; nom: string };
+
+export const TOUS_LES_COFFRES: Portee = { type: "tous" };
+
+export function dansLaPortee(item: VaultEntry, portee: Portee): boolean {
+  if (portee.type === "personnel") return !item.shared;
+  if (portee.type === "organisation") return item.shared?.orgId === portee.orgId;
+  return true;
+}
+
 /// Ce que la barre latérale a choisi de montrer au milieu.
 export type Filtre =
   | { type: "tous" }
@@ -78,7 +93,8 @@ export type Filtre =
   /// Un coffre : le personnel, ou celui d'une organisation.
   | { type: "personnel" }
   | { type: "organisation"; orgId: string; nom: string }
-  | { type: "dossier"; chemin: string };
+  /// Un dossier DE la portée : le même chemin peut exister dans deux coffres.
+  | { type: "dossier"; chemin: string; portee: Portee };
 
 export const TOUS: Filtre = { type: "tous" };
 
@@ -91,6 +107,15 @@ export const TOUS: Filtre = { type: "tous" };
 /// Une seule frontière que la recherche ne franchit pas : les archives. Archiver
 /// sert à sortir un élément du quotidien ; le voir revenir dans chaque recherche
 /// annulerait le geste. Dans la vue des archives, la recherche porte sur elles.
+/// La portée qu'implique un filtre. Les vues transversales (tout, favoris,
+/// archives) n'ont pas de coffre : l'arborescence revient à celle de tous.
+export function porteeDe(filtre: Filtre): Portee {
+  if (filtre.type === "personnel") return { type: "personnel" };
+  if (filtre.type === "organisation") return { type: "organisation", orgId: filtre.orgId, nom: filtre.nom };
+  if (filtre.type === "dossier") return filtre.portee;
+  return TOUS_LES_COFFRES;
+}
+
 export function filtrerVisibles(
   items: VaultEntry[],
   search: string,
@@ -115,7 +140,7 @@ export function filtrerVisibles(
         case "organisation":
           return it.shared?.orgId === filtre.orgId;
         case "dossier":
-          return it.folder === filtre.chemin;
+          return dansLaPortee(it, filtre.portee) && it.folder === filtre.chemin;
       }
     })
     .sort((a, b) => a.name.localeCompare(b.name));

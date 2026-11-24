@@ -31,6 +31,8 @@ import {
   filtrerVisibles,
   folderPaths,
   historiqueApresModification,
+  dansLaPortee,
+  porteeDe,
   TOUS,
   type Filtre,
   type VaultEntry,
@@ -41,13 +43,15 @@ import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Archive, Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Etoile, Organisation, Partage, Plus, Pouls, Reglages as IconeReglages } from "@/components/Icones";
+import { Archive, Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Etoile, Organisation, PanneauLateral, Partage, Plus, Pouls, Reglages as IconeReglages } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
 import { Securite } from "@/components/Securite";
 import { Surveillance } from "@/components/Surveillance";
 import { Administration } from "@/components/Administration";
 import { Partages } from "@/components/Partages";
-import { ImportExport } from "@/components/ImportExport";
+import { ImportNavigateur } from "@/components/ImportNavigateur";
+import { MenuDuCompte } from "@/components/MenuDuCompte";
+import { versCsv } from "@/lib/export";
 import { ListeOrgs } from "@/components/orgs/ListeOrgs";
 import { DetailOrg } from "@/components/orgs/DetailOrg";
 import type { OrgSummary } from "@/lib/orgs";
@@ -85,6 +89,11 @@ export function VaultScreen() {
   const [choisi, setChoisi] = useState<VaultEntry | null>(null);
   const [filtre, setFiltre] = useState<Filtre>(TOUS);
   const dossier = filtre.type === "dossier" ? filtre.chemin : null;
+  // Le coffre dont on montre l'arborescence. Il suit ce qu'on a choisi : un
+  // coffre, ou le coffre du dossier ouvert ; les vues transversales reviennent
+  // à tous les coffres.
+  const portee = porteeDe(filtre);
+  const cleDePortee = portee.type === "organisation" ? `org:${portee.orgId}` : portee.type;
   // Favoris et archives : deux registres du coffre, partagés avec iOS et
   // Android (voir `lib/registres.ts`).
   const [favoris, setFavoris] = useState<Set<string>>(new Set());
@@ -99,6 +108,12 @@ export function VaultScreen() {
   // section fermée au premier lancement cache ce qu'elle contient à qui ne
   // sait pas encore qu'elle existe.
   const [sectionsRepliees, setSectionsRepliees] = useState<Set<string>>(new Set());
+  // Les dossiers vides d'un coffre d'équipe, par organisation. En MÉMOIRE
+  // seulement : le registre des dossiers vides est personnel, et y écrire ceux
+  // d'une équipe les montrerait à soi seul, sur tous ses appareils, comme des
+  // dossiers à soi. Un dossier d'équipe existe pour tous dès qu'un élément y
+  // est rangé ; jusque-là, il n'existe que dans cet onglet, et la saisie le dit.
+  const [dossiersEquipe, setDossiersEquipe] = useState<Record<string, string[]>>({});
   const [recherche, setRecherche] = useState("");
   const [replies, setReplies] = useState<Set<string>>(new Set());
   const [erreur, setErreur] = useState<string | null>(null);
@@ -140,12 +155,19 @@ export function VaultScreen() {
   // L'entrée « Administration » n'existe que pour les adresses de `GHOSTPASS_ADMIN_EMAILS`.
   // Indicatif : les routes `/api/admin/*` vérifient le rôle elles-mêmes.
   const [adminDeLInstance, setAdminDeLInstance] = useState(false);
+  const [courriel, setCourriel] = useState<string | null>(null);
+  const [barreOuverte, setBarreOuverte] = useState(true);
+  const [importOuvert, setImportOuvert] = useState(false);
   useEffect(() => {
     if (!token) return;
     let vivant = true;
     api
       .accountInfo(token)
-      .then((c) => vivant && setAdminDeLInstance(c.isInstanceAdmin === true))
+      .then((c) => {
+        if (!vivant) return;
+        setAdminDeLInstance(c.isInstanceAdmin === true);
+        setCourriel(c.email);
+      })
       .catch(() => {
         /* Sans l'information, l'entrée reste absente : rien n'est perdu. */
       });
@@ -298,7 +320,9 @@ export function VaultScreen() {
       setRegistreCouleursId(regCouleursId);
       setCouleursOrg(regCouleurs);
       setErreur(null);
-      return entrees;
+      // Les deux coffres : l'appelant rouvre l'élément qu'il vient d'écrire,
+      // et celui d'une équipe n'est pas dans `entrees`.
+      return [...entrees, ...equipe.items];
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e));
       return [];
@@ -314,7 +338,18 @@ export function VaultScreen() {
   // Les archivés sortent aussi de l'arbre et de ses comptes : un dossier qui
   // annonce trois éléments et en montre deux enverrait chercher le troisième.
   const courants = useMemo(() => items.filter((i) => !archives.has(i.id)), [items, archives]);
-  const tree = useMemo(() => buildTree(courants, dossiersVides), [courants, dossiersVides]);
+  // Les dossiers vides vivent dans le registre PERSONNEL : ils n'ont rien à
+  // faire dans l'arborescence d'une organisation.
+  const tree = useMemo(
+    () =>
+      buildTree(
+        courants.filter((i) => dansLaPortee(i, portee)),
+        portee.type === "organisation" ? (dossiersEquipe[portee.orgId] ?? []) : dossiersVides,
+      ),
+    // `portee` est recréée à chaque rendu ; sa clé, non.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [courants, dossiersVides, dossiersEquipe, cleDePortee],
+  );
   const visibles = useMemo(
     () => filtrerVisibles(items, recherche, filtre, favoris, archives),
     [items, recherche, filtre, favoris, archives],
@@ -346,7 +381,24 @@ export function VaultScreen() {
     },
     [token, account, favoris, archives, registreFavorisId, registreArchivesId, items, lectureComplete, t],
   );
-  const chemins = useMemo(() => folderPaths(items, dossiersVides), [items, dossiersVides]);
+  // Les chemins proposés par le formulaire sont ceux du coffre DE L'ÉLÉMENT :
+  // celui de l'élément modifié, ou, pour une création, le coffre ouvert (le
+  // personnel quand la vue les mêle tous). Ranger un élément personnel dans
+  // un dossier d'équipe n'aurait pas de sens, et l'inverse non plus.
+  const enEdition = edition ? items.find((i) => i.id === edition) : undefined;
+  const orgDuFormulaire = enEdition
+    ? enEdition.shared?.orgId
+    : portee.type === "organisation"
+      ? portee.orgId
+      : undefined;
+  const chemins = useMemo(
+    () =>
+      folderPaths(
+        items.filter((i) => (orgDuFormulaire ? i.shared?.orgId === orgDuFormulaire : !i.shared)),
+        orgDuFormulaire ? (dossiersEquipe[orgDuFormulaire] ?? []) : dossiersVides,
+      ),
+    [items, dossiersVides, dossiersEquipe, orgDuFormulaire],
+  );
 
   const enregistrerDossiers = useCallback(
     async (chemins: string[]) => {
@@ -383,6 +435,17 @@ export function VaultScreen() {
   );
 
   const creerDossier = async (path: string) => {
+    // Le dossier créé s'ouvre : on le crée pour y ranger quelque chose, et le
+    // voir sélectionné dit où il est apparu.
+    choisirFiltre({ type: "dossier", chemin: path, portee });
+    if (portee.type === "organisation") {
+      const orgId = portee.orgId;
+      setDossiersEquipe((prec) => ({
+        ...prec,
+        [orgId]: [...new Set([...(prec[orgId] ?? []), path])],
+      }));
+      return;
+    }
     if (dossiersVides.includes(path)) return;
     const suivant = [...dossiersVides, path].sort((a, b) => a.localeCompare(b));
     setDossiersVides(suivant);
@@ -394,6 +457,15 @@ export function VaultScreen() {
   };
 
   const supprimerDossier = async (path: string) => {
+    if (portee.type === "organisation") {
+      const orgId = portee.orgId;
+      setDossiersEquipe((prec) => ({
+        ...prec,
+        [orgId]: (prec[orgId] ?? []).filter((p) => p !== path && !p.startsWith(`${path}/`)),
+      }));
+      if (dossier === path) choisirFiltre(portee);
+      return;
+    }
     const suivant = dossiersVides.filter((p) => p !== path && !p.startsWith(`${path}/`));
     setDossiersVides(suivant);
     if (dossier === path) setFiltre(TOUS);
@@ -418,10 +490,43 @@ export function VaultScreen() {
         v.password,
         enCours?.passwordHistory,
       );
-      const enc = encryptItem(account, { ...v, passwordHistory });
-      const id = edition
-        ? (await api.updateItem(token, edition, enc), edition)
-        : (await api.createItem(token, enc)).id;
+      // UN ÉLÉMENT D'ÉQUIPE SE RÉÉCRIT SOUS LA CLÉ DE L'ÉQUIPE, PAR SA ROUTE.
+      // La liste mêle les deux coffres ; l'enregistrer comme un élément
+      // personnel envoyait la modification à une route qui ne le connaît pas.
+      // Créer depuis un coffre d'équipe le crée dans ce coffre : on l'a ouvert
+      // pour ça.
+      const cible = enCours?.shared
+        ? { orgId: enCours.shared.orgId, collectionId: enCours.shared.collectionId }
+        : !edition && portee.type === "organisation"
+          ? destinations.find((d) => d.orgId === portee.orgId)
+          : undefined;
+      if (!enCours?.shared && !edition && portee.type === "organisation" && !cible) {
+        throw new Error(t("app.teamReadOnly"));
+      }
+      let id: string;
+      if (cible) {
+        const m = await api.getMembership(token, cible.orgId);
+        if (!m.encryptedOrgKey || !m.sealedByPublicKey) throw new Error(t("org.keyUnavailable"));
+        const poignee = openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey);
+        const enc = encryptOrgLogin(poignee, {
+          name: v.name,
+          username: v.username,
+          password: v.password,
+          urls: v.urls,
+          totp: v.totp,
+          notes: v.note,
+          folder: v.folder,
+          passwordHistory,
+        });
+        id = edition
+          ? (await api.updateOrgItem(token, cible.orgId, cible.collectionId, edition, enc), edition)
+          : (await api.createOrgItem(token, cible.orgId, cible.collectionId, enc)).id;
+      } else {
+        const enc = encryptItem(account, { ...v, passwordHistory });
+        id = edition
+          ? (await api.updateItem(token, edition, enc), edition)
+          : (await api.createItem(token, enc)).id;
+      }
       setEdition(null);
       // On rouvre l'entrée enregistrée : refermer sur une liste sans rien de
       // sélectionné donnerait l'impression que le geste n'a pas abouti.
@@ -593,7 +698,12 @@ export function VaultScreen() {
     if (!token || !choisi) return;
     setOccupe(true);
     try {
-      await api.deleteItem(token, choisi.id);
+      // Même aiguillage qu'à l'enregistrement : un élément d'équipe a sa route.
+      if (choisi.shared) {
+        await api.deleteOrgItem(token, choisi.shared.orgId, choisi.shared.collectionId, choisi.id);
+      } else {
+        await api.deleteItem(token, choisi.id);
+      }
       setChoisi(null);
       await charger();
       setEdition(null);
@@ -776,6 +886,20 @@ export function VaultScreen() {
     }
   })();
 
+  /// L'export ne porte QUE sur le coffre personnel. `items` contient aussi les
+  /// éléments d'équipe : les passer tels quels déposerait les secrets de toute
+  /// une organisation en clair sur la machine d'un seul membre, sans que
+  /// l'équipe l'apprenne (voir `lib/export.ts`).
+  const exporterCsv = () => {
+    const blob = new Blob([versCsv(items.filter((i) => !i.shared))], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ghostpass-export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const basculerSectionRepliee = (cle: string) => {
     setSectionsRepliees((prec) => basculerId(prec, cle));
   };
@@ -809,51 +933,38 @@ export function VaultScreen() {
         </button>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[16rem_21rem_1fr]">
-        <nav className="verre-dense hidden min-h-0 flex-col overflow-y-auto border-r border-border p-3 md:flex">
-          {/* Tout vit dans le rail — marque, action principale, recherche,
-              navigation, identité — comme chez ghostcal. Une barre horizontale
-              en plus coupait l'écran en deux et éloignait l'action principale
-              de la navigation qu'elle sert. */}
-          {/* `text-foreground` explicite : hérité, le mot-marque sortait en
-              `rgb(11,15,25)` — la couleur du FOND. Noir sur noir, invisible, et
-              la capture d'écran ne montrait qu'une icône. Une couleur qui porte
-              du sens se déclare, elle ne s'hérite pas. */}
-          {/* Aligné au pixel près sur ghostcal, `dashboard/layout.tsx:107-116` :
-              `text-lg tracking-tight`, logo de 28 px, `gap-2`, `mb-6`.
-              GhostPass en avait TROIS de moins — 16 px, interlettrage normal,
-              logo de 24 px — et c'est leur cumul qui se voyait : plus petit ET
-              plus espacé d'un côté, plus grand ET plus resserré de l'autre.
-              Aucun des trois n'aurait sauté aux yeux seul.
-
-              Ces valeurs devront cesser d'être recopiées : le mot-marque est
-              exactement ce qu'un gabarit partagé doit porter (ghostsuite #176),
-              sans quoi la question se reposera au produit suivant. */}
-          <span className="mb-6 flex items-center gap-2 px-2 pt-1 text-lg font-semibold tracking-tight text-foreground">
-            {/* Le logo de la charte, servi tel quel — même traitement que
-                ghostcal. C'est une IMAGE et non un SVG recopié dans le
-                balisage : le fichier est une sortie de `tools/brand/`, et le
-                dupliquer ici rouvrirait la dérive de teintes qu'on a refermée. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="" width={28} height={28} className="h-7 w-7" />
-            GhostPass
-          </span>
-
-          <Bouton
-            className="mb-4 w-full"
-            onClick={() => {
-              // Le dossier ouvert pré-remplit le champ : on ajoute presque
-              // toujours là où l'on est en train de regarder.
-              setSection("coffre");
-              setChoisi(null);
-              setEdition("");
-            }}
-          >
-            <span className="flex items-center justify-center gap-2">
-              <Plus className="size-4" />
-              {t("app.newItem")}
-            </span>
-          </Bouton>
+      {/* LA BARRE DU HAUT
+          La recherche et l'action principale y sont, sur toute la largeur, au
+          lieu d'être tassées en tête de la barre latérale : la recherche y
+          gagne la place de taper un nom entier, et la barre latérale peut se
+          replier sans emporter le bouton « Nouvel élément ». Disposition de
+          1Password, choisie le 2026-11-23 ; ghostcal garde tout dans son
+          rail, et les deux produits ne s'alignent plus sur ce point. */}
+      {/* Barre du haut et barre latérale forment UN cadre, du même fond et sans
+          trait entre elles ; la liste et la fiche se posent dedans comme un
+          panneau, arrondi au coin où les deux barres se rejoignent. C'est ce
+          coin qui dit que le cadre entoure le contenu, au lieu de trois bandes
+          juxtaposées. */}
+      <header className="flex h-14 shrink-0 items-center gap-3 px-3">
+        <button
+          type="button"
+          onClick={() => setBarreOuverte((o) => !o)}
+          aria-pressed={barreOuverte}
+          title={t("app.toggleSidebar")}
+          aria-label={t("app.toggleSidebar")}
+          className="cursor-pointer rounded-lg p-2 text-muted transition-colors hover:bg-surface hover:text-foreground"
+        >
+          <PanneauLateral className="size-5" />
+        </button>
+        {/* `text-foreground` explicite : hérité, le mot-marque sortait en
+            `rgb(11,15,25)`, la couleur du FOND, noir sur noir. Logo de la
+            charte servi tel quel, comme chez ghostcal. */}
+        <span className="hidden w-48 shrink-0 items-center gap-2 text-lg font-semibold tracking-tight text-foreground sm:flex">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="" width={28} height={28} className="h-7 w-7" />
+          GhostPass
+        </span>
+        <div className="mx-auto w-full max-w-3xl">
           <input
             type="search"
             value={recherche}
@@ -865,9 +976,40 @@ export function VaultScreen() {
             }}
             placeholder={t("app.searchVault")}
             aria-label={t("app.searchVault")}
-            className="mb-6 w-full rounded border border-border bg-surface-2 px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+            className="w-full rounded border border-border bg-surface-2 px-3.5 py-2 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
           />
+        </div>
+        <Bouton
+          className="shrink-0"
+          onClick={() => {
+            // Le dossier ouvert pré-remplit le champ : on ajoute presque
+            // toujours là où l'on est en train de regarder.
+            setSection("coffre");
+            setChoisi(null);
+            setEdition("");
+          }}
+        >
+          <span className="flex items-center justify-center gap-2">
+            <Plus className="size-4" />
+            <span className="hidden sm:inline">{t("app.newItem")}</span>
+          </span>
+        </Bouton>
+      </header>
 
+      <div
+        className={`grid min-h-0 flex-1 grid-cols-1 ${barreOuverte ? "md:grid-cols-[16rem_1fr]" : ""}`}
+      >
+        <nav
+          className={`min-h-0 flex-col overflow-y-auto p-3 pt-1 ${barreOuverte ? "hidden md:flex" : "hidden"}`}
+        >
+          <MenuDuCompte
+            courriel={courriel}
+            onSecurite={() => ouvrirSection("securite")}
+            onImporter={() => setImportOuvert(true)}
+            onExporter={exporterCsv}
+            exportPossible={items.some((i) => !i.shared)}
+            onVerrouiller={fermer}
+          />
           {/* LA BARRE PAR SECTIONS
               En haut, les vues qui traversent tout le coffre ; puis les coffres
               (le personnel et ceux des organisations) ; puis les dossiers ; en
@@ -938,28 +1080,19 @@ export function VaultScreen() {
 
           <ArbreDossiers
             tree={tree}
+            aideCreation={portee.type === "organisation" ? t("app.teamFolderHint") : undefined}
             ouvert={!sectionsRepliees.has("dossiers")}
             onBasculerSection={() => basculerSectionRepliee("dossiers")}
             choisi={section === "coffre" ? dossier : null}
             recherche={recherche}
             replies={replies}
-            chemins={chemins}
-            onChoisir={(p) => choisirFiltre({ type: "dossier", chemin: p })}
+            onChoisir={(p) => choisirFiltre({ type: "dossier", chemin: p, portee })}
             onBasculer={basculer}
             onCreer={creerDossier}
             onSupprimer={supprimerDossier}
           />
 
           <div className="mt-6 flex flex-col gap-1">
-            {/* La sécurité du COMPTE (second facteur, clés, connexions) vit en
-                pied : on la règle une fois. Celle du coffre, qu'on consulte,
-                est en haut sous le nom de « Surveillance ». */}
-            <EntreeDeNav
-              icone={Bouclier}
-              libelle={t("app.security")}
-              actif={section === "securite"}
-              onClick={() => ouvrirSection("securite")}
-            />
             <EntreeDeNav
               icone={Partage}
               libelle={t("app.shares")}
@@ -988,35 +1121,15 @@ export function VaultScreen() {
               onClick={() => ouvrirSection("corbeille")}
             />
           </div>
-          {section === "coffre" && (
-            <ImportExport
-              // `items` porte AUSSI les éléments d'équipe, ajoutés juste après
-              // le coffre personnel par `charger()`. Les passer tels quels
-              // faisait exactement ce que `lib/export.ts` dit empêcher : un
-              // membre déposait les secrets de toute son organisation en clair
-              // dans un fichier, sur sa machine, sans que l'équipe l'apprenne.
-              // Le nom du paramètre disait « personnels » et la valeur ne
-              // l'était pas ; le filtre est ici, au seul endroit qui connaît
-              // les deux listes.
-              personnels={items.filter((i) => !i.shared)}
-              onImporte={() => void charger().then(() => setChoisi(null))}
-            />
-          )}
-          {/* Le pied de la colonne dit l'état du coffre. C'est la seule chose
-              qui rappelle, à tout moment, que les clés sont en mémoire. */}
-          <div className="mt-auto space-y-2 border-t border-border pt-4">
-            <span className="flex items-center gap-2 rounded-pill bg-success/10 px-3 py-2 text-xs text-success">
-              <span className="size-1.5 rounded-pill bg-success" />
-              {t("app.unlocked")}
-            </span>
-            <Bouton variante="discret" className="w-full" onClick={fermer}>
-              <span className="flex items-center justify-center gap-1.5">
-                <Cadenas className="size-4" />
-                {t("app.lock")}
-              </span>
-            </Bouton>
-          </div>
         </nav>
+
+        {importOuvert && (
+          <ImportNavigateur
+            personnels={items.filter((i) => !i.shared)}
+            onFerme={() => setImportOuvert(false)}
+            onImporte={() => void charger().then(() => setChoisi(null))}
+          />
+        )}
 
         {/* `overflow-hidden` et non seulement `min-h-0` : sans lui, une section
             plus haute que l'écran déborde cette colonne, déborde la grille, et
@@ -1027,8 +1140,11 @@ export function VaultScreen() {
             `flex flex-col` donne aux sections un contexte où `flex-1` a un
             sens : `min-h-0 overflow-y-auto` sur un bloc sans hauteur définie ne
             déclenche jamais de défilement, il grandit. */}
+        {/* Le panneau : liste et fiche. `overflow-hidden` pour que le coin
+            arrondi coupe aussi ce qui défile dessous. */}
+        <div className="verre-dense grid min-h-0 grid-cols-1 overflow-hidden border-border md:grid-cols-[21rem_1fr] md:rounded-tl-lg md:border-l md:border-t">
         <div
-          className={`verre-dense flex min-h-0 flex-col overflow-hidden border-r border-border ${section !== "coffre" ? "col-span-2" : ""}`}
+          className={`flex min-h-0 flex-col overflow-hidden border-r border-border ${section !== "coffre" ? "col-span-2" : ""}`}
         >
           {section === "partages" ? (
             <Partages partages={partages} occupe={occupe} onRevoquer={revoquerPartage} />
@@ -1151,6 +1267,12 @@ export function VaultScreen() {
                     : undefined
               }
               edition={edition !== ""}
+              // Un coffre d'équipe ne prend que des identifiants : ni l'écran
+              // d'équipe ni l'aiguillage d'enregistrement ne savent écrire
+              // une note ou une carte sous la clé d'une organisation.
+              identifiantSeul={
+                edition ? !!items.find((i) => i.id === edition)?.shared : portee.type === "organisation"
+              }
               occupe={occupe}
               chemins={chemins}
               onValider={enregistrer}
@@ -1238,8 +1360,10 @@ export function VaultScreen() {
                   ? () => setDeplacement(choisi)
                   : undefined
               }
-              onModifier={() => setEdition(choisi.id)}
-              onSupprimer={supprimerEntree}
+              // En lecture seule sur une collection, ni modifier ni supprimer :
+              // le serveur refuserait, après que l'on a tout saisi.
+              onModifier={choisi.shared?.permission === "read" ? undefined : () => setEdition(choisi.id)}
+              onSupprimer={choisi.shared?.permission === "read" ? undefined : supprimerEntree}
               onPartager={() => void partager(choisi)}
               favori={favoris.has(choisi.id)}
               onFavori={() => void basculerDansLeRegistre("favoris", choisi.id)}
@@ -1255,6 +1379,7 @@ export function VaultScreen() {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

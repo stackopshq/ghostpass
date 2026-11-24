@@ -20,7 +20,7 @@ import {
   lireListeDIdentifiants,
   REGISTRY_PREFIX,
 } from "../src/lib/registres";
-import { filtrerVisibles, TOUS, type VaultEntry } from "../src/lib/vault";
+import { buildTree, dansLaPortee, filtrerVisibles, porteeDe, TOUS, type Portee, type VaultEntry } from "../src/lib/vault";
 
 // Même chargement que `adresses-multiples.test.ts` : les octets du vrai paquet,
 // et un échec franc s'il manque plutôt qu'une suite qui saute ses tests.
@@ -158,7 +158,7 @@ const ITEMS = [
   e("perso"),
   e("favori"),
   e("archive"),
-  e("equipe", { shared: partage }),
+  e("equipe", { shared: partage, folder: "Prod" }),
   e("range", { folder: "Travail" }),
 ];
 const FAVORIS = new Set(["favori", "archive"]);
@@ -183,7 +183,7 @@ test("un favori archivé quitte les favoris", () => {
 });
 
 test("la recherche traverse les dossiers mais pas les archives", () => {
-  const vue = { type: "dossier", chemin: "Ailleurs" } as const;
+  const vue = { type: "dossier", chemin: "Ailleurs", portee: { type: "tous" } } as const;
   assert.deepEqual(ids(filtrerVisibles(ITEMS, "a", vue, FAVORIS, ARCHIVES)), ["favori", "range"]);
   assert.deepEqual(ids(filtrerVisibles(ITEMS, "a", { type: "archives" }, FAVORIS, ARCHIVES)), ["archive"]);
 });
@@ -199,6 +199,35 @@ test("le coffre personnel et celui d'une équipe se partagent la liste sans reco
 });
 
 test("un dossier ne montre que ce qui y est rangé", () => {
-  const vue = { type: "dossier", chemin: "Travail" } as const;
+  const vue = { type: "dossier", chemin: "Travail", portee: { type: "tous" } } as const;
   assert.deepEqual(ids(filtrerVisibles(ITEMS, "", vue, FAVORIS, ARCHIVES)), ["range"]);
+});
+
+// ─── L'arborescence suit le coffre choisi ───
+
+const ORG: Portee = { type: "organisation", orgId: "org1", nom: "Équipe" };
+
+test("l'arbre du coffre personnel ne contient rien de l'équipe, et l'inverse", () => {
+  const arbre = (portee: Portee) =>
+    buildTree(
+      ITEMS.filter((i) => dansLaPortee(i, portee)),
+      [],
+    ).children.map((c) => c.name);
+  assert.deepEqual(arbre({ type: "personnel" }), ["Travail"]);
+  // Les dossiers d'équipe sont ceux de ses éléments, pas ses collections.
+  assert.deepEqual(arbre(ORG), ["Prod"]);
+});
+
+test("un dossier homonyme dans deux coffres ne mélange pas leurs éléments", () => {
+  const items = [e("perso", { folder: "Serveurs" }), e("equipe", { shared: partage, folder: "Serveurs" })];
+  const vue = { type: "dossier", chemin: "Serveurs", portee: ORG } as const;
+  assert.deepEqual(ids(filtrerVisibles(items, "", vue)), ["equipe"]);
+  const vuePerso = { type: "dossier", chemin: "Serveurs", portee: { type: "personnel" } } as const;
+  assert.deepEqual(ids(filtrerVisibles(items, "", vuePerso)), ["perso"]);
+});
+
+test("ouvrir un dossier garde le coffre ; une vue transversale revient à tous", () => {
+  assert.deepEqual(porteeDe({ type: "dossier", chemin: "Serveurs", portee: ORG }), ORG);
+  assert.deepEqual(porteeDe({ type: "favoris" }), { type: "tous" });
+  assert.deepEqual(porteeDe(TOUS), { type: "tous" });
 });

@@ -92,8 +92,9 @@ export function DetailSecret({
   /// Absent quand le déplacement n'a pas lieu d'être : élément déjà partagé,
   /// aucune collection où l'on puisse écrire, ou type autre qu'un identifiant.
   onDeplacer?: () => void;
-  onModifier: () => void;
-  onSupprimer: () => void;
+  /// Absents sur un élément d'une collection en lecture seule.
+  onModifier?: () => void;
+  onSupprimer?: () => void;
   onPartager: () => void;
   favori: boolean;
   onFavori: () => void;
@@ -158,12 +159,16 @@ export function DetailSecret({
               {t("app.moveToShared")}
             </Bouton>
           )}
-          <Bouton variante="discret" onClick={onModifier}>
-            {t("app.edit")}
-          </Bouton>
-          <Bouton variante="danger" onClick={onSupprimer} disabled={occupe}>
-            {t("app.delete")}
-          </Bouton>
+          {onModifier && (
+            <Bouton variante="discret" onClick={onModifier}>
+              {t("app.edit")}
+            </Bouton>
+          )}
+          {onSupprimer && (
+            <Bouton variante="danger" onClick={onSupprimer} disabled={occupe}>
+              {t("app.delete")}
+            </Bouton>
+          )}
         </div>
       </div>
 

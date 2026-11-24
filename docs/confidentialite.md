@@ -49,8 +49,14 @@ son empreinte partent, et la comparaison se fait sur votre appareil parmi les r�
 reçues. Le service interrogé ne peut pas savoir quel mot de passe vous vérifiiez.
 
 **Le service d'icônes de votre serveur**, si vous laissez les icônes de sites activées.
-Les adresses des sites de votre coffre transitent alors vers *votre* serveur — jamais vers
+Les adresses des sites de votre coffre transitent alors vers *votre* serveur, jamais vers
 un tiers. Le réglage se coupe dans l'application.
+
+Pour afficher le logo d'un site, votre serveur le demande au CDN jsDelivr, qui héberge la
+collection Dashboard Icons, puis au site lui-même s'il n'y a pas de logo. jsDelivr voit
+alors le nom d'une marque (par exemple « github ») et l'adresse de votre serveur : ni qui
+l'a dans son coffre, ni l'adresse exacte du site. L'hébergeur peut couper cette source
+seule (`ICONS_DASHBOARD=false`) et garder les favicons.
 
 Aucune police, aucun script, aucune ressource n'est chargé depuis un service tiers.
 
