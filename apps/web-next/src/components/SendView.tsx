@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { openSend } from "@/lib/send";
+import { copierPuisEffacer } from "@/lib/verrouillage";
 import { Alerte, Cadenas, Coche, Copier, Oeil, OeilBarre } from "@/components/Icones";
 
 type Etat = "chargement" | "ouvert" | "echec";
@@ -53,7 +54,7 @@ export function SendView() {
 
   async function copier() {
     try {
-      await navigator.clipboard.writeText(secret);
+      await copierPuisEffacer(secret);
       setCopie(true);
       setTimeout(() => setCopie(false), 1200);
     } catch {

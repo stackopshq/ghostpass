@@ -14,6 +14,7 @@
 import type { Account } from "ghostpass-crypto-wasm";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { effacerSiPrevu } from "@/lib/verrouillage";
 
 export type Session = {
   token: string | null;
@@ -61,10 +62,15 @@ export function useSessionValue(): Session {
     // elles resteraient dans le tas jusqu'au ramasse-miettes — c'est-à-dire un
     // moment que personne ne choisit.
     account?.free();
+    // Le jeton est révoqué côté serveur, sans attendre la réponse : verrouiller
+    // ne doit jamais dépendre du réseau. Un échec laisse le jeton mourir à son
+    // expiration, comme avant, et se dit dans la console pour qui cherche.
+    if (token) api.logout(token).catch((e) => console.error("Révocation de la session :", e));
+    effacerSiPrevu();
     setAccount(null);
     setToken(null);
     setJetonIcone(null);
-  }, [account]);
+  }, [account, token]);
 
   return useMemo(
     () => ({ token, account, jetonIcone, ouvrir, fermer }),

@@ -19,6 +19,16 @@ import { createCredential, registerPasskey, webAuthnSupported } from "@/lib/weba
 import { Bouton, Champ, Saisie } from "@/components/champs";
 import { useCopie } from "@/components/useCopie";
 import { Cadenas, Coche, Copier } from "@/components/Icones";
+import {
+  CLE_PRESSE_PAPIERS,
+  CLE_VERROU,
+  DELAIS_PRESSE_PAPIERS,
+  DELAIS_VERROU,
+  ecrire,
+  lire,
+  PRESSE_PAPIERS_PAR_DEFAUT,
+  VERROU_PAR_DEFAUT,
+} from "@/lib/verrouillage";
 
 type Cle = { id: string; name: string; createdAt: number };
 type Connexion = { ip: string; userAgent: string; newDevice: boolean; createdAt: number };
@@ -45,6 +55,91 @@ function Carte({
       </div>
       {children}
     </section>
+  );
+}
+
+/// Un choix parmi quelques délais. Des boutons et non une liste déroulante :
+/// trois ou quatre valeurs se lisent d'un coup d'œil, et le choix courant reste
+/// visible, comme le sélecteur de langue. L'état se dit à la couleur ET à
+/// `aria-pressed`.
+function ChoixDuDelai({
+  libelle,
+  aide,
+  valeurs,
+  valeur,
+  nommer,
+  onChoisir,
+}: {
+  libelle: string;
+  aide: string;
+  valeurs: readonly number[];
+  valeur: number;
+  nommer: (v: number) => string;
+  onChoisir: (v: number) => void;
+}) {
+  return (
+    <div role="group" aria-label={libelle} className="flex flex-col gap-1.5">
+      <span className="text-sm text-foreground">{libelle}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {valeurs.map((v) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={v === valeur}
+            onClick={() => onChoisir(v)}
+            className={`cursor-pointer rounded-sm border px-3 py-1.5 text-xs transition-colors ${
+              v === valeur
+                ? "border-accent/60 bg-accent/12 text-accent"
+                : "border-border text-muted hover:text-foreground"
+            }`}
+          >
+            {nommer(v)}
+          </button>
+        ))}
+      </div>
+      <span className="text-2xs text-muted">{aide}</span>
+    </div>
+  );
+}
+
+/// Les réglages qui appartiennent au navigateur et non au compte.
+function SurCetAppareil() {
+  const { t } = useI18n();
+  // Lus au montage seulement : le rendu statique n'a pas de `localStorage`, et
+  // le lire pendant le rendu ferait différer le serveur du client.
+  const [verrou, setVerrou] = useState(VERROU_PAR_DEFAUT);
+  const [pressePapiers, setPressePapiers] = useState(PRESSE_PAPIERS_PAR_DEFAUT);
+  useEffect(() => {
+    setVerrou(lire(CLE_VERROU, DELAIS_VERROU, VERROU_PAR_DEFAUT));
+    setPressePapiers(lire(CLE_PRESSE_PAPIERS, DELAIS_PRESSE_PAPIERS, PRESSE_PAPIERS_PAR_DEFAUT));
+  }, []);
+  return (
+    <Carte titre={t("app.thisDevice")} sous={t("app.thisDeviceSub")}>
+      <div className="flex flex-col gap-4">
+        <ChoixDuDelai
+          libelle={t("app.autoLock")}
+          aide={t("app.autoLockHint")}
+          valeurs={DELAIS_VERROU}
+          valeur={verrou}
+          nommer={(v) => (v === 0 ? t("app.delayNever") : v === 60 ? t("app.delayHour") : t("app.delayMinutes", { n: v }))}
+          onChoisir={(v) => {
+            ecrire(CLE_VERROU, v);
+            setVerrou(v);
+          }}
+        />
+        <ChoixDuDelai
+          libelle={t("app.clipboardClear")}
+          aide={t("app.clipboardClearHint")}
+          valeurs={DELAIS_PRESSE_PAPIERS}
+          valeur={pressePapiers}
+          nommer={(v) => (v === 0 ? t("app.delayNever") : t("app.delaySeconds", { n: v }))}
+          onChoisir={(v) => {
+            ecrire(CLE_PRESSE_PAPIERS, v);
+            setPressePapiers(v);
+          }}
+        />
+      </div>
+    </Carte>
   );
 }
 
@@ -263,6 +358,8 @@ export function Securite() {
         {message && (
           <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">{message}</p>
         )}
+
+        <SurCetAppareil />
 
         <Carte
           titre={t("app.twoFactor")}

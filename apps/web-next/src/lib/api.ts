@@ -292,6 +292,12 @@ export const api = {
   },
 
   // ─── SSO OIDC (identité fédérée ; le mot de passe maître reste requis pour déverrouiller) ───
+  /// Révoque le jeton de la session. Verrouiller sans l'appeler laissait le
+  /// jeton valable jusqu'à son expiration : le coffre était fermé à l'écran,
+  /// la session ouverte côté serveur.
+  logout(token: string) {
+    return http<void>("/api/auth/logout", { method: "POST", token });
+  },
   ssoStatus() {
     return http<{ enabled: boolean }>("/api/auth/sso/status");
   },
