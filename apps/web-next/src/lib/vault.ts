@@ -146,6 +146,79 @@ export function filtrerVisibles(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/// L'ordre de la liste : un critère et un sens.
+///
+/// Pas de date de création : le serveur ne la garde pas, et un tri « par date
+/// de création » qui trierait en réalité par modification mentirait sur ce
+/// qu'il fait.
+export type Critere = "nom" | "modification";
+export type Sens = "asc" | "desc";
+export interface Ordre {
+  critere: Critere;
+  sens: Sens;
+}
+export const CRITERES: readonly Critere[] = ["nom", "modification"];
+
+/// Le sens qu'on attend en choisissant un critère : l'alphabet de A à Z, et
+/// les dates les plus récentes d'abord. Garder le sens précédent en changeant
+/// de critère donnerait « Z à A » en passant aux dates, puis les plus anciens
+/// en premier, ce que personne ne demande.
+export function sensNaturel(critere: Critere): Sens {
+  return critere === "nom" ? "asc" : "desc";
+}
+
+export const ORDRE_PAR_DEFAUT: Ordre = { critere: "nom", sens: "asc" };
+
+/// L'ordre tel qu'il se range dans le navigateur, et sa relecture. Toute
+/// valeur inattendue, y compris l'ancien format (« nom », « recent »),
+/// retombe sur le défaut.
+export function ecrireOrdre(o: Ordre): string {
+  return `${o.critere}:${o.sens}`;
+}
+
+export function lireOrdre(brut: string | null): Ordre {
+  const [critere, sens] = (brut ?? "").split(":");
+  if ((CRITERES as readonly string[]).includes(critere) && (sens === "asc" || sens === "desc")) {
+    return { critere: critere as Critere, sens };
+  }
+  return ORDRE_PAR_DEFAUT;
+}
+
+/// Trie sans toucher au tableau reçu : `visibles` est mémoïsé, le trier en
+/// place réordonnerait aussi ce que d'autres vues lisent.
+///
+/// Par date, les égalités se départagent par le nom, toujours de A à Z : un
+/// import pose des dizaines d'éléments à la même milliseconde, et un ordre qui
+/// change d'un rendu à l'autre ferait sauter la ligne qu'on s'apprête à cliquer.
+export function trierEntrees(items: readonly VaultEntry[], ordre: Ordre): VaultEntry[] {
+  const signe = ordre.sens === "asc" ? 1 : -1;
+  const parNom = (a: VaultEntry, b: VaultEntry) => a.name.localeCompare(b.name);
+  return [...items].sort(
+    ordre.critere === "nom"
+      ? (a, b) => signe * parNom(a, b)
+      : (a, b) => signe * (a.updatedAt - b.updatedAt) || parNom(a, b),
+  );
+}
+
+/// L'adresse à ouvrir pour une URL du coffre, ou `null` si elle ne doit pas
+/// l'être.
+///
+/// Une adresse saisie à la main n'a souvent pas de schéma : on lui donne
+/// `https://`. Tout ce qui n'est pas http ou https est refusé, et c'est le
+/// point : un membre d'équipe peut déposer `javascript://%0a…` dans une
+/// collection partagée, et `window.open` l'exécuterait dans l'origine du
+/// coffre déverrouillé d'un autre.
+export function adresseOuvrable(url: string): string | null {
+  const brute = url.trim();
+  if (!brute) return null;
+  try {
+    const u = new URL(brute.includes("://") ? brute : `https://${brute}`);
+    return u.protocol === "https:" || u.protocol === "http:" ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
 /// Chemins existants, pour l'autocomplétion du formulaire.
 export function folderPaths(items: VaultEntry[], emptyFolders: string[]): string[] {
   return [...new Set([...items.map((i) => i.folder).filter(Boolean), ...emptyFolders])].sort((a, b) =>
@@ -230,4 +303,76 @@ export function historiqueApresModification(
   const actuel = historique ?? [];
   if (!ancien || ancien === nouveau) return actuel;
   return [ancien, ...actuel].slice(0, VERSIONS_DE_MOT_DE_PASSE_GARDEES);
+}
+
+/// Le coffre commun d'un lot d'éléments, s'il y en a un où l'on peut écrire.
+///
+/// RANGER EN LOT N'A DE SENS QUE DANS UN SEUL COFFRE
+/// Les dossiers d'un coffre d'équipe ne sont pas ceux du coffre personnel, ni
+/// ceux d'une autre équipe : un même chemin « Travail » désigne trois dossiers
+/// différents. Un lot mêlé n'a donc pas de dossier commun à proposer, et le
+/// geste n'est offert que s'il peut aboutir pour TOUS les éléments. Un seul
+/// élément d'équipe en lecture seule suffit à l'écarter : sinon l'envoi
+/// échouerait après le choix, ce qui est la pire façon de le dire.
+export type CoffreDuLot = { type: "personnel" } | { type: "organisation"; orgId: string };
+
+export function coffreDuLot(lot: VaultEntry[]): CoffreDuLot | null {
+  if (lot.length === 0) return null;
+  if (lot.every((i) => !i.shared)) return { type: "personnel" };
+  const orgId = lot[0]!.shared?.orgId;
+  if (!orgId) return null;
+  const memeEquipe = lot.every((i) => i.shared?.orgId === orgId);
+  const ecriture = lot.every((i) => i.shared?.permission === "write" || i.shared?.permission === "manage");
+  return memeEquipe && ecriture ? { type: "organisation", orgId } : null;
+}
+
+/// Une ligne de la liste en vue arborescente : un dossier, ou un élément.
+export type LigneArbre =
+  | {
+      type: "dossier";
+      chemin: string;
+      nom: string;
+      profondeur: number;
+      /// Les éléments du dossier et de ses sous-dossiers.
+      total: number;
+      deplie: boolean;
+      aDesSousDossiers: boolean;
+    }
+  | { type: "element"; item: VaultEntry; profondeur: number };
+
+/// Les lignes de la liste quand les dossiers y sont montrés en arbre.
+///
+/// LES DOSSIERS DANS LA LISTE, ET NON DANS LA BARRE
+/// L'arbre vivait dans la barre latérale : une colonne étroite, où un nom de
+/// dossier se tronquait vite et où trente dossiers repoussaient « Archives »
+/// et « Corbeille » sous l'écran. Il passe dans la liste, comme chez Keeper :
+/// un dossier est une ligne qui se déplie sur place, avec son compte.
+///
+/// À chaque niveau, les dossiers d'abord, puis les éléments : c'est l'ordre
+/// d'un explorateur de fichiers, et un dossier noyé entre deux éléments ne se
+/// retrouve plus. Les dossiers suivent l'ordre alphabétique (inversé quand la
+/// liste est triée par nom de Z à A) ; les éléments suivent le tri choisi.
+/// Un dossier replié ne rend que sa propre ligne.
+export function lignesDeLArbre(racine: TreeNode, deplies: ReadonlySet<string>, ordre: Ordre): LigneArbre[] {
+  const lignes: LigneArbre[] = [];
+  const signe = ordre.critere === "nom" && ordre.sens === "desc" ? -1 : 1;
+  const parcourir = (noeud: TreeNode, profondeur: number) => {
+    const dossiers = [...noeud.children].sort((a, b) => signe * a.name.localeCompare(b.name));
+    for (const d of dossiers) {
+      const deplie = deplies.has(d.path);
+      lignes.push({
+        type: "dossier",
+        chemin: d.path,
+        nom: d.name,
+        profondeur,
+        total: countItems(d),
+        deplie,
+        aDesSousDossiers: d.children.length > 0,
+      });
+      if (deplie) parcourir(d, profondeur + 1);
+    }
+    for (const item of trierEntrees(noeud.items, ordre)) lignes.push({ type: "element", item, profondeur });
+  };
+  parcourir(racine, 0);
+  return lignes;
 }

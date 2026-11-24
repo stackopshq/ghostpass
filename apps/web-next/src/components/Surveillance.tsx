@@ -24,7 +24,14 @@ import { Avatar } from "@/components/Avatar";
 import { Bouton } from "@/components/champs";
 import { Chevron } from "@/components/Icones";
 
-type CleDeCarte = "reutilises" | "faibles" | "nonSecurises" | "compromis" | "clesDisponibles" | "totpDisponible";
+type CleDeCarte =
+  | "reutilises"
+  | "faibles"
+  | "nonSecurises"
+  | "compromis"
+  | "cartes"
+  | "clesDisponibles"
+  | "totpDisponible";
 
 /// Les teintes de la jauge et de la barre, du plus faible au plus fort. La
 /// couleur double l'information, elle ne la porte pas seule : la barre a sa
@@ -132,6 +139,9 @@ export function Surveillance({
     cle: CleDeCarte;
     elements: VaultEntry[];
     alerte: boolean;
+    /// Une carte qui expire bientôt est à prévoir, pas une faute : orange.
+    /// Le rouge est réservé à ce qui est déjà en défaut.
+    teinte?: "text-danger" | "text-warn";
     action?: React.ReactNode;
   }[] = [
     { cle: "reutilises", elements: constat.reutilises, alerte: true },
@@ -150,6 +160,16 @@ export function Surveillance({
           </Bouton>
         ) : undefined,
     },
+    ...(constat.aDesCartes
+      ? [
+          {
+            cle: "cartes" as const,
+            elements: constat.cartes.map((c) => c.item),
+            alerte: true,
+            teinte: constat.cartes.some((c) => c.etat === "expiree") ? ("text-danger" as const) : ("text-warn" as const),
+          },
+        ]
+      : []),
     ...(annuaire
       ? [
           { cle: "clesDisponibles" as const, elements: constat.clesDisponibles, alerte: false },
@@ -209,7 +229,7 @@ export function Surveillance({
                 className={`carte flex flex-col overflow-hidden ${ouverte === c.cle ? "ring-2 ring-accent/40" : ""}`}
               >
                 <div className="flex-1 p-4">
-                  <p className={`text-2xl font-semibold tabular-nums ${probleme ? "text-danger" : "text-foreground"}`}>
+                  <p className={`text-2xl font-semibold tabular-nums ${probleme ? (c.teinte ?? "text-danger") : "text-foreground"}`}>
                     {inconnu ? "?" : c.elements.length}
                   </p>
                   <h3 className="mt-1 text-sm font-semibold text-foreground">{t(`watch.${c.cle}.title`)}</h3>
@@ -239,6 +259,7 @@ export function Surveillance({
             <h3 className="px-2 pb-2 pt-1 text-sm font-semibold text-foreground">{t(`watch.${liste.cle}.title`)}</h3>
             {liste.elements.map((item) => {
               const hote = item.urls.map(hoteDe).find((h): h is string => h !== null);
+              const carte = liste.cle === "cartes" ? constat.cartes.find((c) => c.item.id === item.id) : undefined;
               const doc =
                 liste.cle === "totpDisponible" && annuaire && hote
                   ? dansLAnnuaire(annuaire.documentation, hote)
@@ -253,7 +274,13 @@ export function Surveillance({
                     <Avatar nom={item.name} url={item.urls[0]} />
                     <span className="flex min-w-0 flex-col">
                       <span className="truncate text-sm text-foreground">{item.name}</span>
-                      <span className="truncate text-xs text-muted">{item.username || hote}</span>
+                      {carte ? (
+                        <span className={`truncate text-xs ${carte.etat === "expiree" ? "text-danger" : "text-warn"}`}>
+                          {t(carte.etat === "expiree" ? "watch.cartes.expired" : "watch.cartes.soon", { date: item.cardExp ?? "" })}
+                        </span>
+                      ) : (
+                        <span className="truncate text-xs text-muted">{item.username || hote}</span>
+                      )}
                     </span>
                   </button>
                   {doc && (

@@ -6,7 +6,7 @@
 // des enveloppes ; ce composant les ouvre avec le compte en mémoire, et rien de
 // ce qu'il produit ne repart ni ne se persiste.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { sealSend } from "@/lib/send";
 import {
@@ -28,23 +28,32 @@ import { approuverLHote, examinerLienDePartage, hotesApprouves } from "@/lib/lie
 import { useSession } from "@/lib/session";
 import { copierPuisEffacer, useVerrouAuto } from "@/lib/verrouillage";
 import {
+  adresseOuvrable,
   buildTree,
   filtrerVisibles,
+  coffreDuLot,
   folderPaths,
+  lignesDeLArbre,
   historiqueApresModification,
   dansLaPortee,
   porteeDe,
+  ecrireOrdre,
+  lireOrdre,
+  ORDRE_PAR_DEFAUT,
   TOUS,
+  trierEntrees,
   type Filtre,
+  type Ordre,
   type VaultEntry,
 } from "@/lib/vault";
-import { ArbreDossiers } from "@/components/ArbreDossiers";
+import { contexteCourant, quelRaccourci } from "@/lib/raccourcis";
 import { EnTeteDeSection, EntreeDeNav } from "@/components/BarreLaterale";
 import { ListeSecrets } from "@/components/ListeSecrets";
 import { DetailSecret } from "@/components/DetailSecret";
 import { depuisEntree, FormulaireEntree, vide, type SaisieEntree } from "@/components/FormulaireEntree";
 import { Bouton } from "@/components/champs";
-import { Archive, Bouclier, Cadenas, Coffre, Corbeille as IconeCorbeille, Croix, Etoile, Organisation, PanneauLateral, Partage, Plus, Pouls, Reglages as IconeReglages } from "@/components/Icones";
+import { ChoixDossier } from "@/components/ChoixDossier";
+import { Archive, Bouclier, Cadenas, Coffre, Copier, Corbeille as IconeCorbeille, Crayon, Croix, Dossier as IconeDossier, Etoile, LienSortant, Organisation, PanneauLateral, Partage, Plus, Pouls, Reglages as IconeReglages, Loupe } from "@/components/Icones";
 import { Corbeille } from "@/components/Corbeille";
 import { Securite } from "@/components/Securite";
 import { Surveillance } from "@/components/Surveillance";
@@ -52,10 +61,23 @@ import { Administration } from "@/components/Administration";
 import { Partages } from "@/components/Partages";
 import { ImportNavigateur } from "@/components/ImportNavigateur";
 import { MenuDuCompte } from "@/components/MenuDuCompte";
+import { AideRaccourcis } from "@/components/AideRaccourcis";
+import type { EntreeDeMenu } from "@/components/MenuEntree";
 import { versCsv } from "@/lib/export";
 import { ListeOrgs } from "@/components/orgs/ListeOrgs";
 import { DetailOrg } from "@/components/orgs/DetailOrg";
 import type { OrgSummary } from "@/lib/orgs";
+
+/// L'ordre de la liste est un réglage de l'appareil, comme le thème.
+const CLE_ORDRE = "gp_ordre_liste";
+
+function lireOrdreStocke(): Ordre {
+  try {
+    return lireOrdre(localStorage.getItem(CLE_ORDRE));
+  } catch {
+    return ORDRE_PAR_DEFAUT;
+  }
+}
 
 /// Une organisation dont on a pu lire le coffre, pour la section « Coffres ».
 interface CoffreDEquipe {
@@ -118,7 +140,12 @@ export function VaultScreen() {
   // est rangé ; jusque-là, il n'existe que dans cet onglet, et la saisie le dit.
   const [dossiersEquipe, setDossiersEquipe] = useState<Record<string, string[]>>({});
   const [recherche, setRecherche] = useState("");
-  const [replies, setReplies] = useState<Set<string>>(new Set());
+  /// Les dossiers dépliés dans la liste. Repliés par défaut, comme chez
+  /// Keeper : un coffre de trois mille entrées déplié d'office noierait la
+  /// première ligne qu'on cherche sous tout le reste.
+  const [deplies, setDeplies] = useState<Set<string>>(new Set());
+  /// Le dossier où ranger l'élément qu'on crée depuis le menu d'un dossier.
+  const [dossierDeCreation, setDossierDeCreation] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [occupe, setOccupe] = useState(false);
   /// Les collections d'équipe où l'on peut écrire, rassemblées au chargement.
@@ -129,6 +156,10 @@ export function VaultScreen() {
   // vit déjà dans `selection`, et en garder une copie ici les ferait diverger dès qu'on
   // coche une case de plus pendant que le panneau est ouvert.
   const [deplacementLot, setDeplacementLot] = useState(false);
+  /// Le rangement d'une sélection dans un dossier : le chemin choisi tant que
+  /// le panneau est ouvert, `null` sinon. Comme pour `deplacementLot`, les
+  /// éléments eux-mêmes restent lus dans `selection`.
+  const [rangementLot, setRangementLot] = useState<string | null>(null);
   const [chargement, setChargement] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -161,6 +192,20 @@ export function VaultScreen() {
   const [courriel, setCourriel] = useState<string | null>(null);
   const [barreOuverte, setBarreOuverte] = useState(true);
   const [importOuvert, setImportOuvert] = useState(false);
+  const [aideOuverte, setAideOuverte] = useState(false);
+  // Lu après le montage : `localStorage` n'existe pas pendant le rendu
+  // statique que fait Next, et le lire plus tôt ferait diverger les deux.
+  const [ordre, setOrdre] = useState<Ordre>(ORDRE_PAR_DEFAUT);
+  useEffect(() => setOrdre(lireOrdreStocke()), []);
+  const changerOrdre = (o: Ordre) => {
+    setOrdre(o);
+    try {
+      localStorage.setItem(CLE_ORDRE, ecrireOrdre(o));
+    } catch {
+      /* L'ordre vaudra pour cette visite seulement. */
+    }
+  };
+  const champRecherche = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!token) return;
     let vivant = true;
@@ -354,8 +399,24 @@ export function VaultScreen() {
     [courants, dossiersVides, dossiersEquipe, cleDePortee],
   );
   const visibles = useMemo(
-    () => filtrerVisibles(items, recherche, filtre, favoris, archives),
-    [items, recherche, filtre, favoris, archives],
+    () => trierEntrees(filtrerVisibles(items, recherche, filtre, favoris, archives), ordre),
+    [items, recherche, filtre, favoris, archives, ordre],
+  );
+  /// Les vues d'un coffre montrent leurs dossiers en arbre dans la liste. Une
+  /// recherche, les favoris et les archives restent à plat : on y cherche un
+  /// élément précis, et le dossier où il est rangé n'aide pas à le trouver.
+  const enArbre =
+    !recherche.trim() && (filtre.type === "tous" || filtre.type === "personnel" || filtre.type === "organisation");
+  const lignesArbre = useMemo(
+    () => (enArbre ? lignesDeLArbre(tree, deplies, ordre) : null),
+    [enArbre, tree, deplies, ordre],
+  );
+  /// Ce que les flèches parcourent : les éléments qu'on voit. En arbre, ceux
+  /// d'un dossier replié n'en sont pas, sinon la fiche changerait pour une
+  /// ligne cachée.
+  const navigables = useMemo(
+    () => (lignesArbre ? lignesArbre.flatMap((l) => (l.type === "element" ? [l.item] : [])) : visibles),
+    [lignesArbre, visibles],
   );
 
   /// Bascule un élément dans un registre « liste d'identifiants ».
@@ -363,26 +424,36 @@ export function VaultScreen() {
   /// Comme pour les couleurs d'organisation, l'écran change AVANT l'aller-retour
   /// réseau : une étoile qui attend le serveur donne l'impression que le clic
   /// n'a pas porté. Un échec remet l'état précédent et le dit.
-  const basculerDansLeRegistre = useCallback(
-    async (quel: "favoris" | "archives", id: string) => {
-      if (!token || !account) return;
+  ///
+  /// Une sélection entière passe en UNE écriture : le registre est un seul
+  /// élément chiffré, et onze écritures successives du même registre se
+  /// marcheraient dessus. Rend `true` si l'écriture a abouti.
+  const ecrireDansLeRegistre = useCallback(
+    async (quel: "favoris" | "archives", calcul: (courant: Set<string>) => Set<string>) => {
+      if (!token || !account) return false;
       const [courant, poser, registreId, poserId, nom] =
         quel === "favoris"
           ? ([favoris, setFavoris, registreFavorisId, setRegistreFavorisId, FAVORITES_ITEM_NAME] as const)
           : ([archives, setArchives, registreArchivesId, setRegistreArchivesId, ARCHIVED_ITEM_NAME] as const);
-      const suivant = basculerId(courant, id);
+      const suivant = calcul(courant);
       poser(suivant);
       try {
         const vivants = new Set(items.map((i) => i.id));
         const enc = encryptIdList(account, nom, aEcrire(suivant, vivants, lectureComplete));
         if (registreId) await api.updateItem(token, registreId, enc);
         else poserId((await api.createItem(token, enc)).id);
+        return true;
       } catch {
         poser(courant);
         setErreur(t("app.registryFailed"));
+        return false;
       }
     },
     [token, account, favoris, archives, registreFavorisId, registreArchivesId, items, lectureComplete, t],
+  );
+  const basculerDansLeRegistre = useCallback(
+    (quel: "favoris" | "archives", id: string) => ecrireDansLeRegistre(quel, (c) => basculerId(c, id)),
+    [ecrireDansLeRegistre],
   );
   // Les chemins proposés par le formulaire sont ceux du coffre DE L'ÉLÉMENT :
   // celui de l'élément modifié, ou, pour une création, le coffre ouvert (le
@@ -438,9 +509,14 @@ export function VaultScreen() {
   );
 
   const creerDossier = async (path: string) => {
-    // Le dossier créé s'ouvre : on le crée pour y ranger quelque chose, et le
-    // voir sélectionné dit où il est apparu.
-    choisirFiltre({ type: "dossier", chemin: path, portee });
+    // Ses parents se déplient : un dossier créé sous un parent replié
+    // apparaîtrait nulle part, et le geste semblerait n'avoir rien fait.
+    setDeplies((prec) => {
+      const s = new Set(prec);
+      const segments = path.split("/");
+      for (let i = 1; i < segments.length; i++) s.add(segments.slice(0, i).join("/"));
+      return s;
+    });
     if (portee.type === "organisation") {
       const orgId = portee.orgId;
       setDossiersEquipe((prec) => ({
@@ -842,7 +918,15 @@ export function VaultScreen() {
     try {
       for (const id of selection) {
         try {
-          await api.deleteItem(token, id);
+          // Un élément d'équipe se supprime par la route de sa collection :
+          // envoyé à la route personnelle, il était refusé à chaque fois, et la
+          // sélection mêle les deux coffres dans la vue « Tous les éléments ».
+          const item = items.find((i) => i.id === id);
+          if (item?.shared) {
+            await api.deleteOrgItem(token, item.shared.orgId, item.shared.collectionId, id);
+          } else {
+            await api.deleteItem(token, id);
+          }
           ok++;
         } catch {
           ko++;
@@ -857,6 +941,239 @@ export function VaultScreen() {
       setOccupe(false);
     }
   };
+
+  /// Les éléments sélectionnés, dans l'ordre de la liste.
+  const lot = useMemo(() => items.filter((i) => selection.has(i.id)), [items, selection]);
+  const coffreCommun = useMemo(() => coffreDuLot(lot), [lot]);
+  /// Toute la sélection est déjà archivée (la vue Archives, typiquement) : le
+  /// geste du lot est alors de l'en sortir. Une sélection mêlée s'archive.
+  const lotArchive = lot.length > 0 && lot.every((i) => archives.has(i.id));
+
+  const archiverSelection = async () => {
+    const ids = lot.map((i) => i.id);
+    const sortir = lotArchive;
+    const fait = await ecrireDansLeRegistre("archives", (courant) => {
+      const s = new Set(courant);
+      for (const id of ids) {
+        if (sortir) s.delete(id);
+        else s.add(id);
+      }
+      return s;
+    });
+    if (!fait) return;
+    // Les éléments quittent la vue qu'on regarde : garder leurs cases cochées
+    // ferait agir le geste suivant sur des lignes qu'on ne voit plus.
+    setSelection(new Set());
+    setAncre(null);
+    if (choisi && ids.includes(choisi.id)) setChoisi(null);
+    setMessage(t(sortir ? "app.unarchivedMany" : "app.archivedMany", { n: ids.length }));
+  };
+
+  /// Les dossiers proposés pour ranger le lot : ceux de SON coffre.
+  const cheminsDuLot = useMemo(() => {
+    if (!coffreCommun) return [];
+    return coffreCommun.type === "organisation"
+      ? folderPaths(
+          items.filter((i) => i.shared?.orgId === coffreCommun.orgId),
+          dossiersEquipe[coffreCommun.orgId] ?? [],
+        )
+      : folderPaths(items.filter((i) => !i.shared), dossiersVides);
+  }, [coffreCommun, items, dossiersEquipe, dossiersVides]);
+
+  /// Range la sélection dans un dossier.
+  ///
+  /// Le dossier est DANS le chiffré : changer de dossier, c'est rechiffrer
+  /// l'élément entier et le renvoyer, un par un, faute de route de lot. Comme
+  /// pour la suppression, on compte, et un élément refusé n'arrête pas les
+  /// suivants. La clé d'équipe s'ouvre une fois pour tout le lot.
+  const rangerSelection = async (chemin: string) => {
+    if (!token || !account || !coffreCommun) return;
+    const aRanger = lot.filter((i) => i.folder !== chemin);
+    setOccupe(true);
+    setErreur(null);
+    let ok = lot.length - aRanger.length;
+    let ko = 0;
+    try {
+      let poignee: ReturnType<typeof openOrg> | null = null;
+      if (coffreCommun.type === "organisation") {
+        const m = await api.getMembership(token, coffreCommun.orgId);
+        if (!m.encryptedOrgKey || !m.sealedByPublicKey) throw new Error(t("org.keyUnavailable"));
+        poignee = openOrg(account, m.sealedByPublicKey, m.encryptedOrgKey);
+      }
+      for (const item of aRanger) {
+        try {
+          if (item.shared && poignee) {
+            const enc = encryptOrgLogin(poignee, {
+              name: item.name,
+              username: item.username,
+              password: item.password,
+              urls: item.urls,
+              totp: item.totp,
+              notes: item.note,
+              folder: chemin,
+              passwordHistory: item.passwordHistory,
+            });
+            await api.updateOrgItem(token, item.shared.orgId, item.shared.collectionId, item.id, enc);
+          } else {
+            await api.updateItem(token, item.id, encryptItem(account, { ...item, folder: chemin }));
+          }
+          ok++;
+        } catch {
+          ko++;
+        }
+      }
+      setRangementLot(null);
+      setSelection(new Set());
+      setAncre(null);
+      await charger();
+      // Même partage que pour le déplacement vers une équipe : le vert
+      // s'efface, le rouge reste, parce qu'un lot à moitié rangé demande
+      // qu'on y revienne.
+      if (ko > 0) setErreur(t("app.filedSome", { ok, ko }));
+      else setMessage(t("app.filedAll", { n: ok, folder: chemin ? chemin.split("/").join(" / ") : t("app.noFolder") }));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOccupe(false);
+    }
+  };
+
+  /// Copie un champ depuis la liste ou le clavier, sans passer par la fiche.
+  /// Le bandeau confirme, puisqu'aucun bouton de copie n'est là pour afficher
+  /// sa coche.
+  const copierChamp = async (item: VaultEntry, quoi: "identifiant" | "motDePasse") => {
+    const [valeur, cle] =
+      item.kind === "card"
+        ? quoi === "identifiant"
+          ? [item.cardholder, "app.copiedCardholder"]
+          : [item.cardNumber, "app.copiedCardNumber"]
+        : item.kind === "login"
+          ? quoi === "identifiant"
+            ? [item.username, "app.copiedUsername"]
+            : [item.password, "app.copiedPassword"]
+          : ["", ""];
+    if (!valeur) return false;
+    try {
+      await copierPuisEffacer(valeur);
+      setMessage(t(cle));
+    } catch {
+      setErreur(t("app.copyFailed"));
+    }
+    return true;
+  };
+
+  /// Le menu « … » d'une ligne. Chaque entrée n'existe que si elle aboutit :
+  /// pas de « copier » sur un champ vide, pas de « modifier » en lecture seule.
+  const actionsDe = (item: VaultEntry): EntreeDeMenu[] => {
+    const e: EntreeDeMenu[] = [];
+    const icone = "size-4";
+    if (item.kind === "login") {
+      if (item.username)
+        e.push({ cle: "id", libelle: t("app.copyUsername"), icone: <Copier className={icone} />, agir: () => void copierChamp(item, "identifiant") });
+      if (item.password)
+        e.push({ cle: "mdp", libelle: t("app.copyPassword"), icone: <Copier className={icone} />, agir: () => void copierChamp(item, "motDePasse") });
+      const adresse = item.urls.map(adresseOuvrable).find((a) => a !== null);
+      if (adresse)
+        e.push({
+          cle: "site",
+          libelle: t("app.openWebsite"),
+          icone: <LienSortant className={icone} />,
+          agir: () => void window.open(adresse, "_blank", "noopener,noreferrer"),
+        });
+    } else if (item.kind === "card" && item.cardNumber) {
+      e.push({ cle: "num", libelle: t("app.copyCardNumber"), icone: <Copier className={icone} />, agir: () => void copierChamp(item, "motDePasse") });
+    }
+    const favori = favoris.has(item.id);
+    e.push({
+      cle: "favori",
+      libelle: t(favori ? "app.removeFavorite" : "app.addFavorite"),
+      icone: <Etoile plein={favori} className={icone} />,
+      agir: () => void basculerDansLeRegistre("favoris", item.id),
+    });
+    e.push({
+      cle: "archive",
+      libelle: t(archives.has(item.id) ? "app.unarchive" : "app.archive"),
+      icone: <Archive className={icone} />,
+      agir: () => void basculerDansLeRegistre("archives", item.id),
+    });
+    if (item.shared?.permission !== "read") {
+      e.push({
+        cle: "modifier",
+        libelle: t("app.edit"),
+        icone: <Crayon className={icone} />,
+        agir: () => {
+          setChoisi(item);
+          setEdition(item.id);
+        },
+      });
+    }
+    return e;
+  };
+
+  // ─── Les raccourcis clavier ───
+  //
+  // Un seul écouteur, posé une fois ; il lit l'état du dernier rendu par une
+  // référence. Le reposer à chaque rendu le ferait disparaître un instant à
+  // chaque frappe dans la recherche.
+  const surTouche = useRef<(e: KeyboardEvent) => void>(() => undefined);
+  surTouche.current = (e: KeyboardEvent) => {
+    // Une touche déjà prise (Échap d'un menu ouvert) ou une saisie en cours
+    // de composition (accents, japonais) n'est pas une commande.
+    if (e.defaultPrevented || e.isComposing) return;
+    // Une fenêtre ouverte (import, aide, affichage en grand) a la main.
+    if (document.querySelector('[aria-modal="true"]')) return;
+    const action = quelRaccourci(e, contexteCourant(champRecherche.current));
+    if (!action) return;
+    const surLaListe = section === "coffre" && edition === null;
+    switch (action) {
+      case "chercher":
+        e.preventDefault();
+        champRecherche.current?.focus();
+        champRecherche.current?.select();
+        return;
+      case "suivant":
+      case "precedent": {
+        if (!surLaListe || navigables.length === 0) return;
+        e.preventDefault();
+        const i = choisi ? navigables.findIndex((x) => x.id === choisi.id) : -1;
+        const j = action === "suivant" ? Math.min(i + 1, navigables.length - 1) : Math.max(i - 1, 0);
+        setChoisi(navigables[j]);
+        return;
+      }
+      case "copierMotDePasse":
+      case "copierIdentifiant":
+        if (!surLaListe || !choisi) return;
+        // Rien à copier : on laisse la touche au navigateur.
+        if (!(choisi.kind === "login" || choisi.kind === "card")) return;
+        e.preventDefault();
+        void copierChamp(choisi, action === "copierIdentifiant" ? "identifiant" : "motDePasse");
+        return;
+      case "verrouiller":
+        e.preventDefault();
+        fermer();
+        return;
+      case "aide":
+        e.preventDefault();
+        setAideOuverte(true);
+        return;
+      case "echap":
+        // Le formulaire n'est pas fermé par Échap : un geste réflexe
+        // y perdrait une saisie.
+        if (document.activeElement === champRecherche.current && recherche) {
+          e.preventDefault();
+          setRecherche("");
+        } else if (surLaListe && choisi) {
+          e.preventDefault();
+          setChoisi(null);
+        }
+        return;
+    }
+  };
+  useEffect(() => {
+    const ecoute = (e: KeyboardEvent) => surTouche.current(e);
+    window.addEventListener("keydown", ecoute);
+    return () => window.removeEventListener("keydown", ecoute);
+  }, []);
 
   /// Une vue du coffre : elle ramène toujours à l'écran du coffre, et vide la
   /// sélection, qui ne porterait plus sur ce qu'on regarde.
@@ -907,17 +1224,20 @@ export function VaultScreen() {
     setSectionsRepliees((prec) => basculerId(prec, cle));
   };
 
-  const basculer = (path: string) => {
-    setReplies((prec) => {
-      const s = new Set(prec);
-      if (s.has(path)) s.delete(path);
-      else s.add(path);
-      return s;
-    });
+  const basculer = (path: string) => setDeplies((prec) => basculerId(prec, path));
+
+  const nouvelElement = () => {
+    // Le dossier ouvert pré-remplit le champ : on ajoute presque toujours là
+    // où l'on est en train de regarder.
+    setSection("coffre");
+    setChoisi(null);
+    setDossierDeCreation(null);
+    setEdition("");
   };
 
   return (
     <div className="flex h-dvh flex-col text-foreground">
+      {aideOuverte && <AideRaccourcis onFermer={() => setAideOuverte(false)} />}
 
       {erreur && (
         <p role="alert" className="shrink-0 border-b border-border bg-danger/10 px-4 py-2 text-sm text-danger">
@@ -937,12 +1257,12 @@ export function VaultScreen() {
       )}
 
       {/* LA BARRE DU HAUT
-          La recherche et l'action principale y sont, sur toute la largeur, au
-          lieu d'être tassées en tête de la barre latérale : la recherche y
-          gagne la place de taper un nom entier, et la barre latérale peut se
-          replier sans emporter le bouton « Nouvel élément ». Disposition de
-          1Password, choisie le 2026-11-23 ; ghostcal garde tout dans son
-          rail, et les deux produits ne s'alignent plus sur ce point. */}
+          La recherche au centre, sur toute la largeur, et le compte à droite,
+          où on le cherche (Keeper, 1Password, la plupart des applications web).
+          « Nouvel élément » est passé en tête de la barre latérale le
+          2026-11-24, disposition de Keeper ; il ne revient ici que quand la
+          barre n'est pas affichée. ghostcal garde tout dans son rail, et les
+          deux produits ne s'alignent plus sur ce point. */}
       {/* Barre du haut et barre latérale forment UN cadre, du même fond et sans
           trait entre elles ; la liste et la fiche se posent dedans comme un
           panneau, arrondi au coin où les deux barres se rejoignent. C'est ce
@@ -967,8 +1287,14 @@ export function VaultScreen() {
           <img src="/logo.svg" alt="" width={28} height={28} className="h-7 w-7" />
           GhostPass
         </span>
-        <div className="mx-auto w-full max-w-3xl">
+        {/* La loupe est posée DANS le champ, pas dans son texte d'aide : elle
+            reste quand on tape, et le lecteur d'écran ne la lit pas (le champ
+            a déjà son `aria-label`). `pointer-events-none` laisse le clic
+            atteindre le champ à travers elle. */}
+        <div className="relative mx-auto w-full max-w-3xl">
+          <Loupe className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <input
+            ref={champRecherche}
             type="search"
             value={recherche}
             onChange={(e) => {
@@ -979,24 +1305,29 @@ export function VaultScreen() {
             }}
             placeholder={t("app.searchVault")}
             aria-label={t("app.searchVault")}
-            className="w-full rounded border border-border bg-surface-2 px-3.5 py-2 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+            className="w-full rounded border border-border bg-surface-2 py-2 pl-9 pr-3.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
           />
         </div>
+        {/* « Nouvel élément » vit en tête de la barre latérale. Quand elle
+            n'est pas là (repliée, ou écran étroit), il revient ici en bouton
+            compact : la barre ne doit jamais emporter le geste principal. */}
         <Bouton
-          className="shrink-0"
-          onClick={() => {
-            // Le dossier ouvert pré-remplit le champ : on ajoute presque
-            // toujours là où l'on est en train de regarder.
-            setSection("coffre");
-            setChoisi(null);
-            setEdition("");
-          }}
+          className={`shrink-0 ${barreOuverte ? "md:hidden" : ""}`}
+          onClick={nouvelElement}
+          aria-label={t("app.newItem")}
+          title={t("app.newItem")}
         >
-          <span className="flex items-center justify-center gap-2">
-            <Plus className="size-4" />
-            <span className="hidden sm:inline">{t("app.newItem")}</span>
-          </span>
+          <Plus className="size-4" />
         </Bouton>
+        <MenuDuCompte
+          courriel={courriel}
+          onSecurite={() => ouvrirSection("securite")}
+          onImporter={() => setImportOuvert(true)}
+          onExporter={exporterCsv}
+          exportPossible={items.some((i) => !i.shared)}
+          onRaccourcis={() => setAideOuverte(true)}
+          onVerrouiller={fermer}
+        />
       </header>
 
       <div
@@ -1005,14 +1336,14 @@ export function VaultScreen() {
         <nav
           className={`min-h-0 flex-col overflow-y-auto p-3 pt-1 ${barreOuverte ? "hidden md:flex" : "hidden"}`}
         >
-          <MenuDuCompte
-            courriel={courriel}
-            onSecurite={() => ouvrirSection("securite")}
-            onImporter={() => setImportOuvert(true)}
-            onExporter={exporterCsv}
-            exportPossible={items.some((i) => !i.shared)}
-            onVerrouiller={fermer}
-          />
+          {/* Le geste principal en tête de la barre, au-dessus des vues :
+              disposition de Keeper, demandée le 2026-11-24. */}
+          <Bouton className="mb-5 mt-2 w-full" onClick={nouvelElement}>
+            <span className="flex items-center justify-center gap-2">
+              <Plus className="size-4" />
+              {t("app.newItem")}
+            </span>
+          </Bouton>
           {/* LA BARRE PAR SECTIONS
               En haut, les vues qui traversent tout le coffre ; puis les coffres
               (le personnel et ceux des organisations) ; puis les dossiers ; en
@@ -1081,19 +1412,6 @@ export function VaultScreen() {
             </div>
           )}
 
-          <ArbreDossiers
-            tree={tree}
-            aideCreation={portee.type === "organisation" ? t("app.teamFolderHint") : undefined}
-            ouvert={!sectionsRepliees.has("dossiers")}
-            onBasculerSection={() => basculerSectionRepliee("dossiers")}
-            choisi={section === "coffre" ? dossier : null}
-            recherche={recherche}
-            replies={replies}
-            onChoisir={(p) => choisirFiltre({ type: "dossier", chemin: p, portee })}
-            onBasculer={basculer}
-            onCreer={creerDossier}
-            onSupprimer={supprimerDossier}
-          />
 
           <div className="mt-6 flex flex-col gap-1">
             <EntreeDeNav
@@ -1144,8 +1462,14 @@ export function VaultScreen() {
             sens : `min-h-0 overflow-y-auto` sur un bloc sans hauteur définie ne
             déclenche jamais de défilement, il grandit. */}
         {/* Le panneau : liste et fiche. `overflow-hidden` pour que le coin
-            arrondi coupe aussi ce qui défile dessous. */}
-        <div className="verre-dense grid min-h-0 grid-cols-1 overflow-hidden border-border md:grid-cols-[21rem_1fr] md:rounded-tl-lg md:border-l md:border-t">
+            arrondi coupe aussi ce qui défile dessous.
+
+            LA LISTE S'ÉLARGIT AVEC L'ÉCRAN
+            21rem suffisait à une liste plate. Avec les dossiers en arbre, le
+            retrait de chaque niveau et la pastille de collection mangeaient
+            le nom : « Base de d… » dès le premier niveau. Elle grandit par
+            paliers ; la fiche garde au moins la moitié de la place. */}
+        <div className="verre-dense grid min-h-0 grid-cols-1 overflow-hidden border-border md:grid-cols-[21rem_1fr] md:rounded-tl-lg md:border-l md:border-t lg:grid-cols-[27rem_1fr] xl:grid-cols-[32rem_1fr]">
         <div
           className={`flex min-h-0 flex-col overflow-hidden border-r border-border ${section !== "coffre" ? "col-span-2" : ""}`}
         >
@@ -1202,6 +1526,37 @@ export function VaultScreen() {
                   >
                     <Croix className="size-4" />
                   </button>
+                  {/* Ranger dans un dossier : seulement si toute la sélection
+                      est dans un même coffre où l'on peut écrire (`coffreDuLot`). */}
+                  {coffreCommun && (
+                    <button
+                      type="button"
+                      aria-label={t("app.fileSelected")}
+                      title={t("app.fileSelected")}
+                      onClick={() => {
+                        setDeplacementLot(false);
+                        setEdition(null);
+                        // Le dossier commun du lot s'il en a un, sinon la racine.
+                        const premier = lot[0]?.folder ?? "";
+                        setRangementLot(lot.every((i) => i.folder === premier) ? premier : "");
+                      }}
+                      disabled={occupe}
+                      className="cursor-pointer rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                    >
+                      <IconeDossier className="size-4" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    aria-label={t(lotArchive ? "app.unarchiveSelected" : "app.archiveSelected")}
+                    title={t(lotArchive ? "app.unarchiveSelected" : "app.archiveSelected")}
+                    aria-pressed={lotArchive}
+                    onClick={() => void archiverSelection()}
+                    disabled={occupe}
+                    className={`cursor-pointer rounded-lg p-2 transition-colors hover:bg-surface-2 hover:text-foreground ${lotArchive ? "text-accent" : "text-muted"}`}
+                  >
+                    <Archive className="size-4" />
+                  </button>
                   {/* Déplacer la sélection vers un coffre d'équipe.
                       Offert seulement s'il peut aboutir : au moins un identifiant personnel
                       dans la sélection, et au moins une collection où l'on puisse écrire.
@@ -1211,7 +1566,10 @@ export function VaultScreen() {
                       type="button"
                       aria-label={t("app.moveSelected")}
                       title={t("app.moveSelected")}
-                      onClick={() => setDeplacementLot(true)}
+                      onClick={() => {
+                        setRangementLot(null);
+                        setDeplacementLot(true);
+                      }}
                       disabled={occupe}
                       className="cursor-pointer rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
                     >
@@ -1247,6 +1605,25 @@ export function VaultScreen() {
                   setSelection(new Set(ids));
                   setAncre(null);
                 }}
+                ordre={ordre}
+                onOrdre={changerOrdre}
+                actions={actionsDe}
+                arbre={
+                  lignesArbre
+                    ? {
+                        lignes: lignesArbre,
+                        onBasculer: basculer,
+                        onCreer: (p) => void creerDossier(p),
+                        onSupprimer: (p) => void supprimerDossier(p),
+                        onNouvelElement: (p) => {
+                          setChoisi(null);
+                          setDossierDeCreation(p);
+                          setEdition("");
+                        },
+                        aideCreation: portee.type === "organisation" ? t("app.teamFolderHint") : undefined,
+                      }
+                    : undefined
+                }
               />
             </div>
           )}
@@ -1265,8 +1642,8 @@ export function VaultScreen() {
                       const e = items.find((i) => i.id === edition);
                       return e ? depuisEntree(e) : undefined;
                     })()
-                  : dossier
-                    ? { ...vide(), folder: dossier }
+                  : (dossierDeCreation ?? dossier)
+                    ? { ...vide(), folder: dossierDeCreation ?? dossier ?? "" }
                     : undefined
               }
               edition={edition !== ""}
@@ -1281,6 +1658,22 @@ export function VaultScreen() {
               onValider={enregistrer}
               onAnnuler={() => setEdition(null)}
             />
+            ) : rangementLot !== null && coffreCommun ? (
+              // En ligne dans le panneau, comme le déplacement : la colonne
+              // voisine porte `backdrop-filter`, qui enferme les `fixed`.
+              <div className="flex min-h-0 flex-col gap-3 p-5">
+                <h2 className="text-base font-semibold text-foreground">{t("app.fileSelected")}</h2>
+                <p className="text-sm text-muted">{t("app.fileManyCount", { n: lot.length })}</p>
+                <ChoixDossier valeur={rangementLot} chemins={cheminsDuLot} onChange={setRangementLot} />
+                <div className="flex gap-2">
+                  <Bouton onClick={() => void rangerSelection(rangementLot)} disabled={occupe}>
+                    {t("app.fileHere")}
+                  </Bouton>
+                  <Bouton variante="discret" onClick={() => setRangementLot(null)} disabled={occupe}>
+                    {t("app.cancelBack")}
+                  </Bouton>
+                </div>
+              </div>
             ) : deplacementLot ? (
               // Même placement en ligne que pour un seul élément, et pour la même
               // raison : la colonne voisine porte `backdrop-filter`, qui capture les

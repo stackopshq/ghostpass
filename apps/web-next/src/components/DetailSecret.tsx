@@ -14,7 +14,8 @@ import { formatDate, passwordStrength, type VaultEntry } from "@/lib/vault";
 import { useCopie } from "@/components/useCopie";
 import { Avatar } from "@/components/Avatar";
 import { Bouton } from "@/components/champs";
-import { Archive, Coche, Copier, Etoile, Oeil, OeilBarre } from "@/components/Icones";
+import { Agrandir, Archive, Coche, Copier, Etoile, Oeil, OeilBarre } from "@/components/Icones";
+import { AffichageEnGrand } from "@/components/AffichageEnGrand";
 
 function Ligne({
   label,
@@ -25,6 +26,7 @@ function Ligne({
   onCopier,
   extra,
   enfant,
+  onGrand,
 }: {
   label: string;
   valeur: string;
@@ -34,6 +36,9 @@ function Ligne({
   onCopier?: (texte: string, cle: string) => void;
   extra?: ReactNode;
   enfant?: ReactNode;
+  /// Ouvre la valeur en grands caractères. Réservé aux secrets qu'on recopie
+  /// à la main : un mot de passe, un numéro de carte.
+  onGrand?: () => void;
 }) {
   const { t } = useI18n();
   const [devoile, setDevoile] = useState(false);
@@ -58,6 +63,17 @@ function Ligne({
             className="cursor-pointer rounded p-1 text-muted transition-colors hover:text-foreground"
           >
             {devoile ? <OeilBarre className="size-4" /> : <Oeil className="size-4" />}
+          </button>
+        )}
+        {onGrand && valeur && (
+          <button
+            type="button"
+            onClick={onGrand}
+            title={t("app.largeType")}
+            aria-label={`${t("app.largeType")} : ${label}`}
+            className="cursor-pointer rounded p-1 text-muted transition-colors hover:text-foreground"
+          >
+            <Agrandir className="size-4" />
           </button>
         )}
         {cle && onCopier && valeur && (
@@ -105,6 +121,7 @@ export function DetailSecret({
   const { t, locale } = useI18n();
   const { copie, copier } = useCopie();
   const force = useMemo(() => passwordStrength(item.password), [item.password]);
+  const [grand, setGrand] = useState<{ titre: string; valeur: string } | null>(null);
 
   const genre =
     item.kind === "note"
@@ -212,6 +229,7 @@ export function DetailSecret({
               cle="num"
               copie={copie}
               onCopier={copier}
+              onGrand={() => setGrand({ titre: `${item.name} · ${t("app.cardNumber")}`, valeur: item.cardNumber })}
             />
             {item.cardExp && <Ligne label={t("app.expiry")} valeur={item.cardExp} />}
             <Ligne label={t("app.cardCvv")} valeur={item.cardCode} masque="•••" cle="cvv" copie={copie} onCopier={copier} />
@@ -254,6 +272,7 @@ export function DetailSecret({
               cle="pw"
               copie={copie}
               onCopier={copier}
+              onGrand={() => setGrand({ titre: `${item.name} · ${t("app.password")}`, valeur: item.password })}
               extra={
                 item.password ? (
                   <span className={`shrink-0 text-2xs ${teintes[force.niveau]}`} title={t("app.strength")}>
@@ -292,6 +311,7 @@ export function DetailSecret({
         </div>
         <p className="px-1 pt-3 text-2xs text-muted">{formatDate(item.updatedAt, locale)}</p>
       </div>
+      {grand && <AffichageEnGrand titre={grand.titre} valeur={grand.valeur} onFermer={() => setGrand(null)} />}
     </div>
   );
 }
