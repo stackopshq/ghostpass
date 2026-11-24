@@ -26,7 +26,9 @@ export function Avatar({ nom, url, grand = false }: { nom: string; url?: string;
   // Les rayons du thème, choisis pour un coin d'environ un quart du côté, celui
   // des tuiles d'application ; `rounded-lg` (18 px) arrondissait la petite en cercle.
   const taille = grand ? "size-11 rounded text-lg" : "size-8 rounded-sm text-sm";
-  const marge = grand ? "p-2" : "p-1.5";
+  // La marge laisse le logo occuper environ les trois quarts du côté : assez
+  // pour le reconnaître, assez peu pour que la tuile reste un cadre.
+  const marge = grand ? "p-1.5" : "p-1";
   return (
     <span
       className={`relative grid shrink-0 place-items-center overflow-hidden border border-black/5 bg-white font-semibold shadow-sm ${taille}`}
