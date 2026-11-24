@@ -26,6 +26,7 @@ import { aEcrire, ARCHIVED_ITEM_NAME, basculer as basculerId, FAVORITES_ITEM_NAM
 import { useI18n } from "@/lib/i18n";
 import { approuverLHote, examinerLienDePartage, hotesApprouves } from "@/lib/lienDePartage";
 import { useSession } from "@/lib/session";
+import { copierPuisEffacer, useVerrouAuto } from "@/lib/verrouillage";
 import {
   buildTree,
   filtrerVisibles,
@@ -73,6 +74,8 @@ interface Destination {
 export function VaultScreen() {
   const { t } = useI18n();
   const { token, account, fermer } = useSession();
+  // Monté avec l'écran du coffre, donc actif exactement tant qu'il est ouvert.
+  useVerrouAuto(fermer);
 
   const [items, setItems] = useState<VaultEntry[]>([]);
   const [dossiersVides, setDossiersVides] = useState<string[]>([]);
@@ -618,7 +621,7 @@ export function VaultScreen() {
       ];
       setPartages(suivant);
       await enregistrerPartages(suivant);
-      await navigator.clipboard.writeText(lien).catch(() => undefined);
+      await copierPuisEffacer(lien).catch(() => undefined);
       setErreur(null);
       setMessage(t("app.shareCreated"));
     } catch (e) {

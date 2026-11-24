@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { copierPuisEffacer } from "@/lib/verrouillage";
 
 /**
- * Copier dans le presse-papiers, avec un accusé qui s'efface.
+ * Copier dans le presse-papiers, avec un accusé qui s'efface. Le presse-papiers
+ * lui-même est vidé après le délai réglé (`lib/verrouillage.ts`).
  *
  * La clé sert à savoir QUEL bouton a été pressé : sans elle, copier un mot de
  * passe ferait clignoter la coche de tous les autres. Le minuteur est annulé au
@@ -16,7 +18,7 @@ export function useCopie() {
 
   const copier = useCallback(async (texte: string, cle: string) => {
     try {
-      await navigator.clipboard.writeText(texte);
+      await copierPuisEffacer(texte);
       setCopie(cle);
       if (minuteur.current) clearTimeout(minuteur.current);
       minuteur.current = setTimeout(() => setCopie((c) => (c === cle ? null : c)), 1200);
