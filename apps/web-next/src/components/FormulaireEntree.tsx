@@ -6,15 +6,23 @@
 // est une enveloppe. C'est aussi ici qu'est archivé l'ancien mot de passe quand
 // il change, pour qu'un changement fait par erreur ne soit pas irréversible.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ItemKind } from "@/lib/crypto";
 import { DEFAULT_GEN_OPTIONS, generatePassword, type GenOptions } from "@/lib/generator";
 import { useI18n } from "@/lib/i18n";
+import { CHOIX_FUITES_A_LA_SAISIE, CLE_FUITES_A_LA_SAISIE, FUITES_A_LA_SAISIE_PAR_DEFAUT, pwnedCount } from "@/lib/breach";
+import { lire } from "@/lib/verrouillage";
 import type { VaultEntry } from "@/lib/vault";
 import { ChoixDossier } from "@/components/ChoixDossier";
 import { Bouton, BoutonIcone, Champ, Saisie, Zone } from "@/components/champs";
 import { adressesPourSaisie, ChampsAdresses } from "@/components/ChampsAdresses";
 import { De, Oeil, OeilBarre, Reglages } from "@/components/Icones";
+
+/// Le résultat d'une vérification de fuite, attaché au mot de passe vérifié :
+/// dès qu'on retape, il ne vaut plus et disparaît.
+type Fuite =
+  | { pour: string; etat: "verif" | "sur" | "erreur" }
+  | { pour: string; etat: "fuite"; n: number };
 
 /// Ce que le formulaire rend à son appelant. Il ne chiffre pas et n'appelle pas
 /// le réseau lui-même : il décrit une entrée, et l'écran qui le porte décide
@@ -78,11 +86,32 @@ export function FormulaireEntree({
   onValider: (v: SaisieEntree) => void;
   onAnnuler: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [v, setV] = useState<SaisieEntree>(initial ?? VIDE);
   const [motVisible, setMotVisible] = useState(false);
   const [options, setOptions] = useState<GenOptions>({ ...DEFAULT_GEN_OPTIONS });
   const [optionsOuvertes, setOptionsOuvertes] = useState(false);
+  const [fuite, setFuite] = useState<Fuite | null>(null);
+  const [fuitesALaSaisie, setFuitesALaSaisie] = useState(false);
+  useEffect(() => {
+    setFuitesALaSaisie(lire(CLE_FUITES_A_LA_SAISIE, CHOIX_FUITES_A_LA_SAISIE, FUITES_A_LA_SAISIE_PAR_DEFAUT) === 1);
+  }, []);
+  const fuiteCourante = fuite && fuite.pour === v.password ? fuite : null;
+
+  /// Le résultat n'est posé que s'il concerne encore le mot de passe affiché :
+  /// une réponse lente ne doit pas qualifier celui qu'on a tapé entre-temps.
+  const verifierFuite = async (mot: string) => {
+    if (!mot) return;
+    setFuite({ pour: mot, etat: "verif" });
+    let suite: Fuite;
+    try {
+      const n = await pwnedCount(mot);
+      suite = n > 0 ? { pour: mot, etat: "fuite", n } : { pour: mot, etat: "sur" };
+    } catch {
+      suite = { pour: mot, etat: "erreur" };
+    }
+    setFuite((p) => (p?.pour === mot ? suite : p));
+  };
 
   const maj = <K extends keyof SaisieEntree>(k: K, val: SaisieEntree[K]) =>
     setV((p) => ({ ...p, [k]: val }));
@@ -148,6 +177,11 @@ export function FormulaireEntree({
                 type={motVisible ? "text" : "password"}
                 value={v.password}
                 onChange={(e) => maj("password", e.target.value)}
+                // En quittant le champ, et pas à chaque touche : un mot de
+                // passe à moitié tapé n'a rien à faire chez un tiers.
+                onBlur={() => {
+                  if (fuitesALaSaisie && v.password && !fuiteCourante) void verifierFuite(v.password);
+                }}
                 placeholder="••••••"
                 autoComplete="off"
                 autoCapitalize="off"
@@ -174,6 +208,32 @@ export function FormulaireEntree({
                 <Reglages className="size-4" />
               </BoutonIcone>
             </div>
+
+            {v.password && (
+              // Le verdict s'affiche sans bloquer l'enregistrement : un vieux
+              // compte qu'on recopie tel quel a le droit d'exister, et c'est
+              // Surveillance qui le rappellera.
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-2xs" aria-live="polite">
+                {fuiteCourante?.etat === "verif" && <span className="text-muted">{t("app.breachChecking")}</span>}
+                {fuiteCourante?.etat === "sur" && <span className="text-success">{t("app.breachNone")}</span>}
+                {fuiteCourante?.etat === "fuite" && (
+                  <span className="text-danger">
+                    {t("app.breachFound", { n: fuiteCourante.n.toLocaleString(locale) })}
+                  </span>
+                )}
+                {fuiteCourante?.etat === "erreur" && <span className="text-danger">{t("app.breachError")}</span>}
+                {(!fuiteCourante || fuiteCourante.etat === "erreur") && (
+                  <button
+                    type="button"
+                    onClick={() => void verifierFuite(v.password)}
+                    title={t("app.checkBreachHint")}
+                    className="cursor-pointer text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                  >
+                    {fuiteCourante ? t("app.retry") : t("app.checkBreach")}
+                  </button>
+                )}
+              </p>
+            )}
 
             {optionsOuvertes && (
               <div className="mt-2 rounded border border-border bg-surface-2 p-3">

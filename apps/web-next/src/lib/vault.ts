@@ -5,7 +5,7 @@
 // ni du DOM, ni du WebAssembly, ni d'un état réactif — et se testent avec
 // un tableau en entrée et une valeur en sortie.
 
-import type { DecryptedItem } from "@/lib/crypto";
+import type { DecryptedItem, ItemKind } from "@/lib/crypto";
 
 /// Une entrée déchiffrée, plus les métadonnées que le serveur garde en clair.
 export interface VaultEntry extends DecryptedItem {
@@ -182,6 +182,26 @@ export function lireOrdre(brut: string | null): Ordre {
     return { critere: critere as Critere, sens };
   }
   return ORDRE_PAR_DEFAUT;
+}
+
+/// Le type d'élément que la liste montre : le menu « Afficher » de Keeper.
+///
+/// Il s'ajoute au choix de la barre latérale au lieu de le remplacer : on veut
+/// « les cartes de l'équipe », pas choisir entre les cartes et l'équipe.
+export type Genre = "tous" | ItemKind;
+export const GENRES: readonly Genre[] = ["tous", "login", "card", "note"];
+
+export function duGenre<T extends { kind: ItemKind }>(items: readonly T[], genre: Genre): T[] {
+  return genre === "tous" ? [...items] : items.filter((i) => i.kind === genre);
+}
+
+/// La disposition de la liste. « dossiers » n'a de sens que dans la vue d'un
+/// coffre ; ailleurs (recherche, favoris, archives) elle se lit comme une liste.
+export type Vue = "dossiers" | "liste" | "tuiles";
+export const VUES: readonly Vue[] = ["dossiers", "liste", "tuiles"];
+
+export function lireVue(brut: string | null): Vue {
+  return (VUES as readonly string[]).includes(brut ?? "") ? (brut as Vue) : "dossiers";
 }
 
 /// Trie sans toucher au tableau reçu : `visibles` est mémoïsé, le trier en

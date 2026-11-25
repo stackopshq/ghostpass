@@ -261,3 +261,39 @@ export const Tri = ({ className }: Props) => (
     <path d="M13.5 7.5L17 4l3.5 3.5" />
   </svg>
 );
+
+export const Entonnoir = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M3.5 5h17l-6.5 7.5V19l-4 2v-8.5L3.5 5Z" />
+  </svg>
+);
+
+/// Les trois dispositions de la liste, dessinées comme ce qu'elles montrent.
+export const VueDossiers = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M4 4v13a2 2 0 0 0 2 2h3" />
+    <path d="M4 9h5" />
+    <rect x="11" y="6" width="9" height="5" rx="1" />
+    <rect x="11" y="16" width="9" height="5" rx="1" />
+  </svg>
+);
+
+export const VueListe = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <path d="M9 6h11" />
+    <path d="M9 12h11" />
+    <path d="M9 18h11" />
+    <path d="M4 6h.01" />
+    <path d="M4 12h.01" />
+    <path d="M4 18h.01" />
+  </svg>
+);
+
+export const VueTuiles = ({ className }: Props) => (
+  <svg {...commun} className={className} aria-hidden="true">
+    <rect x="4" y="4" width="7" height="7" rx="1.5" />
+    <rect x="13" y="4" width="7" height="7" rx="1.5" />
+    <rect x="4" y="13" width="7" height="7" rx="1.5" />
+    <rect x="13" y="13" width="7" height="7" rx="1.5" />
+  </svg>
+);

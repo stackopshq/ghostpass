@@ -29,6 +29,7 @@ import {
   PRESSE_PAPIERS_PAR_DEFAUT,
   VERROU_PAR_DEFAUT,
 } from "@/lib/verrouillage";
+import { CHOIX_FUITES_A_LA_SAISIE, CLE_FUITES_A_LA_SAISIE, FUITES_A_LA_SAISIE_PAR_DEFAUT } from "@/lib/breach";
 
 type Cle = { id: string; name: string; createdAt: number };
 type Connexion = { ip: string; userAgent: string; newDevice: boolean; createdAt: number };
@@ -109,7 +110,9 @@ function SurCetAppareil() {
   // le lire pendant le rendu ferait différer le serveur du client.
   const [verrou, setVerrou] = useState(VERROU_PAR_DEFAUT);
   const [pressePapiers, setPressePapiers] = useState(PRESSE_PAPIERS_PAR_DEFAUT);
+  const [fuites, setFuites] = useState<number>(FUITES_A_LA_SAISIE_PAR_DEFAUT);
   useEffect(() => {
+    setFuites(lire(CLE_FUITES_A_LA_SAISIE, CHOIX_FUITES_A_LA_SAISIE, FUITES_A_LA_SAISIE_PAR_DEFAUT));
     setVerrou(lire(CLE_VERROU, DELAIS_VERROU, VERROU_PAR_DEFAUT));
     setPressePapiers(lire(CLE_PRESSE_PAPIERS, DELAIS_PRESSE_PAPIERS, PRESSE_PAPIERS_PAR_DEFAUT));
   }, []);
@@ -136,6 +139,17 @@ function SurCetAppareil() {
           onChoisir={(v) => {
             ecrire(CLE_PRESSE_PAPIERS, v);
             setPressePapiers(v);
+          }}
+        />
+        <ChoixDuDelai
+          libelle={t("app.breachOnEntry")}
+          aide={t("app.breachOnEntryHint")}
+          valeurs={CHOIX_FUITES_A_LA_SAISIE}
+          valeur={fuites}
+          nommer={(v) => (v === 1 ? t("app.on") : t("app.off"))}
+          onChoisir={(v) => {
+            ecrire(CLE_FUITES_A_LA_SAISIE, v);
+            setFuites(v);
           }}
         />
       </div>
