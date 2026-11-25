@@ -195,3 +195,22 @@ test("le tri de Z à A retourne aussi les dossiers ; le tri par date, non", () =
   });
   assert.deepEqual(lire(parDate), ["[X 1 +]", "B", "A"]);
 });
+
+import { duGenre, lireVue } from "../src/lib/vault";
+
+const deGenre = (name: string, kind: "login" | "card" | "note") => ({ id: name, name, kind, updatedAt: 0 }) as VaultEntry;
+
+test("le filtre « Afficher » garde un type et écarte les autres", () => {
+  const coffre = [deGenre("Banque", "login"), deGenre("Visa", "card"), deGenre("Wifi", "note")];
+  assert.deepEqual(duGenre(coffre, "card").map((i) => i.name), ["Visa"]);
+  assert.deepEqual(duGenre(coffre, "login").map((i) => i.name), ["Banque"]);
+  // « Toutes les entrées » ne retire rien, et rend une copie.
+  const tout = duGenre(coffre, "tous");
+  assert.deepEqual(tout.map((i) => i.name), ["Banque", "Visa", "Wifi"]);
+  assert.notEqual(tout, coffre);
+});
+
+test("la vue relue du navigateur : chaque vue revient, le reste retombe sur les dossiers", () => {
+  for (const v of ["dossiers", "liste", "tuiles"] as const) assert.equal(lireVue(v), v);
+  for (const brut of [null, "", "grille", "Liste", "tuiles "]) assert.equal(lireVue(brut), "dossiers", String(brut));
+});

@@ -5,11 +5,12 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { type LigneArbre, type Ordre, type VaultEntry } from "@/lib/vault";
+import { GENRES, VUES, type Genre, type LigneArbre, type Ordre, type VaultEntry, type Vue } from "@/lib/vault";
 import { Avatar } from "@/components/Avatar";
 import { MenuEntree, type EntreeDeMenu } from "@/components/MenuEntree";
 import { MenuTri } from "@/components/MenuTri";
-import { Coffre, Etoile, Plus } from "@/components/Icones";
+import { MenuChoix } from "@/components/MenuChoix";
+import { Coffre, Entonnoir, Etoile, Plus, VueDossiers, VueListe, VueTuiles } from "@/components/Icones";
 import { LigneDossier, RETRAIT, SaisieDossier } from "@/components/LigneDossier";
 
 /// Ce que la liste reçoit pour montrer les dossiers en arbre. Absent, elle
@@ -25,6 +26,19 @@ export interface ArbreDeLaListe {
   /// d'équipe : quand le dossier sera partagé).
   aideCreation?: string;
 }
+
+const LIBELLE_GENRE = {
+  tous: "app.showAll",
+  login: "app.showLogins",
+  card: "app.showCards",
+  note: "app.showNotes",
+} as const;
+
+const VUE = {
+  dossiers: { libelle: "app.viewFolders", Icone: VueDossiers },
+  liste: { libelle: "app.viewList", Icone: VueListe },
+  tuiles: { libelle: "app.viewTiles", Icone: VueTuiles },
+} as const;
 
 function sousTitre(item: VaultEntry, t: (k: string) => string): string {
   if (item.kind === "note") return t("app.secureNote");
@@ -48,6 +62,11 @@ export function ListeSecrets({
   onOrdre,
   actions,
   arbre,
+  genre,
+  onGenre,
+  vue,
+  onVue,
+  dossiersPossibles,
 }: {
   items: VaultEntry[];
   total: number;
@@ -68,6 +87,14 @@ export function ListeSecrets({
   /// Les gestes du menu « … » d'une ligne ; liste vide, pas de menu.
   actions: (item: VaultEntry) => EntreeDeMenu[];
   arbre?: ArbreDeLaListe;
+  genre: Genre;
+  onGenre: (g: Genre) => void;
+  /// La disposition choisie, gardée même là où elle ne s'applique pas : en
+  /// sortant d'une recherche, les dossiers reviennent.
+  vue: Vue;
+  onVue: (v: Vue) => void;
+  /// Faux dans une recherche, les favoris, les archives : pas de dossiers.
+  dossiersPossibles: boolean;
 }) {
   const { t } = useI18n();
   /// Le dossier sous lequel une saisie de dossier est ouverte ; "" : la racine.
@@ -77,6 +104,9 @@ export function ListeSecrets({
   const affiches = arbre
     ? arbre.lignes.flatMap((l) => (l.type === "element" ? [l.item] : []))
     : items;
+  /// Ce qu'on voit vraiment : les dossiers demandés hors d'un coffre se lisent
+  /// en liste, et c'est le bouton « Liste » qui s'allume alors.
+  const vueEffective: Vue = arbre ? "dossiers" : vue === "tuiles" ? "tuiles" : "liste";
   const tousChoisis = items.length > 0 && items.every((i) => selection.has(i.id));
 
   // Parcourue aux flèches, la liste doit suivre : un élément choisi hors de
@@ -164,6 +194,60 @@ export function ListeSecrets({
     );
   };
 
+  /// Une tuile : la même entrée, en carte, pour qui reconnaît ses comptes à
+  /// leur logo plus qu'à leur nom. Mêmes gestes qu'une ligne : case, menu
+  /// « … », clic pour ouvrir.
+  const tuileElement = (item: VaultEntry) => {
+    const actif = choisi?.id === item.id;
+    const sous = sousTitre(item, t);
+    const coche = selection.has(item.id);
+    return (
+      <div
+        key={item.id}
+        data-entree={item.id}
+        className={`group relative flex min-w-0 flex-col rounded-lg border transition-colors ${actif ? "border-accent/60 bg-accent/12" : coche ? "border-border bg-surface" : "border-border hover:bg-surface"}`}
+      >
+        <label
+          className={`absolute left-2.5 top-2.5 flex cursor-pointer transition-opacity ${coche || selection.size > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"}`}
+        >
+          <input
+            type="checkbox"
+            checked={coche}
+            onChange={(e) =>
+              onBasculerSelection(item.id, (e.nativeEvent as MouseEvent).shiftKey ? affiches : undefined)
+            }
+            aria-label={t("app.selectItem", { name: item.name })}
+            className="accent-accent"
+          />
+        </label>
+        <div className="absolute right-1 top-1">
+          <MenuEntree nom={item.name} entrees={actions(item)} />
+        </div>
+        <button
+          type="button"
+          onClick={() => onChoisir(item)}
+          aria-current={actif ? "true" : undefined}
+          className="flex min-w-0 cursor-pointer flex-col items-center gap-2 px-3 pb-3 pt-5 text-center"
+        >
+          <Avatar nom={item.name} url={item.urls[0]} grand />
+          <span className="flex w-full min-w-0 items-center justify-center gap-1">
+            <span className={`truncate text-sm ${actif ? "text-accent" : "text-foreground"}`}>{item.name}</span>
+            {favoris.has(item.id) && <Etoile plein className="size-3 shrink-0 text-warn" />}
+          </span>
+          <span className="w-full truncate text-xs text-muted">{sous || "\u00a0"}</span>
+          {item.shared && (
+            <span
+              className="block max-w-full truncate rounded-pill bg-accent/12 px-2 py-0.5 text-2xs text-accent"
+              title={`${item.shared.orgName} · ${item.shared.collectionName}`}
+            >
+              {item.shared.collectionName}
+            </span>
+          )}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="flex min-h-0 flex-col">
       {/* L'EN-TÊTE, SUR DEUX LIGNES
@@ -178,9 +262,34 @@ export function ListeSecrets({
           colonne, ce que le libellé « Tout sélectionner » disait en mots ; il
           reste pour les lecteurs d'écran et dans l'infobulle. */}
       <div className="px-5 pb-2 pt-5">
-        <h2 className="truncate text-lg font-semibold text-foreground">
-          {recherche.trim() ? t("app.results") : titre}
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="min-w-0 flex-1 truncate text-lg font-semibold text-foreground">
+            {recherche.trim() ? t("app.results") : titre}
+          </h2>
+          {/* LES TROIS DISPOSITIONS, comme dans Keeper. Trois valeurs : des
+              boutons et non un menu, l'état reste visible sans clic. */}
+          <div role="group" aria-label={t("app.view")} className="flex shrink-0 items-center rounded-lg border border-border p-0.5">
+            {VUES.map((v) => {
+              const { libelle, Icone } = VUE[v];
+              const impossible = v === "dossiers" && !dossiersPossibles;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => onVue(v)}
+                  disabled={impossible}
+                  aria-pressed={vueEffective === v}
+                  aria-label={t(libelle)}
+                  // Désactivé, le bouton dit pourquoi : sinon on le croirait cassé.
+                  title={impossible ? t("app.viewFoldersOff") : t(libelle)}
+                  className={`grid size-7 cursor-pointer place-items-center rounded-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${vueEffective === v ? "bg-accent/12 text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}
+                >
+                  <Icone className="size-4" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="mt-1 flex h-7 items-center gap-3">
           {/* La colonne `w-4` des cases des lignes, même vide. */}
           <span className="flex w-4 shrink-0 justify-center">
@@ -195,7 +304,7 @@ export function ListeSecrets({
             />
           )}
           </span>
-          <p className="flex-1 text-xs text-muted">{t("app.itemCount", { n: items.length })}</p>
+          <p className="min-w-0 flex-1 truncate text-xs text-muted">{t("app.itemCount", { n: items.length })}</p>
           {arbre && (
             <button
               type="button"
@@ -205,14 +314,33 @@ export function ListeSecrets({
               className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-muted transition-colors hover:bg-surface hover:text-foreground"
             >
               <Plus className="size-3.5" />
-              {t("app.folder")}
+              {/* Le mot seulement quand la colonne a la place : le menu
+                  « Afficher » s'est ajouté sur la même ligne. */}
+              <span className="hidden lg:inline">{t("app.folder")}</span>
             </button>
+          )}
+          {/* Présent dès que le coffre a quelque chose, même si le filtre ne
+              laisse rien : c'est par lui qu'on revient en arrière. */}
+          {total > 0 && (
+            <MenuChoix
+              icone={<Entonnoir className="size-3.5" />}
+              valeur={t(LIBELLE_GENRE[genre])}
+              nom={t("app.show")}
+              enAvant={genre !== "tous"}
+              groupes={[
+                {
+                  options: GENRES.map((g) => ({ libelle: t(LIBELLE_GENRE[g]), coche: genre === g, agir: () => onGenre(g) })),
+                },
+              ]}
+            />
           )}
           {items.length > 1 && <MenuTri ordre={ordre} onOrdre={onOrdre} />}
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-3">
+      <div
+        className={`min-h-0 flex-1 overflow-y-auto px-2 pb-3 ${vueEffective === "tuiles" && items.length > 0 ? "grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] content-start gap-2 px-3" : "space-y-1"}`}
+      >
         {items.length === 0 && !(arbre && (arbre.lignes.length > 0 || creation)) ? (
           <div className="grid place-items-center gap-3 px-6 py-16 text-center text-sm text-muted">
             <Coffre className="size-7 opacity-30" />
@@ -277,7 +405,9 @@ export function ListeSecrets({
                     </Fragment>
                   ),
                 )
-              : items.map((item) => ligneElement(item, 0))}
+              : vueEffective === "tuiles"
+                ? items.map(tuileElement)
+                : items.map((item) => ligneElement(item, 0))}
           </>
         )}
       </div>

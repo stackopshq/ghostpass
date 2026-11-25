@@ -34,6 +34,10 @@ import {
   coffreDuLot,
   folderPaths,
   lignesDeLArbre,
+  lireVue,
+  duGenre,
+  type Genre,
+  type Vue,
   historiqueApresModification,
   dansLaPortee,
   porteeDe,
@@ -78,6 +82,11 @@ function lireOrdreStocke(): Ordre {
     return ORDRE_PAR_DEFAUT;
   }
 }
+
+/// La disposition de la liste aussi. Le filtre « Afficher », lui, ne se garde
+/// pas : retrouver demain une liste réduite aux cartes, sans s'en souvenir,
+/// ferait croire que les identifiants ont disparu.
+const CLE_VUE = "gp_vue_liste";
 
 /// Une organisation dont on a pu lire le coffre, pour la section « Coffres ».
 interface CoffreDEquipe {
@@ -205,6 +214,23 @@ export function VaultScreen() {
       /* L'ordre vaudra pour cette visite seulement. */
     }
   };
+  const [vue, setVue] = useState<Vue>("dossiers");
+  useEffect(() => {
+    try {
+      setVue(lireVue(localStorage.getItem(CLE_VUE)));
+    } catch {
+      /* La vue par défaut. */
+    }
+  }, []);
+  const changerVue = (v: Vue) => {
+    setVue(v);
+    try {
+      localStorage.setItem(CLE_VUE, v);
+    } catch {
+      /* La vue vaudra pour cette visite seulement. */
+    }
+  };
+  const [genre, setGenre] = useState<Genre>("tous");
   const champRecherche = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!token) return;
@@ -391,22 +417,24 @@ export function VaultScreen() {
   const tree = useMemo(
     () =>
       buildTree(
-        courants.filter((i) => dansLaPortee(i, portee)),
-        portee.type === "organisation" ? (dossiersEquipe[portee.orgId] ?? []) : dossiersVides,
+        duGenre(courants, genre).filter((i) => dansLaPortee(i, portee)),
+        // Filtré sur un type, un dossier vide n'a rien de ce type : il se tait.
+        genre !== "tous" ? [] : portee.type === "organisation" ? (dossiersEquipe[portee.orgId] ?? []) : dossiersVides,
       ),
     // `portee` est recréée à chaque rendu ; sa clé, non.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [courants, dossiersVides, dossiersEquipe, cleDePortee],
+    [courants, genre, dossiersVides, dossiersEquipe, cleDePortee],
   );
   const visibles = useMemo(
-    () => trierEntrees(filtrerVisibles(items, recherche, filtre, favoris, archives), ordre),
-    [items, recherche, filtre, favoris, archives, ordre],
+    () => trierEntrees(filtrerVisibles(duGenre(items, genre), recherche, filtre, favoris, archives), ordre),
+    [items, genre, recherche, filtre, favoris, archives, ordre],
   );
   /// Les vues d'un coffre montrent leurs dossiers en arbre dans la liste. Une
   /// recherche, les favoris et les archives restent à plat : on y cherche un
   /// élément précis, et le dossier où il est rangé n'aide pas à le trouver.
-  const enArbre =
+  const dossiersPossibles =
     !recherche.trim() && (filtre.type === "tous" || filtre.type === "personnel" || filtre.type === "organisation");
+  const enArbre = dossiersPossibles && vue === "dossiers";
   const lignesArbre = useMemo(
     () => (enArbre ? lignesDeLArbre(tree, deplies, ordre) : null),
     [enArbre, tree, deplies, ordre],
@@ -1595,7 +1623,7 @@ export function VaultScreen() {
                 total={items.length}
                 recherche={recherche}
                 titre={titreDuFiltre}
-                vide={videDuFiltre}
+                vide={genre !== "tous" ? t("app.noneOfKind") : videDuFiltre}
                 favoris={favoris}
                 choisi={choisi}
                 onChoisir={setChoisi}
@@ -1608,6 +1636,16 @@ export function VaultScreen() {
                 ordre={ordre}
                 onOrdre={changerOrdre}
                 actions={actionsDe}
+                genre={genre}
+                onGenre={(g) => {
+                  setGenre(g);
+                  // Une sélection doit rester visible : agir sur des éléments
+                  // que le filtre vient de cacher surprendrait.
+                  setSelection(new Set());
+                }}
+                vue={vue}
+                onVue={changerVue}
+                dossiersPossibles={dossiersPossibles}
                 arbre={
                   lignesArbre
                     ? {
