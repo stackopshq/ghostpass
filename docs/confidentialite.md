@@ -44,7 +44,8 @@ transmission à des tiers à des fins commerciales.
 **Votre serveur GhostPass**, dont vous choisissez l'adresse.
 
 **`api.pwnedpasswords.com`**, et seulement si vous lancez vous-même une vérification de
-fuite. Cet appel n'envoie jamais un mot de passe : seuls les cinq premiers caractères de
+fuite : depuis Surveillance, depuis le formulaire d'un élément, ou en quittant le champ du
+mot de passe si vous avez activé ce réglage dans Sécurité (il est désactivé par défaut). Cet appel n'envoie jamais un mot de passe : seuls les cinq premiers caractères de
 son empreinte partent, et la comparaison se fait sur votre appareil parmi les réponses
 reçues. Le service interrogé ne peut pas savoir quel mot de passe vous vérifiiez.
 

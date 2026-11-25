@@ -1,6 +1,6 @@
 # Politique de confidentialité — GhostPass
 
-*Version 0.4 — 2026-09-25. Articles 12 à 14 du règlement (UE) 2016/679 (RGPD).*
+*Version 0.5, 2026-11-25. Articles 12 à 14 du règlement (UE) 2016/679 (RGPD).*
 
 ---
 
@@ -119,6 +119,26 @@ Sur une instance auto-hébergée, l'hébergeur peut couper cette source seule
 (`ICONS_DASHBOARD=false`) et garder les icônes des sites, ou couper tout le
 service d'icônes.
 
+### La vérification des fuites passe par Have I Been Pwned
+
+GhostPass peut vérifier si un mot de passe figure dans des fuites connues, en
+interrogeant le service **Have I Been Pwned** (`api.pwnedpasswords.com`). Cela
+n'arrive que si vous le demandez : en lançant la vérification dans Surveillance
+ou dans le formulaire d'un élément, ou en activant dans Sécurité la vérification
+à la saisie, **désactivée par défaut**.
+
+Le mot de passe ne part jamais. Votre navigateur calcule son empreinte SHA-1 et
+n'en envoie que les **cinq premiers caractères** ; le service répond par toutes
+les empreintes qui commencent ainsi, des centaines, et la comparaison se fait sur
+votre appareil. Le service ne peut donc pas savoir quel mot de passe vous
+vérifiiez, ni s'il a fuité.
+
+Ce qu'il voit, en revanche : l'appel part **de votre navigateur**, pas de notre
+serveur, et il reçoit donc **votre adresse IP**. C'est pour cela que la
+vérification automatique attend votre accord. Ce service n'agit pas pour notre
+compte et ne reçoit rien qui vienne de votre coffre : il ne figure pas dans le
+tableau des destinataires, mais nous l'écrivons.
+
 ### Ce que Cloudflare peut, et que nous préférons écrire
 
 Cloudflare achemine le trafic, donc il vous **sert le code JavaScript qui
@@ -192,6 +212,7 @@ substantiel, nous vous en informerons avant qu'il prenne effet.
 
 | Version | Date | Modification |
 |---|---|---|
+| 0.5 | 2026-11-25 | Deux appels sortants sont décrits. **Have I Been Pwned**, que votre navigateur interroge si vous lancez une vérification de fuite, et désormais aussi à la saisie d'un mot de passe si vous l'activez : il reçoit votre adresse IP et cinq caractères d'une empreinte, jamais le mot de passe. **jsDelivr**, d'où le serveur tire les logos des sites : sa section a été ajoutée le 2026-11-24 sans que la version ni ce tableau soient mis à jour, ce que cette ligne corrige. Les destinataires du tableau ne changent pas |
 | 0.4 | 2026-09-25 | Retrait de l'avertissement « Projet — à faire relire par un juriste avant mise en ligne », que le document portait **alors qu'il était déjà publié**. La relecture a eu lieu ; l'avertissement ne décrivait plus l'état du texte, et une politique de confidentialité qui s'annonce comme un projet se dessert. Aucune modification de fond : ni les données traitées, ni les destinataires, ni les droits ne changent. Les rangs d'historique sont par ailleurs remis en ordre — ils se lisaient 0.3, 0.1, 0.2 |
 | 0.3 | 2026-09-24 | La ligne Cloudflare nommait `ghostpass.stackops.ch`, instance décommissionnée le jour même et qui ne répond plus. Elle nomme désormais les trois instances de la suite : `pass.`, `cal.` et `bit.ghostsuite.cloud`. Ni les destinataires ni les données traitées ne changent : c'est une correction d'exactitude |
 | 0.2 | 2026-08-31 | Trois corrections d'exactitude, après confrontation au code. « Le serveur ne contient aucun code capable de déchiffrer » devient « rien, côté serveur, ne peut ouvrir un coffre » : le serveur détient bien une primitive de déchiffrement, pour le seul secret du second facteur. Le partage par **ghostbit** est décrit — il ne l'était nulle part. Le **PFPDT** gagne son second rôle, destinataire d'une annonce de violation, distinct de celui d'autorité de réclamation |
